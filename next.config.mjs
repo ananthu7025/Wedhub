@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
-
-export default nextConfig;
+const nextConfig = {
+    experimental: {
+      serverActions: {
+        allowedOrigins: ["oacdevportal.bigformula.com", "localhost:3000"],
+      },
+    },
+  };
+   
+  export default nextConfig;
