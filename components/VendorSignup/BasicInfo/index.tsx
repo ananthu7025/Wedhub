@@ -1,11 +1,66 @@
 import React from "react";
+import { z, ZodType } from "zod";
+import { SelectItem } from "@/types";
+import NextButton from "../NextBtn";
+import toaster from "@/lib/toastify";
+import { useForm } from "react-hook-form";
+import { dropDownSchema } from "@/lib/zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import InputText from "@/components/InputComponents/InputText";
+import InputDropdown from "@/components/InputComponents/InputDropdown";
+import InputTextArea from "@/components/InputComponents/InputTextArea";
+import { saveBasicInfo } from "@/lib/actions/basicInfo";
 
 interface StepProps {
   nextStep: () => void;
   prevStep: () => void;
 }
+interface BasicFormType {
+  businessName: string;
+  businessPhone: string;
+  location: string;
+  businessAddress: string;
+  contactPersonName: string;
+  businessCategory?: SelectItem;
+  shortDescription: string;
+}
 
-const BasicInfo: React.FC<StepProps> = ({ nextStep, prevStep }) => {
+const BasicSchema: ZodType<BasicFormType> = z.object({
+  businessName: z.string().nonempty("Business name is required").max(300),
+  businessPhone: z.string().nonempty("Business phone is required").max(15),
+  location: z.string().nonempty("Location is required"),
+  businessAddress: z.string().nonempty("Business address is required"),
+  contactPersonName: z.string().nonempty("Contact person name is required"),
+  businessCategory: dropDownSchema.optional(),
+  shortDescription: z
+    .string()
+    .max(500, "Description must be 500 characters or less"),
+});
+
+const BasicInfo: React.FC<StepProps> = ({ nextStep }) => {
+  const hookForm = useForm<BasicFormType>({
+    resolver: zodResolver(BasicSchema),
+  });
+  const {
+    handleSubmit,
+    formState: { errors },
+  } = hookForm;
+
+  console.log(errors);
+
+  const onSubmit = async (data: BasicFormType) => {
+    console.log(data);
+    const payload ={
+      ...data,
+      userId : "67cf09ae858f8ce6d3f98bb8",
+      businessCategory:Number(data.businessCategory?.value)
+    }
+    const res = await saveBasicInfo(payload)
+    console.log(res,"responce")
+    toaster.success("Success");
+    nextStep();
+  };
+
   return (
     <div className="boarding-form">
       <div className="row">
@@ -14,115 +69,107 @@ const BasicInfo: React.FC<StepProps> = ({ nextStep, prevStep }) => {
             <h1 className="main-head">
               Welcome!
               <br />
-              Let's Get Started
+              Let&apos;s Get Started
             </h1>
             <span>Fill in your basic details to kick off the process.</span>
           </div>
         </div>
         <div className="col-lg-4">
-          <form id="multi-step-form">
+          <form id="multi-step-form" onSubmit={handleSubmit(onSubmit)}>
             <div className="step ">
               <div className="input-group mb-3 mt-1">
-                <input
-                  type="text"
-                  className="form-control"
+                <InputText
                   id="contact-name"
-                  placeholder=" "
+                  hookForm={hookForm}
+                  field="businessName"
+                  label="Full Name"
+                  labelMandatory
+                  errorText="Invalid full name"
+                  type="text"
+                  max={300}
+                  placeholder=""
                 />
-                <label htmlFor="contact-name" className="form-label">
-                  Contact Person Name
-                </label>
               </div>
               <div className="input-group mb-3">
-                <input
-                  type="tel"
-                  className="form-control"
+                <InputText
                   id="contact-number"
-                  placeholder=" "
+                  hookForm={hookForm}
+                  field="businessPhone"
+                  label="Phone Number"
+                  labelMandatory
+                  errorText="Invalid number"
+                  type="tel"
+                  max={300}
+                  placeholder=""
                 />
-                <label htmlFor="contact-number" className="form-label">
-                  Business Phone
-                </label>
               </div>
               <div className="input-group mb-3">
-                <input
+                <InputText
+                  id="contact-number"
+                  hookForm={hookForm}
+                  field="location"
+                  label=" Location"
+                  labelMandatory
+                  errorText="Invalid  Location"
                   type="text"
-                  className="form-control"
-                  id="location"
-                  placeholder=" "
+                  max={300}
+                  placeholder=""
                 />
-                <label htmlFor="location" className="form-label">
-                  Location
-                </label>
               </div>
               <div className="input-group mb-3">
-                <input
+                <InputText
+                  id="contact-adress"
+                  hookForm={hookForm}
+                  field="businessAddress"
+                  label=" Business Address"
+                  labelMandatory
+                  errorText="Invalid  Address"
                   type="text"
-                  className="form-control"
-                  id="address"
-                  placeholder=" "
+                  max={300}
+                  placeholder=""
                 />
-                <label htmlFor="address" className="form-label">
-                  Business Address
-                </label>
               </div>
               <div className="input-group mb-3">
-                <input
+                <InputText
+                  id="contact-adressssssss"
+                  hookForm={hookForm}
+                  field="contactPersonName"
+                  label="Contact Person Name"
+                  labelMandatory
+                  errorText="Invalid  Name"
                   type="text"
-                  className="form-control"
-                  id="contact-name"
-                  placeholder=" "
+                  max={300}
+                  placeholder=""
                 />
-                <label htmlFor="contact-name" className="form-label">
-                  Contact Person Name
-                </label>
               </div>
               <div className="input-group mb-3">
-                <select
-                  name="business-catergory"
-                  id=""
-                  className="form-control"
-                >
-                  <option value="">Business Category</option>
-                  <option value="">Business Category</option>
-                  <option value="">Business Category</option>
-                  <option value="">Business Category</option>
-                </select>
+                <InputDropdown
+                  hookForm={hookForm}
+                  field="businessCategory"
+                  errorText="Select an option"
+                  label="Business Category"
+                  labelMandatory
+                  options={[
+                    {
+                      label: "option 1",
+                      value: "option 1",
+                    },
+                  ]}
+                  placeholder=""
+                />
               </div>
               <div className="input-group mb-3">
-                <textarea
-                  name="description"
-                  id=""
-                  className="form-control"
-                  cols={4}
-                  rows={3}
-                  defaultValue={""}
+                <InputTextArea
+                  hookForm={hookForm}
+                  field="shortDescription"
+                  label="Summary"
+                  errorText="Invalid summary"
+                  placeholder=""
+                  id="summarssssy"
+                  maxLength={500}
                 />
-                <label htmlFor="contact-name" className="form-label">
-                  Short Description
-                </label>
               </div>
-              <button 
-                onClick={nextStep}
-              
-              className="theme-btn">
-                <a 
-                >
-                  Next
-                  <svg
-                    width={18}
-                    height={16}
-                    viewBox="0 0 18 16"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M14.6895 7.25H0.75C0.551088 7.25 0.360322 7.32902 0.21967 7.46967C0.0790178 7.61032 0 7.80109 0 8C0 8.19891 0.0790178 8.38968 0.21967 8.53033C0.360322 8.67098 0.551088 8.75 0.75 8.75H14.6895L9.219 14.219C9.07817 14.3598 8.99905 14.5508 8.99905 14.75C8.99905 14.9492 9.07817 15.1402 9.219 15.281C9.35983 15.4218 9.55084 15.5009 9.75 15.5009C9.94916 15.5009 10.1402 15.4218 10.281 15.281L17.031 8.531C17.1008 8.46133 17.1563 8.37857 17.1941 8.28745C17.2319 8.19633 17.2513 8.09865 17.2513 8C17.2513 7.90135 17.2319 7.80367 17.1941 7.71255C17.1563 7.62143 17.1008 7.53867 17.031 7.469L10.281 0.719001C10.1402 0.578171 9.94916 0.499054 9.75 0.499054C9.55084 0.499054 9.35983 0.578171 9.219 0.719001C9.07817 0.859831 8.99905 1.05084 8.99905 1.25C8.99905 1.44916 9.07817 1.64017 9.219 1.781L14.6895 7.25Z"
-                      fill="#F0F2F5"
-                    />
-                  </svg>
-                </a>
-              </button>
+              <NextButton  type="submit" />
             </div>
           </form>
         </div>

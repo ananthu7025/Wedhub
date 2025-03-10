@@ -8,6 +8,7 @@ type InputTextProps<T extends FieldValues> = {
   label: string;
   errorText: string;
   labelMandatory?: boolean;
+  id?:string;
 } & InputHTMLAttributes<HTMLInputElement>;
 
 const InputText = <T extends FieldValues>({
@@ -15,25 +16,19 @@ const InputText = <T extends FieldValues>({
   field,
   label,
   errorText,
-  labelMandatory,
+  // labelMandatory,
+  id,
   ...props
 }: InputTextProps<T>) => {
   const {
     formState: { errors },
     register,
-  } = hookForm;
 
+  } = hookForm;
+               
   return (
     <div className="form-group">
-      <label className="form-label mandatoryRelated">
-        <span
-          className="mandatory"
-          style={!labelMandatory ? { visibility: "hidden" } : {}}
-        >
-          *
-        </span>
-        {label}
-      </label>
+
       <input
         {...props}
         className={`form-control ${
@@ -41,13 +36,19 @@ const InputText = <T extends FieldValues>({
         }`}
         {...register(field)}
         onBlur={props.onBlur}
+        id={id}
       />
+      
       {isError(errors, field) && (
         <span className="validation-error-text">
           <i className="icon icon-info-icon"></i>
           <h6>{errorText}</h6>
         </span>
       )}
+                  <label htmlFor="contact-name" className="form-label">
+     
+        {label}
+      </label>
     </div>
   );
 };

@@ -8,6 +8,7 @@ type InputTextProps<T extends FieldValues> = {
   field: Path<T>;
   label: string;
   errorText: string;
+  id?: string;
   labelMandatory?: boolean;
 } & InputHTMLAttributes<HTMLTextAreaElement>;
 
@@ -16,7 +17,8 @@ const InputTextArea = <T extends FieldValues>({
   field,
   label,
   errorText,
-  labelMandatory,
+  id,
+  // labelMandatory,
   ...props
 }: InputTextProps<T>) => {
   const {
@@ -26,29 +28,26 @@ const InputTextArea = <T extends FieldValues>({
 
   return (
     <div className="form-group">
-      <label className="form-label mandatoryRelated">
-        <span
-          className="mandatory"
-          style={!labelMandatory ? { visibility: "hidden" } : {}}
-        >
-          *
-        </span>
-        {label}
-      </label>
       <textarea
+        id={id}
         {...props}
         className={`form-control ${
           isError(errors, field) ? "input-validation-error" : ""
         }`}
         {...register(field)}
+        placeholder=""
         onBlur={props.onBlur}
       />
+     
       {isError(errors, field) && (
         <span className="validation-error-text">
           <i className="icon icon-info-icon"></i>
           <h6>{errorText}</h6>
         </span>
       )}
+       <label htmlFor={id} className="form-label">
+        {label}
+      </label>
     </div>
   );
 };

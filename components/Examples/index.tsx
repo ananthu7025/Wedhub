@@ -104,6 +104,7 @@ const ExampleComponent = () => {
                 hookForm={hookForm}
                 field="summary"
                 label="Summary"
+                id="summary"
                 errorText="Invalid summary"
                 placeholder="Enter summary"
                 maxLength={500}

@@ -1,6 +1,9 @@
 
 
 // landing page apis
-const LANDING_PAGE = {
-  DRAFT: "/ClaimForms/MyClaims",
+const VENDOR_REG = {
+  BASIC_INFO: "/register/basic-info",
+};
+export const API_ENDPOINTS = {
+  VENDOR_REG
 };

@@ -3,7 +3,7 @@ import Select from "react-select";
 import { SelectItem } from "@/types";
 import { FieldValues, UseFormReturn, Path, Controller } from "react-hook-form";
 import { isError } from "@/utils/helpers";
- 
+
 type InputTextProps<T extends FieldValues> = {
   hookForm: UseFormReturn<T>;
   field: Path<T>;
@@ -12,11 +12,11 @@ type InputTextProps<T extends FieldValues> = {
   options: SelectItem[];
   placeholder: string;
   labelMandatory?: boolean;
-  isMuliple?:boolean;
+  isMuliple?: boolean;
   isDisabled?: boolean;
   isClearable?: boolean;
 };
- 
+
 const InputDropdown = <T extends FieldValues>({
   hookForm,
   field,
@@ -34,6 +34,46 @@ const InputDropdown = <T extends FieldValues>({
     control,
   } = hookForm;
   const customStyles = {
+    container: (base: any) => ({
+      ...base,
+      width: "100%",
+    }),
+    control: (base: any) => ({
+      ...base,
+      backgroundColor: "#fff",
+      borderRadius: "4px",
+      border: "1px solid #ccc",
+      padding: "8px 12px",
+      fontSize: "14px",
+      cursor: isDisabled ? "not-allowed" : "pointer",
+      minHeight: "36px",
+      boxShadow: "none",
+      "&:hover": {
+        borderColor: "#00796b",
+      },
+    }),
+    menu: (base: any) => ({
+      ...base,
+      zIndex: 9999, // Make sure dropdown appears above other elements
+      maxHeight: "200px",
+      overflowY: "auto",
+    }),
+    option: (base: any, state: any) => ({
+      ...base,
+      padding: "8px 12px",
+      cursor: state.isDisabled ? "not-allowed" : "pointer",
+      backgroundColor: state.isFocused
+        ? "#f1f1f1"
+        : state.isSelected
+        ? "#00796b"
+        : "",
+      color: state.isSelected ? "white" : "black",
+    }),
+    placeholder: (base: any) => ({
+      ...base,
+      color: "#aaa",
+      fontSize: "14px",
+    }),
     multiValue: (base: any) => ({
       ...base,
       backgroundColor: "#fff",
@@ -54,6 +94,7 @@ const InputDropdown = <T extends FieldValues>({
       },
     }),
   };
+
   return (
     <div className="form-group">
       <label className="form-label mandatoryRelated">
@@ -65,7 +106,7 @@ const InputDropdown = <T extends FieldValues>({
         </span>
         {label}
       </label>
- 
+
       <Controller
         name={register(field).name}
         control={control}
@@ -74,16 +115,16 @@ const InputDropdown = <T extends FieldValues>({
             options={options}
             onChange={(selectedOption) => inField.onChange(selectedOption)}
             placeholder={placeholder}
+            menuPlacement="auto"
             classNamePrefix="custom-select"
             className={`custom-dropdown ${
               isError(errors, field) ? "error" : ""
             }`}
             isClearable
-            value={inField.value?inField.value as any:""}
+            value={inField.value ? (inField.value as any) : ""}
             isMulti={isMuliple}
             isDisabled={isDisabled}
-            styles={isMuliple ? customStyles : undefined}
- 
+            styles={customStyles}
           />
         )}
       />
@@ -96,5 +137,5 @@ const InputDropdown = <T extends FieldValues>({
     </div>
   );
 };
- 
-export default InputDropdown
+
+export default InputDropdown;

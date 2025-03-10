@@ -17,6 +17,7 @@ async function withServerInterceptor<TData>(
   const response: ResponseObject<TData> = {
     errors: [],
     messages: [],
+    
   };
 
   try {
@@ -58,8 +59,10 @@ export const httpPost = async <T>(
   data?: object,
   config: object = {}
 ) => {
+  console.log(url,"url")
   return await withServerInterceptor(
     async () => await http.post<ResponseObject<T>>(url, data, config)
+  
   );
 };
 

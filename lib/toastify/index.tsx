@@ -1,8 +1,8 @@
 import { toast } from "react-toastify";
 
-import Error from "@/assets/images/error-toast.svg"
-import submitedForm from "@/assets/images/submitedForm.svg"
-import Image from "next/image";
+// import Error from "@/assets/images/error-toast.svg"
+// import submitedForm from "@/assets/images/submitedForm.svg"
+// import Image from "next/image";
 
 const toaster = {
   error: (message: string) =>
@@ -13,9 +13,9 @@ const toaster = {
         minHeight: 0,
         fontSize: "0.875rem",
       },
-      icon() {
-        return <div><Image src={Error} alt="icon"/></div>
-      },
+      // icon() {
+      //   // return <div><Image src={Error} alt="icon"/></div>
+      // },
     }),
   success: (message: string) =>
     toast.success(message, {
@@ -25,9 +25,9 @@ const toaster = {
         minHeight: 0,
         fontSize: "0.875rem",
       },
-      icon() {
-        return <div><Image src={submitedForm} alt="icon"/></div>
-      },
+      // icon() {
+      //   return <div><Image src={submitedForm} alt="icon"/></div>
+      // },
     }),
 };
 

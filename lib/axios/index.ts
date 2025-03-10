@@ -13,7 +13,7 @@ const http = axios.create({
     return status < 400;
   },
 });
-
+console.log(process.env.NEXT_PUBLIC_API_BASE_URL,"Base")
 // request interceptor
 http.interceptors.request.use(
   (config) => {
