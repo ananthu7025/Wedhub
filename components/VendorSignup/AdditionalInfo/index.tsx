@@ -13,11 +13,12 @@ import twitter from "@/assets/images/twiter.webp";
 import Website from "@/assets/images/website.webp";
 import { zodResolver } from "@hookform/resolvers/zod";
 import InputText from "@/components/InputComponents/InputText";
-
+import { saveAdditionalInfo } from "@/lib/actions/additionalInfo";
 
 interface StepProps {
   nextStep: () => void;
   prevStep: () => void;
+  userId: string;
 }
 
 interface BasicFormType {
@@ -42,7 +43,14 @@ const BasicSchema: ZodType<BasicFormType> = z.object({
     .optional(),
 });
 
-const AdditionalInfo: React.FC<StepProps> = ({ nextStep, prevStep }) => {
+const AdditionalInfo: React.FC<StepProps> = ({
+  nextStep,
+  prevStep,
+  userId,
+}) => {
+  
+  console.log(userId);
+
   const hookForm = useForm<BasicFormType>({
     resolver: zodResolver(BasicSchema),
   });
@@ -53,10 +61,18 @@ const AdditionalInfo: React.FC<StepProps> = ({ nextStep, prevStep }) => {
 
   console.log(errors);
 
-  const onSubmit = (data: BasicFormType) => {
+  const onSubmit = async (data: BasicFormType) => {
     console.log(data);
+    const payload = {
+      ...data,
+      userId: userId,
+    };
+    const res = await saveAdditionalInfo(payload);
+    console.log(res, "responce");
     toaster.success("Success");
-    nextStep();
+    if (res.data?.userId) {
+      nextStep();
+    }
   };
 
   return (

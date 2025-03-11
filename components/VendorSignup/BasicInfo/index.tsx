@@ -14,6 +14,7 @@ import { saveBasicInfo } from "@/lib/actions/basicInfo";
 interface StepProps {
   nextStep: () => void;
   prevStep: () => void;
+  userId: string;
 }
 interface BasicFormType {
   businessName: string;
@@ -37,7 +38,8 @@ const BasicSchema: ZodType<BasicFormType> = z.object({
     .max(500, "Description must be 500 characters or less"),
 });
 
-const BasicInfo: React.FC<StepProps> = ({ nextStep }) => {
+const BasicInfo: React.FC<StepProps> = ({ nextStep, userId }) => {
+  console.log(userId);
   const hookForm = useForm<BasicFormType>({
     resolver: zodResolver(BasicSchema),
   });
@@ -50,15 +52,17 @@ const BasicInfo: React.FC<StepProps> = ({ nextStep }) => {
 
   const onSubmit = async (data: BasicFormType) => {
     console.log(data);
-    const payload ={
+    const payload = {
       ...data,
-      userId : "67cf09ae858f8ce6d3f98bb8",
-      businessCategory:Number(data.businessCategory?.value)
-    }
-    const res = await saveBasicInfo(payload)
-    console.log(res,"responce")
+      userId: userId,
+      businessCategory: Number(data.businessCategory?.value),
+    };
+    const res = await saveBasicInfo(payload);
+    console.log(res, "responce");
     toaster.success("Success");
+    if(res.data?.userId){
     nextStep();
+  }
   };
 
   return (
@@ -169,7 +173,7 @@ const BasicInfo: React.FC<StepProps> = ({ nextStep }) => {
                   maxLength={500}
                 />
               </div>
-              <NextButton  type="submit" />
+              <NextButton type="submit" />
             </div>
           </form>
         </div>

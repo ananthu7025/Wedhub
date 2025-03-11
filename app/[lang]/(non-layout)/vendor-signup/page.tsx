@@ -1,13 +1,20 @@
 import React from "react";
+import Link from "next/link";
+import Image from "next/image";
+
+import { generatePath } from "@/utils/helpers";
 import frameOne from "@/assets/images/frame1.webp";
 import frameTwo from "@/assets/images/frame2.webp";
 import frameThree from "@/assets/images/frame3.webp";
 import frameFour from "@/assets/images/frame4.webp";
 import frameFive from "@/assets/images/frame5.webp";
-import Image from "next/image";
+import { getLanguage } from "@/utils/helpers-server";
 import Register from "@/components/VendorSignup/Register";
 
 const VendorReg = () => {
+
+  const lang = getLanguage();
+
   return (
     <>
       <div className="main">
@@ -44,9 +51,9 @@ const VendorReg = () => {
                   </h2>
                   <h1>Create your account.</h1>
                   <span>
-                    Already a member? <a href="login.html">Login</a>{" "}
+                    Already a member?{" "}
+                    <Link href={generatePath(lang, "/login")}>Login</Link>{" "}
                   </span>
-                  {/* <img src="images/logo.webp" alt=""> */}
                 </div>
                 <div className="google-login">
                   <span>
@@ -93,7 +100,7 @@ const VendorReg = () => {
                   </span>
                   <p>Continue with Google</p>
                 </div>
-              <Register/>
+                <Register />
               </div>
             </div>
           </div>

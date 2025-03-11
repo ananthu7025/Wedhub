@@ -1,6 +1,6 @@
 "use server";
 
-import { BusinessInfo } from "@/types";
+import { BusinessInfo, BusinessProfile } from "@/types";
 import {  httpPost, ResponseObject } from "../api";
 import { API_ENDPOINTS } from "@/config/api";
 
@@ -8,13 +8,9 @@ import { API_ENDPOINTS } from "@/config/api";
 export const saveBasicInfo = async (
   data: BusinessInfo
 ): Promise<
-  ResponseObject<{
-    id: string;
-  }>
+  ResponseObject<BusinessProfile>
 > =>
-  await httpPost<{
-    id: string;
-  }>(API_ENDPOINTS.VENDOR_REG.BASIC_INFO, data);
+  await httpPost<BusinessProfile>(API_ENDPOINTS.VENDOR_REG.BASIC_INFO, data);
 
 // // update Arbitration Agreement action
 // export const updateArbitrationAgreement = async (

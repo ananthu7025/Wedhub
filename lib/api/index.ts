@@ -23,7 +23,7 @@ async function withServerInterceptor<TData>(
   try {
     const resp = await serverAction();
     response.data = resp.data.data;
-
+    console.log(resp,"kjhgf")
     const messages = resp.data.messages;
 
     if (!messages || (messages && messages.length < 1))

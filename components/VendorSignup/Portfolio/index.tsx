@@ -8,14 +8,15 @@ import SkipSection from "../SkipBtn";
 import toaster from "@/lib/toastify";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { savePortfolio } from "@/lib/actions/portfolio";
 import uploadImage from "@/assets/images/add-media-icon.webp";
 import InputText from "@/components/InputComponents/InputText";
 import InputTextArea from "@/components/InputComponents/InputTextArea";
 
-
 interface StepProps {
   nextStep: () => void;
   prevStep: () => void;
+  userId: string;
 }
 
 type PortfolioType = {
@@ -34,7 +35,7 @@ const portfolioSchema: z.ZodType<PortfolioType> = z.object({
   }),
 });
 
-const Portfolio: React.FC<StepProps> = ({ nextStep,prevStep }) => {
+const Portfolio: React.FC<StepProps> = ({ nextStep, prevStep, userId }) => {
   const hookForm = useForm<PortfolioType>({
     resolver: zodResolver(portfolioSchema),
   });
@@ -43,14 +44,27 @@ const Portfolio: React.FC<StepProps> = ({ nextStep,prevStep }) => {
     formState: { errors },
   } = hookForm;
 
-  const onSubmit = (data: PortfolioType) => {
-    console.log(data);
+  const onSubmit = async (data: PortfolioType) => {
+    const payload = {
+      userId,
+      portfolio: [
+        {
+          title: data.portfolio.title ?? "",
+          description: data.portfolio.description ?? "",
+          media: data.portfolio.media ?? [],
+        },
+      ],
+    };
+
+    const res = await savePortfolio(payload);
+    console.log(res, "response");
     toaster.success("Success");
-    nextStep();
+    if (res.data?.userId) {
+      nextStep();
+    }
   };
 
   console.log(errors);
-
 
   return (
     <div className="boarding-form">
@@ -107,9 +121,9 @@ const Portfolio: React.FC<StepProps> = ({ nextStep,prevStep }) => {
                   </p>
                 </div>
               </div>
-              <NextButton  type="submit" />
+              <NextButton type="submit" />
             </div>
-            <SkipSection onSkip={nextStep}  />
+            <SkipSection onSkip={nextStep} />
           </form>
         </div>
       </div>

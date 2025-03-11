@@ -1,12 +1,15 @@
 "use client";
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import BasicInfo from "@/components/VendorSignup/BasicInfo";
 import Portfolio from "@/components/VendorSignup/Portfolio";
 import AdditionalInfo from "@/components/VendorSignup/AdditionalInfo";
 import PricingAndPackage from "@/components/VendorSignup/PricingAndPackage";
 
 const VendorSignup = () => {
+  const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
+  const userId = searchParams.get("id");
 
   const nextStep = () => {
     setCurrentStep((prevStep) => prevStep + 1);
@@ -19,15 +22,45 @@ const VendorSignup = () => {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <BasicInfo nextStep={nextStep} prevStep={prevStep} />;
+        return (
+          <BasicInfo
+            userId={userId ? userId : ""}
+            nextStep={nextStep}
+            prevStep={prevStep}
+          />
+        );
       case 2:
-        return <Portfolio nextStep={nextStep} prevStep={prevStep} />;
+        return (
+          <Portfolio
+            userId={userId ? userId : ""}
+            nextStep={nextStep}
+            prevStep={prevStep}
+          />
+        );
       case 3:
-        return <AdditionalInfo nextStep={nextStep} prevStep={prevStep} />;
+        return (
+          <AdditionalInfo
+            userId={userId ? userId : ""}
+            nextStep={nextStep}
+            prevStep={prevStep}
+          />
+        );
       case 4:
-        return <PricingAndPackage nextStep={nextStep} prevStep={prevStep} />;
+        return (
+          <PricingAndPackage
+            userId={userId ? userId : ""}
+            nextStep={nextStep}
+            prevStep={prevStep}
+          />
+        );
       default:
-        return <BasicInfo nextStep={nextStep} prevStep={prevStep} />;
+        return (
+          <BasicInfo
+            userId={userId ? userId : ""}
+            nextStep={nextStep}
+            prevStep={prevStep}
+          />
+        );
     }
   };
   console.log(currentStep, "c");
