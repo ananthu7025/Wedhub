@@ -3,10 +3,10 @@ import engContent from "./en";
 import ContentSchema from "./schema";
 
 const basic = {
-  project_description: "OAC Public Portal",
-  court_short_name: "OAC",
-  court_long_name: "Oman arbitration Centre",
-  arb_centre_name: "Oman commercial arbitration centre",
+  project_description: "WEDHUB",
+  court_short_name: "WEDHUB",
+  court_long_name: "WEDHUB",
+  arb_centre_name: "WEDHUB",
 };
 
 // first element will be considered as default
