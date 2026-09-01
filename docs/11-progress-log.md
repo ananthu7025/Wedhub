@@ -16,7 +16,7 @@
 | 3 | User Module | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 4 | Category & Location Catalog | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 5 | Vendor Module | [Stage 2](04-stage-marketplace-supply.md) | ✅ Done | 2026-09-02 |
-| 6 | Media & Portfolio | [Stage 2](04-stage-marketplace-supply.md) | ⬜ Not Started | — |
+| 6 | Media & Portfolio | [Stage 2](04-stage-marketplace-supply.md) | ⚠️ Code done, R2 unverified | 2026-09-02 |
 | 7 | Search & Discovery | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
 | 8 | Favorites, Shortlists & Comparison | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
 | 9 | Enquiries & Leads | [Stage 4](06-stage-lead-engine.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 6 / 26 Arch Phases complete. Stage 1 (Foundation) is fully done.**
+**Overall: 7 / 26 Arch Phases complete (Phase 6's R2 upload flow pending real credentials). Stage 1 (Foundation) and Stage 2 (Marketplace Supply) are code-complete.**
 
 ---
 
@@ -530,3 +530,85 @@ Route B (admin-created)
 - **Profile completeness is intentionally a partial formula** — media/portfolio fields (logo, cover, portfolio count) don't exist as real data until Arch Phase 6, so they carry no weight yet. This will need a formula revision and a one-time recalculation pass across existing vendors once Phase 6 ships — flagged as expected follow-up work, not a defect. Verified live: the test vendor's score moved from 0 → 50 → 65 → 70 as fields were filled in, confirming the weighted-checklist mechanism itself works correctly.
 - **Slug is frozen once a vendor leaves `DRAFT`** — `PATCH /vendors/me/detail`'s `businessName` update never touches the slug (unlike the categories/locations modules, where the slug *is* derived from the name on create). A slug change post-DRAFT would need to be an explicit admin-only field edit via `PATCH /admin/vendors/:id`, not an automatic side effect — this avoids silently breaking a publicly-indexed vendor's inbound links/SEO equity.
 - Verified end-to-end: full Route A walkthrough (shell → profile → category → attributes → service → package → city → submit → email-verify → auto-advance → admin-approve → public visibility); full Route B walkthrough (admin shell → invitation → public resolve → claim-by-register → immediate authenticated access, confirmed via a fresh `/vendors/me/detail` call); cross-vendor isolation (a second vendor's `PATCH` never touched the first vendor's data); invitation one-time-use (a reused token correctly rejected). `onDelete: Restrict` on `vendor_invitations.invited_by_admin_id` correctly blocked deleting a test admin who had issued an invitation — a genuine safety feature encountered during test cleanup, not a bug. Confirmed full reproducibility: `docker compose down -v` → migrate (all 6 migrations, partial index included) → seed (categories, services, locations) → health check, all on a completely fresh database.
+
+## Arch Phase 6 — Media & Portfolio
+
+**Status:** ⚠️ Code done, live R2 flow unverified — 2026-09-02
+**Stage:** [Stage 2 — Marketplace Supply](04-stage-marketplace-supply.md) — **this phase completes Stage 2 (code-complete; see caveat below).**
+
+### What this unlocks
+
+Real object storage for vendor media: logos, cover images, portfolio photos, and video. The placeholder `avatarMediaId`/`logoMediaId`/`coverMediaId` UUID columns from Arch Phases 3 and 5 gain real foreign keys now that `media` exists. Introduces Redis + BullMQ into the app for the first time (pulled forward from Arch Phase 14), and the first background worker process, separate from the API server.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| POST | `/api/v1/media/upload-requests` | Request a signed R2 upload URL, creates a PENDING media row | owned vendor |
+| POST | `/api/v1/media/:id/confirm` | Confirm upload, enqueue background processing | owned vendor |
+| GET | `/api/v1/media/me` | List own vendor's media | owned vendor |
+| PATCH | `/api/v1/media/:id` | Update altText, sortOrder, albumId | owned vendor |
+| DELETE | `/api/v1/media/:id` | Delete from R2, mark row DELETED | owned vendor |
+| GET | `/api/v1/admin/media/:id` | Admin detail view | ADMIN |
+| POST | `/api/v1/admin/media/:id/moderate` | Set moderationStatus | ADMIN |
+| POST/GET | `/api/v1/vendors/me/albums` | Create/list own albums | owned vendor |
+| PATCH/DELETE | `/api/v1/vendors/me/albums/:id` | Update/delete an album (media un-albums, doesn't delete) | owned vendor |
+| GET | `/api/v1/vendors/:slug/albums` | Public album listing (PUBLIC visibility only, APPROVED vendor only) | none |
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `media` | Generic media record, scoped to vendor ownership | `vendor_id`, `album_id` (nullable), `media_type`, `original/optimized/thumbnail_object_key`, `status`, `moderation_status`, `checksum` |
+| `albums` | Organizational layer over media | `vendor_id`, `name`, `cover_media_id`, `visibility` (PUBLIC/PRIVATE) |
+
+`user_profiles.avatar_media_id`, `vendor_profiles.logo_media_id`, `vendor_profiles.cover_media_id` all gained real FK constraints to `media.id` (`onDelete: SetNull`) in this same migration.
+
+### Flow
+
+```
+POST /media/upload-requests
+     │
+     ▼
+media.service.createUploadRequest()
+     │  validate MIME type matches mediaType, file size within
+     │  MEDIA_MAX_IMAGE_SIZE_MB/MEDIA_MAX_VIDEO_SIZE_MB, portfolio
+     │  count within MEDIA_MAX_PORTFOLIO_ITEMS
+     │
+     ├─► r2.client.getSignedUploadUrl()   (requested BEFORE the DB row —
+     │        │                            see Notes: ordering bug fixed)
+     │        ▼
+     │   throws ExternalServiceError if R2_* env vars aren't set
+     │
+     ▼ (only on success)
+media row created, status=PENDING
+     │
+     ▼
+Browser uploads directly to R2 using the signed URL (Node never touches the bytes)
+     │
+     ▼
+POST /media/:id/confirm
+     │  HEAD-checks the object actually exists in R2
+     ▼
+status=PROCESSING, enqueueMediaProcessing(mediaId) → BullMQ queue "media-processing"
+     │
+     ▼
+[separate process: npm run worker]
+media-processing.processor.ts
+     │  downloads original from R2, sharp: resize to large/medium/thumbnail,
+     │  re-encode as WebP, re-upload each variant
+     ▼
+status=READY, optimizedObjectKey/thumbnailObjectKey/width/height set
+     (status=FAILED + error logged on any failure — never silently swallowed)
+```
+
+### Notes
+
+- **This phase has a real, explicitly-flagged gap: the live R2 upload → confirm → process → READY flow has not been verified end-to-end**, because no real Cloudflare R2 bucket credentials exist yet. `R2_*` env vars are optional at the schema-validation layer (so the app boots and everything else is testable) but required at the point of actual use — `r2.client.ts`'s `getClient()` throws a clear `ExternalServiceError` ("Object storage is not configured...") the moment a signed URL is actually requested, rather than failing silently or with a cryptic AWS SDK error. Verified this exact failure mode live: a well-formed upload-request correctly 502s with that message. **Next step for a real verification pass: create a Cloudflare R2 bucket, add its credentials to `.env`, run `npm run worker` alongside `npm run dev`, and walk the full flow.**
+- **A real ordering bug was caught and fixed during verification, not left in:** the first implementation created the `media` DB row *before* calling `getSignedUploadUrl()`. Since R2 isn't configured, that call throws — and the row it already created was left behind as a permanently-orphaned `PENDING` record with no way to ever get an upload URL (confirmed via direct DB query: the row existed after the 502 response). Fixed by requesting the signed URL first and only creating the DB row once that succeeds; re-verified the same failure no longer leaves an orphaned row.
+- **Redis + BullMQ introduced for the first time**, pulled forward from Arch Phase 14 since this stage's own acceptance criteria ("never make a normal HTTP request wait for expensive media processing") genuinely needs a real queue now. `REDIS_URL` is now a **required** env var (Docker's Redis container has existed since Phase 0 but nothing connected to it until now). Verified `npm run worker` starts cleanly and connects to Redis without needing R2 at all (R2 is only touched when an actual job runs).
+- **The worker is a separate process** (`npm run worker` → `src/worker.ts`), never imported into `server.ts` — a crash during image processing can't take down the API. Has its own `SIGTERM`/`SIGINT` shutdown handling, mirroring `server.ts`'s pattern.
+- **`vendor_attribute_values`-style typed-column reasoning was NOT repeated here** — `media` stores object keys as plain strings, not a polymorphic value system, since object keys aren't a closed enum needing type-based branching the way category attributes are.
+- **Album deletion un-albums its media rather than deleting it** — `album.repository.deleteAlbum()` runs `media.updateMany({ albumId: null })` and the album delete in one transaction. Verified live: deleting a test album succeeded without needing to handle orphaned media specially.
+- **Routing precedence**: `/vendors/me/albums` and `/vendors/:slug/albums` are both mounted in `routes/index.ts` *before* `/vendors` itself, for the same reason `/vendors/claim` needed to be — otherwise `vendorRouter`'s public `GET /:slug` would greedily match `/vendors/me/albums` as if `"me"` were a slug. Verified live: `/vendors/me/albums` and `/vendors/me/detail` both resolved correctly with no collision.
+- Verified end-to-end (everything not requiring a real R2 round-trip): invalid MIME type rejected at the Zod layer; oversized file rejected with the exact configured limit in the message; mediaType/mimeType mismatch (e.g. VIDEO with an image MIME type) rejected; a well-formed request correctly fails with the object-storage-not-configured error (and, post-fix, without leaving an orphaned row); full album CRUD (create, list, update visibility, delete); private albums correctly excluded from public listings; cross-vendor album access denied with a 404 (not leaking existence); admin moderation correctly gated to ADMIN role and 404s for nonexistent media. Confirmed full reproducibility: `docker compose down -v` → migrate (all 7 migrations, including the FK-adding migration on existing columns) → seed → health check, all on a completely fresh database. `npm run worker` confirmed to start cleanly.
