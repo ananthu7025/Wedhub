@@ -11,7 +11,7 @@
 | Arch Phase | Name | Stage | Status | Completed |
 |---|---|---|---|---|
 | 0 | Architecture & Repository Setup | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
-| 1 | PostgreSQL & ORM Foundation | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
+| 1 | PostgreSQL & ORM Foundation | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 2 | Authentication & Authorization | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
 | 3 | User Module | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
 | 4 | Category & Location Catalog | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 1 / 26 Arch Phases complete.**
+**Overall: 2 / 26 Arch Phases complete.**
 
 ---
 
@@ -133,3 +133,61 @@ unmatched route ──► notFoundMiddleware ──► 404 in the same standard 
 - `tsconfig.json` uses `exactOptionalPropertyTypes: true` — stricter than a typical starter config, but caught two real type-shape issues during setup (an over-loose `details?` field, and a `meta` field typed too generically for `paginatedResponse`) before any real feature code was written on top of them.
 - A known moderate/high/critical `npm audit` finding traces entirely to `esbuild`, a transitive dependency of `vitest`'s dev-only tooling (Vite dev server) — it does not affect the running Express application. Left unresolved for now since fixing it requires a breaking `vitest` v4 upgrade; revisit when Arch Phase 20 (Testing) is implemented.
 - Git repository initialized at the `WedHub/` root (not just inside `wedhub-backend/`) so `docs/`, `product.md`, and the architecture doc are version-controlled alongside the backend code.
+
+## Arch Phase 1 — PostgreSQL & ORM Foundation
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 1 — Foundation](03-stage-foundation.md)
+
+### What this unlocks
+
+PostgreSQL is now the live source of truth: Prisma schema, first migration, and a seed script are all applied against a real Postgres container. The app's `/health` endpoint reports actual database connectivity (not just process liveness), and a `PrismaClient` singleton is available for every module built from here on. Dynamic, DB-driven RBAC (`roles`/`permissions`/`role_permissions`) is seeded and ready for Arch Phase 2 (Auth) to consume — no API endpoints exist yet, this phase is schema + client + migration only.
+
+### APIs completed
+
+None — schema-only phase. `GET /health` (from Arch Phase 0) was extended to report `database: "connected" | "unreachable"` alongside process status.
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `users` | Core account record for every actor | `id`, `email` (unique), `phone` (unique, nullable), `password_hash`, `role` (enum), `status` (enum), `deleted_at` (soft delete) |
+| `user_profiles` | 1:1 profile data separate from auth-critical fields | `user_id` (pk/fk), `first_name`, `last_name`, `preferences` (JSONB) |
+| `roles` | Dynamic, admin-manageable permission groups (distinct from the coarse `User.role` enum) | `id`, `name` (unique), `is_system` |
+| `permissions` | Individual permission strings, e.g. `vendor:approve` | `id`, `resource`, `action` (unique together) |
+| `role_permissions` | Many-to-many join | `role_id`, `permission_id` (composite pk) |
+| `admin_users` | Marks a user as staff and assigns their dynamic role | `user_id` (pk/fk), `role_id` (fk) |
+| `audit_logs` | Append-only record of admin mutations | `id`, `actor_id`, `action`, `entity_type`/`entity_id`, `before`/`after` (JSONB) |
+
+Seed data: 14 system permissions and 3 system roles (`super_admin` → all 14; `end_user` and `vendor` → 5 scoped permissions each).
+
+### Flow
+
+```
+prisma/schema.prisma
+     │
+     ▼
+npx prisma migrate dev   ──►  applies SQL migration  ──►  Postgres (Docker, host port 5433)
+     │
+     ▼
+npx prisma generate      ──►  typed PrismaClient  ──►  src/config/database.ts (singleton)
+                                                              │
+                                                              ├─→ app.ts's /health handler
+                                                              │     runs prisma.$queryRaw`SELECT 1`
+                                                              │     → 200 {database:"connected"}
+                                                              │     → 503 {database:"unreachable"} on failure
+                                                              │
+                                                              └─→ server.ts's shutdown handler
+                                                                    calls disconnectDatabase() before exit
+
+npm run db:seed  ──►  prisma/seed.ts  ──►  upserts permissions → roles → role_permissions
+```
+
+### Notes
+
+- **Port conflict discovered and resolved:** this machine already runs a native Windows PostgreSQL service bound to port 5432, separate from Docker. The container's host port was remapped to **5433** in `docker-compose.yml` (and `DATABASE_URL`/`.env.example` updated to match) rather than touching the native service. If you set this up on a different machine, port 5432 may work fine — check for a conflict first (`netstat -ano | findstr 5432` on Windows) before assuming.
+- **`prisma.config.ts` added** — Prisma's newer config-file approach replaces the deprecated `package.json#prisma.seed` field. It does not auto-load `.env` the way the old integration did, so it calls `process.loadEnvFile(".env")` explicitly. This raised the effective Node minimum from ≥20.6 (Phase 0) to **≥20.12** (`package.json` engines and the README updated accordingly).
+- **RBAC design decision:** `roles`/`permissions`/`role_permissions` are modeled as dynamic, database-driven tables (not a hardcoded enum) specifically to satisfy product.md's admin-configurable staff-permission requirement (Super Admin, Operations Admin, Vendor Manager, Sales, Finance, Content Manager, Moderator, Support). Only generic bootstrap roles (`super_admin`, `end_user`, `vendor`) are seeded now; the specific named admin roles get seeded when Arch Phase 16 (Admin) actually implements permission management — seeding them speculatively now would be unused scaffolding.
+- **`avatar_media_id` and `city_id`** on `user_profiles` are plain nullable UUID columns with no foreign-key constraint yet, since the `media` and `locations` tables don't exist until Arch Phase 6 and Arch Phase 4 respectively. The FK constraints should be added in a follow-up migration once those tables land — noting this so it isn't forgotten.
+- **A new `npm audit` finding** appeared after installing `prisma`: a high-severity `deepmerge-ts` stack-exhaustion advisory, reachable only through `@prisma/config`'s dev-time config merging (not the running app). `npm audit fix` did not resolve it without a Prisma major-version bump; left as-is for the same reason as the pre-existing `esbuild`/vitest finding — revisit at Arch Phase 19 (Security Hardening) rather than force an upgrade now.
+- Verified full reproducibility: `docker compose down -v` (destroys the volume) → `docker compose up -d` → `prisma migrate dev` → `db:seed` produced an identical table/seed-data state to the first run.

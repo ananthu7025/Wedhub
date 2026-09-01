@@ -38,13 +38,15 @@ Maps in full to **Product Phase 1 — Foundation** (product.md §70: architectur
 
 See [`11-progress-log.md`](11-progress-log.md#arch-phase-0--architecture--repository-setup) for the full write-up.
 
-### Arch Phase 1 — PostgreSQL & ORM Foundation
-- [ ] Install ORM (Prisma/Drizzle), configure `DATABASE_URL`
-- [ ] Create schema, configure migrations, UUID strategy, timestamps
-- [ ] Database client singleton, database health check
-- [ ] Configure development/staging databases, document production setup
-- [ ] Seed system
-- [ ] First models: `users`, `user_profiles`, `roles`/`permissions`, `audit_logs`
+### Arch Phase 1 — PostgreSQL & ORM Foundation ✅ Done — 2026-09-02
+- [x] Install ORM (Prisma/Drizzle), configure `DATABASE_URL`
+- [x] Create schema, configure migrations, UUID strategy, timestamps
+- [x] Database client singleton, database health check
+- [x] Configure development/staging databases, document production setup (dev only for now — staging/production documented as a later-phase task, not blocking)
+- [x] Seed system
+- [x] First models: `users`, `user_profiles`, `roles`/`permissions`, `audit_logs`
+
+See [`11-progress-log.md`](11-progress-log.md#arch-phase-1--postgresql--orm-foundation) for the full write-up.
 
 ### Arch Phase 2 — Authentication & Authorization
 - [ ] Registration, login, logout
