@@ -68,12 +68,16 @@ See [`11-progress-log.md`](11-progress-log.md#arch-phase-2--authentication--auth
 
 See [`11-progress-log.md`](11-progress-log.md#arch-phase-3--user-module) for the full write-up.
 
-### Arch Phase 4 — Category & Location Catalog
-- [ ] Category CRUD, subcategory CRUD, ordering, activation/deactivation
-- [ ] Category attributes
-- [ ] Location hierarchy: country, state/province, city, neighborhood, service areas
-- [ ] Admin management APIs for both
-- [ ] Seed initial wedding categories and target cities
+### Arch Phase 4 — Category & Location Catalog ✅ Done — 2026-09-02
+- [x] Category CRUD, subcategory CRUD, ordering, activation/deactivation
+- [x] Category attributes (structured attribute-definition table, not JSONB blob)
+- [x] Location hierarchy: country, state/province, city, area (product.md's term — see Open Questions)
+- [x] Admin management APIs for both
+- [x] Seed initial wedding categories and target cities (India-first — see Open Questions)
+
+See [`11-progress-log.md`](11-progress-log.md#arch-phase-4--category--location-catalog) for the full write-up.
+
+**Stage 1 (Foundation) is now complete — Arch Phases 0 through 4 all done.**
 
 ## Acceptance Criteria
 
@@ -90,3 +94,4 @@ Strictly linear: Arch Phase 0 → 1 → 2 → 3 → 4, matching architecture.md 
 ## Open Questions
 
 - **Verification-level enum mismatch** ([Risk 6](10-risks-and-open-questions.md#6-verification-level-enum-mismatch)) — not implemented in this stage, but the `admin_users`/roles schema design here should leave room for whichever verification enum is eventually chosen, so Stage 2 doesn't require a schema rework.
+- **Two doc inconsistencies resolved during Arch Phase 4, not silently:** (1) architecture.md §38's admin task list says "neighborhoods" for the finest location tier, product.md §8's hierarchy definition says "Area" — standardized on `Area`/`AREA` since that's the actual hierarchy definition, not just a task-list word choice. (2) architecture.md §8's only location example is Toronto/Canada, but product.md §26 states an explicit India-first launch strategy (Razorpay, ₹ pricing) — seeded India + major metro cities instead of the incidental Toronto example, since the example was illustrating the service-area *concept*, not a target market commitment.

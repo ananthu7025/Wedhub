@@ -14,7 +14,7 @@
 | 1 | PostgreSQL & ORM Foundation | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 2 | Authentication & Authorization | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 3 | User Module | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
-| 4 | Category & Location Catalog | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
+| 4 | Category & Location Catalog | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 5 | Vendor Module | [Stage 2](04-stage-marketplace-supply.md) | ⬜ Not Started | — |
 | 6 | Media & Portfolio | [Stage 2](04-stage-marketplace-supply.md) | ⬜ Not Started | — |
 | 7 | Search & Discovery | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 4 / 26 Arch Phases complete.**
+**Overall: 5 / 26 Arch Phases complete. Stage 1 (Foundation) is fully done.**
 
 ---
 
@@ -337,3 +337,85 @@ users.service → users.repository (Prisma)
 - **Anonymization keeps the `users` row** rather than hard-deleting it — per the soft-delete convention and architecture.md §47 ("do not automatically physically delete important business records"). Verified via direct DB query: email scrambled to `deleted-<uuid>@wedhub.invalid`, phone cleared, password hash replaced with an unusable random value, `deleted_at` set, all profile PII nulled, wedding profile removed, and all refresh tokens revoked — then confirmed login with the original email fails (no account resolves to it anymore).
 - **Self-deactivation vs. anonymization are deliberately separate, distinct actions** — deactivation is reversible (nothing in this phase re-activates it yet; that's an admin/future concern), anonymization is one-way. Kept as two endpoints so "I want a break" and "delete my data" aren't conflated.
 - Verified end-to-end: `GET /me` before/after `PATCH /me` (full and partial updates — confirmed partial updates leave untouched fields intact), wedding profile create/partial-update/delete, deactivation blocking login, and full anonymization blocking login with the original credentials. Also confirmed full reproducibility via `docker compose down -v` → migrate (all 4 migrations in sequence) → seed → health check on a completely fresh database.
+
+## Arch Phase 4 — Category & Location Catalog
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 1 — Foundation](03-stage-foundation.md) — **this phase completes Stage 1.**
+
+### What this unlocks
+
+The dynamic, admin-managed taxonomy the whole marketplace is organized around: 20 wedding-service categories (with subcategory support via self-referencing `parentId`), a structured attribute-definition system per category (not just a JSONB blob — genuinely queryable, ready for Arch Phase 7's search filters and the comparison engine referenced in product.md §16), and a Country → State → City → Area location hierarchy seeded with India-first data. Arch Phase 5 (Vendors) can now assign a vendor to a real category and city instead of a placeholder.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/categories` | List active categories with their attributes | None |
+| GET | `/api/v1/categories/:slug` | Get one category + attributes + subcategories | None |
+| POST | `/api/v1/categories` | Create a category or subcategory | ADMIN |
+| PATCH | `/api/v1/categories/:id` | Update name/description/sortOrder/isActive | ADMIN |
+| POST | `/api/v1/categories/:id/attributes` | Define a new attribute on a category | ADMIN |
+| PATCH | `/api/v1/categories/:id/attributes/:attributeId` | Update an attribute definition | ADMIN |
+| DELETE | `/api/v1/categories/:id/attributes/:attributeId` | Remove an attribute definition | ADMIN |
+| GET | `/api/v1/locations` | List locations, filtered by `?type=` / `?parentId=` | None |
+| POST | `/api/v1/locations` | Create a location node (hierarchy-checked) | ADMIN |
+| PATCH | `/api/v1/locations/:id` | Update a location node | ADMIN |
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `categories` | Self-referencing category/subcategory tree | `id`, `name`, `slug` (unique), `parent_id` (self-fk), `sort_order`, `is_active` |
+| `category_attributes` | Admin-defined attribute *schema* per category (not vendor-filled values — those arrive in Arch Phase 5) | `id`, `category_id`, `key`, `label`, `data_type` (enum), `options` (JSONB, SELECT/MULTI_SELECT only), `is_filterable`, `is_comparable` |
+| `locations` | Self-referencing Country/State/City/Area hierarchy in one polymorphic table | `id`, `type` (enum), `name`, `slug`, `parent_id` (self-fk) |
+
+Seeded: 20 categories (product.md §13's full list), attribute definitions for Photography (5), Venues (6), and Makeup Artists (4) from product.md §7, plus India → 5 states → 6 metro cities (Mumbai, Delhi, Bengaluru, Chennai, Hyderabad, Pune).
+
+### Flow
+
+```
+GET /categories (public)
+     │
+     ▼
+categories.repository.findActiveCategories()
+     │  (include: attributes, ordered by sortOrder)
+     ▼
+returns categories the public site/app can render with real filter/comparison metadata
+
+POST /categories/:id/attributes (ADMIN only)
+     │
+     ▼
+authenticateMiddleware → authorize(Role.ADMIN)
+     │
+     ▼
+createAttributeSchema.superRefine()
+     │  SELECT/MULTI_SELECT → options required
+     │  BOOLEAN/NUMBER/TEXT → options must be absent
+     ▼
+categories.service.createAttribute() → unique-constraint-violation caught
+     │  and translated to ConflictError (not a raw Postgres error)
+     ▼
+category_attributes row created
+
+POST /locations (ADMIN only)
+     │
+     ▼
+locations.service.createLocation()
+     │  looks up LOCATION_HIERARCHY[type] → expected parent type
+     │  COUNTRY expects no parent; STATE expects COUNTRY; CITY expects STATE; AREA expects CITY
+     │  mismatch → ValidationError naming the actual vs. expected parent type
+     ▼
+locations row created with a slug unique per (parentId, slug) — not globally unique,
+so "Delhi" the city and a hypothetical "Delhi" area under a different city could coexist
+```
+
+### Notes
+
+- **Two doc inconsistencies found and resolved, not silently:** (1) architecture.md's admin task list says "neighborhoods" for the finest location tier, product.md's hierarchy definition says "Area" — standardized on `Area`/`AREA` since it's the actual schema-defining term. (2) architecture.md's only location example is Toronto/Canada; product.md states an explicit India-first launch strategy (Razorpay, ₹ pricing elsewhere in the same doc) — seeded India + metro cities instead, since the Toronto example was illustrating the *service-area concept*, not committing to a launch market.
+- **Design choice, not oversight:** `locations` is one polymorphic self-referencing table (type + parentId distinguish tiers) rather than four separate `countries`/`states`/`cities`/`areas` tables. Simpler to seed and query generically, at the cost of the database itself not enforcing "a CITY's parent must be a STATE" — that invariant lives in `locations.service.ts` instead, and was verified working (a CITY under a COUNTRY, and a COUNTRY with a parent, both correctly rejected with a 400 naming the mismatch).
+- **`category_attributes` is a schema-definition table, not vendor data.** It defines *what* attributes a category has (e.g. Photography has a "Photography Style" attribute with three SELECT options) — it does not store any particular vendor's answer to that attribute. Vendor-supplied attribute *values* arrive with the vendor model in Arch Phase 5. Worth being explicit about this since the table name alone doesn't make the distinction obvious.
+- **`omitUndefined`/`DefinedFields<T>` helper extracted to `common/utils/object.util.ts`** — first written ad hoc in the Arch Phase 3 users module, now a shared utility since categories and locations needed the identical pattern for `exactOptionalPropertyTypes`-safe partial updates. Also added `validateQuery` alongside the existing `validateBody` in `common/middleware/validate.middleware.ts`, since this is the first module needing query-string validation (`?type=`, `?parentId=`) — both will very likely be needed by every future list/search endpoint.
+- **A Prisma-specific gotcha hit during seeding:** `prisma.location.upsert()` with a compound-unique `where` clause (`{ parentId_slug: { parentId: null, slug: ... } }`) rejects a literal `null` for the key field, even though the underlying Postgres unique index handles `NULL` correctly. Only affects the one parent-less row (India, the country); worked around with `findFirst` + conditional `create` instead of `upsert` for that single case — states and cities always have a real parent, so their `upsert` calls are unaffected.
+- **Found and safely handled a second stray credential file** in the repo working directory (`rzp-key (1).csv`, a Razorpay test-mode key/secret pair) — same pattern as the earlier `server.md` SSH-credential file from Arch Phase 0. Neither was created by this session; both are left on disk (may be intentional local files for later Razorpay integration work in Arch Phase 11) but added to `.gitignore` so they can't be accidentally committed.
+- Verified end-to-end: public category/location reads work unauthenticated; category and location writes correctly return 401 (no token) / 403 (wrong role) / 201 (ADMIN); SELECT-without-options and BOOLEAN-with-options both rejected with clear validation messages; deactivating a category removes it from the public list; location hierarchy invariants enforced in both directions. Confirmed full reproducibility and seed idempotency: `docker compose down -v` → migrate (all 5 migrations) → seed → re-seed (identical row counts, no duplicates) → health check, all on a completely fresh database.
