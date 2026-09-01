@@ -16,7 +16,7 @@
 | 3 | User Module | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 4 | Category & Location Catalog | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 5 | Vendor Module | [Stage 2](04-stage-marketplace-supply.md) | ✅ Done | 2026-09-02 |
-| 6 | Media & Portfolio | [Stage 2](04-stage-marketplace-supply.md) | ⚠️ Code done, R2 unverified | 2026-09-02 |
+| 6 | Media & Portfolio | [Stage 2](04-stage-marketplace-supply.md) | ✅ Done | 2026-09-02 |
 | 7 | Search & Discovery | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
 | 8 | Favorites, Shortlists & Comparison | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
 | 9 | Enquiries & Leads | [Stage 4](06-stage-lead-engine.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 7 / 26 Arch Phases complete (Phase 6's R2 upload flow pending real credentials). Stage 1 (Foundation) and Stage 2 (Marketplace Supply) are code-complete.**
+**Overall: 7 / 26 Arch Phases complete. Stage 1 (Foundation) and Stage 2 (Marketplace Supply) are both fully done.**
 
 ---
 
@@ -533,8 +533,8 @@ Route B (admin-created)
 
 ## Arch Phase 6 — Media & Portfolio
 
-**Status:** ⚠️ Code done, live R2 flow unverified — 2026-09-02
-**Stage:** [Stage 2 — Marketplace Supply](04-stage-marketplace-supply.md) — **this phase completes Stage 2 (code-complete; see caveat below).**
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 2 — Marketplace Supply](04-stage-marketplace-supply.md) — **this phase completes Stage 2.**
 
 ### What this unlocks
 
@@ -604,11 +604,11 @@ status=READY, optimizedObjectKey/thumbnailObjectKey/width/height set
 
 ### Notes
 
-- **This phase has a real, explicitly-flagged gap: the live R2 upload → confirm → process → READY flow has not been verified end-to-end**, because no real Cloudflare R2 bucket credentials exist yet. `R2_*` env vars are optional at the schema-validation layer (so the app boots and everything else is testable) but required at the point of actual use — `r2.client.ts`'s `getClient()` throws a clear `ExternalServiceError` ("Object storage is not configured...") the moment a signed URL is actually requested, rather than failing silently or with a cryptic AWS SDK error. Verified this exact failure mode live: a well-formed upload-request correctly 502s with that message. **Next step for a real verification pass: create a Cloudflare R2 bucket, add its credentials to `.env`, run `npm run worker` alongside `npm run dev`, and walk the full flow.**
+- **The live R2 upload → confirm → process → READY flow is now verified end-to-end against a real Cloudflare R2 bucket** (`wedhub-dev`). Walked the full real flow: registered a fresh VENDOR account → created a vendor shell → `POST /media/upload-requests` for a PORTFOLIO image returned a genuine presigned R2 URL → uploaded a real 1600×1200 JPEG directly to that URL (200 from R2, Node never touched the bytes) → `POST /media/:id/confirm` HEAD-checked the object in R2 and enqueued the BullMQ job → the separate `npm run worker` process picked up the job within ~2s, downloaded the original, generated `medium.webp` and `thumbnail.webp` variants via sharp, and flipped status to `READY` with real extracted `width`/`height` (1600×1200). Fetched both generated variants directly from the public R2 URL (200, correct `image/webp` content-type) to confirm they exist in the bucket, not just referenced in the DB. Also verified `DELETE /media/:id` removes the objects from R2 for real — refetching the same public URL after deletion returned 404. Before this run, the missing-credentials path was already confirmed to fail with a clear `ExternalServiceError` rather than a cryptic one; both states are now covered.
 - **A real ordering bug was caught and fixed during verification, not left in:** the first implementation created the `media` DB row *before* calling `getSignedUploadUrl()`. Since R2 isn't configured, that call throws — and the row it already created was left behind as a permanently-orphaned `PENDING` record with no way to ever get an upload URL (confirmed via direct DB query: the row existed after the 502 response). Fixed by requesting the signed URL first and only creating the DB row once that succeeds; re-verified the same failure no longer leaves an orphaned row.
 - **Redis + BullMQ introduced for the first time**, pulled forward from Arch Phase 14 since this stage's own acceptance criteria ("never make a normal HTTP request wait for expensive media processing") genuinely needs a real queue now. `REDIS_URL` is now a **required** env var (Docker's Redis container has existed since Phase 0 but nothing connected to it until now). Verified `npm run worker` starts cleanly and connects to Redis without needing R2 at all (R2 is only touched when an actual job runs).
 - **The worker is a separate process** (`npm run worker` → `src/worker.ts`), never imported into `server.ts` — a crash during image processing can't take down the API. Has its own `SIGTERM`/`SIGINT` shutdown handling, mirroring `server.ts`'s pattern.
 - **`vendor_attribute_values`-style typed-column reasoning was NOT repeated here** — `media` stores object keys as plain strings, not a polymorphic value system, since object keys aren't a closed enum needing type-based branching the way category attributes are.
 - **Album deletion un-albums its media rather than deleting it** — `album.repository.deleteAlbum()` runs `media.updateMany({ albumId: null })` and the album delete in one transaction. Verified live: deleting a test album succeeded without needing to handle orphaned media specially.
 - **Routing precedence**: `/vendors/me/albums` and `/vendors/:slug/albums` are both mounted in `routes/index.ts` *before* `/vendors` itself, for the same reason `/vendors/claim` needed to be — otherwise `vendorRouter`'s public `GET /:slug` would greedily match `/vendors/me/albums` as if `"me"` were a slug. Verified live: `/vendors/me/albums` and `/vendors/me/detail` both resolved correctly with no collision.
-- Verified end-to-end (everything not requiring a real R2 round-trip): invalid MIME type rejected at the Zod layer; oversized file rejected with the exact configured limit in the message; mediaType/mimeType mismatch (e.g. VIDEO with an image MIME type) rejected; a well-formed request correctly fails with the object-storage-not-configured error (and, post-fix, without leaving an orphaned row); full album CRUD (create, list, update visibility, delete); private albums correctly excluded from public listings; cross-vendor album access denied with a 404 (not leaking existence); admin moderation correctly gated to ADMIN role and 404s for nonexistent media. Confirmed full reproducibility: `docker compose down -v` → migrate (all 7 migrations, including the FK-adding migration on existing columns) → seed → health check, all on a completely fresh database. `npm run worker` confirmed to start cleanly.
+- Verified end-to-end, including the real R2 round-trip: invalid MIME type rejected at the Zod layer; oversized file rejected with the exact configured limit in the message; mediaType/mimeType mismatch (e.g. VIDEO with an image MIME type) rejected; missing-credentials path fails with the object-storage-not-configured error without leaving an orphaned row; the real upload → confirm → background-process → READY flow against a live `wedhub-dev` R2 bucket (see the note above); real object deletion from R2 on `DELETE /media/:id`; full album CRUD (create, list, update visibility, delete); private albums correctly excluded from public listings; cross-vendor album access denied with a 404 (not leaking existence); admin moderation correctly gated to ADMIN role and 404s for nonexistent media. Confirmed full reproducibility: `docker compose down -v` → migrate (all 7 migrations, including the FK-adding migration on existing columns) → seed → health check, all on a completely fresh database. `npm run worker` confirmed to start cleanly and to process a real job end-to-end.
