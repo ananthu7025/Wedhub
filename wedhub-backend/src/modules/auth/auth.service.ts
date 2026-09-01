@@ -117,6 +117,14 @@ export async function login(
     throw new AuthenticationError("Invalid credentials");
   }
 
+  if (user.status === "DEACTIVATED") {
+    throw new AuthenticationError("This account has been deactivated");
+  }
+
+  if (user.status === "SUSPENDED") {
+    throw new AuthenticationError("This account has been suspended. Contact support for assistance.");
+  }
+
   await authRepository.recordSuccessfulLogin(user.id);
   const tokens = await issueTokenPair(user.id, user.role as Role, context);
 

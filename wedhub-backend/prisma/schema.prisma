@@ -36,6 +36,7 @@ model User {
   deletedAt           DateTime?  @map("deleted_at")
 
   profile                 UserProfile?
+  weddingProfile          WeddingProfile?
   adminUser               AdminUser?
   auditLogs               AuditLog[]
   refreshTokens           RefreshToken[]
@@ -51,6 +52,7 @@ model UserProfile {
   userId        String   @id @map("user_id") @db.Uuid
   firstName     String?  @map("first_name")
   lastName      String?  @map("last_name")
+  avatarUrl     String?  @map("avatar_url")
   avatarMediaId String?  @map("avatar_media_id") @db.Uuid
   cityId        String?  @map("city_id") @db.Uuid
   bio           String?
@@ -61,6 +63,25 @@ model UserProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_profiles")
+}
+
+model WeddingProfile {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @unique @map("user_id") @db.Uuid
+  weddingDate     DateTime? @map("wedding_date")
+  cityId          String?   @map("city_id") @db.Uuid
+  venueCityId     String?   @map("venue_city_id") @db.Uuid
+  guestCount      Int?      @map("guest_count")
+  estimatedBudget Decimal?  @map("estimated_budget") @db.Decimal(12, 2)
+  weddingStyle    String?   @map("wedding_style")
+  partnerName     String?   @map("partner_name")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wedding_profiles")
 }
 
 model Role {
