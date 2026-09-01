@@ -18,7 +18,7 @@ function requestContext(req: Request): RequestContext {
   return { ipAddress: req.ip, userAgent: req.header("user-agent") };
 }
 
-function setRefreshCookie(res: Response, tokens: TokenPair): void {
+export function setRefreshCookie(res: Response, tokens: TokenPair): void {
   res.cookie(REFRESH_TOKEN_COOKIE, tokens.refreshToken, {
     httpOnly: true,
     secure: isProduction,

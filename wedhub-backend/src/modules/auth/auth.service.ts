@@ -31,7 +31,7 @@ function toAuthenticatedUserView(user: {
   return { id: user.id, email: user.email, phone: user.phone, role: user.role as Role };
 }
 
-async function issueTokenPair(userId: string, role: Role, context: RequestContext): Promise<TokenPair> {
+export async function issueTokenPair(userId: string, role: Role, context: RequestContext): Promise<TokenPair> {
   const accessToken = signAccessToken({ sub: userId, role });
   const refreshToken = generateOpaqueToken();
   const refreshTokenExpiresAt = refreshTokenExpiryDate();

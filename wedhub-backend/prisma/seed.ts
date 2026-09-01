@@ -110,6 +110,12 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
   ],
 };
 
+const CATEGORY_SERVICES: Record<string, string[]> = {
+  Photography: ["Candid Photography", "Traditional Photography", "Drone Coverage", "Pre-Wedding Shoot"],
+  Venues: ["Indoor Hall", "Outdoor Lawn", "Banquet Hall", "Destination Venue"],
+  "Makeup Artists": ["Bridal Makeup", "Groom Makeup", "Party Makeup", "Trial Session"],
+};
+
 interface LocationSeed {
   name: string;
   cities?: string[];
@@ -158,6 +164,26 @@ async function seedCategories(): Promise<void> {
   }
 
   console.info(`Seeded ${WEDDING_CATEGORIES.length} categories.`);
+}
+
+async function seedServices(): Promise<void> {
+  let count = 0;
+
+  for (const [categoryName, serviceNames] of Object.entries(CATEGORY_SERVICES)) {
+    const category = await prisma.category.findUnique({ where: { slug: slugify(categoryName) } });
+    if (!category) continue;
+
+    for (const serviceName of serviceNames) {
+      await prisma.service.upsert({
+        where: { categoryId_slug: { categoryId: category.id, slug: slugify(serviceName) } },
+        update: { name: serviceName },
+        create: { categoryId: category.id, name: serviceName, slug: slugify(serviceName) },
+      });
+      count += 1;
+    }
+  }
+
+  console.info(`Seeded ${count} services across ${Object.keys(CATEGORY_SERVICES).length} categories.`);
 }
 
 async function seedLocations(): Promise<void> {
@@ -237,6 +263,7 @@ async function main(): Promise<void> {
   console.info(`Seeded ${permissionRecords.length} permissions and ${SYSTEM_ROLES.length} roles.`);
 
   await seedCategories();
+  await seedServices();
   await seedLocations();
 }
 
