@@ -36,3 +36,9 @@ export const registerRateLimiter = createRateLimiter({
   max: 20,
   message: "Too many registration attempts. Please try again later.",
 });
+
+export const searchRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 60,
+  message: "Too many search requests. Please slow down.",
+});

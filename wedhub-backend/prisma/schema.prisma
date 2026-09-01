@@ -46,6 +46,7 @@ model User {
   vendorInvitationsSent    VendorInvitation[]       @relation("VendorInvitationsSent")
   vendorInvitationsClaimed VendorInvitation[]       @relation("VendorInvitationsClaimed")
   vendorStatusChanges      VendorStatusHistory[]
+  searchLogs               SearchLog[]
 
   @@index([role])
   @@index([status])
@@ -591,4 +592,22 @@ model Album {
 
   @@index([vendorId])
   @@map("albums")
+}
+
+model SearchLog {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  keyword      String?
+  categoryId   String?  @map("category_id") @db.Uuid
+  cityId       String?  @map("city_id") @db.Uuid
+  filters      Json?
+  sort         String?
+  resultCount  Int      @map("result_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([keyword])
+  @@map("search_logs")
 }

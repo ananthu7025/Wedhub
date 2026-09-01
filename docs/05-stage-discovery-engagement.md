@@ -25,11 +25,13 @@ Maps to **Product Phase 3 — User Discovery** (product.md §70: search, filters
 
 ## Task Checklist
 
-### Arch Phase 7 — Search & Discovery
-- [ ] Vendor keyword search; category/subcategory/city/service-area/price/rating/verified/attribute filters
-- [ ] Pagination, sorting, search relevance
-- [ ] Search indexes, PostgreSQL full-text search, `pg_trgm`
-- [ ] Vendor ranking service, featured-listing integration (stub until Stage 5 exists), search analytics
+### Arch Phase 7 — Search & Discovery ✅ Done — 2026-09-02
+- [x] Vendor keyword search; category/subcategory/city/service-area/price/verified/attribute filters (rating filter deferred — no review data until Arch Phase 10)
+- [x] Pagination, sorting, search relevance
+- [x] Search indexes, PostgreSQL full-text search, `pg_trgm`
+- [x] Vendor ranking service, featured-listing integration (stub until Stage 5 exists), search analytics
+
+See [`11-progress-log.md`](11-progress-log.md#arch-phase-7--search--discovery) for the full write-up.
 
 ### Arch Phase 8 — Favorites, Shortlists & Comparison
 - [ ] Favorites; shortlists; shortlist items; rename shortlist; remove item
@@ -42,9 +44,9 @@ Maps to **Product Phase 3 — User Discovery** (product.md §70: search, filters
 
 ## Acceptance Criteria
 
-- Search works at realistic catalog size; queries are indexed; search response time is monitored; search logic is abstracted from the controller (swap-ready for a dedicated engine later).
-- User can save vendors; user can create multiple shortlists; duplicate shortlist items are prevented; private shortlist access is enforced.
-- Vendors cannot create fake reviews of themselves through vendor-owned accounts; review moderation works; rating aggregation stays consistent.
+- Search works at realistic catalog size; queries are indexed; search response time is monitored; search logic is abstracted from the controller (swap-ready for a dedicated engine later). — **Met for Arch Phase 7**: keyword/category/city/service-area/price/verified/attribute filters, relevance/price/newest/recommended sorting, and pagination all live behind a dedicated `search` module (`GET /api/v1/search/vendors`), separate from the `vendors` CRUD module. `pg_trgm` GIN indexes back keyword matching; verified live via `EXPLAIN` that the planner can select them as a valid access path.
+- User can save vendors; user can create multiple shortlists; duplicate shortlist items are prevented; private shortlist access is enforced. — **Pending Arch Phase 8.**
+- Vendors cannot create fake reviews of themselves through vendor-owned accounts; review moderation works; rating aggregation stays consistent. — **Pending Arch Phase 10.**
 
 ## Dependencies / Sequencing
 
@@ -54,3 +56,4 @@ Depends on Stage 2 (vendors and media must exist to search, display, and review)
 
 - **Reviews phase-alignment mismatch** ([Risk 2](10-risks-and-open-questions.md#2-reviews-phase-alignment-mismatch)) — product.md groups reviews with discovery at the same coarse level; architecture.md sequences them after search/favorites within this stage. Confirm this lag is acceptable (it converges within the same stage regardless, per the MVP cut line) before scheduling.
 - **Arch Phase 8 MVP inclusion** — this phase was absent from architecture.md §53's explicit MVP list. Resolved in [`02-mvp-cut-line.md`](02-mvp-cut-line.md) to be included at MVP — build it as scoped above, not as a stretch/optional item.
+- **New judgment calls resolved during Arch Phase 7** (not pre-existing risks, decided during implementation): (1) Search was built as its own `search` module with its own `GET /search/vendors` endpoint rather than upgrading Arch Phase 5's thin `GET /vendors` stub in place — confirmed with the user, matching architecture.md's module list (`search` as its own module) and product.md §10's explicit "search logic must be abstracted" requirement. The old `GET /vendors` stub is left as-is. (2) The vendor-ranking formula (product.md §11's `organic relevance + quality + business visibility`) is deliberately partial: review rating/quality (Arch Phase 10), response rate/time/lead conversion (Arch Phase 9), and subscription/featured status (Arch Phase 13) don't exist yet, so those terms are weighted zero rather than faked — mirrors Arch Phase 5's precedent of a partial `profileCompleteness` formula pending later phases' data. (3) The `rating` and `availability` filters from product.md §10 are deferred to Arch Phase 10/9 respectively for the same reason — no underlying data exists yet to filter on.

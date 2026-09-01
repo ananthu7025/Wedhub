@@ -17,7 +17,7 @@
 | 4 | Category & Location Catalog | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 5 | Vendor Module | [Stage 2](04-stage-marketplace-supply.md) | ✅ Done | 2026-09-02 |
 | 6 | Media & Portfolio | [Stage 2](04-stage-marketplace-supply.md) | ✅ Done | 2026-09-02 |
-| 7 | Search & Discovery | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
+| 7 | Search & Discovery | [Stage 3](05-stage-discovery-engagement.md) | ✅ Done | 2026-09-02 |
 | 8 | Favorites, Shortlists & Comparison | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
 | 9 | Enquiries & Leads | [Stage 4](06-stage-lead-engine.md) | ⬜ Not Started | — |
 | 10 | Reviews & Trust | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 7 / 26 Arch Phases complete. Stage 1 (Foundation) and Stage 2 (Marketplace Supply) are both fully done.**
+**Overall: 8 / 26 Arch Phases complete. Stage 1 (Foundation) and Stage 2 (Marketplace Supply) are both fully done; Stage 3 (Discovery & Engagement) is underway with Arch Phase 7 done.**
 
 ---
 
@@ -612,3 +612,81 @@ status=READY, optimizedObjectKey/thumbnailObjectKey/width/height set
 - **Album deletion un-albums its media rather than deleting it** — `album.repository.deleteAlbum()` runs `media.updateMany({ albumId: null })` and the album delete in one transaction. Verified live: deleting a test album succeeded without needing to handle orphaned media specially.
 - **Routing precedence**: `/vendors/me/albums` and `/vendors/:slug/albums` are both mounted in `routes/index.ts` *before* `/vendors` itself, for the same reason `/vendors/claim` needed to be — otherwise `vendorRouter`'s public `GET /:slug` would greedily match `/vendors/me/albums` as if `"me"` were a slug. Verified live: `/vendors/me/albums` and `/vendors/me/detail` both resolved correctly with no collision.
 - Verified end-to-end, including the real R2 round-trip: invalid MIME type rejected at the Zod layer; oversized file rejected with the exact configured limit in the message; mediaType/mimeType mismatch (e.g. VIDEO with an image MIME type) rejected; missing-credentials path fails with the object-storage-not-configured error without leaving an orphaned row; the real upload → confirm → background-process → READY flow against a live `wedhub-dev` R2 bucket (see the note above); real object deletion from R2 on `DELETE /media/:id`; full album CRUD (create, list, update visibility, delete); private albums correctly excluded from public listings; cross-vendor album access denied with a 404 (not leaking existence); admin moderation correctly gated to ADMIN role and 404s for nonexistent media. Confirmed full reproducibility: `docker compose down -v` → migrate (all 7 migrations, including the FK-adding migration on existing columns) → seed → health check, all on a completely fresh database. `npm run worker` confirmed to start cleanly and to process a real job end-to-end.
+
+## Arch Phase 7 — Search & Discovery
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 3 — Discovery & Engagement](05-stage-discovery-engagement.md)
+
+### What this unlocks
+
+Real vendor discovery: keyword search, category/city/service-area/price/verified/category-attribute filtering, five sort modes, and pagination, all behind a dedicated `search` module kept separate from the `vendors` CRUD module per product.md §10's "search logic must be abstracted from the controller" requirement. A vendor-ranking service implements product.md §11's `organic relevance + quality + business visibility` formula. Every search is logged for analytics.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/search/vendors` | Keyword/filter/sort/paginate approved vendors | none (optional — attributes the search to a logged-in user when a valid token is present) |
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `search_logs` | Search analytics — one row per query | `user_id` (nullable), `keyword`, `category_id`, `city_id`, `filters` (JSONB), `sort`, `result_count` |
+
+No new vendor-facing tables — this phase reads existing `vendors`/`vendor_profiles`/`vendor_categories`/`vendor_service_areas`/`vendor_attribute_values`/`media` tables. It adds the `pg_trgm` Postgres extension and several indexes (GIN trigram on `vendors.business_name` and `vendor_profiles.short_description`/`description`, GIN on `vendor_profiles.tags`, a composite `vendors(status, city_id)`, and a plain index on `vendor_profiles.starting_price`) via hand-authored migration SQL — the same pattern as Arch Phase 5's manually-added partial unique index, since `CREATE EXTENSION` and non-Prisma-native GIN operator classes aren't expressible through the schema DSL without opting into Prisma's `postgresqlExtensions` preview feature, which this project hasn't done.
+
+### Flow
+
+```
+GET /search/vendors?keyword=...&categoryId=...&sort=recommended&page=1
+     │
+     ▼
+optionalAuthenticateMiddleware  (attaches req.user only if a valid token is present — never blocks)
+     │
+     ▼
+validateQuery(searchVendorsQuerySchema)   (Zod; attr[<uuid>]=<value> parsed via Express's
+     │                                      default "extended" qs parser into req.query.attr)
+     ▼
+search.service.searchVendors()
+     │
+     ├─► search.repository.searchVendors()
+     │       │  raw parameterized SQL (Prisma.sql — never string-concatenated):
+     │       │  status='APPROVED' AND deleted_at IS NULL, plus any of:
+     │       │  category/city/service-area EXISTS-joins, price range,
+     │       │  verified (verificationLevel != UNVERIFIED), keyword via
+     │       │  pg_trgm `%` similarity across business name/description,
+     │       │  and per-attribute EXISTS-joins against vendor_attribute_values
+     │       │  — each attribute value's numeric/boolean cast is only
+     │       │  attempted when the filter value actually parses as that type
+     │       │  (a real bug: casting an arbitrary string straight to
+     │       │  ::numeric/::boolean inside an unconditional OR errored out
+     │       │  on any non-numeric value like "Candid" — fixed by testing
+     │       │  the value's shape before adding that branch)
+     │       ▼
+     │   ordered per `sort` (relevance/recommended by similarity+completeness,
+     │   price_low/high by starting_price, newest by created_at)
+     │
+     ├─► vendor-ranking.service.rankVendors()   (only for sort=recommended;
+     │       re-scores the already-fetched page in-application — organic
+     │       relevance + quality [completeness+verification] + business
+     │       visibility [0 today, no featured/subscription signal exists
+     │       until Arch Phase 13] — never re-queries the database)
+     │
+     └─► search_logs row written (best-effort; a logging failure never
+             fails the search response)
+     ▼
+paginatedResponse({ id, businessName, slug, verificationLevel,
+  shortDescription, startingPrice, currency, logoUrl }, meta)
+```
+
+### Notes
+
+- **Built as its own `search` module, not an upgrade of Arch Phase 5's thin `GET /vendors` stub** — confirmed with the user before implementation. Matches architecture.md's module list (`search` is its own named module) and product.md §10's explicit requirement that search logic be abstracted behind a swappable module, not entangled with vendor CRUD. The old `GET /vendors?categoryId&cityId` stub from Arch Phase 5 is untouched.
+- **Real bug caught and fixed during verification, not left in:** the attribute-filter SQL originally tried `vav.value_number = ${value}::numeric OR vav.value_boolean = ${value}::boolean` unconditionally inside one OR chain. Postgres evaluates every branch of an OR regardless of which one is meant to match, so filtering `photography_style=Candid` (a SELECT/text attribute) crashed with `invalid input syntax for type numeric: "Candid"`. Fixed by testing the filter value's shape (`/^-?\d+(\.\d+)?$/` for numeric, exact `"true"`/`"false"` for boolean) before adding that branch to the query at all. Verified live: text (SELECT), boolean, and numeric attribute filters all now return correct results with no cast errors.
+- **A second real bug caught in the same pass:** the initial `ORDER BY` clauses for price/newest/relevance sorting referenced the inner query's `v.`/`vp.`-prefixed table columns (e.g. `v.profile_completeness`), but they're applied to an outer wrapper query over a `ranked` subquery that only exposes the projected camelCase aliases — this failed with `missing FROM-clause entry for table "v"` the moment any request hit the endpoint. Fixed by rewriting every sort clause to reference the subquery's own output aliases (`"profileCompleteness"`, `"startingPrice"`, `"createdAt"`) instead.
+- **Raw SQL was necessary, not a shortcut** — Prisma's query builder cannot express `pg_trgm`'s `similarity()`/`%` operator as an orderable, filterable expression, nor a dynamic number of attribute-filter EXISTS-joins built from arbitrary user-supplied query keys. Every value (keyword, UUIDs, attribute filter values) is passed through `Prisma.sql`'s tagged-template parameterization — confirmed no string concatenation of user input into SQL text anywhere in `search.repository.ts`.
+- **Vendor-ranking formula (product.md §11) is deliberately partial**, same precedent as Arch Phase 5's `profileCompleteness`: review rating/quality needs Arch Phase 10, response rate/time/lead-conversion needs Arch Phase 9, and subscription/featured visibility needs Arch Phase 13 — none of that data exists yet, so those terms are weighted zero in `vendor-ranking.service.ts` rather than faked with a placeholder value. `rating` and `availability` are likewise deferred as search *filters* for the same reason. Documented explicitly so this isn't mistaken for an oversight later.
+- **`optionalAuthenticateMiddleware` is new shared infrastructure** (`common/middleware/authenticate.middleware.ts`) — the first route needing "attach `req.user` if a valid token happens to be present, but never require or error on one." Search needed this to attribute a query to a logged-in user in `search_logs` without gating a public endpoint behind auth. Verified live: a request with no token, a request with a valid token, and a request with a garbage/malformed token all return 200 — only the valid-token case populates `search_logs.user_id`.
+- **Search analytics logging is best-effort** — wrapped in try/catch so a `search_logs` insert failure (e.g. a transient DB blip) can never turn a working search into a 500. Verified the happy path writes a row with the correct `resultCount`, `sort`, and filter snapshot (as JSONB) for keyword, category, city, price-range, verified, and attribute-filter queries alike.
+- Verified end-to-end against real seeded data (not just unit-level checks): keyword search correctly matched "Sunset Frames Photography" for the query "photography" via trigram similarity while excluding an unrelated venue; category and city filters each correctly scoped to one of two seeded vendors; price-range filtering correctly included/excluded by `startingPrice`; `verified=true` correctly excluded an `UNVERIFIED` vendor; all four sort modes (`price_low`, `price_high`, `recommended`, default `relevance`) produced correctly-ordered results; pagination (`page`/`limit`) produced correct `meta.total`/`totalPages` and non-overlapping pages; SELECT/BOOLEAN/NUMBER category-attribute filters all matched correctly post-fix; a `DRAFT`-status vendor never appeared in any search path (keyword or category filter) confirming the `status='APPROVED'` guard holds; invalid query params (bad UUID, invalid sort enum) correctly 400 via Zod; the search-specific rate limiter (60/min) correctly 429s past its threshold. Confirmed via `EXPLAIN` that the new `vendors_business_name_trgm_idx` GIN index is a real, plan-eligible access path for the `%` operator (the planner prefers a cheaper status-based bitmap scan at the current tiny table size, which is correct, expected behavior, not a sign the index is unused). Confirmed full reproducibility: `docker compose down -v` → migrate (all 8 migrations, including the `pg_trgm`-extension-and-indexes migration) → seed → health check → `npm run worker` start, all on a completely fresh database. All test vendors/users/search-log rows created during verification were deleted afterward.
