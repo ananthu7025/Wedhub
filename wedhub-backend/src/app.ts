@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import pinoHttp from "pino-http";
 import { logger } from "./config/logger";
+import { checkDatabaseConnection } from "./config/database";
 import { requestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { notFoundMiddleware } from "./common/middleware/not-found.middleware";
 import { errorMiddleware } from "./common/middleware/error.middleware";
@@ -26,7 +27,13 @@ export function createApp(): Express {
   );
 
   app.get("/health", (_req, res) => {
-    res.json(successResponse({ status: "healthy" }));
+    void (async () => {
+      const databaseConnected = await checkDatabaseConnection();
+      const status = databaseConnected ? "healthy" : "degraded";
+      res
+        .status(databaseConnected ? 200 : 503)
+        .json(successResponse({ status, database: databaseConnected ? "connected" : "unreachable" }));
+    })();
   });
 
   app.use("/api/v1", apiV1Router);

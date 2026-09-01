@@ -5,7 +5,7 @@
   "private": true,
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=20.6.0"
+    "node": ">=20.12.0"
   },
   "type": "commonjs",
   "main": "dist/server.js",
@@ -20,11 +20,12 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "vitest run tests/e2e",
-    "db:migrate": "echo \"db:migrate will be wired to Prisma in Arch Phase 1\" && exit 1",
-    "db:seed": "echo \"db:seed will be wired to Prisma in Arch Phase 1\" && exit 1",
-    "db:reset": "echo \"db:reset will be wired to Prisma in Arch Phase 1\" && exit 1"
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset"
   },
   "dependencies": {
+    "@prisma/client": "^6.1.0",
     "express": "^4.21.2",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",
@@ -39,6 +40,7 @@
     "eslint-config-prettier": "^9.1.0",
     "pino-pretty": "^13.0.0",
     "prettier": "^3.4.2",
+    "prisma": "^6.1.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

@@ -6,7 +6,7 @@ Modular monolith backend for WedHub, a wedding vendor discovery marketplace. See
 
 ## Prerequisites
 
-- Node.js >= 20.6 (uses native `--env-file` support)
+- Node.js >= 20.12 (uses native `--env-file` support and `process.loadEnvFile`)
 - Docker (for local Postgres/Redis) — install [Docker Desktop](https://www.docker.com/products/docker-desktop/) if `docker --version` doesn't resolve
 
 ## Setup
