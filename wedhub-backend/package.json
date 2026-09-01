@@ -1,0 +1,46 @@
+{
+  "name": "wedhub-backend",
+  "version": "0.1.0",
+  "description": "WedHub backend — modular monolith for the wedding vendor marketplace",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "type": "commonjs",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file=.env dist/server.js",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "vitest run tests/e2e",
+    "db:migrate": "echo \"db:migrate will be wired to Prisma in Arch Phase 1\" && exit 1",
+    "db:seed": "echo \"db:seed will be wired to Prisma in Arch Phase 1\" && exit 1",
+    "db:reset": "echo \"db:reset will be wired to Prisma in Arch Phase 1\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pino": "^9.5.0",
+    "pino-http": "^10.3.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.17.9",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.16.0",
+    "eslint-config-prettier": "^9.1.0",
+    "pino-pretty": "^13.0.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
