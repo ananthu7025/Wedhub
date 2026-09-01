@@ -26,15 +26,17 @@ Maps in full to **Product Phase 1 — Foundation** (product.md §70: architectur
 
 ## Task Checklist
 
-### Arch Phase 0 — Architecture & Repository Setup
-- [ ] Create backend repository, initialize Node.js + TypeScript
-- [ ] Configure ESLint, Prettier, Git, `.gitignore`, `.env.example`
-- [ ] Environment configuration module
-- [ ] Express application, HTTP server, health endpoint
-- [ ] `/api/v1` router, error middleware, request ID middleware, structured logger
-- [ ] Base response format, base error classes, common utilities
-- [ ] Module directory structure, README
-- [ ] npm scripts: `dev, build, start, lint, lint:fix, typecheck, test, test:unit, test:integration, test:e2e, db:migrate, db:seed, db:reset`
+### Arch Phase 0 — Architecture & Repository Setup ✅ Done — 2026-09-02
+- [x] Create backend repository, initialize Node.js + TypeScript
+- [x] Configure ESLint, Prettier, Git, `.gitignore`, `.env.example`
+- [x] Environment configuration module
+- [x] Express application, HTTP server, health endpoint
+- [x] `/api/v1` router, error middleware, request ID middleware, structured logger
+- [x] Base response format, base error classes, common utilities
+- [x] Module directory structure, README
+- [x] npm scripts: `dev, build, start, lint, lint:fix, typecheck, test, test:unit, test:integration, test:e2e, db:migrate, db:seed, db:reset` (`db:*` intentionally stubbed to fail with a message until Arch Phase 1 wires up Prisma)
+
+See [`11-progress-log.md`](11-progress-log.md#arch-phase-0--architecture--repository-setup) for the full write-up.
 
 ### Arch Phase 1 — PostgreSQL & ORM Foundation
 - [ ] Install ORM (Prisma/Drizzle), configure `DATABASE_URL`

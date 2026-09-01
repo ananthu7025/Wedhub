@@ -10,7 +10,7 @@
 
 | Arch Phase | Name | Stage | Status | Completed |
 |---|---|---|---|---|
-| 0 | Architecture & Repository Setup | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
+| 0 | Architecture & Repository Setup | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 1 | PostgreSQL & ORM Foundation | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
 | 2 | Authentication & Authorization | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
 | 3 | User Module | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 0 / 26 Arch Phases complete.**
+**Overall: 1 / 26 Arch Phases complete.**
 
 ---
 
@@ -81,4 +81,55 @@ Client → Controller → Service → Repository → DB
 
 ## Phase Entries
 
-*(Empty until phases complete — entries get appended below in Arch Phase order as they ship.)*
+## Arch Phase 0 — Architecture & Repository Setup
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 1 — Foundation](03-stage-foundation.md)
+
+### What this unlocks
+
+A running Express + TypeScript server with validated environment config, structured logging, a standard success/error API envelope, centralized error classes, and the full module folder scaffold. Nothing user-facing yet — this is the substrate every later phase builds directly on top of.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/health` | Liveness check | None |
+| GET | `/api/v1` | API root / version info | None |
+
+### Tables created
+
+None — database work starts in Arch Phase 1.
+
+### Flow
+
+```
+Client
+  │
+  ▼
+requestIdMiddleware  (assigns/propagates x-request-id)
+  │
+  ▼
+pino-http            (structured request/response logging)
+  │
+  ▼
+Route handler        (/health, /api/v1, or a mounted module router later)
+  │
+  ├─→ success ──────────────────────────► successResponse() ──► JSON { success:true, data, meta? }
+  │
+  └─→ throws AppError ──► errorMiddleware ──► errorResponse() ──► JSON { success:false, error }
+                              │
+                              └─→ unknown/non-AppError errors are logged and returned as 500
+                                   with a generic message in production, real message in dev
+
+unmatched route ──► notFoundMiddleware ──► 404 in the same standard error envelope
+```
+
+### Notes
+
+- `docker` is not installed on the development machine used to build this phase — `docker-compose.yml` (Postgres 16 + Redis 7) is written and reviewed but **not yet run or verified**. Install Docker Desktop and run `docker compose up -d` before starting Arch Phase 1.
+- `db:migrate` / `db:seed` / `db:reset` npm scripts exist but intentionally fail with a message (`"will be wired to Prisma in Arch Phase 1"`) rather than silently no-op — avoids the false impression that database tooling already works.
+- Dev/start scripts use Node's native `--env-file=.env` flag, which requires **Node ≥ 20.6** (bumped from the initially planned ≥20.0 after discovering the flag's actual minimum version during verification).
+- `tsconfig.json` uses `exactOptionalPropertyTypes: true` — stricter than a typical starter config, but caught two real type-shape issues during setup (an over-loose `details?` field, and a `meta` field typed too generically for `paginatedResponse`) before any real feature code was written on top of them.
+- A known moderate/high/critical `npm audit` finding traces entirely to `esbuild`, a transitive dependency of `vitest`'s dev-only tooling (Vite dev server) — it does not affect the running Express application. Left unresolved for now since fixing it requires a breaking `vitest` v4 upgrade; revisit when Arch Phase 20 (Testing) is implemented.
+- Git repository initialized at the `WedHub/` root (not just inside `wedhub-backend/`) so `docs/`, `product.md`, and the architecture doc are version-controlled alongside the backend code.
