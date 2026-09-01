@@ -11,13 +11,17 @@ const envSchema = z.object({
   JWT_ACCESS_TOKEN_TTL: z.string().default("15m"),
   JWT_REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
 
-  REDIS_URL: z.string().optional(),
+  REDIS_URL: z.string().min(1, "REDIS_URL is required"),
 
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET: z.string().optional(),
   R2_PUBLIC_BASE_URL: z.string().optional(),
+
+  MEDIA_MAX_IMAGE_SIZE_MB: z.coerce.number().positive().default(10),
+  MEDIA_MAX_VIDEO_SIZE_MB: z.coerce.number().positive().default(100),
+  MEDIA_MAX_PORTFOLIO_ITEMS: z.coerce.number().int().positive().default(50),
 
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
