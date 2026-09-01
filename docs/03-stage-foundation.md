@@ -59,12 +59,14 @@ See [`11-progress-log.md`](11-progress-log.md#arch-phase-1--postgresql--orm-foun
 
 See [`11-progress-log.md`](11-progress-log.md#arch-phase-2--authentication--authorization) for the full write-up.
 
-### Arch Phase 3 — User Module
-- [ ] User profile CRUD, avatar support
-- [ ] Contact preferences, notification preferences
-- [ ] Wedding profile
-- [ ] Account status, account deletion/anonymization
-- [ ] User activity metadata
+### Arch Phase 3 — User Module ✅ Done — 2026-09-02
+- [x] User profile CRUD, avatar support (URL field only — real upload arrives in Arch Phase 6)
+- [x] Contact preferences, notification preferences (structured JSON flags — consumed once Arch Phase 14 exists)
+- [x] Wedding profile
+- [x] Account status, account deletion/anonymization
+- [x] User activity metadata (already covered by `lastLoginAt` from Arch Phase 2 — no new tracking added)
+
+See [`11-progress-log.md`](11-progress-log.md#arch-phase-3--user-module) for the full write-up.
 
 ### Arch Phase 4 — Category & Location Catalog
 - [ ] Category CRUD, subcategory CRUD, ordering, activation/deactivation

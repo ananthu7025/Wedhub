@@ -13,7 +13,7 @@
 | 0 | Architecture & Repository Setup | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 1 | PostgreSQL & ORM Foundation | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 2 | Authentication & Authorization | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
-| 3 | User Module | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
+| 3 | User Module | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 4 | Category & Location Catalog | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
 | 5 | Vendor Module | [Stage 2](04-stage-marketplace-supply.md) | ⬜ Not Started | — |
 | 6 | Media & Portfolio | [Stage 2](04-stage-marketplace-supply.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 3 / 26 Arch Phases complete.**
+**Overall: 4 / 26 Arch Phases complete.**
 
 ---
 
@@ -275,3 +275,65 @@ Any protected route:
 - **Email verification / password reset "sending"** is a `logger.info` line containing the raw token, clearly marked with a `// TODO(Arch Phase 14)` comment — real delivery arrives with the notification service, not before.
 - **Rate limiting is in-memory** (`express-rate-limit`'s default store), not Redis-backed — acceptable for a single-instance dev/MVP setup per architecture.md's "Redis optional pre-MVP," but will not share state across multiple API instances once the app scales horizontally. Revisit when Arch Phase 14 introduces Redis.
 - Verified the full flow end-to-end manually: register → duplicate-email rejection (409) → login → 5-failed-attempts lockout → refresh rotation → reuse-detection chain revocation → logout → authenticate/authorize middleware (401 no token, 401 malformed, 403 wrong role, 200 correct role) → rate limiting (429 past threshold) → email verification (one-time use) → forgot-password (identical response for existing vs. non-existent email) → reset-password (old password stops working, all sessions revoked). Also confirmed full reproducibility via `docker compose down -v` → migrate → seed → register on a completely fresh database.
+
+## Arch Phase 3 — User Module
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 1 — Foundation](03-stage-foundation.md)
+
+### What this unlocks
+
+An authenticated user can now read and edit their own profile, optionally record wedding details for future personalization/matching, deactivate their own account, and permanently anonymize it. This is the first module to actually sit behind Arch Phase 2's `authenticateMiddleware`, and the first real (if implicit) exercise of ownership scoping — every route operates on `req.user.id`, never an arbitrary path parameter.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/users/me` | Fetch own account + profile + wedding profile | Access token |
+| PATCH | `/api/v1/users/me` | Partially update own profile (name, avatarUrl, bio, preferences) | Access token |
+| PUT | `/api/v1/users/me/wedding-profile` | Create or partially update own wedding profile | Access token |
+| DELETE | `/api/v1/users/me/wedding-profile` | Remove own wedding profile | Access token |
+| POST | `/api/v1/users/me/deactivate` | Self-service deactivation (`status → DEACTIVATED`) | Access token |
+| DELETE | `/api/v1/users/me` | Anonymize account (not a hard delete) | Access token |
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `wedding_profiles` | Optional 1:1 wedding details per user, for future personalization/vendor matching | `id`, `user_id` (unique fk), `wedding_date`, `guest_count`, `estimated_budget`, `wedding_style`, `partner_name`, `notes` |
+
+`user_profiles` gained `avatar_url` (plain string, separate from the `avatar_media_id` UUID column reserved for Arch Phase 6's real media FK).
+
+### Flow
+
+```
+Authenticated request (Authorization: Bearer <token>)
+     │
+     ▼
+authenticateMiddleware  (from Arch Phase 2 — verifies JWT, attaches req.user)
+     │
+     ▼
+users.routes → users.controller → requireUserId(req)  (reads req.user.id only)
+     │
+     ▼
+users.service → users.repository (Prisma)
+     │
+     ├─ GET /me            → findUserWithProfile (include profile + weddingProfile)
+     ├─ PATCH /me          → upsertProfile (omitUndefined strips absent fields before hitting Prisma)
+     ├─ PUT .../wedding-profile → upsertWeddingProfile (same omitUndefined pattern)
+     ├─ DELETE .../wedding-profile → deleteWeddingProfile
+     ├─ POST .../deactivate → setUserStatus(DEACTIVATED)
+     └─ DELETE /me          → anonymizeUser (single $transaction:
+                                 scramble email/phone, unusable password hash,
+                                 set deletedAt + status=DEACTIVATED,
+                                 null all profile PII, delete wedding profile,
+                                 revoke every still-active refresh token)
+```
+
+### Notes
+
+- **Real gap found and fixed during this phase's verification:** `auth.service.login()` (Arch Phase 2) never checked `user.status` — a deactivated or suspended account could still log in and receive valid tokens. Fixed by checking status *after* password verification (so a wrong password never leaks whether an account is deactivated to someone who doesn't have the password) and *before* issuing tokens. Verified: deactivating a test user, then attempting login with correct credentials, now correctly returns 401 "This account has been deactivated." This fix lives in `auth.service.ts`, not this module, since it's Arch Phase 2's responsibility — Phase 3 only surfaced the gap by being the first thing to actually set `DEACTIVATED`.
+- **`omitUndefined` helper** (`users.repository.ts`) strips keys whose value is `undefined` before building Prisma `create`/`update` payloads, with a type (`DefinedFields<T>`) that correctly tells the compiler the remaining keys are genuinely present — needed because `exactOptionalPropertyTypes` treats "key present with value `undefined`" as a distinct, disallowed state from "key absent," and Prisma's generated input types don't accept explicit `undefined` for absent optional fields. This pattern will likely recur in every future module doing partial updates; worth reusing rather than reinventing.
+- **Anonymization keeps the `users` row** rather than hard-deleting it — per the soft-delete convention and architecture.md §47 ("do not automatically physically delete important business records"). Verified via direct DB query: email scrambled to `deleted-<uuid>@wedhub.invalid`, phone cleared, password hash replaced with an unusable random value, `deleted_at` set, all profile PII nulled, wedding profile removed, and all refresh tokens revoked — then confirmed login with the original email fails (no account resolves to it anymore).
+- **Self-deactivation vs. anonymization are deliberately separate, distinct actions** — deactivation is reversible (nothing in this phase re-activates it yet; that's an admin/future concern), anonymization is one-way. Kept as two endpoints so "I want a break" and "delete my data" aren't conflated.
+- Verified end-to-end: `GET /me` before/after `PATCH /me` (full and partial updates — confirmed partial updates leave untouched fields intact), wedding profile create/partial-update/delete, deactivation blocking login, and full anonymization blocking login with the original credentials. Also confirmed full reproducibility via `docker compose down -v` → migrate (all 4 migrations in sequence) → seed → health check on a completely fresh database.
