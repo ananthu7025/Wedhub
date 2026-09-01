@@ -18,7 +18,7 @@ Maps in full to **Product Phase 1 — Foundation** (product.md §70: architectur
 
 ## Included Product Concerns
 
-- User types/actors — End User, Vendor, Admin, and admin role examples (Super Admin, Operations Admin, Vendor Manager, Sales, Finance, Content Manager, Moderator, Support) — product.md §4
+- User types/actors — End User, Vendor, Admin, and admin role examples (Operations Admin, Vendor Manager, Sales, Finance, Content Manager, Moderator, Support) — product.md §4
 - End-user account fields and optional wedding profile (name, email, phone, partner info, wedding date/location, guest count, budget, preferred categories) — product.md §14
 - Category system: dynamic, admin-managed, database-driven, with category-specific attributes and filters — product.md §7
 - Location hierarchy: Country → State/Province → City → Area, with vendor service areas distinct from primary location — product.md §8
@@ -55,7 +55,7 @@ See [`11-progress-log.md`](11-progress-log.md#arch-phase-1--postgresql--orm-foun
 - [ ] Authentication middleware, role middleware, permission middleware
 - [ ] Ownership policy system
 - [ ] Rate limiting for auth, failed login tracking
-- [ ] Roles: `END_USER`, `VENDOR`, `ADMIN`, `SUPER_ADMIN`
+- [ ] Roles: `END_USER`, `VENDOR`, `ADMIN`
 
 ### Arch Phase 3 — User Module
 - [ ] User profile CRUD, avatar support

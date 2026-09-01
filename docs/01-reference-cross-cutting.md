@@ -114,7 +114,7 @@ Module list (architecture.md §64): auth, users, vendors, categories, locations,
 
 ## Authentication & authorization baseline (architecture.md §8–9)
 
-Actors: `END_USER`, `VENDOR`, `ADMIN`, `SUPER_ADMIN`.
+Actors: `END_USER`, `VENDOR`, `ADMIN`.
 
 ```text
 Register/Login → Credential verification → Session/access token

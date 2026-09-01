@@ -20,7 +20,7 @@ const SYSTEM_PERMISSIONS: Array<{ resource: string; action: string; description:
 ];
 
 const SYSTEM_ROLES: Array<{ name: string; description: string; permissions: "all" | string[] }> = [
-  { name: "super_admin", description: "Full platform access", permissions: "all" },
+  { name: "admin", description: "Full platform access", permissions: "all" },
   {
     name: "end_user",
     description: "Default role for couples using the platform",

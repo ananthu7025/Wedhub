@@ -203,7 +203,6 @@ Admin roles should be permission-based.
 
 Example roles:
 
-- Super Admin
 - Operations Admin
 - Vendor Manager
 - Sales

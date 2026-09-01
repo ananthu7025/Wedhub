@@ -151,7 +151,7 @@ None — schema-only phase. `GET /health` (from Arch Phase 0) was extended to re
 
 | Table | Purpose | Key columns |
 |---|---|---|
-| `users` | Core account record for every actor | `id`, `email` (unique), `phone` (unique, nullable), `password_hash`, `role` (enum), `status` (enum), `deleted_at` (soft delete) |
+| `users` | Core account record for every actor | `id`, `email` (unique), `phone` (unique, nullable), `password_hash`, `role` (enum: `END_USER`/`VENDOR`/`ADMIN`), `status` (enum), `deleted_at` (soft delete) |
 | `user_profiles` | 1:1 profile data separate from auth-critical fields | `user_id` (pk/fk), `first_name`, `last_name`, `preferences` (JSONB) |
 | `roles` | Dynamic, admin-manageable permission groups (distinct from the coarse `User.role` enum) | `id`, `name` (unique), `is_system` |
 | `permissions` | Individual permission strings, e.g. `vendor:approve` | `id`, `resource`, `action` (unique together) |
@@ -159,7 +159,7 @@ None — schema-only phase. `GET /health` (from Arch Phase 0) was extended to re
 | `admin_users` | Marks a user as staff and assigns their dynamic role | `user_id` (pk/fk), `role_id` (fk) |
 | `audit_logs` | Append-only record of admin mutations | `id`, `actor_id`, `action`, `entity_type`/`entity_id`, `before`/`after` (JSONB) |
 
-Seed data: 14 system permissions and 3 system roles (`super_admin` → all 14; `end_user` and `vendor` → 5 scoped permissions each).
+Seed data: 14 system permissions and 3 system roles (`admin` → all 14; `end_user` and `vendor` → 5 scoped permissions each).
 
 ### Flow
 
@@ -187,7 +187,8 @@ npm run db:seed  ──►  prisma/seed.ts  ──►  upserts permissions → r
 
 - **Port conflict discovered and resolved:** this machine already runs a native Windows PostgreSQL service bound to port 5432, separate from Docker. The container's host port was remapped to **5433** in `docker-compose.yml` (and `DATABASE_URL`/`.env.example` updated to match) rather than touching the native service. If you set this up on a different machine, port 5432 may work fine — check for a conflict first (`netstat -ano | findstr 5432` on Windows) before assuming.
 - **`prisma.config.ts` added** — Prisma's newer config-file approach replaces the deprecated `package.json#prisma.seed` field. It does not auto-load `.env` the way the old integration did, so it calls `process.loadEnvFile(".env")` explicitly. This raised the effective Node minimum from ≥20.6 (Phase 0) to **≥20.12** (`package.json` engines and the README updated accordingly).
-- **RBAC design decision:** `roles`/`permissions`/`role_permissions` are modeled as dynamic, database-driven tables (not a hardcoded enum) specifically to satisfy product.md's admin-configurable staff-permission requirement (Super Admin, Operations Admin, Vendor Manager, Sales, Finance, Content Manager, Moderator, Support). Only generic bootstrap roles (`super_admin`, `end_user`, `vendor`) are seeded now; the specific named admin roles get seeded when Arch Phase 16 (Admin) actually implements permission management — seeding them speculatively now would be unused scaffolding.
+- **RBAC design decision:** `roles`/`permissions`/`role_permissions` are modeled as dynamic, database-driven tables (not a hardcoded enum) specifically to satisfy product.md's admin-configurable staff-permission requirement (Operations Admin, Vendor Manager, Sales, Finance, Content Manager, Moderator, Support). Only generic bootstrap roles (`admin`, `end_user`, `vendor`) are seeded now; the specific named admin roles get seeded when Arch Phase 16 (Admin) actually implements permission management — seeding them speculatively now would be unused scaffolding.
+- **Correction (2026-09-02, same day):** the project has only 3 primary actor roles — `END_USER`, `VENDOR`, `ADMIN` — no `SUPER_ADMIN`. The `User.role` enum, the seeded RBAC role (renamed `super_admin` → `admin`), and every reference across `docs/`, `product.md`, and the architecture doc were updated to drop it. A new migration (`remove_super_admin_role`) was applied to alter the enum and rename the seed row on the live database.
 - **`avatar_media_id` and `city_id`** on `user_profiles` are plain nullable UUID columns with no foreign-key constraint yet, since the `media` and `locations` tables don't exist until Arch Phase 6 and Arch Phase 4 respectively. The FK constraints should be added in a follow-up migration once those tables land — noting this so it isn't forgotten.
 - **A new `npm audit` finding** appeared after installing `prisma`: a high-severity `deepmerge-ts` stack-exhaustion advisory, reachable only through `@prisma/config`'s dev-time config merging (not the running app). `npm audit fix` did not resolve it without a Prisma major-version bump; left as-is for the same reason as the pre-existing `esbuild`/vitest finding — revisit at Arch Phase 19 (Security Hardening) rather than force an upgrade now.
 - Verified full reproducibility: `docker compose down -v` (destroys the volume) → `docker compose up -d` → `prisma migrate dev` → `db:seed` produced an identical table/seed-data state to the first run.

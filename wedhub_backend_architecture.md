@@ -497,7 +497,6 @@ Supported actors:
 END_USER
 VENDOR
 ADMIN
-SUPER_ADMIN
 ```
 
 Recommended authentication flow:
@@ -2142,7 +2141,6 @@ Build secure identity management.
 - [ ] END_USER
 - [ ] VENDOR
 - [ ] ADMIN
-- [ ] SUPER_ADMIN
 
 ### Acceptance criteria
 
