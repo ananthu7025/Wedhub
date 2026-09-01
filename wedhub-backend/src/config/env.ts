@@ -8,6 +8,8 @@ const envSchema = z.object({
 
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
   JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required"),
+  JWT_ACCESS_TOKEN_TTL: z.string().default("15m"),
+  JWT_REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
 
   REDIS_URL: z.string().optional(),
 

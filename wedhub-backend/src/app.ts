@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import { logger } from "./config/logger";
 import { checkDatabaseConnection } from "./config/database";
@@ -13,6 +14,7 @@ export function createApp(): Express {
 
   app.disable("x-powered-by");
   app.use(express.json());
+  app.use(cookieParser());
   app.use(requestIdMiddleware);
   app.use(
     pinoHttp({
