@@ -1,6 +1,14 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type AttributeDataType } from "@prisma/client";
 
 const prisma = new PrismaClient();
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 const SYSTEM_PERMISSIONS: Array<{ resource: string; action: string; description: string }> = [
   { resource: "vendor", action: "read", description: "View vendor profiles" },
@@ -32,6 +40,157 @@ const SYSTEM_ROLES: Array<{ name: string; description: string; permissions: "all
     permissions: ["profile:read", "profile:update", "leads:read", "leads:update", "media:manage"],
   },
 ];
+
+const WEDDING_CATEGORIES: string[] = [
+  "Photography",
+  "Videography",
+  "Venues",
+  "Makeup Artists",
+  "Mehndi Artists",
+  "Wedding Planners",
+  "Decorators",
+  "Caterers",
+  "DJs",
+  "Choreographers",
+  "Bridal Wear",
+  "Groom Wear",
+  "Jewellery",
+  "Invitations",
+  "Cakes",
+  "Florists",
+  "Rentals",
+  "Transportation",
+  "Honeymoon & Travel",
+  "Destination Weddings",
+];
+
+interface AttributeSeed {
+  key: string;
+  label: string;
+  dataType: AttributeDataType;
+  options?: string[];
+  isFilterable?: boolean;
+  isComparable?: boolean;
+}
+
+const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
+  Photography: [
+    {
+      key: "photography_style",
+      label: "Photography Style",
+      dataType: "SELECT",
+      options: ["Traditional", "Candid", "Documentary"],
+      isFilterable: true,
+      isComparable: true,
+    },
+    { key: "drone", label: "Drone Coverage", dataType: "BOOLEAN", isFilterable: true },
+    { key: "pre_wedding", label: "Pre-Wedding Shoot", dataType: "BOOLEAN", isFilterable: true },
+    { key: "number_of_photographers", label: "Number of Photographers", dataType: "NUMBER", isComparable: true },
+    { key: "delivery_time", label: "Delivery Time", dataType: "TEXT", isComparable: true },
+  ],
+  Venues: [
+    { key: "capacity", label: "Capacity", dataType: "NUMBER", isFilterable: true, isComparable: true },
+    {
+      key: "indoor_outdoor",
+      label: "Indoor / Outdoor",
+      dataType: "MULTI_SELECT",
+      options: ["Indoor", "Outdoor"],
+      isFilterable: true,
+    },
+    { key: "parking", label: "Parking", dataType: "BOOLEAN", isFilterable: true },
+    { key: "rooms", label: "Rooms", dataType: "NUMBER", isComparable: true },
+    { key: "catering", label: "Catering", dataType: "BOOLEAN", isFilterable: true, isComparable: true },
+    { key: "accommodation", label: "Accommodation", dataType: "BOOLEAN", isFilterable: true, isComparable: true },
+  ],
+  "Makeup Artists": [
+    { key: "bridal_makeup", label: "Bridal Makeup", dataType: "BOOLEAN", isFilterable: true },
+    { key: "groom_makeup", label: "Groom Makeup", dataType: "BOOLEAN", isFilterable: true },
+    { key: "trial", label: "Trial Available", dataType: "BOOLEAN", isFilterable: true },
+    { key: "travel", label: "Travels to Venue", dataType: "BOOLEAN", isFilterable: true },
+  ],
+};
+
+interface LocationSeed {
+  name: string;
+  cities?: string[];
+}
+
+const INDIA_STATES: LocationSeed[] = [
+  { name: "Maharashtra", cities: ["Mumbai", "Pune"] },
+  { name: "Delhi NCR", cities: ["Delhi"] },
+  { name: "Karnataka", cities: ["Bengaluru"] },
+  { name: "Tamil Nadu", cities: ["Chennai"] },
+  { name: "Telangana", cities: ["Hyderabad"] },
+];
+
+async function seedCategories(): Promise<void> {
+  for (const [index, name] of WEDDING_CATEGORIES.entries()) {
+    const category = await prisma.category.upsert({
+      where: { slug: slugify(name) },
+      update: { name, sortOrder: index },
+      create: { name, slug: slugify(name), sortOrder: index },
+    });
+
+    const attributes = CATEGORY_ATTRIBUTES[name] ?? [];
+    for (const [attrIndex, attr] of attributes.entries()) {
+      await prisma.categoryAttribute.upsert({
+        where: { categoryId_key: { categoryId: category.id, key: attr.key } },
+        update: {
+          label: attr.label,
+          dataType: attr.dataType,
+          options: attr.options,
+          isFilterable: attr.isFilterable ?? false,
+          isComparable: attr.isComparable ?? false,
+          sortOrder: attrIndex,
+        },
+        create: {
+          categoryId: category.id,
+          key: attr.key,
+          label: attr.label,
+          dataType: attr.dataType,
+          options: attr.options,
+          isFilterable: attr.isFilterable ?? false,
+          isComparable: attr.isComparable ?? false,
+          sortOrder: attrIndex,
+        },
+      });
+    }
+  }
+
+  console.info(`Seeded ${WEDDING_CATEGORIES.length} categories.`);
+}
+
+async function seedLocations(): Promise<void> {
+  // Prisma's compound-unique `where` clause rejects a literal `null` for parentId,
+  // even though the underlying Postgres unique index treats it correctly — so the
+  // one top-level (parent-less) row uses findFirst + conditional create instead of upsert.
+  const indiaSlug = slugify("India");
+  let india = await prisma.location.findFirst({ where: { parentId: null, slug: indiaSlug } });
+  if (!india) {
+    india = await prisma.location.create({ data: { type: "COUNTRY", name: "India", slug: indiaSlug } });
+  }
+
+  let cityCount = 0;
+
+  for (const state of INDIA_STATES) {
+    const stateRecord = await prisma.location.upsert({
+      where: { parentId_slug: { parentId: india.id, slug: slugify(state.name) } },
+      update: {},
+      create: { type: "STATE", name: state.name, slug: slugify(state.name), parentId: india.id },
+    });
+
+    for (const cityName of state.cities ?? []) {
+      await prisma.location.upsert({
+        where: { parentId_slug: { parentId: stateRecord.id, slug: slugify(cityName) } },
+        update: {},
+        create: { type: "CITY", name: cityName, slug: slugify(cityName), parentId: stateRecord.id },
+      });
+      cityCount += 1;
+    }
+  }
+
+  console.info(`Seeded India, ${INDIA_STATES.length} states, and ${cityCount} cities.`);
+}
 
 async function main(): Promise<void> {
   const permissionRecords = await Promise.all(
@@ -76,6 +235,9 @@ async function main(): Promise<void> {
   }
 
   console.info(`Seeded ${permissionRecords.length} permissions and ${SYSTEM_ROLES.length} roles.`);
+
+  await seedCategories();
+  await seedLocations();
 }
 
 main()

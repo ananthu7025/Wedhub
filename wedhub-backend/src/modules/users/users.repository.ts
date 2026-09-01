@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/database";
+import { omitUndefined } from "../../common/utils/object.util";
 import type { UserPreferences } from "./users.types";
 
 export function findUserWithProfile(userId: string) {
@@ -7,19 +8,6 @@ export function findUserWithProfile(userId: string) {
     where: { id: userId },
     include: { profile: true, weddingProfile: true },
   });
-}
-
-type DefinedFields<T> = { [K in keyof T]?: Exclude<T[K], undefined> };
-
-function omitUndefined<T extends object>(obj: T): DefinedFields<T> {
-  const result: DefinedFields<T> = {};
-  for (const key of Object.keys(obj) as Array<keyof T>) {
-    const value = obj[key];
-    if (value !== undefined) {
-      result[key] = value as Exclude<T[keyof T], undefined>;
-    }
-  }
-  return result;
 }
 
 export interface ProfileFields {

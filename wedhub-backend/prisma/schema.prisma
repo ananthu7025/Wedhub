@@ -200,3 +200,76 @@ model PasswordResetToken {
   @@index([userId])
   @@map("password_reset_tokens")
 }
+
+enum AttributeDataType {
+  BOOLEAN
+  NUMBER
+  TEXT
+  SELECT
+  MULTI_SELECT
+}
+
+model Category {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  slug        String   @unique
+  description String?
+  parentId    String?  @map("parent_id") @db.Uuid
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  parent     Category?           @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children   Category[]          @relation("CategoryHierarchy")
+  attributes CategoryAttribute[]
+
+  @@index([parentId])
+  @@index([isActive])
+  @@map("categories")
+}
+
+model CategoryAttribute {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId   String            @map("category_id") @db.Uuid
+  key          String
+  label        String
+  dataType     AttributeDataType @map("data_type")
+  options      Json?
+  isFilterable Boolean           @default(false) @map("is_filterable")
+  isComparable Boolean           @default(false) @map("is_comparable")
+  sortOrder    Int               @default(0) @map("sort_order")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, key])
+  @@map("category_attributes")
+}
+
+enum LocationType {
+  COUNTRY
+  STATE
+  CITY
+  AREA
+}
+
+model Location {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type      LocationType
+  name      String
+  slug      String
+  parentId  String?      @map("parent_id") @db.Uuid
+  isActive  Boolean      @default(true) @map("is_active")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  parent   Location?  @relation("LocationHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Location[] @relation("LocationHierarchy")
+
+  @@unique([parentId, slug])
+  @@index([type])
+  @@index([parentId])
+  @@map("locations")
+}
