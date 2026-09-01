@@ -68,7 +68,7 @@
 - **Description:** The two source docs define genuinely different 4-level vendor verification hierarchies — different level names, different counts of shared levels. This is a direct enum mismatch, not a wording difference.
 - **Impact:** Whichever enum is picked affects the vendor schema (Stage 1 admin/roles foundation touches this indirectly; Stage 2 Marketplace Supply implements the actual verification workflow) and any UI/badge copy built on top of it.
 - **Recommendation:** Must be resolved as an explicit decision **before** Stage 2's vendor verification fields are implemented. Neither docs set should silently pick one — flag for stakeholder confirmation.
-- **Status:** Open — needs a decision before Stage 2 implementation.
+- **Status:** Resolved — Arch Phase 5 (2026-09-02) uses product.md §25's version (`UNVERIFIED/IDENTITY_VERIFIED/BUSINESS_VERIFIED/PLATFORM_VERIFIED`), modeled as `Vendor.verificationLevel`, independent of the vendor status workflow. See [`04-stage-marketplace-supply.md`](04-stage-marketplace-supply.md) and [`11-progress-log.md`](11-progress-log.md#arch-phase-5--vendor-module).
 - **Related stage files:** [03-stage-foundation.md](03-stage-foundation.md), [04-stage-marketplace-supply.md](04-stage-marketplace-supply.md)
 
 ## 7. Notifications/Telegram co-design dependency

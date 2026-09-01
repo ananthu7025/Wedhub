@@ -28,13 +28,15 @@ Maps closely to **Product Phase 2 — Marketplace Supply** (product.md §70: ven
 
 ## Task Checklist
 
-### Arch Phase 5 — Vendor Module
-- [ ] Vendor creation, slug, profile, category assignment, service areas
-- [ ] Services, packages, pricing, contact details, social links
-- [ ] Vendor status workflow (`DRAFT → PENDING_VERIFICATION → PENDING_APPROVAL → APPROVED`, plus `REJECTED`/`SUSPENDED`/`DEACTIVATED`)
-- [ ] Vendor ownership, admin-created vendor, vendor self-registration, vendor invitation
-- [ ] Vendor approval, rejection, suspension
-- [ ] Vendor profile completeness calculation
+### Arch Phase 5 — Vendor Module ✅ Done — 2026-09-02
+- [x] Vendor creation, slug, profile, category assignment, service areas
+- [x] Services, packages, pricing, contact details, social links
+- [x] Vendor status workflow (`DRAFT → PENDING_VERIFICATION → PENDING_APPROVAL → APPROVED`, plus `REJECTED`/`SUSPENDED`/`DEACTIVATED`)
+- [x] Vendor ownership, admin-created vendor, vendor self-registration, vendor invitation
+- [x] Vendor approval, rejection, suspension (+ restore, deactivate)
+- [x] Vendor profile completeness calculation (partial formula — media weight arrives with Arch Phase 6)
+
+See [`11-progress-log.md`](11-progress-log.md#arch-phase-5--vendor-module) for the full write-up.
 
 ### Arch Phase 6 — Media & Portfolio
 - [ ] R2 integration, signed upload URL generation, upload authorization
@@ -54,5 +56,6 @@ Depends fully on Stage 1 (needs users, auth, roles, categories, locations). Inte
 
 ## Open Questions
 
-- **Verification-level enum mismatch** ([Risk 6](10-risks-and-open-questions.md#6-verification-level-enum-mismatch)) — must be resolved **before** implementing the vendor verification workflow fields in this stage. product.md §25 vs. architecture.md §24 define different 4-level hierarchies; pick one before building the schema and admin UI copy around it.
-- Confirm whether category-attribute "comparison fields" (product.md §16, used by the vendor comparison engine) are modeled now, in this stage's `category_attributes` design, or deferred to Stage 3's comparison engine work. Recommend modeling the field definitions now (cheap, schema-only) even if the comparison UI itself ships in Stage 3.
+- **Verification-level enum mismatch** ([Risk 6](10-risks-and-open-questions.md#6-verification-level-enum-mismatch)) — **Resolved in Arch Phase 5.** Used product.md §25's version (`UNVERIFIED/IDENTITY_VERIFIED/BUSINESS_VERIFIED/PLATFORM_VERIFIED`). `VerificationLevel` is modeled as an independent, admin-awarded trust badge (`POST /admin/vendors/:id/verify`), decoupled from the `DRAFT→APPROVED` status machine — a vendor's verification level can change at any status.
+- Category-attribute "comparison fields" (product.md §16) — **Resolved.** `category_attributes.isComparable` was already modeled in Stage 1/Arch Phase 4; this phase adds `vendor_attribute_values` (typed columns per `dataType`) so a vendor's actual attribute values exist for a future comparison engine to read.
+- **New judgment calls resolved during this phase** (not pre-existing risks, decided with user confirmation): (1) changing an APPROVED vendor's primary category re-triggers `PENDING_APPROVAL`; subcategory-only changes do not. (2) Subcategories are a free multi-select, not constrained to actual `Category.parentId` children of the primary category. (3) `PENDING_VERIFICATION → PENDING_APPROVAL` is automatic once the owner's email is verified — no separate admin verification action gates this transition. (4) Vendor slugs are frozen once a vendor leaves `DRAFT`; a slug change post-DRAFT is an explicit admin-only action, never an automatic side effect of a business-name edit.

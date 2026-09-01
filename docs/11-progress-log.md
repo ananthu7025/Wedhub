@@ -15,7 +15,7 @@
 | 2 | Authentication & Authorization | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 3 | User Module | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 4 | Category & Location Catalog | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
-| 5 | Vendor Module | [Stage 2](04-stage-marketplace-supply.md) | ⬜ Not Started | — |
+| 5 | Vendor Module | [Stage 2](04-stage-marketplace-supply.md) | ✅ Done | 2026-09-02 |
 | 6 | Media & Portfolio | [Stage 2](04-stage-marketplace-supply.md) | ⬜ Not Started | — |
 | 7 | Search & Discovery | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
 | 8 | Favorites, Shortlists & Comparison | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 5 / 26 Arch Phases complete. Stage 1 (Foundation) is fully done.**
+**Overall: 6 / 26 Arch Phases complete. Stage 1 (Foundation) is fully done.**
 
 ---
 
@@ -419,3 +419,114 @@ so "Delhi" the city and a hypothetical "Delhi" area under a different city could
 - **A Prisma-specific gotcha hit during seeding:** `prisma.location.upsert()` with a compound-unique `where` clause (`{ parentId_slug: { parentId: null, slug: ... } }`) rejects a literal `null` for the key field, even though the underlying Postgres unique index handles `NULL` correctly. Only affects the one parent-less row (India, the country); worked around with `findFirst` + conditional `create` instead of `upsert` for that single case — states and cities always have a real parent, so their `upsert` calls are unaffected.
 - **Found and safely handled a second stray credential file** in the repo working directory (`rzp-key (1).csv`, a Razorpay test-mode key/secret pair) — same pattern as the earlier `server.md` SSH-credential file from Arch Phase 0. Neither was created by this session; both are left on disk (may be intentional local files for later Razorpay integration work in Arch Phase 11) but added to `.gitignore` so they can't be accidentally committed.
 - Verified end-to-end: public category/location reads work unauthenticated; category and location writes correctly return 401 (no token) / 403 (wrong role) / 201 (ADMIN); SELECT-without-options and BOOLEAN-with-options both rejected with clear validation messages; deactivating a category removes it from the public list; location hierarchy invariants enforced in both directions. Confirmed full reproducibility and seed idempotency: `docker compose down -v` → migrate (all 5 migrations) → seed → re-seed (identical row counts, no duplicates) → health check, all on a completely fresh database.
+
+## Arch Phase 5 — Vendor Module
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 2 — Marketplace Supply](04-stage-marketplace-supply.md)
+
+### What this unlocks
+
+Vendors can now exist, own a rich profile, and go through a real approval workflow — the first phase with genuine end-to-end marketplace content. Both onboarding routes from product.md §5 are live: self-registration (a VENDOR user builds a profile through DRAFT and submits it) and admin-created shells with an invitation/claim flow for businesses onboarded by WedHub staff. This is also the first phase to give `authorize(Role.ADMIN)` a real, non-test consumer, and the first to model a genuine cross-doc-conflict resolution end-to-end (the verification-level enum, [Risk 6](10-risks-and-open-questions.md#6-verification-level-enum-mismatch), now resolved).
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| POST | `/api/v1/vendors` | Create own vendor shell (Route A) | VENDOR |
+| GET | `/api/v1/vendors/me/detail` | Fetch own vendor (full detail) | owned |
+| PATCH | `/api/v1/vendors/me/detail` | Update business name (slug frozen post-DRAFT) | owned |
+| PUT | `/api/v1/vendors/me/profile` | Upsert rich profile fields | owned |
+| PUT | `/api/v1/vendors/me/categories` | Set primary + subcategories | owned |
+| PUT | `/api/v1/vendors/me/service-areas` | Set service-area locations | owned |
+| PUT | `/api/v1/vendors/me/attributes` | Set category-attribute values (typed per dataType) | owned |
+| POST/DELETE | `/api/v1/vendors/me/services(/:serviceId)` | Attach/detach catalog services | owned |
+| POST/PATCH/DELETE | `/api/v1/vendors/me/packages(/:packageId)` | Manage packages | owned |
+| POST | `/api/v1/vendors/me/submit` | Submit for review | owned |
+| GET | `/api/v1/vendors` | Public listing (thin stub — real search is Arch Phase 7) | none |
+| GET | `/api/v1/vendors/:slug` | Public profile (APPROVED only) | none |
+| GET | `/api/v1/vendors/claim/:token` | Resolve an invitation | none |
+| POST | `/api/v1/vendors/claim/register` | Claim by registering a new account | none |
+| POST | `/api/v1/vendors/claim/link` | Claim by linking an existing logged-in account | access token |
+| GET/POST | `/api/v1/admin/vendors` | Admin list/create (Route B) | ADMIN |
+| GET/PATCH | `/api/v1/admin/vendors/:id` | Admin detail/direct edit | ADMIN |
+| POST | `/api/v1/admin/vendors/:id/invitations` | Generate a claim invitation | ADMIN |
+| POST | `/api/v1/admin/vendors/:id/verify` | Set verification level | ADMIN |
+| POST | `/api/v1/admin/vendors/:id/{approve,reject,suspend,restore,deactivate}` | Status transitions | ADMIN |
+| GET | `/api/v1/admin/vendors/:id/status-history` | Full audit trail | ADMIN |
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `vendors` | Identity/status/ownership — small, hot, frequently joined | `id`, `owner_user_id` (unique, nullable until claimed), `business_name`, `slug` (unique), `status`, `creation_source`, `verification_level`, `profile_completeness` |
+| `vendor_profiles` | Rich content, 1:1 via shared PK — mirrors `User`/`UserProfile` | `vendor_id` (pk), pricing/contact/SEO/operational fields, `social_links`/`business_hours` (JSONB) |
+| `vendor_categories` | Primary + subcategory assignments | `(vendor_id, category_id)` pk, `is_primary` — **partial unique index** `WHERE is_primary` enforces at most one primary per vendor at the DB level |
+| `vendor_service_areas` | Additional locations served, distinct from `vendors.city_id` | `(vendor_id, location_id)` pk |
+| `vendor_attribute_values` | A vendor's values for their category's defined attributes | `(vendor_id, attribute_id)` pk, typed nullable columns: `value_text`/`value_number`/`value_boolean`/`value_options` |
+| `services` | Admin-curated catalog per category (not free text) | `category_id` fk, `name`, `slug` (unique per category) |
+| `vendor_services` | Vendor-to-service attachment | `(vendor_id, service_id)` pk, optional `note` |
+| `packages` | Vendor-owned bespoke packages | `vendor_id` fk, `name`, `price`, `inclusions` (String[]) |
+| `vendor_invitations` | Route B claim mechanism — exact mirror of `email_verification_tokens` | `token_hash` (unique), `invited_by_admin_id`, `claimed_by_user_id`, `expires_at`, `used_at` |
+| `vendor_status_history` | Vendor-facing status audit trail (product.md §41's "approval history must be stored") | `from_status`/`to_status` (nullable `from_status` for the initial DRAFT event), `reason`, `changed_by_user_id` |
+
+### Flow
+
+```
+Route A (self-registration)
+  VENDOR user
+    │
+    ▼
+  POST /vendors  ──►  vendor.service.createVendorForOwner()
+    │                    unique-slug generation + VendorStatusHistory(null→DRAFT)
+    ▼
+  PUT .../profile, .../categories, .../service-areas, .../attributes,
+  POST .../services, .../packages
+    │  each mutation ──► recalculateCompleteness(vendorId)
+    │                       fetches vendor + relations ──► calculateCompleteness()
+    │                       weighted checklist ──► stores Vendor.profileCompleteness
+    ▼
+  POST /vendors/me/submit
+    │
+    ├─ missingRequiredForSubmission non-empty? ──► ValidationError, listing what's missing
+    │
+    └─ owner.emailVerifiedAt set?
+         ├─ yes ──► status = PENDING_APPROVAL
+         └─ no  ──► status = PENDING_VERIFICATION
+                       (self-heals to PENDING_APPROVAL on next GET /vendors/me/detail
+                        once the owner verifies — vendor.service.advanceIfEmailNowVerified,
+                        no direct call from auth.service into the vendor module)
+    ▼
+  ADMIN: POST /admin/vendors/:id/approve  ──►  status = APPROVED, approvedAt set
+    │       (writes VendorStatusHistory + AuditLog together, one transaction)
+    ▼
+  GET /vendors/:slug  (public, unauthenticated)  ──►  visible now
+
+Route B (admin-created)
+  ADMIN: POST /admin/vendors  ──►  Vendor{ownerUserId: null, creationSource: ADMIN_CREATED}
+    ▼
+  POST /admin/vendors/:id/invitations  ──►  VendorInvitation{tokenHash, expiresAt}
+    │                                          (logged, stubbed — no email yet)
+    ▼
+  Public: GET /vendors/claim/:token  ──►  {businessName} (confirm before claiming)
+    ▼
+  POST /vendors/claim/register  OR  POST /vendors/claim/link
+    │        (new account)               (existing VENDOR-role, authenticated)
+    ▼
+  completeClaim(): Vendor.ownerUserId set, invitation.usedAt set,
+                   VendorStatusHistory(null→DRAFT, "invitation claimed")
+    ▼
+  converges into Route A's mutation surface (PUT .../profile, etc.)
+```
+
+### Notes
+
+- **Verification-level enum mismatch ([Risk 6](10-risks-and-open-questions.md#6-verification-level-enum-mismatch)) is now resolved** — used product.md §25's 4 levels. `VerificationLevel` is deliberately decoupled from the `DRAFT→APPROVED` status machine: it's an independent, admin-awarded trust badge (`POST /admin/vendors/:id/verify`) that can change at any vendor status, not a gate the vendor must pass through to get approved. This was a genuine judgment call (both docs used "example"/"possible" framing, not a settled schema) — confirmed with the user before implementation, not silently decided.
+- **The partial unique index for "at most one primary category per vendor" was manually added to the generated migration SQL** — Prisma's schema DSL cannot express a partial unique index (`CREATE UNIQUE INDEX ... WHERE is_primary`) directly. Used `prisma migrate dev --create-only`, hand-edited `migration.sql`, then applied. **Verified directly via SQL**: inserting a second `is_primary=true` row for the same vendor correctly raises a unique-constraint violation. This is a DB-level backstop against a race condition, not just service-layer trust.
+- **Changing an APPROVED vendor's primary category re-triggers `PENDING_APPROVAL`** (subcategory-only changes do not) — confirmed with the user as the safer default, preventing a vendor from inheriting approved status in an unreviewed category. Verified live: switching Photography→Videography on an approved test vendor flipped it back to `PENDING_APPROVAL` and removed it from public search until re-approved.
+- **A real cross-module design question surfaced and was resolved without coupling `auth` to `vendors`:** a vendor that submits before its owner verifies their email needs to eventually reach `PENDING_APPROVAL`, but `auth.service.verifyEmail()` has no reason to know vendors exist (wrong direction of dependency for a modular monolith). Resolved by having `vendor.service.advanceIfEmailNowVerified()` run opportunistically on every `GET /vendors/me/detail` — the transition happens on the vendor's next read after verifying, with zero cross-module calls. Verified: manually setting `email_verified_at`, then re-fetching `/vendors/me/detail`, correctly flipped `PENDING_VERIFICATION → PENDING_APPROVAL`.
+- **Reused rather than duplicated:** exported `issueTokenPair` from `auth.service.ts` and `setRefreshCookie` from `auth.controller.ts` so `vendor-claim`'s register-and-claim flow immediately authenticates the new owner (same JWT + refresh-cookie issuance as normal login), instead of re-implementing token issuance a second time.
+- **`vendor_attribute_values` uses typed nullable columns** (`value_text`/`value_number`/`value_boolean`/`value_options`) rather than one JSONB `value` column, since `CategoryAttribute.dataType` is a closed enum the platform must branch on. The service layer looks up the attribute's `dataType` first and writes only the matching column, nulling the rest — verified live: a SELECT attribute wrote to `value_text` only, a BOOLEAN to `value_boolean` only, a NUMBER to `value_number` only, with the others correctly `null`/`[]`. Also verified the validation rejects an invalid SELECT option and a type-mismatched value (a string where a number was expected) with clear error messages.
+- **Profile completeness is intentionally a partial formula** — media/portfolio fields (logo, cover, portfolio count) don't exist as real data until Arch Phase 6, so they carry no weight yet. This will need a formula revision and a one-time recalculation pass across existing vendors once Phase 6 ships — flagged as expected follow-up work, not a defect. Verified live: the test vendor's score moved from 0 → 50 → 65 → 70 as fields were filled in, confirming the weighted-checklist mechanism itself works correctly.
+- **Slug is frozen once a vendor leaves `DRAFT`** — `PATCH /vendors/me/detail`'s `businessName` update never touches the slug (unlike the categories/locations modules, where the slug *is* derived from the name on create). A slug change post-DRAFT would need to be an explicit admin-only field edit via `PATCH /admin/vendors/:id`, not an automatic side effect — this avoids silently breaking a publicly-indexed vendor's inbound links/SEO equity.
+- Verified end-to-end: full Route A walkthrough (shell → profile → category → attributes → service → package → city → submit → email-verify → auto-advance → admin-approve → public visibility); full Route B walkthrough (admin shell → invitation → public resolve → claim-by-register → immediate authenticated access, confirmed via a fresh `/vendors/me/detail` call); cross-vendor isolation (a second vendor's `PATCH` never touched the first vendor's data); invitation one-time-use (a reused token correctly rejected). `onDelete: Restrict` on `vendor_invitations.invited_by_admin_id` correctly blocked deleting a test admin who had issued an invitation — a genuine safety feature encountered during test cleanup, not a bug. Confirmed full reproducibility: `docker compose down -v` → migrate (all 6 migrations, partial index included) → seed (categories, services, locations) → health check, all on a completely fresh database.
