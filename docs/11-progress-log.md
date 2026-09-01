@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | 0 | Architecture & Repository Setup | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 1 | PostgreSQL & ORM Foundation | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
-| 2 | Authentication & Authorization | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
+| 2 | Authentication & Authorization | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 3 | User Module | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
 | 4 | Category & Location Catalog | [Stage 1](03-stage-foundation.md) | ⬜ Not Started | — |
 | 5 | Vendor Module | [Stage 2](04-stage-marketplace-supply.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 2 / 26 Arch Phases complete.**
+**Overall: 3 / 26 Arch Phases complete.**
 
 ---
 
@@ -192,3 +192,86 @@ npm run db:seed  ──►  prisma/seed.ts  ──►  upserts permissions → r
 - **`avatar_media_id` and `city_id`** on `user_profiles` are plain nullable UUID columns with no foreign-key constraint yet, since the `media` and `locations` tables don't exist until Arch Phase 6 and Arch Phase 4 respectively. The FK constraints should be added in a follow-up migration once those tables land — noting this so it isn't forgotten.
 - **A new `npm audit` finding** appeared after installing `prisma`: a high-severity `deepmerge-ts` stack-exhaustion advisory, reachable only through `@prisma/config`'s dev-time config merging (not the running app). `npm audit fix` did not resolve it without a Prisma major-version bump; left as-is for the same reason as the pre-existing `esbuild`/vitest finding — revisit at Arch Phase 19 (Security Hardening) rather than force an upgrade now.
 - Verified full reproducibility: `docker compose down -v` (destroys the volume) → `docker compose up -d` → `prisma migrate dev` → `db:seed` produced an identical table/seed-data state to the first run.
+
+## Arch Phase 2 — Authentication & Authorization
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 1 — Foundation](03-stage-foundation.md)
+
+### What this unlocks
+
+Real users can now register, log in with email or phone, and hold an authenticated session across requests. Every future module can gate an endpoint behind `authenticateMiddleware` (who is this?) and `authorize(...)` (are they allowed?) without reimplementing auth. Password reset and email verification exist end-to-end at the data/token level, with real email delivery stubbed as a logged link until Arch Phase 14 wires up the notification service.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| POST | `/api/v1/auth/register` | Create an END_USER or VENDOR account | None |
+| POST | `/api/v1/auth/login` | Email-or-phone + password → access token + refresh cookie | None |
+| POST | `/api/v1/auth/logout` | Revoke current refresh token, clear cookie | Refresh cookie |
+| POST | `/api/v1/auth/refresh` | Rotate refresh token, issue new access token | Refresh cookie |
+| POST | `/api/v1/auth/verify-email` | Consume email verification token | None (token in body) |
+| POST | `/api/v1/auth/forgot-password` | Issue password reset token (always 200, no user-enumeration) | None |
+| POST | `/api/v1/auth/reset-password` | Consume reset token, set new password, revoke all sessions | None (token in body) |
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `refresh_tokens` | Opaque refresh tokens, hashed at rest, with a rotation chain for theft detection | `id`, `user_id`, `token_hash` (unique), `expires_at`, `revoked_at`, `replaced_by_id` (self-fk) |
+| `email_verification_tokens` | One-time tokens for email confirmation | `id`, `user_id`, `token_hash` (unique), `expires_at`, `used_at` |
+| `password_reset_tokens` | One-time tokens for password resets | `id`, `user_id`, `token_hash` (unique), `expires_at`, `used_at` |
+
+`users` gained `failed_login_attempts` and `locked_until` columns for account lockout.
+
+### Flow
+
+```
+Client
+  │
+  ▼
+POST /auth/login  (rate-limited: 10/15min)
+  │
+  ▼
+auth.controller → auth.service.login()
+  │
+  ├─ user locked? ──► AuthenticationError (locked message)
+  ├─ wrong password? ──► increment failed_login_attempts
+  │                       5th failure ──► set locked_until, return locked message
+  └─ correct password ──► reset attempts, issue token pair
+                              │
+                              ├─→ JWT access token (15m, stateless, in response body)
+                              └─→ opaque refresh token (30d, httpOnly+secure+sameSite=strict cookie)
+                                   only its SHA-256 hash is stored in refresh_tokens
+
+Later: POST /auth/refresh (cookie only)
+  │
+  ├─ token hash not found ──► AuthenticationError
+  ├─ token already revoked ──► REUSE DETECTED
+  │                             → revoke every refresh_token row for that user
+  │                             → AuthenticationError ("all sessions revoked")
+  ├─ token expired ──► AuthenticationError
+  └─ valid ──► issue new pair, mark old row revoked_at + replaced_by_id (rotation)
+
+Any protected route:
+  Authorization: Bearer <access token>
+       │
+       ▼
+  authenticateMiddleware (verifies JWT, attaches req.user)
+       │
+       ▼
+  authorize(Role.X, Role.Y)  (checks req.user.role against allow-list)
+       │
+       ▼
+  route handler
+```
+
+### Notes
+
+- **New cross-cutting infrastructure this phase surfaced but wasn't explicitly scoped in the plan:** an `asyncHandler` wrapper (Express 4 doesn't auto-catch rejected promises from async route handlers — without it, errors thrown in `auth.service.ts` would become unhandled rejections instead of reaching `errorMiddleware`) and a generic `validateBody(schema)` Zod middleware (every module needs request validation per Coding Rule 4; this is now the one shared implementation, not reinvented per module). Both live in `common/`, not the auth module, since every future module needs them.
+- **Refresh token reuse detection:** presenting an already-rotated (revoked) refresh token is treated as a signal of token theft — the entire session chain for that user is revoked, not just the presented token. Verified manually: rotating a token, then replaying the *old* cookie, correctly revoked both the old and the newly-issued token, forcing a fresh login.
+- **Password reset revokes all sessions:** confirmed via direct DB query that all 5 refresh tokens issued during testing were marked revoked after a single `/reset-password` call — a password reset should not leave old sessions valid.
+- **Logout and rotation share one `revoked_at` field**, so presenting a token after ordinary logout returns the same "already been used, all sessions revoked" message as genuine reuse-detection. This is a deliberate simplification (safe-by-default: over-revoking on any revoked-token presentation causes no harm since the user already intended to end that session) rather than a bug — flagging here so it isn't mistaken for one later.
+- **Email verification / password reset "sending"** is a `logger.info` line containing the raw token, clearly marked with a `// TODO(Arch Phase 14)` comment — real delivery arrives with the notification service, not before.
+- **Rate limiting is in-memory** (`express-rate-limit`'s default store), not Redis-backed — acceptable for a single-instance dev/MVP setup per architecture.md's "Redis optional pre-MVP," but will not share state across multiple API instances once the app scales horizontally. Revisit when Arch Phase 14 introduces Redis.
+- Verified the full flow end-to-end manually: register → duplicate-email rejection (409) → login → 5-failed-attempts lockout → refresh rotation → reuse-detection chain revocation → logout → authenticate/authorize middleware (401 no token, 401 malformed, 403 wrong role, 200 correct role) → rate limiting (429 past threshold) → email verification (one-time use) → forgot-password (identical response for existing vs. non-existent email) → reset-password (old password stops working, all sessions revoked). Also confirmed full reproducibility via `docker compose down -v` → migrate → seed → register on a completely fresh database.

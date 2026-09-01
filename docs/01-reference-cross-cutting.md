@@ -126,6 +126,14 @@ Register/Login → Credential verification → Session/access token
 - Must support: email, phone, password, OTP (later), password reset, email verification, account lockout/rate limiting, session/token revocation, logout.
 - Never store plain passwords, raw payment secrets, raw API secrets, or unsigned webhook data.
 
+**Implemented in Arch Phase 2** (`src/modules/auth/`, `src/common/middleware/`, `src/common/policies/`) — every later module reuses these rather than reimplementing auth:
+- `authenticateMiddleware` — verifies the JWT access token from the `Authorization: Bearer` header, attaches `req.user = { id, role }`.
+- `authorize(...roles)` — role allow-list guard; use after `authenticateMiddleware` on any protected route.
+- `assertOwnsResource(userId, resourceOwnerId)` (`common/policies/ownership.policy.ts`) — throws `AuthorizationError` on mismatch; the generic building block for "can this user touch this specific row."
+- `validateBody(schema)` (`common/middleware/validate.middleware.ts`) — generic Zod request-body validator; every module's routes should use this rather than validating inline in controllers.
+- `asyncHandler(fn)` (`common/utils/async-handler.util.ts`) — wraps async route handlers so a thrown/rejected error reaches `errorMiddleware` instead of becoming an unhandled rejection. **Every async controller method in every module must be wrapped in this** — Express 4 does not catch async errors on its own.
+- Access tokens are short-lived (15 min) JWTs; refresh tokens are opaque, hashed at rest, rotated on every use, with reuse-detection that revokes a user's entire session chain if an already-rotated token is replayed. See `docs/11-progress-log.md`'s Arch Phase 2 entry for the full flow diagram.
+
 ## Security & abuse baseline (architecture.md §40–42; product.md §50, §52)
 
 Implement across all stages as applicable: Helmet, CORS restrictions, rate limiting (see below), request validation, SQL-injection protection via ORM/parameterized queries, XSS-safe output handling, CSRF protection where cookie auth requires it, secure cookies, password hashing, webhook signature verification, upload/MIME/file-size validation, signed object-storage uploads, signed/private media URLs where needed, secrets via environment/secret manager, audit logs, brute-force protection.

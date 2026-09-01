@@ -48,14 +48,16 @@ See [`11-progress-log.md`](11-progress-log.md#arch-phase-0--architecture--reposi
 
 See [`11-progress-log.md`](11-progress-log.md#arch-phase-1--postgresql--orm-foundation) for the full write-up.
 
-### Arch Phase 2 — Authentication & Authorization
-- [ ] Registration, login, logout
-- [ ] Password hashing, email verification foundation, password reset foundation
-- [ ] Access token/session, refresh token strategy if applicable, session revocation
-- [ ] Authentication middleware, role middleware, permission middleware
-- [ ] Ownership policy system
-- [ ] Rate limiting for auth, failed login tracking
-- [ ] Roles: `END_USER`, `VENDOR`, `ADMIN`
+### Arch Phase 2 — Authentication & Authorization ✅ Done — 2026-09-02
+- [x] Registration, login, logout
+- [x] Password hashing, email verification foundation, password reset foundation
+- [x] Access token/session, refresh token strategy if applicable, session revocation
+- [x] Authentication middleware, role middleware, permission middleware
+- [x] Ownership policy system (foundation only — genuinely enforced once Stage 2 adds owned resources)
+- [x] Rate limiting for auth, failed login tracking
+- [x] Roles: `END_USER`, `VENDOR`, `ADMIN`
+
+See [`11-progress-log.md`](11-progress-log.md#arch-phase-2--authentication--authorization) for the full write-up.
 
 ### Arch Phase 3 — User Module
 - [ ] User profile CRUD, avatar support
