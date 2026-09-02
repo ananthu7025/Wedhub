@@ -51,8 +51,23 @@ const REVIEW_PHOTOS_INCLUDE = {
   photos: { where: { status: "READY" as const }, orderBy: { sortOrder: "asc" as const } },
 } as const;
 
+// user/reports.reporter are included for the admin-detail path
+// (getReviewAdmin) — safe to join unconditionally since findReviewById's
+// result is never returned to a public/couple/vendor caller
+// (respondToReview/reportReview/moderateReview all discard or re-fetch
+// rather than returning this object directly; only the admin path
+// returns it as-is).
+const REVIEWER_SELECT = { id: true, email: true, profile: { select: { firstName: true, lastName: true } } } as const;
+
 export function findReviewById(id: string) {
-  return prisma.review.findUnique({ where: { id }, include: { reports: true, ...REVIEW_PHOTOS_INCLUDE } });
+  return prisma.review.findUnique({
+    where: { id },
+    include: {
+      reports: { include: { reporter: { select: REVIEWER_SELECT } } },
+      user: { select: REVIEWER_SELECT },
+      ...REVIEW_PHOTOS_INCLUDE,
+    },
+  });
 }
 
 export function listVendorReviews(vendorId: string, page: number, limit: number) {
@@ -106,7 +121,11 @@ export function listReviewsAdmin(filter: { status: ReviewStatus | undefined; pag
   const where: Prisma.ReviewWhereInput = filter.status ? { status: filter.status } : {};
   return prisma.review.findMany({
     where,
-    include: { vendor: { select: { id: true, businessName: true, slug: true } }, reports: true },
+    include: {
+      vendor: { select: { id: true, businessName: true, slug: true } },
+      user: { select: REVIEWER_SELECT },
+      reports: { include: { reporter: { select: REVIEWER_SELECT } } },
+    },
     orderBy: { createdAt: "desc" },
     skip: (filter.page - 1) * filter.limit,
     take: filter.limit,

@@ -5,10 +5,12 @@ import type { CreateLocationBody, ListLocationsQuery, UpdateLocationBody } from 
 
 export async function listLocations(req: Request, res: Response): Promise<void> {
   const query = req.validatedQuery as ListLocationsQuery;
-  const locations = await locationsService.listLocations({
-    type: query.type,
-    parentId: query.parentId,
-  });
+  // includeInactive is only honored for an authenticated ADMIN — same
+  // pattern as categoriesController.listCategories.
+  const includeInactive = req.query.includeInactive === "true" && req.user?.role === "ADMIN";
+  const locations = includeInactive
+    ? await locationsService.listAllLocationsForAdmin({ type: query.type, parentId: query.parentId })
+    : await locationsService.listLocations({ type: query.type, parentId: query.parentId });
   res.json(successResponse(locations));
 }
 

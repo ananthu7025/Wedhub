@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../../common/utils/async-handler.util";
 import { validateBody } from "../../common/middleware/validate.middleware";
-import { authenticateMiddleware } from "../../common/middleware/authenticate.middleware";
+import { authenticateMiddleware, optionalAuthenticateMiddleware } from "../../common/middleware/authenticate.middleware";
 import { authorize } from "../../common/middleware/authorize.middleware";
 import { Role } from "../../common/enums/roles.enum";
 import * as categoriesController from "./categories.controller";
@@ -14,7 +14,11 @@ import {
 
 export const categoriesRouter = Router();
 
-categoriesRouter.get("/", asyncHandler(categoriesController.listCategories));
+// optionalAuthenticateMiddleware only so an authenticated ADMIN can pass
+// ?includeInactive=true and see disabled categories (see
+// categoriesController.listCategories) — every other caller sees the
+// exact same public, isActive:true-only list as before.
+categoriesRouter.get("/", optionalAuthenticateMiddleware, asyncHandler(categoriesController.listCategories));
 categoriesRouter.get("/:slug", asyncHandler(categoriesController.getCategory));
 
 categoriesRouter.post(

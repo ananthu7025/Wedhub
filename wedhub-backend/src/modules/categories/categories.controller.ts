@@ -8,8 +8,13 @@ import type {
   UpdateCategoryBody,
 } from "./categories.schema";
 
-export async function listCategories(_req: Request, res: Response): Promise<void> {
-  const categories = await categoriesService.listCategories();
+export async function listCategories(req: Request, res: Response): Promise<void> {
+  // includeInactive is only honored for an authenticated ADMIN — anyone
+  // else gets the normal isActive:true list regardless of what they pass,
+  // so this stays a safe no-op for the public/couple/vendor callers this
+  // route already serves.
+  const includeInactive = req.query.includeInactive === "true" && req.user?.role === "ADMIN";
+  const categories = includeInactive ? await categoriesService.listAllCategoriesForAdmin() : await categoriesService.listCategories();
   res.json(successResponse(categories));
 }
 

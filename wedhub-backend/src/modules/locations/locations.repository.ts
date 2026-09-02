@@ -15,6 +15,21 @@ export function findLocations(filter: ListLocationsFilter) {
   return prisma.location.findMany({ where, orderBy: { name: "asc" } });
 }
 
+// Admin-only counterpart to findLocations — omits the isActive filter so a
+// disabled location remains visible/re-enable-able. See
+// locations.controller.ts's listLocations for the ADMIN-only gate.
+export function findAllLocationsForAdmin(filter: ListLocationsFilter) {
+  const where: Prisma.LocationWhereInput = {};
+  if (filter.type) {
+    where.type = filter.type;
+  }
+  if (filter.parentId !== undefined) {
+    where.parentId = filter.parentId;
+  }
+
+  return prisma.location.findMany({ where, orderBy: { name: "asc" } });
+}
+
 export function findLocationById(id: string) {
   return prisma.location.findUnique({ where: { id } });
 }

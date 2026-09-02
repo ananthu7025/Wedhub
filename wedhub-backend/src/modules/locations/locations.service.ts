@@ -12,6 +12,10 @@ export function listLocations(filter: ListLocationsFilter) {
   return locationsRepository.findLocations(filter);
 }
 
+export function listAllLocationsForAdmin(filter: ListLocationsFilter) {
+  return locationsRepository.findAllLocationsForAdmin(filter);
+}
+
 async function generateUniqueSlug(name: string, parentId: string | undefined): Promise<string> {
   const base = slugify(name);
   let candidate = base;
