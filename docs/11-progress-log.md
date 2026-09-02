@@ -26,7 +26,7 @@
 | 13 | Featured Listings & Promotions | [Stage 5](07-stage-monetization.md) | ✅ Done | 2026-09-02 |
 | 14 | Notifications | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
 | 15 | Telegram Bot MVP | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
-| 16 | Admin Platform Backend | [Stage 6](08-stage-telegram-and-admin.md) | ⬜ Not Started | — |
+| 16 | Admin Platform Backend | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
 | 17 | CMS & SEO Backend | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 18 | Analytics & Marketplace Metrics | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 19 | Security Hardening | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 16 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), and Stage 5 (Monetization) are all fully done; Stage 6 (Telegram & Admin) is underway with Arch Phases 14–15 done (Arch Phase 16 remaining).**
+**Overall: 17 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), and Stage 6 (Telegram & Admin) are all fully done. Stage 7 (Growth & Scale) is next.**
 
 ---
 
@@ -1389,3 +1389,69 @@ sendAndLog() — telegramProvider.sendMessage() (real Telegram API call)
 - **A synthesized placeholder email for Telegram-sourced contacts, confirmed with the user:** `Enquiry.contactEmail` is required and non-nullable; a Telegram user has no email on file and product.md's journey never asks for one. Rather than making the column nullable (touching 4+ already-shipped modules that assume it exists), Telegram enquiries get `telegram_<telegramUserId>@wedhub.telegram` — the real contact channel for that lead is the collected phone number or Telegram itself, and every downstream consumer already treats `contactEmail` as an opaque string.
 - **Live bot verification is partial, flagged honestly:** the real bot token (`@VendorMatefinderBot`, confirmed live via Telegram's own `getMe`) is configured, and every outbound send in this phase's code genuinely round-trips to Telegram's real API — verified by its real, live rejection of synthetic test chat IDs (`400 chat not found`, `400 query is too old`). Receiving real webhook deliveries requires a public HTTPS tunnel; this machine's managed endpoint security (Sophos + an enforced AppLocker policy, confirmed via Windows CodeIntegrity/AppLocker event logs) blocked the ngrok binary needed for that, and — per the user's explicit instruction — no attempt was made to work around or modify that endpoint security configuration. Instead, the full conversation state machine (all 11 states, skip logic, invalid-budget/date reprompting, real Enquiry/Lead creation with correct `source`/data mapping) was verified by calling the exact same conversation-engine functions the webhook handler calls, directly and in sequence, against the real database.
 - Also verified live: webhook secret-token verification correctly 401s on a wrong or missing header, before any parsing; the admin register-webhook endpoint correctly 401s unauthenticated and 403s a non-admin, and its one real live call against a fabricated domain genuinely attempted DNS resolution via Telegram's own API before failing (proving the call is real, not stubbed); `npm run typecheck` and `npm run lint` both pass with zero errors; no test suite exists yet in this codebase to run (consistent with every prior phase). All test users/vendors/Telegram identities/conversations created during verification were deleted afterward.
+
+---
+
+## Arch Phase 16 — Admin Platform Backend
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 6 — Telegram & Admin](08-stage-telegram-and-admin.md)
+
+### What this unlocks
+
+This phase started with an audit of all 15 prior phases against architecture.md's 17-task list and product.md §39's dashboard inventory — and found most of the admin surface already shipped incrementally: vendors (approve/reject/suspend/invite, Arch Phase 5/8), media (Arch Phase 6), leads (Arch Phase 9), reviews + moderation (Arch Phase 10, including reported-reviews — see Notes), plans/subscriptions/refunds/coupons (Arch Phase 11), categories/locations (Arch Phase 4), featured listings (Arch Phase 13). The real remaining gaps — zero admin visibility into users, no dashboard metrics, audit log rows written since Arch Phase 5 but never read back, and unused Role/Permission tables — are what this phase actually builds. A real password-hash leak was caught and fixed during live verification.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/admin/dashboard` | Platform metrics: users, vendors, leads, enquiries, revenue, MRR, conversion rate | ADMIN |
+| GET | `/api/v1/admin/users` | List users, filterable by status/role | ADMIN |
+| GET | `/api/v1/admin/users/:id` | User detail (incl. linked vendor, login/lockout state) | ADMIN |
+| POST | `/api/v1/admin/users/:id/suspend` | Suspend a user, with a required reason | ADMIN |
+| POST | `/api/v1/admin/users/:id/restore` | Restore a suspended user to ACTIVE | ADMIN |
+| GET | `/api/v1/admin/audit-logs` | Read the audit trail, filterable by entityType/entityId/actorId | ADMIN |
+| GET | `/api/v1/admin/roles` | List roles with their permissions (read-only) | ADMIN |
+| GET | `/api/v1/admin/permissions` | List all permissions (read-only) | ADMIN |
+| GET | `/api/v1/admin/admin-users` | List which users hold which admin role (read-only) | ADMIN |
+
+No new tables — this phase is entirely new read/write surface over existing models (`User`, `AuditLog`, `Role`, `Permission`, `RolePermission`, `AdminUser`, all present since Arch Phase 2/3).
+
+### Flow
+
+```
+GET /admin/dashboard
+     │
+     ├─ totalUsers, newRegistrations(30d)     — User.count()
+     ├─ totalVendors, activeVendors            — Vendor.count() / count(status=APPROVED)
+     ├─ paidVendors                            — distinct vendorId with an ACTIVE/TRIALING Subscription
+     ├─ totalLeads, totalEnquiries              — Lead.count() / Enquiry.count()
+     ├─ conversionRate                          — leads WON / total leads (see Notes — no
+     │                                             formula defined in either source doc)
+     ├─ revenue.total / .thisMonth              — sum(Invoice.amount) where status=PAID
+     └─ mrr                                     — sum of every ACTIVE subscription's plan
+                                                    price, YEARLY normalized ÷12 (TRIALING
+                                                    excluded — no revenue collected yet)
+
+POST /admin/users/:id/suspend {reason}
+     │
+     ├─ user already SUSPENDED? → 409
+     └─► transaction: User.status=SUSPENDED + AuditLog row
+           (actorId, action, entityType="user", before/after status, reason)
+     ▼
+GET /admin/audit-logs?entityType=user&entityId=...
+     → the row from above, plus every vendor-status-transition AuditLog
+       row already being written since Arch Phase 5 — now finally readable
+```
+
+### Notes
+
+- **A real security bug was caught and fixed during live verification:** `admin-users.service.ts`'s suspend/restore transition called `prisma.user.update()` with no `select` clause — Prisma returns every column by default, so the bcrypt `passwordHash` was leaking directly into the API response body. Caught by actually reading the live response rather than assuming the endpoint was safe. Prompted an audit of every other `prisma.user.*` call site in the codebase for the same pattern (`auth.repository.ts`, `users.repository.ts`, `vendor-claim.service.ts`, `vendor.service.ts`) — all confirmed safe already, either via an explicit `select`, a discarded return value, or (in `GET /users/me`'s case) the controller manually re-picking safe fields before `res.json` even though the service layer underneath fetches the full row. Fixed the one broken call site with an explicit `select`. Re-verified live: the same suspend call no longer includes `passwordHash`.
+- **A real architectural gap was found and deliberately left unresolved, confirmed with the user:** `Role`/`Permission`/`RolePermission`/`AdminUser` have existed since Arch Phase 2/3, seeded with one "admin" role holding every permission — but no code anywhere across all 15 prior phases actually reads them for an authorization decision; every `authorize(Role.ADMIN)` call gates on the coarse `User.role` enum instead. Building CRUD to *edit* these tables would have produced endpoints that look functional but have zero real effect on access control. Shipped read-only visibility instead (`GET /admin/roles`, `/permissions`, `/admin-users`) and deliberately did not wire `authorize()` to consult them — that's a real breaking change to every admin route's authorization model across every prior phase, and deserves its own deliberate design rather than a rushed side effect of this phase's admin-CRUD sweep.
+- **The "reported reviews" gap identified during initial scoping turned out to already be closed** — `review.service.ts`'s `reportReview()` (Arch Phase 10) already auto-transitions a review to `FLAGGED` on its first report, and the admin review endpoints already `include: { reports: true }`. `GET /admin/reviews?status=FLAGGED` already is the reported-reviews view; no new endpoint was built here, corrected after an initial pass wrongly assumed it was missing.
+- **product.md §39's "Conversion" has no defined formula in either source doc** — confirmed with the user: defined as `leads WON / total leads` (reusing product.md §23's own "Conversion outcome" language and the real `LeadStatus.WON` value from Arch Phase 9), not enquiry→lead conversion (rejected on reflection — an Enquiry always produces ≥1 Lead by construction, so that ratio isn't a meaningful signal) or free→paid vendor conversion (a different metric entirely, not what was built).
+- **product.md §39's "Users: Reported" has no backing data source** — `ReviewReport` ties a reporter to a *review*, not to a user; there is no generic "this user was reported" record in the schema. Omitted from the user-list filters rather than faked via inference.
+- **CMS, Analytics, feature flags, and system settings are correctly out of scope** — CMS is explicitly Stage 7/Arch Phase 17's job (Stage 6's own doc says so directly); Analytics is Arch Phase 18; feature flags/system settings have no product.md scenario or later-stage dependency requiring them yet, so building speculative CRUD for them was avoided.
+- Verified live end-to-end on a real running Postgres/Redis stack: dashboard MRR calculation matched the exact expected sum for a real monthly + real yearly active subscription (5999 + 129990/12 = 16831.5); conversion rate and revenue totals matched exactly for real WON/NEW leads and a real PAID invoice; user suspend correctly 409s on a double-suspend and correctly transitions back via restore; the audit-log endpoint correctly surfaced both suspend and restore actions with accurate before/after state and correctly filtered by `entityType`/`actorId`; roles/permissions/admin-users endpoints correctly returned the real seeded data; all four new route groups correctly 401 unauthenticated and 403 a non-admin (END_USER role). `npm run typecheck` and `npm run lint` both pass with zero errors; no test suite exists yet in this codebase to run (consistent with every prior phase). All test users/vendors/subscriptions/leads/invoices/audit logs created during verification were deleted afterward.
+
+**This completes Stage 6 (Telegram & Admin) — Arch Phases 14–16 all done.**

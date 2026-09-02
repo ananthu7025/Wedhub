@@ -21,6 +21,10 @@ import { webhookRouter } from "../modules/webhooks";
 import { featuredListingAdminRouter, featuredListingRouter } from "../modules/featured-listings";
 import { notificationRouter } from "../modules/notifications";
 import { telegramAdminRouter, telegramRouter } from "../modules/telegram";
+import { adminUsersRouter } from "../modules/admin-users";
+import { adminAuditLogsRouter } from "../modules/admin-audit-logs";
+import { adminRolesRouter } from "../modules/admin-roles";
+import { adminDashboardRouter } from "../modules/admin-dashboard";
 
 export const apiV1Router = Router();
 
@@ -52,6 +56,10 @@ apiV1Router.use("/admin/featured-listings", featuredListingAdminRouter);
 apiV1Router.use("/notifications", notificationRouter);
 apiV1Router.use("/telegram", telegramRouter);
 apiV1Router.use("/admin/telegram", telegramAdminRouter);
+apiV1Router.use("/admin/users", adminUsersRouter);
+apiV1Router.use("/admin/audit-logs", adminAuditLogsRouter);
+apiV1Router.use("/admin", adminRolesRouter);
+apiV1Router.use("/admin/dashboard", adminDashboardRouter);
 
 // Mounted BEFORE /vendors: vendorRouter's public GET /:slug would otherwise
 // greedily match /vendors/claim/:token, /vendors/me/albums, /vendors/:slug/albums,
