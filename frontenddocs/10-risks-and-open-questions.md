@@ -61,3 +61,39 @@
 - **Recommendation:** Before wiring `vendor/portfolio.html` and `vendor/analytics.html` in Frontend Arch Phase 5/7, read `wedhub-backend/src/modules/entitlements/` directly to get the real, current list of enforced limits, and reconcile the UI to exactly that list — do not assume the mockup's implied gating is accurate.
 - **Status:** Open — needs a source-code check at implementation time, not resolvable from docs alone.
 - **Related stage files:** [05-stage-vendor-experience.md](05-stage-vendor-experience.md)
+
+## 7. Vendor detail endpoint cannot resolve the vendor's logo/cover image
+
+- **Citations:** `wedhub-backend/src/modules/vendors/vendor.repository.ts` (`VENDOR_FULL_INCLUDE` — includes `profile`, `categories`, `serviceAreas`, `services`, `packages`, `attributeValues`, `city`, but **not** `profile.logoMedia`/`profile.coverMedia`), `prisma/schema.prisma` (`VendorProfile.logoMediaId`/`coverMediaId` are bare uuids with no relation joined in the vendor-detail query), `wedhub-backend/src/modules/media/media.routes.ts` (every route requires `authenticateMiddleware` — no public "get media by id" endpoint exists at all)
+- **Description:** `GET /api/v1/vendors/:slug` returns `profile.logoMediaId`/`coverMediaId` as opaque UUIDs with no accompanying object key or URL, and there is no public endpoint to resolve a media ID to a URL. This is a real, verified backend gap (confirmed via direct source read, not inferred), not a frontend oversight. By contrast, `GET /api/v1/search/vendors` **does** resolve a logo URL server-side (`logoUrl` field, pre-built via `getPublicUrl(objectKey)`) — the inconsistency is specific to the single-vendor detail endpoint.
+- **Impact:** The vendor profile page (`couple/vendor-profile.html`'s cover/logo hero) cannot render the vendor's actual configured logo/cover image via the detail endpoint alone.
+- **Recommendation:** `GET /api/v1/vendors/:slug/albums` (public, confirmed working) embeds full `Media` rows (`originalObjectKey`/`optimizedObjectKey`/`thumbnailObjectKey`, resolvable via the same `getPublicUrl(key) = ${R2_PUBLIC_BASE_URL}/${key}` join pattern used server-side) for each album's photos. Frontend Arch Phase 2's vendor-profile page falls back to the vendor's first public album's cover/first photo for hero imagery when `logoMediaId`/`coverMediaId` can't be resolved, rather than blocking on a backend fix. This is a pragmatic UI fallback, not a silent workaround — documented here and in that phase's progress-log entry. A proper fix (adding the `logoMedia`/`coverMedia` include to `VENDOR_FULL_INCLUDE`, or a public single-media-lookup endpoint) belongs to a future backend pass, not this frontend phase.
+- **Status:** ✅ Worked around (2026-09-02) with the album-cover fallback described above; the underlying backend gap remains open and un-fixed.
+- **Related stage files:** [04-stage-couple-experience.md](04-stage-couple-experience.md)
+
+## 8. Search results carry no city/category name, rating, or review count
+
+- **Citations:** `wedhub-backend/src/modules/search/search.service.ts` (`toPublicVendorSummary()` — returns only `id, businessName, slug, verificationLevel, shortDescription, startingPrice, currency, logoUrl`), `search.repository.ts` (raw SQL joins only `vendors`, `vendor_profiles`, and the logo `media` row — no `Category`, `Location`, or `Review` join at all)
+- **Description:** Search result rows have no denormalized city/category display name, and no rating/review count, even though the vendor's `Vendor.averageRating`/`reviewCount` are real, already-computed fields (just not selected into the search projection).
+- **Impact:** The search results list (`couple/search.html`) mockup shows rating and location text on every card — this cannot be rendered from `/search/vendors` alone.
+- **Recommendation:** Since a search is normally scoped to a single `cityId`/`categoryId` filter the user already chose, the frontend can resolve that one city/category name client-side (one extra `GET /locations`/`GET /categories` call per search, not per result row) rather than needing it per-row. Rating/review count genuinely cannot be shown on search cards without either a backend change to the search projection or an extra per-row detail fetch (rejected as impractical for a paginated list — N+1 calls per page). Frontend Arch Phase 2's search page omits the star-rating and city-name-per-row from result cards, showing only what `/search/vendors` actually returns, rather than fabricating a rating or making N+1 calls. This is a scoped, deliberate simplification, not a bug.
+- **Status:** ✅ Resolved via scope reduction (2026-09-02) — search cards render only backend-provided fields; the mockup's per-card rating/location display is not carried into the real implementation for search results (it remains correct and buildable on the vendor detail page itself, where `averageRating`/`reviewCount` ARE present).
+- **Related stage files:** [04-stage-couple-experience.md](04-stage-couple-experience.md)
+
+## 9. No star-rating distribution breakdown available anywhere in the backend
+
+- **Citations:** `wedhub-backend/src/modules/reviews/review.repository.ts` (`recalculateVendorRating` only ever computes `_avg`/`_count` via `prisma.review.aggregate`, never a `groupBy` on `rating`)
+- **Description:** The vendor profile mockup (`couple/vendor-profile.html`'s `.rating-bar-row` elements, one per star value 1–5) shows a distribution bar chart. No backend endpoint computes this, and computing it client-side would require fetching every review for a vendor (expensive, and paginated review lists don't guarantee completeness at reasonable page sizes).
+- **Impact:** The rating-summary section's distribution bars cannot be built as designed.
+- **Recommendation:** Render only the average rating (large number) and total review count on the vendor profile page — both are real, already on the vendor-detail response (`averageRating`, `reviewCount`) — and omit the per-star distribution bars entirely rather than fabricating them. Revisit if/when the backend adds a `groupBy` aggregate.
+- **Status:** ✅ Resolved via scope reduction (2026-09-02) — distribution bars omitted from the real implementation.
+- **Related stage files:** [04-stage-couple-experience.md](04-stage-couple-experience.md)
+
+## 10. Featured-listings endpoint returns minimal vendor data, and categories have no icon field
+
+- **Citations:** `wedhub-backend/src/modules/featured-listings/featured-listing.repository.ts` (`VENDOR_SUMMARY_INCLUDE` selects only `{id, businessName, slug}` on the joined vendor), `prisma/schema.prisma`'s `Category` model (no `iconUrl`/`imageObjectKey` field exists at all)
+- **Description:** `GET /api/v1/featured-listings?placementType=HOMEPAGE` identifies which vendors are featured but not enough to render a card (no logo/price). Separately, the category browse strip on the home page mockup shows a photo per category — no such field exists on `Category`.
+- **Impact:** Both the "Featured vendors" and "Browse by category" sections of the home page mockup need adaptation to what's actually queryable.
+- **Recommendation:** For featured vendors: cross-reference each featured listing's `vendorId`/`slug` against `GET /search/vendors` (filtered or scanned) to get the logo/price — practical since the home page shows a small, fixed number of featured cards (not a paginated list), so a handful of extra lookups is reasonable, unlike the search-results N+1 problem in Open Question 8. For category icons: use a small static frontend-side image map keyed by category slug (matching the unsplash placeholder pattern already used in the approved mockup) rather than blocking on a backend schema change — this is presentation-only data with no business meaning, appropriate to keep frontend-side.
+- **Status:** ✅ Resolved via the above approach (2026-09-02).
+- **Related stage files:** [04-stage-couple-experience.md](04-stage-couple-experience.md)

@@ -24,13 +24,18 @@ Arch Phases 4 (Category/Location Catalog), 5 (Vendor Module), 6 (Media & Portfol
 
 ## Task Checklist
 
-### Frontend Arch Phase 2 — Public Discovery
-- [ ] `(public)/` home route — port `couple/home.html`: hero search bar, category browse strip, featured vendors grid, Telegram promo banner. Featured vendors and category list are real backend data (`GET /categories`, whatever powers "featured" — check `wedhub-backend/src/modules/featured-listings/` and `search`)
-- [ ] `(public)/search` — port `couple/search.html`: filter sidebar (category, location, budget range, category-specific attributes, verified/rating filters), search bar, sort dropdown, result list, pagination. Wire to `GET /search` (check `wedhub-backend/src/modules/search/search.schema.ts` for the real query param shape before assuming the mockup's filter set maps 1:1)
-- [ ] `(public)/vendors/[slug]` — port `couple/vendor-profile.html`: cover/logo, identity, about, category-specific attributes, portfolio grid, packages, reviews with rating summary, sticky enquiry CTA card. Wire to `GET /vendors/:slug` (or however the real route is shaped — check `wedhub-backend/src/modules/vendors/vendors.routes.ts`)
-- [ ] Category-specific attribute rendering must be generic, not hardcoded to Photographer fields the way the mockup's single worked example is — check how `wedhub-backend/src/modules/categories/` models category attributes (structured relational vs. JSONB per `../docs/01-reference-cross-cutting.md`) and render whatever attributes come back for the vendor's actual category
-- [ ] SEO metadata basics per page (`generateMetadata` — title, description) even though full structured-data SEO is Frontend Arch Phase 11
-- [ ] Loading/empty/error states for search with zero results, a vendor slug that doesn't exist (404), and network failure
+### Frontend Arch Phase 2 — Public Discovery ✅ Done — 2026-09-02
+- [x] `(public)/` home route — port `couple/home.html`: hero search bar, category browse strip, featured vendors grid, Telegram promo banner. Category list is real (`GET /categories`); featured vendors come from `GET /featured-listings?placementType=HOMEPAGE` cross-referenced against `GET /search/vendors` for renderable card data (see Open Question 10 — the featured-listings endpoint alone only returns `{id, businessName, slug}` per vendor)
+- [x] `(public)/search` — port `couple/search.html`: filter sidebar (category, city, budget range, verified-only), search bar, sort dropdown, result grid, pagination. Wired to `GET /search/vendors` with the exact query shape from `search.schema.ts` (`keyword, categoryId, cityId, priceMin, priceMax, verified, sort, page, limit`) — confirmed via direct source read, not assumed. Category-specific attribute filters (`attr[<uuid>]=value`) are supported by `lib/api/catalog.ts`'s `searchVendors()` but not yet surfaced as sidebar UI controls in this phase — see Notes
+- [x] `(public)/vendors/[slug]` — port `couple/vendor-profile.html`: hero image (via album-cover fallback, see Open Question 7), identity, about, category-specific attributes, portfolio grid, packages, reviews (average + count, no distribution bars — see Open Question 9), sticky enquiry CTA (links to login — enquiry submission itself is Frontend Arch Phase 3 scope). Wired to `GET /vendors/:slug` + `GET /vendors/:slug/albums` + `GET /vendors/:vendorId/reviews`
+- [x] Category-specific attribute rendering is fully generic (`components/shared/VendorAttributes.tsx`) — switches on `attribute.dataType` (`TEXT/SELECT/NUMBER/BOOLEAN/MULTI_SELECT`), not hardcoded to Photography's field set. Verified live against a real vendor with one attribute value of every data type (see Playwright verification below)
+- [x] SEO metadata basics per page (`generateMetadata` on the vendor detail page using `profile.seoTitle`/`seoDescription` when set, falling back to business name/short description; static `metadata` export on home/search)
+- [x] Loading/empty/error states: search's zero-result empty state, vendor `not-found.tsx` for an unknown slug (real Next.js `notFound()` triggered on a genuine backend 404, not simulated), reviews section's "No reviews yet" state — all verified against real triggering conditions, not assumed correct
+
+### Deferred within Frontend Arch Phase 2 (explicitly, not silently)
+- Category-specific attribute **filter controls** in the search sidebar (the API supports them via `attr[uuid]=value`, but no UI renders them yet — the sidebar only has category/city/price/verified). Left for a follow-up pass since it needs its own small design (dynamic form per selected category) rather than being squeezed into this phase's scope.
+- Search result cards do not show rating or city name per card (see Open Question 8 — not retrievable from `/search/vendors` without N+1 calls).
+- Rating distribution bars on the vendor profile page (see Open Question 9 — no backend aggregate exists).
 
 ### Frontend Arch Phase 3 — Shortlist, Compare & Enquiry
 - [ ] Enquiry modal (used from vendor profile) — port the modal in `couple/vendor-profile.html`: wedding date, budget, guest count, message, contact number. Submits to the real enquiry-creation endpoint (`wedhub-backend/src/modules/enquiries/`) — this is an authenticated action, so unauthenticated users get redirected to login first (preserve their in-progress enquiry intent across that redirect if reasonably simple; if not trivial, just require login before opening the modal at all — decide pragmatically, don't over-engineer)
@@ -50,10 +55,10 @@ See [`11-progress-log.md`](11-progress-log.md#frontend-arch-phase-2--public-disc
 
 ## Acceptance Criteria
 
-- A logged-out visitor can browse home, search, and any vendor profile page with real backend data, no login required.
-- A logged-out visitor attempting to shortlist or enquire is redirected to login/signup, then lands back in a sensible place after authenticating.
-- A logged-in couple can shortlist vendors, compare a selection, submit an enquiry, see it appear in their enquiry tracker, get notified when a vendor responds (per whatever notification channel Arch Phase 14 actually delivers to the frontend — likely in-app/email, confirm), and write a review after a qualifying interaction.
-- Every list/detail page has real loading, empty, and error states — verified by actually triggering them (empty search results, a vendor with zero portfolio images, a network failure), not assumed.
+- A logged-out visitor can browse home, search, and any vendor profile page with real backend data, no login required. **✅ Frontend Arch Phase 2, verified 2026-09-02** — built a complete real vendor end-to-end through the actual backend flow (register as VENDOR → build profile/category/attributes/service/package → submit → verify email → auto-advance to PENDING_APPROVAL → admin-approve), including a real image uploaded through the actual R2 presigned-upload flow and approved through real moderation. All three pages verified against this real data via headed Playwright (`e2e/phase-02-discovery.spec.ts`, 7/7 passing) — not mock data, not assumed correct.
+- A logged-out visitor attempting to shortlist or enquire is redirected to login/signup, then lands back in a sensible place after authenticating. *(Frontend Arch Phase 3 — the enquiry CTA link exists and points at `/login?next=...` per Phase 2's scope, but shortlist/enquiry submission themselves are Phase 3 work, not yet built.)*
+- A logged-in couple can shortlist vendors, compare a selection, submit an enquiry, see it appear in their enquiry tracker, get notified when a vendor responds (per whatever notification channel Arch Phase 14 actually delivers to the frontend — likely in-app/email, confirm), and write a review after a qualifying interaction. *(Frontend Arch Phase 3/4 — not yet built.)*
+- Every list/detail page has real loading, empty, and error states — verified by actually triggering them (empty search results, a vendor with zero portfolio images, a network failure), not assumed. **✅ Frontend Arch Phase 2, verified 2026-09-02** — search's empty state triggered with a real nonsense keyword; vendor 404 triggered with a real nonexistent slug (hits the actual backend 404, not simulated); the vendor's album started genuinely empty (`media: []`) before the test upload, exercising the real empty-portfolio code path before it had real data to fall back on.
 
 ## Dependencies / Sequencing
 
@@ -61,4 +66,8 @@ Requires Stage 1 (Foundation) complete. Frontend Arch Phase 2 → 3 → 4 is the
 
 ## Open Questions
 
-- [Open Question 6](10-risks-and-open-questions.md#6-vendor-facing-entitlement-ui-depends-on-backend-arch-phase-12s-minimal-scope-not-the-mockups-full-vision) is Stage 3's concern, not this stage's — no open questions specific to Stage 2 beyond the general ones already tracked in Stage 1.
+- [Open Question 6](10-risks-and-open-questions.md#6-vendor-facing-entitlement-ui-depends-on-backend-arch-phase-12s-minimal-scope-not-the-mockups-full-vision) is Stage 3's concern, not this stage's.
+- [Open Question 7](10-risks-and-open-questions.md#7-vendor-detail-endpoint-cannot-resolve-the-vendors-logocover-image) — vendor logo/cover unresolvable; worked around via album-cover fallback. Resolved for this phase.
+- [Open Question 8](10-risks-and-open-questions.md#8-search-results-carry-no-citycategory-name-rating-or-review-count) — search cards show only backend-provided fields. Resolved via scope reduction.
+- [Open Question 9](10-risks-and-open-questions.md#9-no-star-rating-distribution-breakdown-available-anywhere-in-the-backend) — rating distribution bars omitted. Resolved via scope reduction.
+- [Open Question 10](10-risks-and-open-questions.md#10-featured-listings-endpoint-returns-minimal-vendor-data-and-categories-have-no-icon-field) — featured vendors cross-referenced against search; category icons are a static frontend map. Resolved.

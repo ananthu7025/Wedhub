@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | 0 | Project Setup & Design System | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 1 | Auth Flows | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
-| 2 | Public Discovery | [Stage 2](04-stage-couple-experience.md) | ⬜ Not Started | — |
+| 2 | Public Discovery | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
 | 3 | Shortlist, Compare & Enquiry | [Stage 2](04-stage-couple-experience.md) | ⬜ Not Started | — |
 | 4 | Couple Account | [Stage 2](04-stage-couple-experience.md) | ⬜ Not Started | — |
 | 5 | Vendor Onboarding & Profile Mgmt | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
@@ -23,7 +23,7 @@
 | 10 | Admin Monetization, Governance & Audit | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | ⬜ Not Started (11b blocked on backend Arch Phase 17) | — |
 
-**Overall: 2 / 12 Frontend Arch Phases complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
+**Overall: 3 / 12 Frontend Arch Phases complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
 
 ---
 
@@ -167,3 +167,66 @@ Four real lessons came out of getting this spec right, each traced to a concrete
 - **Real signup-flow deviation from the mockup, discovered by reading the backend schema rather than assumed from the mockup's UI**: `registerSchema` (`wedhub-backend/src/modules/auth/auth.schema.ts`) has no name field at all — only `email`, `phone?`, `password`, `role`. The mockup's single "Complete your profile" step (name + business name in one screen) doesn't correspond to one backend call. Built as: register (email/password/role only) → auto-login → a genuinely separate optional step that calls `PATCH /users/me` with `firstName`/`lastName`. This is a real API-shape correction, not a design preference — documented here so nobody "fixes" the signup wizard back to match the mockup's single-step assumption without knowing why it was split.
 - **Live end-to-end verification performed** (not claimed from reading code alone): registered a real END_USER test account and a real VENDOR test account against the running backend + Postgres (`docker compose` stack, same one Stage 1–6 backend work used), through this app's own `/api/auth/register` → `/api/auth/login` → `/api/users/me` (generic proxy `PATCH` then `GET`) chain, confirming the profile update actually persisted server-side. Verified `proxy.ts`'s role gating in all six directions (unauthenticated → each of `/couple`, `/vendor`, `/admin`; each authenticated role → the other two roles' routes) via direct `curl` requests with real session cookies — not inferred from reading the gating logic alone. Verified the already-authenticated-user-hits-`/login`-redirects-to-their-dashboard behavior the same way. All test accounts (`frontend-smoke-test@wedhub.dev`, `frontend-vendor-test@wedhub.dev`) were deleted from the database after verification — no test data left behind.
 - Password reset's actual email delivery (Resend, per backend Arch Phase 14) was not verified end-to-end in this phase — the backend's response contract was verified (`{"success":true,"data":{"message":"If an account exists..."}}`, correctly not leaking account existence), but the follow-through of receiving and clicking a real emailed link was not exercised here. Worth a manual pass before this ships to real users, tracked informally rather than as a formal Open Question since it's a one-time manual check, not an architectural gap.
+
+## Frontend Arch Phase 2 — Public Discovery
+
+### What this unlocks
+
+Full unauthenticated discovery surface: a real user can browse the home page, search/filter vendors, and view a complete vendor profile, all against real backend data. This is the highest-traffic, SEO-relevant part of the product (product.md §3.5/§3.6) and the foundation Frontend Arch Phase 3 (shortlist/compare/enquiry) builds directly on top of.
+
+### Routes implemented
+
+- `(public)/` — home page (hero search, category browse strip, featured vendors, Telegram CTA)
+- `(public)/search` — filterable/sortable/paginated vendor search
+- `(public)/vendors/[slug]` — vendor detail (identity, about, generic category attributes, portfolio, packages, reviews, sticky enquiry CTA)
+- `(public)/vendors/[slug]/not-found.tsx` — real 404 page, triggered by a genuine backend 404, not simulated
+
+### Components added
+
+- `components/shared/PublicTopbar.tsx`, `VendorCard.tsx`, `VendorAttributes.tsx` (generic category-attribute renderer, switches on `dataType`)
+- `components/ui/Input.tsx` reused; no new `ui/` primitives needed this phase
+- `lib/api/vendors.types.ts` (search/vendor/category/location/review/album/featured-listing types, verified field-by-field against backend source, not guessed)
+- `lib/api/catalog.ts` (all read-only catalog/search/vendor API functions)
+- `lib/media/url.ts` (`getPublicMediaUrl()` — mirrors the backend's R2 URL-join exactly), `lib/media/category-icons.ts` (static frontend-side icon map, since `Category` has no icon field in the schema)
+- `app/(public)/search/SortSelect.tsx` (small Client Component — the only interactive piece on an otherwise fully server-rendered search page)
+
+### Backend endpoints consumed
+
+`GET /search/vendors`, `GET /vendors/:slug`, `GET /vendors/:slug/albums`, `GET /vendors/:vendorId/reviews`, `GET /categories`, `GET /categories/:slug`, `GET /locations`, `GET /featured-listings`.
+
+### Flow
+
+```
+Before writing any frontend code: dispatched a research pass that read
+wedhub-backend source directly (search.service.ts, vendor.repository.ts,
+categories.repository.ts, locations.repository.ts, review.repository.ts,
+album.repository.ts, featured-listing.repository.ts, r2.client.ts) to get
+exact field shapes and confirm nothing was assumed — this surfaced 4 real
+gaps (Open Questions 7-10) that shaped the actual implementation before any
+UI was built, rather than being discovered as bugs afterward.
+
+Home page → GET /categories (browse strip) + GET /featured-listings
+   (cross-referenced against GET /search/vendors for renderable cards, since
+   featured-listings alone only returns {id, businessName, slug})
+
+Search page → GET /search/vendors with the real query shape (keyword,
+   categoryId, cityId, priceMin/Max, verified, sort, page, limit) + GET
+   /categories and GET /locations?type=CITY for the filter sidebar
+
+Vendor detail → GET /vendors/:slug (identity/profile/categories/packages/
+   attributeValues) + GET /vendors/:slug/albums (portfolio, and the hero-
+   image fallback source) + GET /vendors/:vendorId/reviews (using the
+   detail response's real `id`, not the slug)
+```
+
+### Playwright verification
+
+`e2e/phase-02-discovery.spec.ts` — 7 tests covering home (real categories, hero search submission, category-to-search navigation), search (real vendor appears, keyword narrows results, nonsense keyword shows the real empty state, clicking a result navigates correctly), and vendor detail (identity, all 5 category-attribute data types rendered correctly, package with inclusions, the real R2-hosted portfolio image resolving through Next.js's image optimizer, the Phase-3-scoped enquiry CTA linking to login, and a real 404 for an unknown slug). Run headed, watched, all 7 passing on the final run. One test-authoring fix needed: an early version's `getByText("Bengaluru")` matched two elements (the meta line and, coincidentally, a substring inside the vendor's own description paragraph) — fixed by matching the more specific `"Photography · Bengaluru"` string; not an app bug, and arguably a good sign real content was rendering richly enough to collide.
+
+### Notes
+
+- **This phase required real test data that didn't exist yet, and building it surfaced real, useful findings.** The dev database had zero vendors of any status. Rather than insert rows directly (which would validate nothing about the actual application), built one real vendor end-to-end through the actual backend API: registered a VENDOR account, created the vendor, set its profile/category/attributes/service-area/service/package, hit `POST /vendors/me/submit`, discovered submission requires `cityId` (settable only via `PUT /vendors/me/profile`, not the `PATCH /vendors/me/detail` endpoint one might guess — a real API-shape finding), discovered a vendor sits in `PENDING_VERIFICATION` until its owner's email is verified (auto-advances to `PENDING_APPROVAL` on the vendor's next read once verified — a genuinely well-designed piece of backend logic, found by reading `vendor.service.ts`'s `advanceIfEmailNowVerified` rather than guessing why `approve` returned a 409), marked the test owner's email verified directly in the dev DB (pragmatic, dev-only, reversible), then approved as a temporarily-promoted admin test account. This entire real workflow is now documented here for Frontend Arch Phase 5 (Vendor Onboarding) to build against with full confidence, not rediscover from scratch.
+- **Also uploaded one real portfolio image through the actual R2 presigned-upload flow** (`POST /media/upload-requests` → real `PUT` to the returned presigned R2 URL with real JPEG bytes → `POST /media/:id/confirm`), then discovered the media-processing worker wasn't running to advance it out of `PROCESSING`/`PENDING` moderation — approved moderation via the real admin endpoint and set `status = READY` directly in the DB as a pragmatic dev-only unblock (the worker's actual job, image optimization/thumbnailing, is backend infrastructure outside this phase's scope; what mattered here was confirming the frontend correctly resolves a real object key to a real displayable image, which was independently confirmed by fetching the R2 public URL directly and getting a real 200 JPEG response, and by Next.js's image optimizer successfully proxying it).
+- **Real, cited backend gaps found and worked around, not silently papered over** — see [Open Questions 7-10](10-risks-and-open-questions.md#7-vendor-detail-endpoint-cannot-resolve-the-vendors-logocover-image): (7) the vendor detail endpoint cannot resolve `logoMediaId`/`coverMediaId` to a URL at all (no relation joined, no public media-by-id endpoint) — worked around with an album-cover fallback for hero imagery; (8) search results carry no city/category name, rating, or review count — search cards show only what the backend actually returns rather than fabricating or making N+1 calls; (9) no star-rating distribution endpoint exists anywhere in the backend — omitted rather than approximated; (10) featured-listings returns minimal vendor data and categories have no icon field — cross-referenced against search and used a static frontend icon map respectively.
+- **A real, useful backend finding not filed as an Open Question** (informational, not a gap requiring frontend work): `PATCH /vendors/me/detail` only accepts `businessName` — `cityId` looked like it should live there by symmetry with other "detail" fields, but actually lives on `PUT /vendors/me/profile`. Confirmed by reading `vendor.schema.ts` directly after a live 200-but-no-effect response revealed the assumption was wrong. No frontend action needed since Phase 2 only reads vendor data; flagged here for whoever builds Frontend Arch Phase 5's vendor profile editor.
+- Test vendor (`frame-co-photography`, owned by `phase2-vendor-test@wedhub.dev`) and the temporarily-promoted admin account (`phase2-admin-test@wedhub.dev`) are **intentionally left in the dev database**, not cleaned up — unlike Phase 0/1's test accounts, this one is real, reusable fixture data that Frontend Arch Phase 3 (shortlist/enquiry against a real approved vendor), Phase 4 (reviews/enquiry-tracking), and Phase 5 (vendor-side view of this same vendor) all benefit from having available rather than recreating. If it ever needs to be rebuilt, the exact sequence of API calls is preserved in this entry's Notes above.
