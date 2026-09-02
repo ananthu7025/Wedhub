@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm]
 }
 
 enum UserRole {
@@ -47,6 +49,8 @@ model User {
   vendorInvitationsClaimed VendorInvitation[]       @relation("VendorInvitationsClaimed")
   vendorStatusChanges      VendorStatusHistory[]
   searchLogs               SearchLog[]
+  shortlists               Shortlist[]
+  analyticsEvents          AnalyticsEvent[]
 
   @@index([role])
   @@index([status])
@@ -337,10 +341,18 @@ model Vendor {
   statusHistory   VendorStatusHistory[]
   media           Media[]
   albums          Album[]
+  shortlistItems  ShortlistItem[]
 
   @@index([status])
   @@index([cityId])
   @@index([ownerUserId])
+  @@index([status, cityId])
+  // GIN trigram index for pg_trgm fuzzy keyword search (Arch Phase 7). Needs
+  // the postgresqlExtensions preview feature (see generator/datasource
+  // blocks above) since `ops: gin_trgm_ops` isn't expressible otherwise —
+  // first attempted as untracked raw SQL, which a later migration's drift
+  // detection silently dropped, so this is now first-class schema state.
+  @@index([businessName(ops: raw("gin_trgm_ops"))], type: Gin, name: "vendors_business_name_trgm_idx")
   @@map("vendors")
 }
 
@@ -380,6 +392,14 @@ model VendorProfile {
   logoMedia  Media? @relation("VendorProfileLogo", fields: [logoMediaId], references: [id], onDelete: SetNull)
   coverMedia Media? @relation("VendorProfileCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
 
+  @@index([startingPrice])
+  // GIN trigram indexes power Arch Phase 7's fuzzy keyword search across
+  // vendor descriptions. The tags[] index uses the default array GIN ops
+  // (containment/overlap, e.g. `tags && ARRAY[...]`), not gin_trgm_ops —
+  // trigram ops are for text similarity, not array membership.
+  @@index([shortDescription(ops: raw("gin_trgm_ops"))], type: Gin, name: "vendor_profiles_short_description_trgm_idx")
+  @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, name: "vendor_profiles_description_trgm_idx")
+  @@index([tags], type: Gin, name: "vendor_profiles_tags_gin_idx")
   @@map("vendor_profiles")
 }
 
@@ -610,4 +630,61 @@ model SearchLog {
   @@index([createdAt])
   @@index([keyword])
   @@map("search_logs")
+}
+
+// Favorites and named shortlists are unified into one model (product.md §15
+// describes them as the same mechanism — named collections a vendor can
+// belong to multiple of, e.g. "Photographers", "Final shortlist"). Every
+// user gets exactly one auto-created isDefault shortlist ("Favorites") they
+// cannot rename or delete; additional named shortlists are optional.
+model Shortlist {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  name           String
+  isDefault      Boolean   @default(false) @map("is_default")
+  shareToken     String?   @unique @map("share_token")
+  shareEnabled   Boolean   @default(false) @map("share_enabled")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items ShortlistItem[]
+
+  @@index([userId])
+  @@map("shortlists")
+}
+
+model ShortlistItem {
+  shortlistId String   @map("shortlist_id") @db.Uuid
+  vendorId    String   @map("vendor_id") @db.Uuid
+  note        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  shortlist Shortlist @relation(fields: [shortlistId], references: [id], onDelete: Cascade)
+  vendor    Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@id([shortlistId, vendorId])
+  @@index([vendorId])
+  @@map("shortlist_items")
+}
+
+// A minimal, generic event log for Arch Phase 8's "analytics events" task
+// (favorite/shortlist/compare actions). Deliberately narrow in scope — a
+// full analytics pipeline (aggregation, dashboards, funnels) is Arch Phase
+// 18's job; this only records that _something_ happened, the same
+// best-effort, never-blocks-the-response pattern as Arch Phase 7's
+// search_logs.
+model AnalyticsEvent {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  eventType String   @map("event_type")
+  vendorId  String?  @map("vendor_id") @db.Uuid
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, createdAt])
+  @@index([vendorId])
+  @@map("analytics_events")
 }

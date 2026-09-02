@@ -10,6 +10,8 @@ import { vendorClaimRouter } from "../modules/vendor-claim";
 import { mediaAdminRouter, mediaRouter } from "../modules/media";
 import { albumPublicRouter, albumSelfRouter } from "../modules/albums";
 import { searchRouter } from "../modules/search";
+import { shortlistRouter } from "../modules/shortlists";
+import { comparisonRouter } from "../modules/comparison";
 
 export const apiV1Router = Router();
 
@@ -24,6 +26,8 @@ apiV1Router.use("/locations", locationsRouter);
 apiV1Router.use("/media", mediaRouter);
 apiV1Router.use("/admin/media", mediaAdminRouter);
 apiV1Router.use("/search", searchRouter);
+apiV1Router.use("/shortlists", shortlistRouter);
+apiV1Router.use("/comparison", comparisonRouter);
 
 // Mounted BEFORE /vendors: vendorRouter's public GET /:slug would otherwise
 // greedily match /vendors/claim/:token, /vendors/me/albums, /vendors/:slug/albums

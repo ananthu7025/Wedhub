@@ -18,7 +18,7 @@
 | 5 | Vendor Module | [Stage 2](04-stage-marketplace-supply.md) | ✅ Done | 2026-09-02 |
 | 6 | Media & Portfolio | [Stage 2](04-stage-marketplace-supply.md) | ✅ Done | 2026-09-02 |
 | 7 | Search & Discovery | [Stage 3](05-stage-discovery-engagement.md) | ✅ Done | 2026-09-02 |
-| 8 | Favorites, Shortlists & Comparison | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
+| 8 | Favorites, Shortlists & Comparison | [Stage 3](05-stage-discovery-engagement.md) | ✅ Done | 2026-09-02 |
 | 9 | Enquiries & Leads | [Stage 4](06-stage-lead-engine.md) | ⬜ Not Started | — |
 | 10 | Reviews & Trust | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
 | 11 | Subscription & Billing Foundation | [Stage 5](07-stage-monetization.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 8 / 26 Arch Phases complete. Stage 1 (Foundation) and Stage 2 (Marketplace Supply) are both fully done; Stage 3 (Discovery & Engagement) is underway with Arch Phase 7 done.**
+**Overall: 9 / 26 Arch Phases complete. Stage 1 (Foundation) and Stage 2 (Marketplace Supply) are both fully done; Stage 3 (Discovery & Engagement) is underway with Arch Phases 7 and 8 done (Arch Phase 10 remaining).**
 
 ---
 
@@ -690,3 +690,96 @@ paginatedResponse({ id, businessName, slug, verificationLevel,
 - **`optionalAuthenticateMiddleware` is new shared infrastructure** (`common/middleware/authenticate.middleware.ts`) — the first route needing "attach `req.user` if a valid token happens to be present, but never require or error on one." Search needed this to attribute a query to a logged-in user in `search_logs` without gating a public endpoint behind auth. Verified live: a request with no token, a request with a valid token, and a request with a garbage/malformed token all return 200 — only the valid-token case populates `search_logs.user_id`.
 - **Search analytics logging is best-effort** — wrapped in try/catch so a `search_logs` insert failure (e.g. a transient DB blip) can never turn a working search into a 500. Verified the happy path writes a row with the correct `resultCount`, `sort`, and filter snapshot (as JSONB) for keyword, category, city, price-range, verified, and attribute-filter queries alike.
 - Verified end-to-end against real seeded data (not just unit-level checks): keyword search correctly matched "Sunset Frames Photography" for the query "photography" via trigram similarity while excluding an unrelated venue; category and city filters each correctly scoped to one of two seeded vendors; price-range filtering correctly included/excluded by `startingPrice`; `verified=true` correctly excluded an `UNVERIFIED` vendor; all four sort modes (`price_low`, `price_high`, `recommended`, default `relevance`) produced correctly-ordered results; pagination (`page`/`limit`) produced correct `meta.total`/`totalPages` and non-overlapping pages; SELECT/BOOLEAN/NUMBER category-attribute filters all matched correctly post-fix; a `DRAFT`-status vendor never appeared in any search path (keyword or category filter) confirming the `status='APPROVED'` guard holds; invalid query params (bad UUID, invalid sort enum) correctly 400 via Zod; the search-specific rate limiter (60/min) correctly 429s past its threshold. Confirmed via `EXPLAIN` that the new `vendors_business_name_trgm_idx` GIN index is a real, plan-eligible access path for the `%` operator (the planner prefers a cheaper status-based bitmap scan at the current tiny table size, which is correct, expected behavior, not a sign the index is unused). Confirmed full reproducibility: `docker compose down -v` → migrate (all 8 migrations, including the `pg_trgm`-extension-and-indexes migration) → seed → health check → `npm run worker` start, all on a completely fresh database. All test vendors/users/search-log rows created during verification were deleted afterward.
+
+## Arch Phase 8 — Favorites, Shortlists & Comparison
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 3 — Discovery & Engagement](05-stage-discovery-engagement.md)
+
+### What this unlocks
+
+Users can save vendors (favorites), organize saves into multiple named collections (shortlists), compare vendors head-to-head within the same category using the category's own comparison-flagged attributes, and generate a share link for a shortlist (foundation only — no public share-view page yet). All favorite/shortlist/compare actions are now logged to a lightweight analytics event table.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/shortlists` | List own shortlists with items (auto-creates the default Favorites shortlist if missing) | access token |
+| POST | `/api/v1/shortlists` | Create a named shortlist | access token |
+| PATCH | `/api/v1/shortlists/:id` | Rename a shortlist (blocked for the default) | access token, owned |
+| DELETE | `/api/v1/shortlists/:id` | Delete a shortlist (blocked for the default) | access token, owned |
+| POST | `/api/v1/shortlists/:id/items` | Add a vendor to a shortlist | access token, owned |
+| DELETE | `/api/v1/shortlists/:id/items/:vendorId` | Remove a vendor from a shortlist | access token, owned |
+| POST | `/api/v1/shortlists/favorites/items` | One-click add to the default Favorites shortlist | access token |
+| DELETE | `/api/v1/shortlists/favorites/items/:vendorId` | One-click remove from Favorites | access token |
+| POST | `/api/v1/shortlists/:id/share` | Enable sharing, (re)issue a share token | access token, owned |
+| DELETE | `/api/v1/shortlists/:id/share` | Disable sharing, revoke the share token | access token, owned |
+| GET | `/api/v1/comparison/vendors?vendorIds=a,b,c` | Category-aware side-by-side vendor comparison | none (optional — attributes the view to a logged-in user) |
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `shortlists` | Favorites and named collections, unified into one model | `user_id`, `name`, `is_default`, `share_token` (unique, nullable), `share_enabled` |
+| `shortlist_items` | Vendor membership in a shortlist | `(shortlist_id, vendor_id)` composite pk — DB-level duplicate prevention |
+| `analytics_events` | Minimal generic event log for favorite/shortlist/compare actions | `user_id` (nullable), `event_type`, `vendor_id` (nullable), `metadata` (JSONB) |
+
+### Flow
+
+```
+GET /shortlists
+     │
+     ▼
+authenticateMiddleware
+     │
+     ▼
+shortlist.controller.listShortlists()
+     │
+     ├─► shortlist.service.getOrCreateDefaultShortlist(userId)
+     │       │  lazy creation on first use, not at registration — same
+     │       │  opportunistic pattern as Arch Phase 5's
+     │       │  advanceIfEmailNowVerified, avoiding a cross-module call
+     │       │  from auth.service into shortlists
+     │       ▼
+     │   findDefaultShortlist() → exists? return it : createDefaultShortlist()
+     │
+     └─► shortlist.repository.listUserShortlists()  (ordered: default first,
+             then by creation date; each shortlist's items include a vendor
+             summary — businessName/slug/verificationLevel/price)
+
+POST /shortlists/:id/items                    GET /comparison/vendors?vendorIds=a,b
+     │                                              │
+     ▼                                              ▼
+getOwnedShortlistOrThrow(userId, id)          optionalAuthenticateMiddleware (never blocks)
+     │  404 if missing or not owned                 │
+     ▼                                              ▼
+assertVendorIsPublic(vendorId)                comparison.service.compareVendors()
+     │  404 if not APPROVED (no existence leak)     │
+     ▼                                              ├─ fetch vendors WHERE status='APPROVED'
+findItem() → exists? 409 Conflict                    │    AND id IN (...)
+     │  : else                                       ├─ vendors.length !== requested.length?
+     ▼                                              │    → 404 (a draft/missing vendor was requested)
+shortlistRepository.addItem()  (upsert on the        ├─ collect each vendor's PRIMARY category
+  composite pk — a genuine duplicate is caught       │    → more than one distinct category? → 400
+  at the service layer before ever reaching the      │       ("must share the same primary category")
+  DB, giving a clean 409 instead of a raw             ▼
+  constraint-violation error)                   findComparableAttributes(categoryId)
+     │                                              │  CategoryAttribute WHERE isComparable=true
+     ▼                                              ▼
+logAnalyticsEvent("shortlist_item_added")     shape response: category + attribute defs +
+  (best-effort, never blocks the response)      per-vendor {baseline fields, attributeValues}
+                                                     │
+                                                     ▼
+                                               logAnalyticsEvent("vendor_comparison_viewed")
+```
+
+### Notes
+
+- **Favorites-vs-shortlists unified into one model, not two** — product.md §15 describes them as the same mechanism (named collections a vendor can belong to multiple of); architecture.md's task list names them separately. Resolved by confirming with the user: one `Shortlist`/`ShortlistItem` model, where every user gets exactly one auto-created, non-renamable, non-deletable `isDefault` "Favorites" shortlist, plus any number of additional named shortlists. `POST/DELETE /shortlists/favorites/items` convenience endpoints resolve to the default shortlist automatically so the frontend never needs its ID. Verified live: renaming and deleting the default shortlist both correctly return 400 with a clear message; the one-click favorite endpoints work without the caller ever knowing the default shortlist's ID.
+- **Comparison built as its own `comparison` module**, not folded into `shortlists` — comparing is a stateless read over arbitrary vendor IDs (not necessarily from a saved shortlist), mirroring Arch Phase 7's precedent of giving search its own module rather than overloading an adjacent one.
+- **"Category-aware" comparison is enforced, not just implied** — product.md §16 requires comparison to "use category-defined comparison attributes," which only makes sense when every vendor being compared shares the same primary category (comparing a photographer's "Photography Style" against a venue's non-existent value would be meaningless). `comparison.service.ts` collects every requested vendor's primary category and rejects with a 400 the moment more than one distinct category is present. Verified live: comparing two photographers succeeded with real attribute values (`photography_style: "Candid"`, `number_of_photographers: 2`); comparing a photographer against a venue correctly rejected with "All vendors being compared must share the same primary category."
+- **A draft/non-public vendor in a comparison request is rejected, not silently dropped** — `compareVendors()` checks `vendors.length !== vendorIds.length` after fetching only `APPROVED` vendors, so requesting a mix of one real and one DRAFT vendor ID returns a 404 for the whole request rather than a shorter, silently-partial result. Verified live.
+- **"Share shortlist foundation" shipped as token generation/revocation only** — product.md §15 explicitly frames sharing as a "future capability," so `POST/DELETE /shortlists/:id/share` only issue/revoke an opaque `shareToken` (`generateOpaqueToken()`, stored in plaintext rather than hashed like auth tokens, since it functions as a bearer capability link a future public endpoint will look up directly, not a login credential). No public share-view endpoint exists yet to resolve a token into a read-only page — same thin-slice reasoning as Arch Phase 13's featured-listings foundation in the MVP cut line. Verified live: enabling sharing issues a token; disabling clears it.
+- **Real gap caught during this phase's own verification, not left in:** the task list's "Analytics events" item was initially going to be marked done by pointing at Arch Phase 7's unrelated `search_logs` table — a dishonest shortcut, since no logging existed yet for favorite/shortlist/compare actions. Confirmed with the user before proceeding, then added a genuinely new (if deliberately minimal) `analytics_events` table and a `logAnalyticsEvent()` helper (`common/utils/analytics.util.ts`), reusing Arch Phase 7's exact best-effort pattern (wrapped in try/catch, never fails the caller's real response). Logs `shortlist_item_added`, `shortlist_item_removed`, and `vendor_comparison_viewed`. A full analytics pipeline (aggregation, dashboards, funnels) is explicitly left to Arch Phase 18 — this is intentionally just an event log, not analytics infrastructure. Verified live: all three event types recorded with correct `userId` attribution and metadata (e.g. `{ vendorIds, categoryId }` for a comparison view).
+- **A real, more serious bug was caught and fixed *before* any of the above shipped:** the initial migration for this phase's `Shortlist`/`ShortlistItem` tables was auto-generated by `prisma migrate dev`, which — because Arch Phase 7's `pg_trgm` GIN indexes existed only as untracked raw SQL, invisible to `schema.prisma` — included six auto-generated `DROP INDEX` statements that silently deleted every one of Arch Phase 7's real search indexes the moment the migration applied. Caught immediately by re-querying `pg_indexes` after applying and finding them gone, before any commit. Fixed at the root, not just patched over: enabled Prisma's `postgresqlExtensions` preview feature, declared `pg_trgm` in the `datasource` block, and re-expressed all six indexes as native `@@index(... type: Gin)` declarations directly in `schema.prisma` (Vendor.businessName trigram, VendorProfile.shortDescription/description trigram, VendorProfile.tags GIN, plus the two plain indexes) — so they are now first-class tracked schema state that `migrate dev`'s drift detection can never again mistake for orphaned state to delete. This required hand-editing the already-applied Arch Phase 8 migration file (to remove the bad drops) and a full `prisma migrate reset` to reconcile the changed checksum — done only after explicit user confirmation, and only after confirming the dev database held zero real rows at the time. Re-verified post-reset: `prisma migrate status` reports "Database schema is up to date!" with no drift, and a subsequent real migration (`add_analytics_events`) applied cleanly with no further index drops — only an incidental, harmless Prisma-driven index rename.
+- Verified end-to-end against real seeded data: default Favorites shortlist auto-creates on first list/use; named shortlist creation, item add/remove; duplicate item add correctly 409s; adding a DRAFT (non-public) vendor correctly 404s without leaking its existence; renaming/deleting the default shortlist correctly 400s while a named shortlist can be renamed/deleted freely; a second user account cannot read, rename, or add items to the first user's shortlist (404, not 403 — consistent with the albums module's existence-hiding precedent) and has its own independent default shortlist; the one-click favorite add/remove endpoints work correctly; share enable/disable correctly issue and clear a token; unauthenticated requests to any shortlist endpoint correctly 401. Comparison verified: two same-category vendors compare correctly with real attribute values surfaced (including a numeric `Decimal` converting cleanly to a plain JS number); cross-category comparison correctly 400s; a DRAFT vendor in the request correctly 404s; fewer than 2 or more than 5 vendor IDs correctly 400 via Zod. All three analytics event types confirmed written with correct attribution. Confirmed full reproducibility: `docker compose down -v` → migrate (all 10 migrations, including the corrected shortlists migration and the new analytics-events migration) → seed → health check, all on a completely fresh database, with zero schema drift reported by `prisma migrate status`. All test users/vendors/shortlists/events created during verification were deleted afterward.
