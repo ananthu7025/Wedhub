@@ -6,7 +6,10 @@ export function findActiveCategories() {
   return prisma.category.findMany({
     where: { isActive: true },
     orderBy: { sortOrder: "asc" },
-    include: { attributes: { orderBy: { sortOrder: "asc" } } },
+    include: {
+      attributes: { orderBy: { sortOrder: "asc" } },
+      services: { where: { isActive: true }, orderBy: { name: "asc" } },
+    },
   });
 }
 

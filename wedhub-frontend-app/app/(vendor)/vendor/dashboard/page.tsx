@@ -1,0 +1,132 @@
+import Link from "next/link";
+import type { Metadata } from "next";
+import { VendorShell } from "@/components/shared/VendorShell";
+import { requireVendorOwnership } from "@/lib/auth/require-vendor";
+import { getMyAnalytics } from "@/lib/api/vendor-self";
+import { COMPLETENESS_CHECKS } from "@/lib/api/vendor-self.types";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
+
+function isChecklistItemMet(label: string, vendor: Awaited<ReturnType<typeof requireVendorOwnership>>): boolean {
+  switch (label) {
+    case "Business name":
+      return vendor.businessName.length > 0;
+    case "Short description":
+      return !!vendor.profile?.shortDescription;
+    case "Full description":
+      return !!vendor.profile?.description;
+    case "Primary category":
+      return vendor.categories.some((c) => c.isPrimary);
+    case "Primary city":
+      return vendor.cityId !== null;
+    case "At least one service area":
+      return vendor.serviceAreas.length > 0;
+    case "Pricing information":
+      return vendor.profile?.startingPrice != null || vendor.profile?.customQuoteAvailable === true;
+    case "At least one package":
+      return vendor.packages.length > 0;
+    case "At least one service":
+      return vendor.services.length > 0;
+    case "A contact method":
+      return !!(vendor.profile?.phone || vendor.profile?.email || vendor.profile?.website);
+    case "Category attribute values":
+      return vendor.attributeValues.length > 0;
+    default:
+      return false;
+  }
+}
+
+export default async function VendorDashboardPage() {
+  const vendor = await requireVendorOwnership();
+  const analytics = await getMyAnalytics()
+    .then((r) => r.data)
+    .catch(() => null);
+
+  return (
+    <VendorShell activeHref="/vendor/dashboard" vendorName={vendor.businessName}>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Welcome back, {vendor.businessName.split(" ")[0]}</h1>
+        <p className="text-sm text-text-grey">Here&apos;s how your profile is performing.</p>
+      </div>
+
+      <div className="mb-5 grid grid-cols-3 gap-4 max-[900px]:grid-cols-1">
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">
+            Profile views ({analytics?.windowDays ?? "…"} days)
+          </p>
+          <p className="text-2xl font-bold">{analytics?.profileViews ?? "—"}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">Leads ({analytics?.windowDays ?? "…"} days)</p>
+          <p className="text-2xl font-bold">{analytics?.leads ?? "—"}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">
+            Approved reviews ({analytics?.windowDays ?? "…"} days)
+          </p>
+          <p className="text-2xl font-bold">{analytics?.reviews ?? "—"}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-[2fr_1fr] gap-5 max-[1100px]:grid-cols-1">
+        <div className="rounded-xl border border-border bg-white p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-bold">Status</h3>
+              <p className="text-xs text-text-grey">Your listing&apos;s current review state</p>
+            </div>
+          </div>
+          <p className="text-sm">
+            Status: <strong>{vendor.status.replace(/_/g, " ")}</strong>
+            {vendor.verificationLevel !== "UNVERIFIED" && <> · Verification: {vendor.verificationLevel.replace(/_/g, " ")}</>}
+          </p>
+          {vendor.rejectionReason && (
+            <p className="mt-2 rounded-md bg-red-10 p-3 text-[13px] text-red-70">{vendor.rejectionReason}</p>
+          )}
+          {(vendor.status === "DRAFT" || vendor.status === "REJECTED") && (
+            <Link
+              href="/vendor/profile"
+              className="mt-4 inline-block rounded-md bg-brand-primary px-4 py-2.5 text-[13px] font-bold text-white no-underline"
+            >
+              {vendor.status === "REJECTED" ? "Update and resubmit" : "Complete and submit your profile"}
+            </Link>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-border bg-white p-6">
+          <h3 className="mb-1 text-base font-bold">Profile completeness</h3>
+          <p className="mb-3 text-xs text-text-grey">{vendor.profileCompleteness}% complete</p>
+          <div className="mb-4 h-2.5 w-full overflow-hidden rounded-full bg-surface-input">
+            <div className="h-full rounded-full bg-brand-primary" style={{ width: `${vendor.profileCompleteness}%` }} />
+          </div>
+          {COMPLETENESS_CHECKS.map((check) => {
+            const met = isChecklistItemMet(check.label, vendor);
+            return (
+              <div key={check.label} className="flex items-center gap-2.5 border-b border-neutral-grey-20 py-2 text-[13px] last:border-b-0">
+                <span
+                  className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                    met ? "bg-emerald-10 text-emerald-70" : "bg-neutral-grey-20 text-text-grey"
+                  }`}
+                >
+                  {met ? "✓" : "○"}
+                </span>
+                <span className={met ? "text-text-body" : "text-text-grey"}>
+                  {check.label}
+                  {check.requiredForSubmission && !met && " (required)"}
+                </span>
+              </div>
+            );
+          })}
+          <Link
+            href="/vendor/profile"
+            className="mt-4 block rounded-md bg-brand-primary py-2.5 text-center text-[13px] font-bold text-white no-underline"
+          >
+            Complete your profile
+          </Link>
+        </div>
+      </div>
+    </VendorShell>
+  );
+}

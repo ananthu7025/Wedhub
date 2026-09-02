@@ -113,7 +113,7 @@ test.describe("Signup flow (VENDOR)", () => {
     deleteTestUser(email);
   });
 
-  test("a vendor signup lands on vendor dashboard, not couple/admin routes", async ({ page }) => {
+  test("a vendor signup creates a real vendor and lands on the profile editor, not couple/admin routes", async ({ page }) => {
     await page.goto("/signup");
 
     await page.getByPlaceholder("you@example.com").fill(email);
@@ -122,20 +122,27 @@ test.describe("Signup flow (VENDOR)", () => {
 
     await page.getByRole("button", { name: "I'm a vendor" }).click();
 
-    await expect(page.getByPlaceholder("e.g. Aditi")).toBeVisible({ timeout: 10_000 });
+    // Frontend Arch Phase 5 changed this step: register() alone never
+    // creates a Vendor row, so the vendor path of the "profile" step now
+    // asks for a business name and calls the real POST /vendors here,
+    // rather than the couple path's firstName/lastName fields.
+    await expect(page.getByPlaceholder(/Frame & Co/)).toBeVisible({ timeout: 10_000 });
+    await page.getByPlaceholder(/Frame & Co/).fill("E2E Test Photography");
     await page.getByRole("button", { name: "Continue" }).click();
 
     // Both roles share the same "You're all set!" heading in SignupWizard.tsx
     // — only the subtext/CTA differ ("Complete your profile" for vendors).
-    await expect(page.getByText("You're all set!")).toBeVisible();
+    await expect(page.getByText("You're all set!")).toBeVisible({ timeout: 10_000 });
     await page.getByRole("button", { name: "Complete your profile" }).click();
 
-    await expect(page).toHaveURL(/\/vendor\/dashboard/);
+    await expect(page).toHaveURL(/\/vendor\/profile/);
+    await expect(page.getByRole("heading", { name: "Edit profile" })).toBeVisible();
 
     // Same real behavior as the END_USER test above: proxy.ts blocks
     // /shortlist for a VENDOR session, then /login bounces the still-valid
-    // session straight back to /vendor/dashboard rather than showing the
-    // login form.
+    // session back via roleHomeRoute — which is /vendor/dashboard for the
+    // login flow (only signup's own success screen sends a brand-new
+    // vendor to /vendor/profile specifically, to nudge completing it).
     await page.goto("/shortlist");
     await expect(page).toHaveURL(/\/vendor\/dashboard/, { timeout: 10_000 });
   });

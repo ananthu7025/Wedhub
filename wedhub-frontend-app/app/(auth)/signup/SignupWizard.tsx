@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { register, login } from "@/lib/api/auth-client";
 import { updateMyProfile } from "@/lib/api/users-client";
+import { createVendor } from "@/lib/api/vendor-onboarding-client";
 import type { UserRole } from "@/lib/auth/types";
 
 type AccountType = "END_USER" | "VENDOR";
@@ -13,7 +14,7 @@ type Step = "credentials" | "account-type" | "profile" | "done";
 
 const roleHomeRoute: Record<UserRole, string> = {
   END_USER: "/shortlist",
-  VENDOR: "/vendor/dashboard",
+  VENDOR: "/vendor/profile",
   ADMIN: "/admin/dashboard",
 };
 
@@ -25,6 +26,7 @@ export function SignupWizard() {
   const [accountType, setAccountType] = useState<AccountType>("END_USER");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [businessName, setBusinessName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -62,8 +64,16 @@ export function SignupWizard() {
   async function handleProfileSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
+    setError(null);
 
-    if (firstName || lastName) {
+    if (accountType === "VENDOR") {
+      const result = await createVendor(businessName);
+      if (!result.success) {
+        setError(result.error.message);
+        setPending(false);
+        return;
+      }
+    } else if (firstName || lastName) {
       await updateMyProfile({ firstName: firstName || undefined, lastName: lastName || undefined });
     }
 
@@ -156,6 +166,31 @@ export function SignupWizard() {
   }
 
   if (step === "profile") {
+    if (accountType === "VENDOR") {
+      return (
+        <form onSubmit={handleProfileSubmit} className="w-full max-w-md">
+          {error && (
+            <div className="mb-4 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">
+              {error}
+            </div>
+          )}
+          <div className="mb-4.5">
+            <span className="mb-2 block text-[13px] font-bold">Business name</span>
+            <Input
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              placeholder="e.g. Frame & Co. Photography"
+              required
+            />
+            <p className="mt-1.5 text-xs text-text-grey">You can add photos, packages and more details next.</p>
+          </div>
+          <Button type="submit" variant="primary" block disabled={pending}>
+            {pending ? "Creating your listing…" : "Continue"}
+          </Button>
+        </form>
+      );
+    }
+
     return (
       <form onSubmit={handleProfileSubmit} className="w-full max-w-md">
         <div className="mb-4.5">

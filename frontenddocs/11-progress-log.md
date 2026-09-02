@@ -15,7 +15,7 @@
 | 2 | Public Discovery | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
 | 3 | Shortlist, Compare & Enquiry | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
 | 4 | Couple Account | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
-| 5 | Vendor Onboarding & Profile Mgmt | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
+| 5 | Vendor Onboarding & Profile Mgmt | [Stage 3](05-stage-vendor-experience.md) | ✅ Done | 2026-09-02 |
 | 6 | Vendor Leads & Reviews | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
 | 7 | Vendor Monetization | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
 | 8 | Admin Core | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
@@ -23,7 +23,7 @@
 | 10 | Admin Monetization, Governance & Audit | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | ⬜ Not Started (11b blocked on backend Arch Phase 17) | — |
 
-**Overall: 5 / 12 Frontend Arch Phases complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
+**Overall: 6 / 12 Frontend Arch Phases complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
 
 ---
 
@@ -387,3 +387,93 @@ Test-authoring mistakes (not app bugs), for the record: an early Playwright loca
 - `npx tsc --noEmit`, `eslint`, and `next build` all pass cleanly on both the frontend and backend sides.
 
 **This completes Stage 2 (Couple Experience) — Frontend Arch Phases 2, 3, and 4 are all done.**
+
+## Frontend Arch Phase 5 — Vendor Onboarding & Profile Management
+
+### What this unlocks
+
+A vendor can now sign up, land on a real profile editor, fill in every field group (identity, classification, location, commercial, trust, contact, operational, category attributes), upload real portfolio photos/videos with live processing status, set a logo/cover, manage packages, and submit their listing for admin review — the full self-service onboarding loop Stage 3 depends on for everything after it (leads, reviews, monetization all assume a real, submitted vendor exists).
+
+### Backend additions (required before this phase could be built against real data — see this file's earlier addenda for the established pattern)
+
+- `VendorProfile.logoMediaId`/`coverMediaId` made writable (`PUT /vendors/me/profile`, validated against the vendor's own READY media) and readable (`VENDOR_FULL_INCLUDE` now joins `logoMedia`/`coverMedia`) — previously neither was possible at all. Closes [Open Question 7](10-risks-and-open-questions.md#7-vendor-detail-endpoint-cannot-resolve-the-vendors-logocover-image).
+- `GET /categories` and `GET /categories/:slug` now embed each category's active `services` — there was no services-listing endpoint anywhere (the `services` module was an empty placeholder directory), needed for the profile editor's "services offered" picker. The list-endpoint half of this fix was caught live as a real 500 (`Cannot read properties of undefined (reading 'length')`) during manual verification, not by code review — the single-category fix shipped first, the list one was missed until the profile editor actually hit it.
+- Separately, a real pre-existing worker crash (`notification-delivery` throwing `P2025` when a `Notification` row was deleted mid-flight by cascading test-account cleanup) was found and fixed while verifying the portfolio upload flow live — see the standalone commit "Fix notification-delivery worker crashing when a Notification row is deleted mid-flight". Not a Phase 5 feature, but it silently took down the shared media-processing worker process too (same Node process, same `startMediaProcessingWorker`/`startNotificationDeliveryWorker` pair), which is what made it impossible to reliably verify portfolio uploads until fixed.
+
+All backend changes verified live end-to-end before any frontend code was written against them.
+
+### Routes implemented
+
+- `app/(vendor)/layout.tsx` — the first real `(vendor)` layout, calling a new `requireVendorOwnership()` (not `requireRole("VENDOR")` alone — confirmed via research that `/vendors/me/*` is ownership-gated, not role-gated, so a VENDOR-role user with no vendor row gets a 404 from every self-service route, not a 403)
+- `(vendor)/vendor/dashboard` — real analytics (profile views/leads/reviews within a real 30-or-90-day window), status panel, live weighted completeness checklist
+- `(vendor)/vendor/profile` — the 8-section field-group editor (Identity/Classification/Location/Commercial/Trust/Contact/Operational/category attributes), plus a submit-for-review action
+- `(vendor)/vendor/portfolio` — upload dropzone, media grid with reorder/delete/set-as-logo/set-as-cover, real polling for PROCESSING→READY transitions
+- `(vendor)/vendor/packages` — package list + add/edit modal with a repeatable inclusions list
+
+### Components added
+
+- `components/shared/VendorShell.tsx` (sidebar shell, matching the mockup's `.app-shell`/`.sidebar`) + `VendorLogoutButton.tsx`
+- `lib/auth/require-vendor.ts` — the ownership-based route guard described above
+- `lib/api/vendor-self.types.ts`, `vendor-self.ts` (server reads), `vendor-self-client.ts` (client writes), `vendor-onboarding-client.ts` (the one-time `POST /vendors` call used by signup)
+- `app/(vendor)/vendor/profile/`: `ProfileEditor.tsx` (the main form, one global "Save changes" matching the mockup, not per-section saves), `LogoCoverPicker.tsx`, `ServicesSection.tsx`, `AttributesSection.tsx` (generic dataType-switching editable renderer, same principle as Stage 2's read-only `VendorAttributes.tsx`), `SubmitBar.tsx`
+- `app/(vendor)/vendor/portfolio/PortfolioManager.tsx` — upload, reorder, delete, set-as-logo/cover, and a polling loop against `GET /media/me`
+- `app/(vendor)/vendor/packages/`: `PackagesManager.tsx`, `PackageModal.tsx`
+
+### Backend endpoints consumed
+
+`POST /vendors`, `GET /vendors/me/detail`, `GET /vendors/me/analytics`, `PUT /vendors/me/profile`, `PUT /vendors/me/categories`, `PUT /vendors/me/service-areas`, `PUT /vendors/me/attributes`, `POST/DELETE /vendors/me/services(/:id)`, `POST/PATCH/DELETE /vendors/me/packages(/:id)`, `POST /vendors/me/submit`, `POST /media/upload-requests`, `POST /media/:id/confirm`, `GET /media/me`, `PATCH/DELETE /media/:id`, `GET /categories`, `GET /locations`.
+
+### Flow
+
+```
+Before writing any frontend code: dispatched a research pass that read the
+entire vendors module (routes/schema/service/repository/types) plus media,
+categories, and entitlements — confirmed the full /vendors/me/* route
+inventory, the exact profile-completeness formula and its two-tier
+(required-for-submission vs. weighted-score) structure, that packages live
+inside the vendors module (not a separate one), that reorder for both media
+and packages is one-PATCH-per-item (no bulk endpoint), and precisely which
+3 dashboard metrics are real vs. fabricated in the mockup. This surfaced 2
+real backend gaps (logo/cover write support, services listing) before any
+UI was built — see the backend-additions note above.
+
+Signup (VENDOR path) → business name → real POST /vendors → DRAFT vendor →
+   redirects to /vendor/profile (not /vendor/dashboard — a deliberate,
+   real fix: the old flow never called POST /vendors at all and would have
+   404'd forever, see "Real bugs" below)
+
+/vendor/profile → fill 8 field-group sections → one "Save changes" →
+   PUT .../profile + PUT .../categories + PUT .../service-areas +
+   PUT .../attributes + diffed POST/DELETE .../services (attach/detach) →
+   real profileCompleteness recalculated server-side after every call →
+   "Submit for review" → POST .../submit → real REQUIRED_FOR_SUBMISSION
+   validation (missing fields surfaced verbatim from the backend's own
+   error, not re-derived client-side) → PENDING_VERIFICATION or
+   PENDING_APPROVAL depending on real email-verification state
+
+/vendor/portfolio → drag-drop or file picker → POST /media/upload-requests
+   → real PUT to the presigned R2 URL → POST /media/:id/confirm → item
+   shows PROCESSING → polls GET /media/me every 3s until the real
+   sharp-based worker finishes → READY with real optimized/thumbnail webp
+   variants → "Set as logo"/"Set as cover" → PUT .../profile with the real
+   mediaId, validated server-side
+```
+
+### Playwright verification
+
+`e2e/phase-05-vendor-profile.spec.ts` — 3 tests: the dashboard shows real analytics numbers, a real DRAFT status prompt, and the real weighted completeness checklist; the profile editor saves real fields (verified via a full page reload, not just optimistic UI), attaches a real service, creates a real package on the packages page, and successfully submits for review, landing on `PENDING_VERIFICATION`; the portfolio manager uploads a real photo through the real R2 flow, shows a genuine processing state, polls to a real READY image once the worker finishes, and sets it as the vendor's logo. Run headed, watched, 3/3 passing on the final clean run. Also re-verified Phases 1 (6/6, after a real fix to its own VENDOR-signup assertions — see below), 2 (7/7), 3 (6/6), and 4 (7/7, 5 together + 2 confirmed on an isolated rate-limiter-reset re-run, same documented pattern as prior phases) — no regressions beyond the ones this phase's own changes required fixing.
+
+Real bugs found and fixed during this phase (not test-authoring mistakes):
+1. **Vendor signup never created a vendor.** `SignupWizard.tsx`'s VENDOR path collected firstName/lastName (couple-shaped fields) and called `updateMyProfile()` — never `POST /vendors`. Every vendor who ever signed up would land on `roleHomeRoute.VENDOR` (`/vendor/dashboard`) and 404 forever, since no vendor row existed. This was a latent bug from Frontend Arch Phase 1, invisible until Phase 5 built the first real `(vendor)` page to actually reach. Fixed: the VENDOR path now asks for a business name and calls the real `POST /vendors`; its success screen sends a brand-new vendor to `/vendor/profile` specifically (not `/vendor/dashboard`) to nudge completing it. `phase-01-auth.spec.ts`'s VENDOR signup test was updated to match — it had been asserting the old, broken shape (firstName field, direct-to-dashboard landing) the whole time, meaning that test's earlier "pass" was validating dead code, not real behavior. This is the same class of drift as Frontend Arch Phase 3's `/couple/home` fix — a stale assertion propping up an untested path.
+2. **`GET /categories` (list) crashed the profile editor with a real 500** (`Cannot read properties of undefined (reading 'length')` in `ServicesSection`) — the services-embedding fix from this phase's backend addendum only touched `findCategoryBySlug`, not `findActiveCategories` (the list endpoint `ProfileEditor` actually calls). Caught by manually loading `/vendor/profile` against a real vendor before writing any Playwright, not by code review. Fixed by adding the same `services` include to the list query; also hardened `ServicesSection.tsx` to treat a missing `services` array as empty rather than crash, as defense in depth.
+3. **Portfolio items never visually left "Processing," even after the real worker finished.** `PortfolioManager.tsx` only updated its local state once, at upload-confirm time, with whatever status `POST /media/:id/confirm` returned synchronously (`PROCESSING`) — there was no mechanism to pick up the later `READY` transition short of a manual page reload. Caught by a real headed Playwright run timing out waiting for the processed image, cross-checked directly against the database (`status: READY` was already true — the bug was purely that the UI never re-fetched, not a backend timing issue). Fixed by polling `GET /media/me` every 3 seconds while any item is in a non-terminal status.
+4. **A real, systemic worker crash** (see the backend-additions note above and its own standalone commit) that repeatedly took down media-processing verification runs during this phase — root-caused to a Prisma `update()`-vs-`updateMany()` distinction on a row that can legitimately disappear mid-flight (cascading delete from user/test-account cleanup), not fixed by another manual Redis flush this time.
+
+Test-authoring mistakes (not app bugs), for the record: an early version of the packages test hit a strict-mode Playwright violation because the empty-state UI intentionally renders two "+ Add package" buttons (header + empty-state CTA, both functionally identical) — fixed with `.first()`, not a UI change, since the duplication is a reasonable, deliberate pattern.
+
+### Notes
+
+- **Dashboard metrics were deliberately reduced to 3 real numbers** (profile views, leads, approved reviews) instead of the mockup's 4 ("new leads this week", "response rate", and "conversion rate" have no backing computation anywhere in the backend, confirmed by reading every exported function in the analytics service) — filed as [Open Question 13](10-risks-and-open-questions.md#13-vendor-dashboard-metrics-mockup-shows-3-numbers-the-backend-never-computes), resolved via scope reduction rather than fabrication.
+- **Location section was simplified to a flat city select + service-area checkboxes**, not the mockup's full country→state→city cascading selects — the real seeded location data only has 1 country and 6 cities total, so a 3-level cascade would be speculative UI for data that doesn't exist yet. `AREA`-type locations (the mockup's "Indiranagar" free-text field) have no real backend data at all and were omitted rather than faked with a free-text input with nowhere real to persist to.
+- `phase5-vendor-test@wedhub.dev` (a manually-created VENDOR account used for live curl verification, including setting a real logo via a real R2-uploaded photo) is **intentionally left in the dev database** as reusable fixture data, same rationale as prior phases' fixtures — its vendor listing sits at `PENDING_VERIFICATION` with a real logo, a real package, and a real attached service, useful for Frontend Arch Phase 6/7 work. All Playwright-created test accounts (`e2e-phase5-*@wedhub.dev`) were deleted via `afterEach` per the established convention.
+- `npx tsc --noEmit`, `eslint`, and `next build` all pass cleanly on both the frontend and backend sides.
