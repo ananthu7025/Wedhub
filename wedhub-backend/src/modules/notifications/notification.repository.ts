@@ -37,8 +37,14 @@ export function findNotificationById(id: string) {
   return prisma.notification.findUnique({ where: { id } });
 }
 
+// updateMany (not update) throughout this trio — a Notification can be
+// legitimately gone by the time a queued delivery job runs (Notification.userId
+// is onDelete: Cascade, so deleting a user, e.g. test-account cleanup,
+// deletes their pending notifications too). update() throws P2025 in that
+// race and crashes the worker; updateMany() silently matches zero rows,
+// same pattern markRead() below already used correctly.
 export function markSent(id: string) {
-  return prisma.notification.update({ where: { id }, data: { status: "SENT", sentAt: new Date() } });
+  return prisma.notification.updateMany({ where: { id }, data: { status: "SENT", sentAt: new Date() } });
 }
 
 // Attempts is bumped separately, once per delivery attempt, by
@@ -46,14 +52,14 @@ export function markSent(id: string) {
 // failure, retried or not) — this only records the terminal state once
 // BullMQ's own retries are exhausted, so it must not increment again itself.
 export function markFailed(id: string, error: string) {
-  return prisma.notification.update({
+  return prisma.notification.updateMany({
     where: { id },
     data: { status: "FAILED", lastError: error },
   });
 }
 
 export function incrementAttempts(id: string) {
-  return prisma.notification.update({ where: { id }, data: { attempts: { increment: 1 } } });
+  return prisma.notification.updateMany({ where: { id }, data: { attempts: { increment: 1 } } });
 }
 
 export function markRead(id: string, userId: string) {

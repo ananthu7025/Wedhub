@@ -21,7 +21,15 @@ async function deliverEmail(notification: { id: string; userId: string; title: s
 }
 
 async function deliverNotification(notificationId: string): Promise<void> {
-  const notification = await prisma.notification.findUniqueOrThrow({ where: { id: notificationId } });
+  const notification = await prisma.notification.findUnique({ where: { id: notificationId } });
+  if (!notification) {
+    // Notification.userId is onDelete: Cascade — the row can legitimately
+    // be gone by the time this job runs if the user was deleted in the
+    // meantime (e.g. account deletion, test-account cleanup). Nothing to
+    // delivery or mark; this is not an error.
+    logger.info({ notificationId }, "Notification no longer exists — skipping delivery");
+    return;
+  }
 
   if (notification.channel === "EMAIL") {
     await deliverEmail(notification);
