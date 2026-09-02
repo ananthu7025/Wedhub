@@ -28,6 +28,11 @@ const envSchema = z.object({
 
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
+  // The public HTTPS URL Telegram should POST updates to, e.g. an ngrok
+  // tunnel in dev or the real API domain in production — only needed when
+  // actually registering the webhook (registerWebhook.ts), not for
+  // receiving/processing updates once it's set.
+  API_PUBLIC_URL: z.string().url().optional(),
 
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM_ADDRESS: z.string().default("WedHub <notifications@wedhub.dev>"),

@@ -59,6 +59,7 @@ model User {
   featuredListingsCreated  FeaturedListing[]
   notifications            Notification[]
   notificationPreferences  NotificationPreference[]
+  telegramUser             TelegramUser?
 
   @@index([role])
   @@index([status])
@@ -756,11 +757,12 @@ model Enquiry {
   message                String?
   createdAt              DateTime                @default(now()) @map("created_at")
 
-  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  city     Location? @relation(fields: [cityId], references: [id], onDelete: SetNull)
-  service  Service?  @relation(fields: [serviceId], references: [id], onDelete: SetNull)
-  leads    Lead[]
+  user                  User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  category              Category?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  city                  Location?              @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  service               Service?               @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  leads                 Lead[]
+  telegramConversations TelegramConversation[]
 
   @@index([userId])
   @@index([createdAt])
@@ -1245,4 +1247,105 @@ model NotificationPreference {
 
   @@unique([userId, eventType, channel])
   @@map("notification_preferences")
+}
+
+// Arch Phase 15. product.md §33: Telegram must not become part of the core
+// business domain — TelegramUser only maps a Telegram identity to an
+// optional platform User; every other module (enquiries, leads,
+// notifications) continues to operate on User/Vendor/Lead exactly as before,
+// unaware that Telegram was the origin (see LeadSource.TELEGRAM, already
+// modeled in Arch Phase 9).
+model TelegramUser {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  telegramUserId BigInt   @unique @map("telegram_user_id")
+  userId         String?  @unique @map("user_id") @db.Uuid
+  chatId         BigInt   @map("chat_id")
+  username       String?
+  firstName      String?  @map("first_name")
+  lastName       String?  @map("last_name")
+  languageCode   String?  @map("language_code")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user          User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  conversations TelegramConversation[]
+  messages      TelegramMessage[]
+
+  @@index([userId])
+  @@map("telegram_users")
+}
+
+// product.md §35's 11 states, persisted (not in-memory) — "do not rely only
+// on in-memory state" is explicit. collectedData carries the enquiry being
+// built up across states (categoryId, cityId, weddingDate, budget,
+// guestCount, contactPhone, candidateVendorIds, selectedVendorId) since
+// none of that has a durable home until the real Enquiry/Lead is created at
+// CONFIRMING_ENQUIRY → COMPLETED.
+enum TelegramConversationState {
+  START
+  SELECTING_CATEGORY
+  SELECTING_LOCATION
+  COLLECTING_DATE
+  COLLECTING_BUDGET
+  COLLECTING_GUEST_COUNT
+  COLLECTING_CONTACT
+  MATCHING_VENDORS
+  SELECTING_VENDOR
+  CONFIRMING_ENQUIRY
+  COMPLETED
+}
+
+model TelegramConversation {
+  id             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  telegramUserId String                    @map("telegram_user_id") @db.Uuid
+  state          TelegramConversationState @default(START)
+  collectedData  Json                      @default("{}") @map("collected_data")
+  enquiryId      String?                   @map("enquiry_id") @db.Uuid
+  createdAt      DateTime                  @default(now()) @map("created_at")
+  updatedAt      DateTime                  @updatedAt @map("updated_at")
+
+  telegramUser TelegramUser      @relation(fields: [telegramUserId], references: [id], onDelete: Cascade)
+  enquiry      Enquiry?          @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
+  messages     TelegramMessage[]
+
+  @@index([telegramUserId])
+  @@map("telegram_conversations")
+}
+
+enum TelegramMessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+// Architecture.md's "Message model" task — a log of what was actually
+// exchanged, separate from TelegramConversation's current-state snapshot.
+model TelegramMessage {
+  id                String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  telegramUserId    String                   @map("telegram_user_id") @db.Uuid
+  conversationId    String?                  @map("conversation_id") @db.Uuid
+  direction         TelegramMessageDirection
+  telegramMessageId BigInt?                  @map("telegram_message_id")
+  text              String?
+  createdAt         DateTime                 @default(now()) @map("created_at")
+
+  telegramUser TelegramUser          @relation(fields: [telegramUserId], references: [id], onDelete: Cascade)
+  conversation TelegramConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([telegramUserId])
+  @@index([conversationId])
+  @@map("telegram_messages")
+}
+
+// product.md §36: "every incoming message/event should have an external
+// identifier; store processed IDs" — Telegram's own update_id is globally
+// sequential per bot, unique per delivery attempt (a genuine redelivery
+// carries the same update_id). A unique-constraint INSERT-then-catch here
+// is the exact same idempotency pattern Arch Phase 11's WebhookEvent uses
+// for Razorpay.
+model TelegramProcessedUpdate {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  updateId  BigInt   @unique @map("update_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("telegram_processed_updates")
 }

@@ -3,6 +3,7 @@ import { createRedisConnection } from "../../config/redis";
 import { logger } from "../../config/logger";
 import { prisma } from "../../config/database";
 import { sendEmail } from "../../integrations/email/resend.client";
+import { telegramProvider } from "../../integrations/telegram/telegram.client";
 import { renderEmailHtml } from "../../modules/notifications/notification.templates";
 import * as notificationRepository from "../../modules/notifications/notification.repository";
 import type { NotificationDeliveryJobData } from "../queues/notification-delivery.queue";
@@ -29,14 +30,20 @@ async function deliverNotification(notificationId: string): Promise<void> {
   }
 
   if (notification.channel === "TELEGRAM") {
-    // Arch Phase 15's bot/MessagingProvider doesn't exist yet — same
-    // deferral pattern as Arch Phase 9's lead notifications before this
-    // phase: a structured log stands in for real delivery, clearly marked.
-    logger.info(
-      { notificationId, userId: notification.userId },
-      // TODO(Arch Phase 15): replace with real Telegram delivery via MessagingProvider.
-      "Telegram notification (delivery pending Arch Phase 15)",
-    );
+    // No channel currently defaults to TELEGRAM (see notification.constants
+    // — Arch Phase 14 confirmed with the user that it stays off by default
+    // until a real bot exists), so this only fires for a user who
+    // explicitly opted in via preferences. That user may still have never
+    // linked a Telegram identity at all — a genuine, expected case, not an
+    // error: nothing to deliver to, so this no-ops as SENT rather than
+    // retrying forever against a recipient that will never exist.
+    const telegramUser = await prisma.telegramUser.findUnique({ where: { userId: notification.userId } });
+    if (!telegramUser) {
+      logger.info({ notificationId, userId: notification.userId }, "No linked Telegram identity — skipping Telegram delivery");
+      await notificationRepository.markSent(notification.id);
+      return;
+    }
+    await telegramProvider.sendMessage(String(telegramUser.chatId), `${notification.title}\n\n${notification.body}`);
     await notificationRepository.markSent(notification.id);
     return;
   }

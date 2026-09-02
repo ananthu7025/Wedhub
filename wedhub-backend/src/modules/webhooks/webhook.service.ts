@@ -38,13 +38,26 @@ export async function handleWebhook(rawBody: Buffer | undefined, signature: stri
 
   // Scenario D: log the event BEFORE processing, keyed on the idempotency
   // key. The unique constraint on webhook_events.event_id makes a duplicate
-  // delivery's INSERT fail — caught here and treated as "already handled,"
-  // never as a real error, and never processed a second time.
+  // delivery's INSERT fail — caught here.
+  //
+  // A real bug caught live while verifying the same pattern for Telegram:
+  // if the FIRST attempt's INSERT succeeds but processing then fails (e.g.
+  // a transient error), the row exists with processedAt still null. Without
+  // this check, Razorpay's own retry of the same event_id would be silently
+  // dropped as "already handled" even though it was never actually
+  // processed — a genuine message-loss bug, not the duplicate-suppression
+  // Scenario D is meant to provide. Only a row that was genuinely completed
+  // (processedAt set) is treated as a true duplicate; a still-pending or
+  // previously-errored row is reprocessed instead.
   try {
     await subscriptionRepository.recordWebhookEvent({ eventId, eventType: payload.event, payload });
   } catch {
-    logger.info({ eventId, eventType: payload.event }, "Duplicate webhook event ignored (idempotency)");
-    return;
+    const existing = await subscriptionRepository.findWebhookEvent(eventId);
+    if (existing?.processedAt) {
+      logger.info({ eventId, eventType: payload.event }, "Duplicate webhook event ignored (idempotency)");
+      return;
+    }
+    logger.info({ eventId, eventType: payload.event }, "Retrying a previously-unsuccessful webhook event");
   }
 
   try {

@@ -25,7 +25,7 @@
 | 12 | Entitlement Enforcement | [Stage 5](07-stage-monetization.md) | ✅ Done | 2026-09-02 |
 | 13 | Featured Listings & Promotions | [Stage 5](07-stage-monetization.md) | ✅ Done | 2026-09-02 |
 | 14 | Notifications | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
-| 15 | Telegram Bot MVP | [Stage 6](08-stage-telegram-and-admin.md) | ⬜ Not Started | — |
+| 15 | Telegram Bot MVP | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
 | 16 | Admin Platform Backend | [Stage 6](08-stage-telegram-and-admin.md) | ⬜ Not Started | — |
 | 17 | CMS & SEO Backend | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 18 | Analytics & Marketplace Metrics | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 15 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), and Stage 5 (Monetization) are all fully done; Stage 6 (Telegram & Admin) is underway with Arch Phase 14 done (Arch Phases 15–16 remaining).**
+**Overall: 16 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), and Stage 5 (Monetization) are all fully done; Stage 6 (Telegram & Admin) is underway with Arch Phases 14–15 done (Arch Phase 16 remaining).**
 
 ---
 
@@ -1314,3 +1314,78 @@ triggered it (this stage's own acceptance criterion).
 - **New judgment calls, confirmed with the user during implementation:** (1) Arch Phase 9's `lead-notification` queue/processor is retired entirely, not left running alongside the new generic system — `enquiry.service.ts` now resolves the lead's vendor owner and calls `notificationService.notify(..., "NEW_LEAD", ...)` directly, with a new `enquiryRepository.findVendorOwnersByIds()` lookup (an admin-created, not-yet-claimed vendor has no owner and is correctly skipped, not errored). (2) Default channels are asymmetric: account/business-critical events default to `EMAIL`+`IN_APP`; high-frequency lead/message events default to `IN_APP` only (a vendor with real deal flow getting emailed per-lead by default would look like spam) — vendors can opt in via preferences. (3) `PASSWORD_RESET` was added as a 17th event type beyond product.md §45's literal 12, specifically because `auth.service.ts` already had a pre-existing `TODO(Arch Phase 14)` stub expecting real delivery for it — email-only by default, since a locked-out user can't see in-app notifications yet. (4) The vendor-claim invitation email (`vendor-admin.service.ts`) deliberately bypasses `notificationService.notify()` entirely and calls `resend.client.sendEmail()` directly — the invitee has no `User` row yet (that's the point of an invitation), so there's no recipient to attach a `Notification`/preference row to; modeling it as a notification event would have required a fictional user. (5) `SUBSCRIPTION_EXPIRING` and `FEATURED_CAMPAIGN_STARTED`/`FEATURED_CAMPAIGN_ENDING` are declared (enum, template, default channels) but have no trigger yet — both need a look-ahead scheduler that doesn't exist anywhere in this codebase (the same gap Arch Phase 12 hit for grace-period expiry, resolved there by lazy-at-read-time evaluation, which doesn't fit a "notify before something happens" case) — confirmed with the user as out of scope for this phase, left as a documented gap rather than a rushed one-off scheduler.
 - **register() sends one email, not two** — confirmed with the user: `VERIFICATION`'s template now carries both the welcome message and the actual verification link, rather than firing a separate `REGISTRATION` email with no actionable content in the same second. `REGISTRATION` stays declared (schema-complete) for a possible future standalone touch.
 - Verified live end-to-end against a real running Postgres/Redis stack and the real Resend API (not mocked): registration → real `VERIFICATION` email delivered (`IN_APP` + `EMAIL`, both `SENT`) and correctly visible via `GET /notifications/me` (only the `IN_APP` row — `EMAIL` rows are delivery-only, not inbox items); opting out of `EMAIL` for `VERIFICATION` correctly suppressed the `EMAIL` row on a subsequent event while leaving `IN_APP` unaffected; `POST /notifications/me/:id/read` correctly dropped the unread count from 1 to 0; vendor approval and rejection both correctly fired `IN_APP`+`EMAIL` with the rejection reason correctly interpolated into the body; a review submission correctly notified the vendor owner (`IN_APP`+`EMAIL`) with the real rating; a lead-creating enquiry correctly notified the vendor owner `IN_APP`-only (no `EMAIL` row created, per the default matrix) with `relatedEntityType="lead"`/`relatedEntityId` correctly pointing at the real lead; the vendor-claim invitation's direct-`sendEmail()` bypass path succeeded with a real `201` and no error; `forgotPassword()` correctly sent an `EMAIL`-only `PASSWORD_RESET` notification with a working reset link. `npm run typecheck` and `npm run lint` both pass with zero errors; no test suite exists yet in this codebase to run (consistent with every prior phase). All test users/vendors/notifications created during verification were deleted afterward.
+
+---
+
+## Arch Phase 15 — Telegram Bot MVP
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 6 — Telegram & Admin](08-stage-telegram-and-admin.md)
+
+### What this unlocks
+
+A user can now discover and enquire with a vendor entirely through Telegram — `/start` → pick "Find a vendor" → category → city → date (skippable) → budget (skippable) → guest count (skippable) → contact phone (skippable) → a real ranked shortlist of matching vendors → pick one → confirm → a real `Enquiry`/`Lead` is created with `source=TELEGRAM`, routing into the exact same lead pipeline (dashboard, notifications, review-eligibility) as a web-originated enquiry. Every state is persisted in Postgres, not in-memory (product.md §35's explicit requirement), and every incoming Telegram update is idempotency-checked before being acted on (product.md §36). Arch Phase 14's stubbed `TELEGRAM` notification channel is now real. This phase also surfaced and fixed a genuine idempotency bug in Arch Phase 11's already-shipped Razorpay webhook handler.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| POST | `/api/v1/telegram/webhook` | Telegram update receiver | none (X-Telegram-Bot-Api-Secret-Token header instead) |
+| POST | `/api/v1/admin/telegram/register-webhook` | Register this server's public URL as the bot's webhook with Telegram | ADMIN |
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `telegram_users` | Maps a Telegram identity to an optional platform `User` | `telegram_user_id` (unique), `chat_id`, `user_id` (nullable, unique — one platform account per Telegram identity), `username`/`first_name`/`last_name` |
+| `telegram_conversations` | The persisted state machine — product.md §35's 11 states | `telegram_user_id`, `state`, `collected_data` (JSONB scratch state for the in-progress enquiry), `enquiry_id` (set only once `CONFIRMING_ENQUIRY` completes) |
+| `telegram_messages` | Message log — architecture.md's "Message model" task, separate from the conversation's current-state snapshot | `telegram_user_id`, `conversation_id`, `direction` (`INBOUND`/`OUTBOUND`), `telegram_message_id`, `text` |
+| `telegram_processed_updates` | Idempotency — product.md §36 | `update_id` (unique) |
+
+No new enums beyond `TelegramConversationState`/`TelegramMessageDirection`; `LeadSource.TELEGRAM` already existed from Arch Phase 9.
+
+### Flow
+
+```
+Telegram → POST /telegram/webhook (real update)
+     │
+     ├─ X-Telegram-Bot-Api-Secret-Token verified (Coding Rule 6) — wrong/
+     │    missing header → 401, nothing parsed. Verified live both ways.
+     ▼
+recordProcessedUpdate(update_id) — unique constraint; duplicate INSERT
+     │  fails → treated as already-handled, never reprocessed (Scenario D-
+     │  style, product.md §36). Verified live: a genuine duplicate of a
+     │  SUCCESSFULLY processed update is correctly deduped.
+     ▼
+message? → handleTextMessage    callback_query? → handleCallbackQuery
+     │  upsert TelegramUser, log INBOUND message
+     │  /start → resetOrCreateConversation() (real bug fixed here, see Notes)
+     │  else → getOrCreateOpenConversation() → advanceConversation()
+     ▼
+advanceConversation() — one function per TelegramConversationState:
+   START → SELECTING_CATEGORY → SELECTING_LOCATION → COLLECTING_DATE
+   → COLLECTING_BUDGET → COLLECTING_GUEST_COUNT → COLLECTING_CONTACT
+   → MATCHING_VENDORS (searchRepository.searchVendors + rankVendors —
+       Arch Phase 7's real ranking service, not reimplemented)
+   → SELECTING_VENDOR → CONFIRMING_ENQUIRY
+       → confirm:yes → enquiryService.createSingleVendorEnquiry(
+           source: "TELEGRAM", contactEmail: synthesized placeholder)
+       → COMPLETED, conversation.enquiryId set
+     ▼
+sendAndLog() — telegramProvider.sendMessage() (real Telegram API call)
+     │  success → OUTBOUND message logged
+     │  failure → deleteProcessedUpdate(update_id) — real bug fixed here,
+     │    see Notes — then re-throw, Telegram retries, retry is now
+     │    correctly reprocessed rather than silently dropped
+```
+
+### Notes
+
+- **`node-telegram-bot-api`'s `latest` npm tag is a ground-up rewrite, incompatible with the widely-used `@types` package** — confirmed with the user: pinned to `^1.2.0` (the classic `class TelegramBot` line's last release), matching `@types/node-telegram-bot-api` and the vast majority of existing Telegram bot documentation/prior art, rather than adopting the new 2.x middleware API for a first integration.
+- **A real bug was caught and fixed during live testing:** `/start` always called `createConversation()` unconditionally, so calling `/start` twice (or once after `getOrCreateOpenConversation` had already created a row for an unrelated message) left two orphaned `TelegramConversation` rows both stuck at `START` for the same user, with no way to tell which was "current." Fixed with `resetOrCreateConversation()` — reuses and resets any existing open conversation instead of always inserting a new row. Re-verified: repeated `/start` calls now correctly leave exactly one conversation row.
+- **A second, more significant real bug was caught and fixed during live idempotency testing, and the same bug was then found and fixed in Arch Phase 11's already-shipped Razorpay webhook handler while checking for it:** the idempotency row was written *before* processing completed. When a live outbound send genuinely failed (verified against Telegram's real API with a synthetic test chat — a real `400 chat not found`), the resulting 500 response meant a real Telegram/Razorpay retry would arrive with the identical `update_id`/`event_id` — and that retry was then wrongly deduped as "already handled" by the row the failed first attempt had already inserted, silently losing a message/event that was never actually delivered. This is the exact inverse failure mode from what product.md §36/Scenario D exist to prevent. Fixed two different ways to fit each table's real shape: Telegram's `telegram_processed_updates` row is deleted before re-throwing on a processing failure (it's pure idempotency bookkeeping, nothing worth keeping on failure); Razorpay's `webhook_events` row is kept — it's an audit log with `payload`/`error`/`processedAt` fields specifically for tracing failures, deleting it would destroy that history — instead, a duplicate-insert failure now looks up the existing row and only treats it as a true duplicate if `processedAt` is actually set, reprocessing it otherwise. Both fixes verified live in both directions: a genuinely-failed delivery's retry now correctly reprocesses (still 500s, not silently 200s); a genuine duplicate of a successfully-processed event still correctly deduped.
+- **Vendor matching reuses Arch Phase 7's ranking service directly** — confirmed with the user (Risk 3): `promptVendorMatches()` calls the exact same `searchRepository.searchVendors()` + `rankVendors()` functions `enquiry.service.ts`'s multi-vendor web flow already uses, not a separate Telegram-specific matching implementation.
+- **`createSingleVendorEnquiry()` gained optional `source`/`categoryId`/`cityId` parameters rather than a duplicate function** — product.md §34's journey (search → shortlist → user picks ONE vendor → confirm) is structurally the single-vendor shape, not the multi-vendor auto-select-three shape. The web caller's behavior is unchanged (`source` defaults to `"WEB"` when omitted).
+- **A synthesized placeholder email for Telegram-sourced contacts, confirmed with the user:** `Enquiry.contactEmail` is required and non-nullable; a Telegram user has no email on file and product.md's journey never asks for one. Rather than making the column nullable (touching 4+ already-shipped modules that assume it exists), Telegram enquiries get `telegram_<telegramUserId>@wedhub.telegram` — the real contact channel for that lead is the collected phone number or Telegram itself, and every downstream consumer already treats `contactEmail` as an opaque string.
+- **Live bot verification is partial, flagged honestly:** the real bot token (`@VendorMatefinderBot`, confirmed live via Telegram's own `getMe`) is configured, and every outbound send in this phase's code genuinely round-trips to Telegram's real API — verified by its real, live rejection of synthetic test chat IDs (`400 chat not found`, `400 query is too old`). Receiving real webhook deliveries requires a public HTTPS tunnel; this machine's managed endpoint security (Sophos + an enforced AppLocker policy, confirmed via Windows CodeIntegrity/AppLocker event logs) blocked the ngrok binary needed for that, and — per the user's explicit instruction — no attempt was made to work around or modify that endpoint security configuration. Instead, the full conversation state machine (all 11 states, skip logic, invalid-budget/date reprompting, real Enquiry/Lead creation with correct `source`/data mapping) was verified by calling the exact same conversation-engine functions the webhook handler calls, directly and in sequence, against the real database.
+- Also verified live: webhook secret-token verification correctly 401s on a wrong or missing header, before any parsing; the admin register-webhook endpoint correctly 401s unauthenticated and 403s a non-admin, and its one real live call against a fabricated domain genuinely attempted DNS resolution via Telegram's own API before failing (proving the call is real, not stubbed); `npm run typecheck` and `npm run lint` both pass with zero errors; no test suite exists yet in this codebase to run (consistent with every prior phase). All test users/vendors/Telegram identities/conversations created during verification were deleted afterward.

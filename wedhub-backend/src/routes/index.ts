@@ -20,6 +20,7 @@ import { subscriptionAdminRouter, subscriptionRouter } from "../modules/subscrip
 import { webhookRouter } from "../modules/webhooks";
 import { featuredListingAdminRouter, featuredListingRouter } from "../modules/featured-listings";
 import { notificationRouter } from "../modules/notifications";
+import { telegramAdminRouter, telegramRouter } from "../modules/telegram";
 
 export const apiV1Router = Router();
 
@@ -49,6 +50,8 @@ apiV1Router.use("/webhooks", webhookRouter);
 apiV1Router.use("/featured-listings", featuredListingRouter);
 apiV1Router.use("/admin/featured-listings", featuredListingAdminRouter);
 apiV1Router.use("/notifications", notificationRouter);
+apiV1Router.use("/telegram", telegramRouter);
+apiV1Router.use("/admin/telegram", telegramAdminRouter);
 
 // Mounted BEFORE /vendors: vendorRouter's public GET /:slug would otherwise
 // greedily match /vendors/claim/:token, /vendors/me/albums, /vendors/:slug/albums,

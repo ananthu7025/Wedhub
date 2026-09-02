@@ -9,7 +9,7 @@ import * as enquiryRepository from "./enquiry.repository";
 const DEDUPE_WINDOW_MINUTES = 15;
 const MULTI_VENDOR_SELECTION_SIZE = 3;
 
-interface EnquiryContactInput {
+export interface EnquiryContactInput {
   contactName: string;
   contactEmail: string;
   contactPhone: string | undefined;
@@ -98,7 +98,12 @@ async function queueNotificationsAndAnalytics(
 
 export async function createSingleVendorEnquiry(
   userId: string | undefined,
-  input: EnquiryContactInput & { vendorId: string },
+  input: EnquiryContactInput & {
+    vendorId: string;
+    source?: "WEB" | "TELEGRAM" | "ADMIN" | "FUTURE_WHATSAPP" | undefined;
+    categoryId?: string | undefined;
+    cityId?: string | undefined;
+  },
 ) {
   await assertVendorIsPublic(input.vendorId);
 
@@ -116,9 +121,9 @@ export async function createSingleVendorEnquiry(
     {
       userId,
       routingMode: "SINGLE_VENDOR",
-      source: "WEB",
-      categoryId: undefined,
-      cityId: undefined,
+      source: input.source ?? "WEB",
+      categoryId: input.categoryId,
+      cityId: input.cityId,
       serviceId: input.serviceId,
       contactName: input.contactName,
       contactEmail: input.contactEmail,
