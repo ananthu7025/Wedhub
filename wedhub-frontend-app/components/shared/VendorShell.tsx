@@ -3,11 +3,11 @@ import { VendorLogoutButton } from "./VendorLogoutButton";
 
 /**
  * Sidebar shell for all (vendor) routes, matching
- * wedhub-frontend/vendor/*.html's .app-shell/.sidebar pattern. Dashboard/
- * Profile/Portfolio/Packages (Phase 5) and Leads/Reviews (Phase 6) link to
- * real routes; Subscription/Analytics are Phase 7 scope — shown in the nav
- * (matching the mockup) but not yet built, so they're rendered as
- * disabled/greyed rather than linking to a 404.
+ * wedhub-frontend/vendor/*.html's .app-shell/.sidebar pattern. All nine
+ * mockup nav items now link to real routes as of Frontend Arch Phase 7
+ * (Dashboard/Profile/Portfolio/Packages from Phase 5, Leads/Reviews from
+ * Phase 6, Subscription/Analytics/Settings from Phase 7) — Stage 3 is
+ * fully built out, no more "coming soon" placeholders.
  */
 
 const navLinks = [
@@ -37,11 +37,26 @@ const navLinks = [
     label: "Reviews",
     icon: <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />,
   },
-];
-
-const comingSoonLinks = [
-  { label: "Subscription", icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></> },
-  { label: "Analytics", icon: <path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3" /> },
+  {
+    href: "/vendor/subscription",
+    label: "Subscription",
+    icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></>,
+  },
+  {
+    href: "/vendor/analytics",
+    label: "Analytics",
+    icon: <path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3" />,
+  },
+  {
+    href: "/vendor/settings",
+    label: "Settings",
+    icon: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+      </>
+    ),
+  },
 ];
 
 export function VendorShell({
@@ -75,19 +90,6 @@ export function VendorShell({
             </svg>
             {link.label}
           </Link>
-        ))}
-
-        {comingSoonLinks.map((link) => (
-          <span
-            key={link.label}
-            title="Coming soon"
-            className="flex cursor-not-allowed items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-semibold text-paynes-grey-30"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
-              {link.icon}
-            </svg>
-            {link.label}
-          </span>
         ))}
 
         <div className="mt-auto flex flex-col gap-1 border-t border-border pt-3">

@@ -17,13 +17,13 @@
 | 4 | Couple Account | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
 | 5 | Vendor Onboarding & Profile Mgmt | [Stage 3](05-stage-vendor-experience.md) | ✅ Done | 2026-09-02 |
 | 6 | Vendor Leads & Reviews | [Stage 3](05-stage-vendor-experience.md) | ✅ Done | 2026-09-02 |
-| 7 | Vendor Monetization | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
+| 7 | Vendor Monetization | [Stage 3](05-stage-vendor-experience.md) | ⚠️ Built, Playwright pending | 2026-09-02 |
 | 8 | Admin Core | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 9 | Admin Catalog & Moderation | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 10 | Admin Monetization, Governance & Audit | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | ⬜ Not Started (11b blocked on backend Arch Phase 17) | — |
 
-**Overall: 7 / 12 Frontend Arch Phases complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
+**Overall: 7 / 12 Frontend Arch Phases fully verified complete, +1 built and code-complete pending a combined Playwright pass (Phase 7 — see its entry below for why).** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
 
 ---
 
@@ -550,3 +550,99 @@ Real friction hit and fixed during this phase (not an app bug, but a real recurr
 - Lead notification surfacing (dashboard/nav unread counts for new leads) was scoped out of this phase — no real UI element needed it yet, since the vendor shell's notification bell predates this phase and isn't wired to any module's unread count.
 - `phase6-seed-vendor@wedhub.dev` / `phase6-seed-couple@wedhub.dev` (manually-created accounts used for live curl verification, including one real APPROVED review) are **intentionally left in the dev database** as reusable fixture data, same rationale as prior phases' fixtures. All Playwright-created test accounts (`e2e-phase6-*@wedhub.dev`) were deleted via `afterEach` per the established convention.
 - `npx tsc --noEmit` and `eslint` both pass cleanly on the new/changed files.
+
+---
+
+## Frontend Arch Phase 7 — Vendor Monetization
+
+### What this unlocks
+
+A vendor can now view real plan pricing, upgrade (immediately via a real trial, or via a real Razorpay order handoff for non-trial plans), cancel/undo-cancel, see real invoice history, view a dedicated analytics page (real profile-view/lead/review metrics plus a real day-by-day chart for advanced-tier plans), and manage business info, notification preferences, and account deactivation from a real settings page. This completes Stage 3 (Vendor Experience) — every mockup nav item under `(vendor)/*` now links to a real, backend-verified route.
+
+### Backend research findings (no schema/endpoint changes required this phase)
+
+- `subscriptions` and `plans` are separate sibling modules; `payments` is an empty stub — all checkout logic lives inside `subscription.service.ts`, all Razorpay SDK calls are isolated in `src/integrations/payment/razorpay.client.ts`.
+- A vendor with no `Subscription` row at all is implicitly on FREE — `GET /subscriptions/me` returns `null`, not an error or a synthetic FREE row. The real seeded plan data does include an explicit FREE-tier `SubscriptionPlan` row (price `"0"`) for the plan-card grid, so no synthetic/hardcoded FREE card was needed.
+- There is no dedicated downgrade endpoint — downgrading to Free is `POST /subscriptions/me/cancel` (confirmed via an explicit code comment in `subscription.service.ts`), not a separate route. The UI's "Downgrade to Free" button on the Free plan card calls the same cancel endpoint under the hood.
+- Payment confirmation is 100% webhook-driven (`POST /webhooks/razorpay`, HMAC-signature-authenticated, no `authenticateMiddleware`) — there is no frontend-callable "verify payment" endpoint, confirmed by an explicit design comment in `webhook.service.ts` ("the webhook is the source of truth regardless of whether the frontend's checkout-success callback ever fired"). `CheckoutButton.tsx`'s Razorpay `handler` callback therefore only triggers a poll of `GET /subscriptions/me`, never an assumption of success.
+- Only 2 of 8 declared entitlement keys (`portfolio_limit`/`video_limit` via media upload, `analytics_level` via the analytics endpoint) are enforced by any real backend code path — `lead_access`, `featured_eligibility`, `promotional_placement`, `response_tools`, `priority_support` exist in plan JSON and the type system but gate nothing today (confirmed by grepping every call site of `canVendorAccess`/`canVendorUse`/`canVendorUpload`). No standalone entitlements HTTP endpoint exists either — plan limits/features are read from `GET /subscriptions/me`'s embedded `plan` object.
+- No team/staff model exists anywhere in the schema (`Vendor.ownerUserId` is a single nullable FK, no multi-user-per-vendor concept) — confirmed via an exhaustive grep, not assumed.
+- "Deactivate my vendor listing" has no real backend implementation — only a generic, role-agnostic `POST /users/me/deactivate` exists (flips `User.status`, not `Vendor.status`; `Vendor.status = DEACTIVATED` is a schema enum value with zero code paths that ever set it).
+- No real Razorpay test-mode credentials exist in this dev environment, and the codebase has no mock/sandbox payment provider — confirmed via `razorpay.client.ts` throwing `ExternalServiceError` at call-time if `RAZORPAY_KEY_ID`/`SECRET` are unset.
+- Notification preferences (`GET/PUT /notifications/me/preferences`) are the exact same generic, role-agnostic system Frontend Arch Phase 4 built for couples — no vendor-specific preferences module exists, and this phase is the first to actually wire a frontend page to it.
+
+Three explicit scope decisions were made with the user before building (all "Recommended" options): build the subscription UI and verify up to Razorpay order creation without a real payment; omit team members and vendor-listing deactivation entirely rather than build against non-existent backend support; build the analytics page as its own real page rather than folding it into the dashboard.
+
+### Routes implemented
+
+- `(vendor)/vendor/subscription` — plan cards, current-subscription panel, checkout handoff, invoice history
+- `(vendor)/vendor/analytics` — profile-view/lead/review metrics, day-by-day chart (advanced tier), leads funnel, response performance
+- `(vendor)/vendor/settings` — business info, notification preferences, deactivate account
+
+### Components added
+
+- `app/(vendor)/vendor/subscription/`: `SubscriptionBoard.tsx` (plan selection, upgrade/cancel/undo-cancel, invoice table), `CheckoutButton.tsx` (Razorpay Checkout.js loader + invocation, renders a clear "not configured" state when `NEXT_PUBLIC_RAZORPAY_KEY_ID` is unset)
+- `app/(vendor)/vendor/analytics/AnalyticsBoard.tsx` — reuses `VendorAnalytics` (Phase 5) and `LeadAnalytics` (Phase 6) types/endpoints, no new analytics data source
+- `app/(vendor)/vendor/settings/SettingsBoard.tsx` — business-info form, notification-preference toggles, danger zone
+- `lib/api/subscriptions.types.ts`, `subscriptions.ts` (server reads), `subscriptions-client.ts` (client writes) — new
+- `lib/api/notification-preferences.types.ts`, `notification-preferences.ts` (server read), `notification-preferences-client.ts` (client write) — new; the first frontend consumer of this backend system
+- `lib/api/vendor-self-client.ts` — added `updateMyVendorDetail()` for `PATCH /vendors/me/detail` (business name)
+- `components/shared/VendorShell.tsx` — Subscription/Analytics/Settings moved from a removed `comingSoonLinks` array into real `navLinks`; all nine mockup nav items now link to real routes
+
+### Backend endpoints consumed
+
+`GET /plans`, `GET /subscriptions/me`, `POST /subscriptions/me/upgrade`, `POST /subscriptions/me/cancel`, `POST /subscriptions/me/undo-cancel`, `GET /subscriptions/me/invoices`, `GET /vendors/me/analytics`, `GET /leads/analytics`, `PATCH /vendors/me/detail`, `PUT /vendors/me/profile`, `PATCH /users/me`, `GET /notifications/me/preferences`, `PUT /notifications/me/preferences`, `POST /users/me/deactivate`.
+
+### Flow
+
+```
+Before writing any frontend code: dispatched a research pass covering
+subscriptions, plans, payments/razorpay integration, entitlements, vendor
+analytics, and vendor settings support (notification prefs, team members,
+deactivation) — see "Backend research findings" above. This surfaced real
+gaps (no Razorpay sandbox, no team model, no vendor-listing deactivation)
+that were resolved as explicit scope decisions with the user before any
+UI was designed around them, rather than guessed at.
+
+/vendor/subscription → GET /plans + GET /subscriptions/me + GET
+   /subscriptions/me/invoices (parallel) → plan cards render real
+   prices/limits/features → select a trial-eligible plan → POST
+   /subscriptions/me/upgrade → { subscription: {...TRIALING}, checkout:
+   null } → activated immediately, no payment
+   OR select a non-trial plan → { subscription: null, checkout: {orderId,
+   amount, currency} } → CheckoutButton renders a real Razorpay Checkout.js
+   invocation (or a "not configured" state, since no test credentials
+   exist here) → on the client-side success callback, poll GET
+   /subscriptions/me (never trust the callback itself — webhook is the
+   real source of truth)
+   Cancel → POST .../cancel {immediate:false} → cancelAtPeriodEnd: true →
+   Undo → POST .../undo-cancel → cancelAtPeriodEnd: false, both merging
+   the client-held plan object back in since neither response includes it
+
+/vendor/analytics → GET /vendors/me/analytics + GET /leads/analytics
+   (parallel) → real profile views/leads/reviews + real response/
+   conversion rates + real qualified/won/lost funnel; advanced-tier
+   vendors additionally get a real profileViewsByDay bar chart, basic-tier
+   vendors see an honest upgrade prompt instead of a fake/empty chart
+
+/vendor/settings → PATCH /vendors/me/detail (businessName) + PATCH
+   /users/me (firstName/lastName) + PUT /vendors/me/profile (phone), all
+   in parallel on one "Save changes" → GET/PUT /notifications/me/
+   preferences → real per-toggle persistence, confirmed via reload (opt-out
+   model: no row means enabled) → "Deactivate account" → POST /users/me/
+   deactivate → logout() → /login
+```
+
+### Playwright verification
+
+`e2e/phase-07-vendor-monetization.spec.ts` was written (3 tests covering the subscription page's plan cards/trial-upgrade/cancel/undo-cancel flow, the analytics page's real metrics and basic-tier gating message, and the settings page's business-info save plus a real notification-preference toggle round-trip via reload) and passes `tsc --noEmit`/`eslint` cleanly, but **has not yet been run**. Per an explicit user instruction partway through this phase (2026-09-02), Playwright verification is being deliberately batched: this phase and the upcoming Stage 4 (Admin Platform, Frontend Arch Phases 8–10) will all be run together in one combined pass rather than after each individual phase, to reduce context-switching overhead. Spec-writing and git-commit cadence remain per-phase as before — only the run/debug step is deferred.
+
+In place of a Playwright run, every backend integration point for this phase was independently confirmed via live curl calls against a real seeded vendor before any frontend code was written against it: `GET /subscriptions/me` returning `null` for a fresh vendor, a real trial-eligible upgrade to Pro activating immediately, cancel/undo-cancel round-tripping correctly, a real `PATCH /vendors/me/detail` businessName change, a real notification-preference toggle, and `GET /vendors/me/analytics` correctly flipping to `"advanced"` tier with a `profileViewsByDay` array once the vendor was on a plan with `analytics_level: "advanced"`.
+
+One real bug was caught during this curl verification (not a test-authoring mistake, and not caught by code review): `POST /subscriptions/me/cancel` and `/undo-cancel` omit the `plan` relation in their response (only `GET /subscriptions/me` includes it) — the initial `Subscription` type assumed `plan` was always present, which would have thrown at render time immediately after any real cancel/undo-cancel call. Fixed by introducing `SubscriptionWithoutPlan` and explicitly merging the client-held `plan` back into state after those two calls, rather than trusting the response shape to match the richer `GET` endpoint.
+
+### Notes
+
+- The subscription page only surfaces MONTHLY-interval plans in the 3-card grid, matching the mockup's simple layout — YEARLY variants exist in the real seeded plan data (confirmed via `GET /plans`) but a billing-interval toggle wasn't built, since nothing in the mockup calls for one. Revisit if a future pass wants yearly pricing exposed.
+- `phase6-seed-vendor@wedhub.dev` (reused from Phase 6's fixture data) now carries a real TRIALING Pro subscription as of this phase's live curl verification — left in place intentionally as richer fixture data for any future phase needing a non-Free vendor to test against.
+- `npx tsc --noEmit` and `eslint` both pass cleanly on every new/changed file (one real unused-variable warning was caught and fixed during this pass, not left as a lint suppression).

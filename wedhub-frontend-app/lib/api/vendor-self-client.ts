@@ -38,6 +38,10 @@ export function upsertMyProfile(body: UpsertProfileBody) {
   return call<VendorProfileSelf>("/vendors/me/profile", "PUT", body);
 }
 
+export function updateMyVendorDetail(body: { businessName?: string }) {
+  return call<VendorSelf>("/vendors/me/detail", "PATCH", body);
+}
+
 export function setMyCategories(body: SetCategoriesBody) {
   return call<VendorSelf>("/vendors/me/categories", "PUT", body);
 }
