@@ -39,6 +39,8 @@
 
 **Overall: 17 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), and Stage 6 (Telegram & Admin) are all fully done. Stage 7 (Growth & Scale) is next.**
 
+**Paused here, 2026-09-02, by user decision:** the backend build-out is deliberately pausing before Arch Phase 17 to wire up the frontend against everything shipped so far (Arch Phases 0–16 cover the full couple/vendor-facing product surface — auth, vendors, media, search, shortlists, leads, reviews, subscriptions, entitlements, featured listings, notifications, Telegram, and admin). Arch Phase 17 (CMS & SEO Backend) is still full MVP scope per `02-mvp-cut-line.md` and remains the next Arch Phase to resume with — this is a sequencing choice to get real frontend-integration signal before adding more backend surface, not a scope change. Arch Phases 18–25 stay post-MVP except for the baseline security/testing carve-out already noted in `02-mvp-cut-line.md`.
+
 ---
 
 ## How each phase entry is written (template — copy this block per phase when it ships)
