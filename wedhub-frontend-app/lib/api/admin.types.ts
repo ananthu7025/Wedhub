@@ -211,6 +211,13 @@ export interface AdminUpdateCategoryBody {
   description?: string;
   sortOrder?: number;
   isActive?: boolean;
+  // Homepage presentation fields (added 2026-09-03) — nullable so an admin
+  // can explicitly clear a previously-set image/price, not just leave it
+  // unchanged.
+  imageUrl?: string | null;
+  isFeaturedOnHomepage?: boolean;
+  homepageSortOrder?: number;
+  startingPriceLabel?: string | null;
 }
 
 // ---- POST /categories/:id/attributes (ADMIN) ----
@@ -514,6 +521,31 @@ export interface AdminUserRoleAssignment {
   updatedAt: string;
   user: { id: string; email: string; role: UserRole; status: UserStatus };
   role: AdminRole;
+}
+
+// ---- POST /admin/media-uploads/upload-requests, /:id/confirm ----
+// Admin-only, platform-owned image uploads (real R2 presigned flow, same
+// pattern as vendor logo/cover uploads — see LogoCoverPicker.tsx) — added
+// 2026-09-03 to back Category.imageUrl with a real file picker instead of
+// a hand-typed URL. Not routed through the vendor media pipeline at all
+// (that module requires a vendorId); this is its own small parallel
+// module, mirroring review-media's REVIEW_PHOTO precedent.
+export interface AdminCreateImageUploadRequestBody {
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+}
+
+export interface AdminImageUploadRequestResult {
+  mediaId: string;
+  uploadUrl: string;
+  objectKey: string;
+}
+
+export interface AdminImageConfirmResult {
+  id: string;
+  status: string;
+  url: string | null;
 }
 
 // ---- GET /admin/audit-logs (extended filters) ----

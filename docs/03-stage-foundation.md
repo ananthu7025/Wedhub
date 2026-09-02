@@ -75,6 +75,10 @@ See [`11-progress-log.md`](11-progress-log.md#arch-phase-3--user-module) for the
 - [x] Admin management APIs for both
 - [x] Seed initial wedding categories and target cities (India-first — see Open Questions)
 
+**Small addition, 2026-09-03** (after Stage 1 was already closed out — noted here rather than reopening the phase): `Category` gained four homepage-presentation fields — `imageUrl`, `isFeaturedOnHomepage`, `homepageSortOrder`, `startingPriceLabel` (migration `20260902203806_add_category_homepage_fields`) — plus a new public `GET /categories/featured/homepage` endpoint and extended `PATCH /categories/:id` (nullable `imageUrl`/`startingPriceLabel` for explicit clearing). This backs the public homepage's category carousel/bento grid with real, admin-curated data instead of a hardcoded frontend array; the seed script now marks the same 7 categories as featured that the old hardcoded design used. See `frontenddocs/10-risks-and-open-questions.md` Open Question 21 for the full story (this was originally mis-scoped as needing a new CMS content model — see `09-stage-growth-and-scale.md`'s Arch Phase 17 — before being recognized as a small, natural extension of this already-shipped module instead).
+
+**Same-day follow-up**: the category image field initially shipped as a raw, hand-typed URL input rather than a real upload — inconsistent with the rest of the app. Fixed with a new small `admin-media` module (migration `20260902210019_add_category_image_media_type`, new `CATEGORY_IMAGE` value on the existing `MediaType` enum), mirroring `review-media`'s precedent for a `Media` row with no `vendorId` — `Media.vendorId` was already nullable for exactly this reason. New admin-only `POST /admin/media-uploads/upload-requests` + `/:id/confirm` routes reuse the same R2 presign/processing pipeline every other upload in this app uses, storing under `platform/category-images/` instead of `vendors/{id}/`.
+
 See [`11-progress-log.md`](11-progress-log.md#arch-phase-4--category--location-catalog) for the full write-up.
 
 **Stage 1 (Foundation) is now complete — Arch Phases 0 through 4 all done.**

@@ -1,20 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { Badge } from "@/components/ui/Badge";
 import { createAdminCategory, updateAdminCategory } from "@/lib/api/admin-client";
 import type { Category, Location } from "@/lib/api/vendors.types";
 import { LocationTree } from "./LocationTree";
+import { CategoryImagePicker } from "./CategoryImagePicker";
+import { CategoryAttributesPanel } from "./CategoryAttributesPanel";
 
 /**
- * Categories & Locations admin page (Frontend Arch Phase 9), matching
- * wedhub-frontend/admin/categories-locations.html's two-tab layout. Real
- * gaps vs. the mockup, confirmed via backend research: no reorder-specific
- * endpoint (dragging isn't wired — sortOrder edits would need a dedicated
- * numeric input, not built this pass since the mockup's drag handle has no
- * real backend to persist ordering changes beyond one-PATCH-per-row), no
- * inline attribute/filter config UI on this page (attribute CRUD lives on
- * a per-category basis and wasn't in the mockup's own inline view either —
- * category creation/renaming/enable-disable is this page's real scope).
+ * Categories & Locations admin page (Frontend Arch Phase 9, extended
+ * 2026-09-03), matching wedhub-frontend/admin/categories-locations.html's
+ * two-tab layout. Real gaps vs. the mockup, confirmed via backend
+ * research: no reorder-specific endpoint (dragging isn't wired —
+ * sortOrder edits would need a dedicated numeric input, not built this
+ * pass since the mockup's drag handle has no real backend to persist
+ * ordering changes beyond one-PATCH-per-row), no inline attribute/filter
+ * config UI on this page (attribute CRUD lives on a per-category basis
+ * and wasn't in the mockup's own inline view either — category
+ * creation/renaming/enable-disable is this page's real scope).
  *
  * Both GET /categories and GET /locations are the exact same public
  * endpoints Phase 2 built against — includeInactive=true is only honored
@@ -22,6 +26,17 @@ import { LocationTree } from "./LocationTree";
  * which is what makes toggling a category/location back on possible at
  * all after disabling it (previously a one-way trap — see
  * frontenddocs/10-risks-and-open-questions.md).
+ *
+ * 2026-09-03 addition: real homepage-curation fields
+ * (isFeaturedOnHomepage/imageUrl/startingPriceLabel/homepageSortOrder,
+ * backing the public homepage's category carousel/bento grid — see Open
+ * Question 21). Image upload goes through a real R2 presigned flow
+ * (CategoryImagePicker.tsx, admin-only media-uploads endpoints), not a
+ * pasted URL. "Feature on homepage" is a prominent labeled button + a
+ * dedicated summary section at the top of this tab (not a small,
+ * easy-to-miss per-row checkbox), per explicit user feedback that the
+ * first version of this screen buried both behind an unlabeled toggle and
+ * a raw text field.
  */
 
 type Tab = "categories" | "locations";
@@ -52,6 +67,9 @@ export function CatalogBoard({
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   const tree = buildCategoryTree(categories);
+  const featured = categories
+    .filter((c) => c.isFeaturedOnHomepage)
+    .sort((a, b) => a.homepageSortOrder - b.homepageSortOrder);
 
   async function handleCreateCategory(event: React.FormEvent) {
     event.preventDefault();
@@ -78,6 +96,39 @@ export function CatalogBoard({
       return;
     }
     setCategories((prev) => prev.map((c) => (c.id === category.id ? { ...c, isActive: result.data.isActive } : c)));
+  }
+
+  async function handleToggleFeatured(category: Category) {
+    setPendingId(category.id);
+    setError(null);
+    const result = await updateAdminCategory(category.id, { isFeaturedOnHomepage: !category.isFeaturedOnHomepage });
+    setPendingId(null);
+    if (!result.success) {
+      setError(result.error.message);
+      return;
+    }
+    setCategories((prev) => prev.map((c) => (c.id === category.id ? { ...c, isFeaturedOnHomepage: result.data.isFeaturedOnHomepage } : c)));
+  }
+
+  async function handleSaveHomepageFields(category: Category, imageUrl: string | null, startingPriceLabel: string) {
+    setPendingId(category.id);
+    setError(null);
+    const result = await updateAdminCategory(category.id, {
+      imageUrl,
+      startingPriceLabel: startingPriceLabel.trim() || null,
+    });
+    setPendingId(null);
+    if (!result.success) {
+      setError(result.error.message);
+      return;
+    }
+    setCategories((prev) =>
+      prev.map((c) => (c.id === category.id ? { ...c, imageUrl: result.data.imageUrl, startingPriceLabel: result.data.startingPriceLabel } : c)),
+    );
+  }
+
+  function handleAttributesChange(categoryId: string, attributes: Category["attributes"]) {
+    setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, attributes } : c)));
   }
 
   return (
@@ -110,6 +161,28 @@ export function CatalogBoard({
 
       {tab === "categories" && (
         <>
+          <div className="mb-5 rounded-xl border border-border bg-white p-5">
+            <h2 className="text-sm font-bold">Homepage-featured categories ({featured.length})</h2>
+            <p className="mt-0.5 text-xs text-text-grey">
+              These categories appear on the public homepage&apos;s category carousel and bento grid, in this order.
+            </p>
+            {featured.length === 0 ? (
+              <p className="mt-3 text-xs text-text-grey">
+                No categories are featured yet. Use &quot;Feature on homepage&quot; below on any category to add it here.
+              </p>
+            ) : (
+              <ol className="mt-3 flex flex-wrap gap-2">
+                {featured.map((c, i) => (
+                  <li key={c.id}>
+                    <Badge variant="green">
+                      {i + 1}. {c.name}
+                    </Badge>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+
           <form onSubmit={handleCreateCategory} className="mb-4 flex gap-2">
             <input
               type="text"
@@ -133,7 +206,14 @@ export function CatalogBoard({
             ) : (
               tree.map((parent) => (
                 <div key={parent.id}>
-                  <CategoryRow category={parent} pending={pendingId === parent.id} onToggle={() => handleToggleCategory(parent)} />
+                  <CategoryRow
+                    category={parent}
+                    pending={pendingId === parent.id}
+                    onToggle={() => handleToggleCategory(parent)}
+                    onToggleFeatured={() => handleToggleFeatured(parent)}
+                    onSaveHomepageFields={(imageUrl, priceLabel) => handleSaveHomepageFields(parent, imageUrl, priceLabel)}
+                    onAttributesChange={(attributes) => handleAttributesChange(parent.id, attributes)}
+                  />
                   {parent.children.map((child) => (
                     <CategoryRow
                       key={child.id}
@@ -141,6 +221,9 @@ export function CatalogBoard({
                       indented
                       pending={pendingId === child.id}
                       onToggle={() => handleToggleCategory(child)}
+                      onToggleFeatured={() => handleToggleFeatured(child)}
+                      onSaveHomepageFields={(imageUrl, priceLabel) => handleSaveHomepageFields(child, imageUrl, priceLabel)}
+                      onAttributesChange={(attributes) => handleAttributesChange(child.id, attributes)}
                     />
                   ))}
                 </div>
@@ -160,30 +243,107 @@ function CategoryRow({
   indented,
   pending,
   onToggle,
+  onToggleFeatured,
+  onSaveHomepageFields,
+  onAttributesChange,
 }: {
   category: Category;
   indented?: boolean;
   pending: boolean;
   onToggle: () => void;
+  onToggleFeatured: () => void;
+  onSaveHomepageFields: (imageUrl: string | null, startingPriceLabel: string) => void;
+  onAttributesChange: (attributes: Category["attributes"]) => void;
 }) {
+  const [editingHomepage, setEditingHomepage] = useState(false);
+  const [editingAttributes, setEditingAttributes] = useState(false);
+  const [imageUrlDraft, setImageUrlDraft] = useState<string | null>(category.imageUrl);
+  const [priceDraft, setPriceDraft] = useState(category.startingPriceLabel ?? "");
+
   return (
-    <div
-      className={`flex items-center justify-between gap-3 border-b border-neutral-grey-20 px-5 py-3.5 last:border-b-0 ${
-        indented ? "pl-12" : ""
-      } ${!category.isActive ? "opacity-60" : ""}`}
-    >
-      <div>
-        <div className="text-sm font-bold">{category.name}</div>
-        <div className="text-xs text-text-grey">
-          {category.attributes.length} attribute{category.attributes.length === 1 ? "" : "s"}
-          {!category.isActive && " · disabled"}
+    <div className={`border-b border-neutral-grey-20 last:border-b-0 ${indented ? "pl-12" : ""} ${!category.isActive ? "opacity-60" : ""}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-bold">
+            {category.name}
+            {category.isFeaturedOnHomepage && <Badge variant="green">Featured on homepage</Badge>}
+          </div>
+          <div className="text-xs text-text-grey">
+            {category.attributes.length} attribute{category.attributes.length === 1 ? "" : "s"}
+            {!category.isActive && " · disabled"}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setEditingAttributes((v) => !v)}
+            className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-bold text-text-dark hover:bg-surface-input"
+          >
+            {editingAttributes ? "Close attributes" : `Attributes (${category.attributes.length})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditingHomepage((v) => !v)}
+            className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-bold text-text-dark hover:bg-surface-input"
+          >
+            {editingHomepage ? "Close homepage settings" : "Homepage image & price"}
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={onToggleFeatured}
+            className={`rounded-md px-3 py-1.5 text-xs font-bold disabled:opacity-60 ${
+              category.isFeaturedOnHomepage
+                ? "border border-border bg-white text-text-dark hover:bg-surface-input"
+                : "bg-brand-primary text-white hover:bg-brand-primary-hover"
+            }`}
+          >
+            {category.isFeaturedOnHomepage ? "Remove from homepage" : "Feature on homepage"}
+          </button>
+          <label className="flex items-center gap-2 text-xs text-text-grey">
+            Active
+            <span className="relative inline-flex h-[22px] w-10 flex-shrink-0 cursor-pointer items-center">
+              <input type="checkbox" checked={category.isActive} disabled={pending} onChange={onToggle} className="peer sr-only" />
+              <span className="absolute inset-0 rounded-full bg-border transition-colors peer-checked:bg-brand-primary" />
+              <span className="absolute left-[3px] h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-[18px]" />
+            </span>
+          </label>
         </div>
       </div>
-      <label className="relative inline-flex h-[22px] w-10 flex-shrink-0 cursor-pointer items-center">
-        <input type="checkbox" checked={category.isActive} disabled={pending} onChange={onToggle} className="peer sr-only" />
-        <span className="absolute inset-0 rounded-full bg-border transition-colors peer-checked:bg-brand-primary" />
-        <span className="absolute left-[3px] h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-[18px]" />
-      </label>
+
+      {editingHomepage && (
+        <div className="flex flex-wrap items-end gap-4 border-t border-dashed border-neutral-grey-20 bg-surface-input px-5 py-3.5">
+          <div>
+            <span className="mb-1 block text-xs font-semibold text-text-grey">Homepage image</span>
+            <CategoryImagePicker currentImageUrl={category.imageUrl} onUploaded={(url) => setImageUrlDraft(url)} />
+          </div>
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-text-grey">Starting price label</span>
+            <input
+              value={priceDraft}
+              onChange={(e) => setPriceDraft(e.target.value)}
+              placeholder="₹ 50,000"
+              className="w-40 rounded-md border border-border px-3 py-1.5 text-xs"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => onSaveHomepageFields(imageUrlDraft, priceDraft)}
+            className="rounded-md bg-brand-primary px-3.5 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+          >
+            {pending ? "Saving…" : "Save"}
+          </button>
+        </div>
+      )}
+
+      {editingAttributes && (
+        <CategoryAttributesPanel
+          categoryId={category.id}
+          attributes={category.attributes}
+          onAttributesChange={onAttributesChange}
+        />
+      )}
     </div>
   );
 }

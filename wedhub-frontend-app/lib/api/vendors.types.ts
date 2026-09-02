@@ -66,9 +66,19 @@ export interface Category {
   parentId: string | null;
   sortOrder: number;
   isActive: boolean;
+  imageUrl: string | null;
+  isFeaturedOnHomepage: boolean;
+  homepageSortOrder: number;
+  startingPriceLabel: string | null;
   attributes: CategoryAttribute[];
   children?: Category[];
 }
+
+// ---- GET /categories/featured/homepage ----
+// Scalar-only rows (categoriesRepository.findFeaturedCategories() does a
+// plain findMany with no `include`) — no attributes/children, unlike the
+// main Category shape above.
+export type FeaturedCategory = Omit<Category, "attributes" | "children">;
 
 // ---- GET /locations ----
 export interface Location {

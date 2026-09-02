@@ -6,10 +6,13 @@ import type {
   AdminCreateAttributeBody,
   AdminCreateCategoryBody,
   AdminCreateCouponBody,
+  AdminCreateImageUploadRequestBody,
   AdminCreateInvitationBody,
   AdminCreateLocationBody,
   AdminCreatePlanBody,
   AdminCreateVendorBody,
+  AdminImageConfirmResult,
+  AdminImageUploadRequestResult,
   AdminLeadStatusUpdateResult,
   AdminModerateReviewBody,
   AdminPlan,
@@ -143,4 +146,15 @@ export function updateAdminPlan(id: string, body: AdminUpdatePlanBody) {
 // via research). Kept here rather than admin.ts since it's a mutation.
 export function createAdminCoupon(body: AdminCreateCouponBody) {
   return call<AdminCoupon>("/admin/subscriptions/coupons", "POST", body);
+}
+
+// Real R2 presigned upload flow for admin-owned platform images (e.g. a
+// Category's homepage image) — added 2026-09-03, see admin.types.ts's
+// header comment above AdminImageUploadRequestResult.
+export function createAdminImageUploadRequest(body: AdminCreateImageUploadRequestBody) {
+  return call<AdminImageUploadRequestResult>("/admin/media-uploads/upload-requests", "POST", body);
+}
+
+export function confirmAdminImageUpload(mediaId: string) {
+  return call<AdminImageConfirmResult>(`/admin/media-uploads/${mediaId}/confirm`, "POST");
 }

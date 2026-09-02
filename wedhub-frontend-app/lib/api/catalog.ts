@@ -2,6 +2,7 @@ import { apiFetch } from "./client";
 import type { PaginationMeta } from "./types";
 import type {
   Category,
+  FeaturedCategory,
   FeaturedListing,
   Location,
   LocationType,
@@ -57,6 +58,14 @@ export function getVendorReviews(vendorId: string, page = 1, limit = 20) {
 
 export function listCategories() {
   return apiFetch<Category[]>("/categories", { skipAuth: true });
+}
+
+// Real, admin-curated categories for the public homepage's category
+// carousel/bento grid — backed by Category.isFeaturedOnHomepage/imageUrl/
+// startingPriceLabel (added 2026-09-03, see frontenddocs/10-risks-and-
+// open-questions.md Open Question 21).
+export function listFeaturedCategories() {
+  return apiFetch<FeaturedCategory[]>("/categories/featured/homepage", { skipAuth: true });
 }
 
 export function getCategoryBySlug(slug: string) {

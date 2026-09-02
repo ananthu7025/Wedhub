@@ -3,6 +3,13 @@
 import { useState } from "react";
 import Image from "next/image";
 
+// TODO(backend): no "inspiration gallery" content model exists (no Prisma
+// model, no endpoint) — this is static placeholder content, not real
+// vendor portfolio media. CMS content-model scope (backend Arch Phase 17,
+// see docs/09-stage-growth-and-scale.md); replace once that ships. Real
+// vendor portfolio photos already exist via Media/Album (Frontend Arch
+// Phase 2/5) — a future version of this section could source from those
+// instead of/alongside curated editorial content.
 const GALLERY_ITEMS = [
   {
     id: "1",

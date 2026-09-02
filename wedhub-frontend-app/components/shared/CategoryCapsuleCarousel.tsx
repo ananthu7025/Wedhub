@@ -3,68 +3,16 @@
 import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import type { FeaturedCategory } from "@/lib/api/vendors.types";
 
-interface CategoryCapsule {
-  id: string;
-  title: string;
-  startingPrice: string;
-  imageUrl: string;
-  link: string;
-}
-
-const CAPSULE_CATEGORIES: CategoryCapsule[] = [
-  {
-    id: "venues",
-    title: "Venues",
-    startingPrice: "₹ 1,50,000",
-    imageUrl: "/images/capsules/venue.jpg",
-    link: "/search?categoryId=venue",
-  },
-  {
-    id: "photographers",
-    title: "Photography",
-    startingPrice: "₹ 50,000",
-    imageUrl: "/images/capsules/photo.jpg",
-    link: "/search?categoryId=photographer",
-  },
-  {
-    id: "makeup",
-    title: "Bridal Makeup",
-    startingPrice: "₹ 18,000",
-    imageUrl: "/images/capsules/makeup.jpg",
-    link: "/search?categoryId=makeup",
-  },
-  {
-    id: "mehndi",
-    title: "Mehndi",
-    startingPrice: "₹ 8,000",
-    imageUrl: "/images/capsules/mehndi.jpg",
-    link: "/search?keyword=mehndi",
-  },
-  {
-    id: "decor",
-    title: "Decorators",
-    startingPrice: "₹ 75,000",
-    imageUrl: "/images/capsules/decor.jpg",
-    link: "/search?categoryId=decorator",
-  },
-  {
-    id: "wear",
-    title: "Bridal Wear",
-    startingPrice: "₹ 45,000",
-    imageUrl: "/images/capsules/wear.jpg",
-    link: "/search?keyword=wear",
-  },
-  {
-    id: "caterers",
-    title: "Catering",
-    startingPrice: "₹ 800 / plate",
-    imageUrl: "/images/capsules/catering.jpg",
-    link: "/search?categoryId=caterer",
-  },
-];
-
-export function CategoryCapsuleCarousel() {
+/**
+ * Wedding category carousel — real, admin-curated data from
+ * GET /categories/featured/homepage (Category.isFeaturedOnHomepage,
+ * added 2026-09-03; see frontenddocs/10-risks-and-open-questions.md Open
+ * Question 21). Renders nothing if no category is currently featured,
+ * rather than showing hardcoded placeholder categories.
+ */
+export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCategory[] }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -73,6 +21,8 @@ export function CategoryCapsuleCarousel() {
       scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
     }
   };
+
+  if (categories.length === 0) return null;
 
   return (
     <section className="relative px-6 py-8 max-[900px]:px-4">
@@ -126,21 +76,23 @@ export function CategoryCapsuleCarousel() {
           className="flex gap-4 sm:gap-5 overflow-x-auto py-3 px-1 scroll-smooth no-scrollbar"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {CAPSULE_CATEGORIES.map((category) => (
+          {categories.map((category) => (
             <Link
               key={category.id}
-              href={category.link}
+              href={`/search?categoryId=${category.id}`}
               className="group relative flex-shrink-0 w-[145px] sm:w-[165px] h-[245px] sm:h-[275px] rounded-[80px] overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 no-underline text-white flex flex-col justify-between p-4"
             >
               {/* Full Background Image */}
-              <div className="absolute inset-0 z-0">
-                <Image
-                  src={category.imageUrl}
-                  alt={category.title}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
-                  sizes="(max-width: 640px) 145px, 165px"
-                />
+              <div className="absolute inset-0 z-0 bg-surface-input">
+                {category.imageUrl && (
+                  <Image
+                    src={category.imageUrl}
+                    alt={category.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    sizes="(max-width: 640px) 145px, 165px"
+                  />
+                )}
               </div>
 
               {/* Top Subtle Shade — Revealed on HOVER */}
@@ -149,7 +101,7 @@ export function CategoryCapsuleCarousel() {
               {/* Category Title — Revealed on HOVER */}
               <div className="relative z-10 text-center pt-3 opacity-0 -translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 pointer-events-none">
                 <h3 className="text-sm sm:text-base font-extrabold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] leading-tight tracking-tight">
-                  {category.title}
+                  {category.name}
                 </h3>
               </div>
 
@@ -158,12 +110,16 @@ export function CategoryCapsuleCarousel() {
 
               {/* Bottom Details (Price + Yellow Arrow) — Revealed on HOVER */}
               <div className="relative z-10 text-center pb-1 flex flex-col items-center opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                <span className="text-[9px] uppercase font-semibold text-white/90 tracking-wider">
-                  Starting at
-                </span>
-                <div className="text-xs sm:text-sm font-extrabold text-white tracking-wide mb-1.5 drop-shadow">
-                  {category.startingPrice}
-                </div>
+                {category.startingPriceLabel && (
+                  <>
+                    <span className="text-[9px] uppercase font-semibold text-white/90 tracking-wider">
+                      Starting at
+                    </span>
+                    <div className="text-xs sm:text-sm font-extrabold text-white tracking-wide mb-1.5 drop-shadow">
+                      {category.startingPriceLabel}
+                    </div>
+                  </>
+                )}
 
                 {/* Yellow Action Circle */}
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fde047] text-jet-black font-extrabold shadow-md transition-transform duration-200 group-hover:scale-105 active:scale-95">
