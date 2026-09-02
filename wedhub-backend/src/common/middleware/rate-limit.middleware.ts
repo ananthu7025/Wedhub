@@ -21,7 +21,7 @@ export function createRateLimiter(options: RateLimitOptions): RateLimitRequestHa
 
 export const loginRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: process.env.LOGIN_RATE_LIMIT_MAX ? Number(process.env.LOGIN_RATE_LIMIT_MAX) : 10,
   message: "Too many login attempts. Please try again later.",
 });
 
@@ -33,7 +33,7 @@ export const forgotPasswordRateLimiter = createRateLimiter({
 
 export const registerRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000,
-  max: 20,
+  max: process.env.REGISTER_RATE_LIMIT_MAX ? Number(process.env.REGISTER_RATE_LIMIT_MAX) : 20,
   message: "Too many registration attempts. Please try again later.",
 });
 
@@ -45,12 +45,12 @@ export const searchRateLimiter = createRateLimiter({
 
 export const enquiryRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: process.env.ENQUIRY_RATE_LIMIT_MAX ? Number(process.env.ENQUIRY_RATE_LIMIT_MAX) : 10,
   message: "Too many enquiries submitted. Please try again later.",
 });
 
 export const reviewRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000,
-  max: 5,
+  max: process.env.REVIEW_RATE_LIMIT_MAX ? Number(process.env.REVIEW_RATE_LIMIT_MAX) : 5,
   message: "Too many reviews submitted. Please try again later.",
 });
