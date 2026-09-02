@@ -27,6 +27,10 @@ Then open `http://localhost:3000`.
 | `npm run build` | Production build |
 | `npm start` | Run the production build |
 | `npm run lint` | ESLint |
+| `npm run test:e2e:watch` | Playwright, headed — watch the browser exercise a phase's flows against the real backend. Run `npm run dev` (and the backend) first. |
+| `npm run test:e2e` | Playwright, headless — for a quick pass/fail check once you've already watched a flow succeed headed at least once |
+
+See [`../frontenddocs/01-reference-cross-cutting.md`](../frontenddocs/01-reference-cross-cutting.md)'s "Mandatory: headed Playwright verification" section — every Frontend Arch Phase needs a spec under `e2e/` run headed before it's marked done in the progress log. `e2e/support/test-users.ts` has the register/delete-via-psql pattern every spec that creates accounts should follow.
 
 ## Structure
 

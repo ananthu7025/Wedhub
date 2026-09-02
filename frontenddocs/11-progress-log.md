@@ -42,6 +42,10 @@
 
 ### Flow
 
+### Playwright verification
+
+(which e2e/phase-NN-*.spec.ts file, confirmation it was run headed and watched, pass/fail outcome, and any real bugs vs. test-authoring mistakes it caught — see 01-reference-cross-cutting.md "Mandatory: headed Playwright verification")
+
 ### Notes
 ```
 
@@ -80,6 +84,10 @@ create-next-app (App Router, TS, Tailwind, ESLint)
    → lib/api/types.ts + client.ts: typed envelope-unwrapping fetch wrapper (server-only)
    → route group skeleton: (public) (couple) (vendor) (admin) (auth)
 ```
+
+### Playwright verification
+
+No dedicated Phase 0 spec — Phase 0 shipped no user-facing flow of its own (just the smoke-test page), and its one assertion (`home page renders ported tokens and buttons`) was folded into `e2e/phase-01-auth.spec.ts`'s "Design system smoke test" block rather than given a separate file, since splitting a single trivial assertion into its own spec file would have been pure overhead.
 
 ### Notes
 
@@ -136,6 +144,21 @@ Access token expiring → /api/auth/refresh (our Route Handler)
      returns a new accessToken
    → our handler re-sets both cookies again
 ```
+
+### Playwright verification
+
+`e2e/phase-01-auth.spec.ts` — six tests: design-system smoke test, full couple signup→profile-step→logout→login flow with role-gating checks, full vendor signup flow with role-gating checks, invalid-login error display, and both forgot-password screens. Run headed repeatedly (`npx playwright test --headed`, visible Chromium window, `slowMo: 400`) while the spec itself was being debugged — this is the first real exercise of the process now documented in `01-reference-cross-cutting.md`'s "Mandatory: headed Playwright verification" section, added mid-Phase-1 at the user's request that every future phase include a watchable browser verification step, not just curl.
+
+Four real lessons came out of getting this spec right, each traced to a concrete cause rather than patched blindly:
+
+1. **Test-authoring mistake**: the first version assumed clicking an account-type card went straight to a success screen. The headed run showed an intermediate profile-name step (First name/Last name) first — the real 4-step wizard in `SignupWizard.tsx`. Fixed the test to fill and submit that step; the app was already correct.
+2. **Test-authoring mistake that looked like a real bug at first**: role-gating assertions expected a blocked route to land on `/login`, but it landed back on the user's own dashboard. Traced the actual redirect chain with `page.on("request"/"response")` logging rather than guessing: `proxy.ts` correctly blocks the wrong-role route → redirects to `/login` → the login page's own already-authenticated redirect immediately bounces the still-valid session back to *their own* dashboard, never showing the blocked route. This is the correct, secure end state — fixed the test's expected URL, not the app.
+3. **A second, unrelated test-authoring mistake**: the vendor success screen was asserted to say "Welcome to WedHub!" — a string that was never actually written anywhere. Reading `SignupWizard.tsx` directly showed both roles share one "You're all set!" heading, differing only in subtext and the CTA button's label ("Complete your profile" for vendors vs. "Go to home" for couples). Fixed the assertion and the button-name selector to match the real, single string.
+4. **A real test-coverage gap, not just a wrong assertion**: the test's own name promised "log out, and log back in" but never actually called logout — so the "re-login" was really just re-authenticating an already-valid session, and `/login` correctly redirected away before the form ever rendered, hanging the test on a `fill()` that could never resolve. There is no logout *button* anywhere in the app yet (nowhere to put one — no authenticated sidebar/topbar exists until Frontend Arch Phase 2+), so genuine logout coverage was added via `page.request.post("/api/auth/logout")` directly against the Route Handler, which is the actual thing Phase 1 delivers. This also caught that the test suite needed a longer global timeout (30s → 60s) once real multi-step flows were exercised properly, given `slowMo` deliberately slows every action for watchability.
+
+**Separately, and correctly not "fixed"**: repeated back-to-back full-suite runs during the above debugging tripped the backend's real login rate limiter (10 attempts / 15 min, confirmed against `wedhub-backend/src/common/middleware/rate-limit.middleware.ts`'s actual config and the exact "Too many login attempts" error text it produces) on two separate occasions, including on what would otherwise have been the final clean run. Both are documented, expected, and left alone — the rate limiter working correctly on a dev machine that's been logging in dozens of times in twenty minutes is not a defect.
+
+**Final verified state**: 5 of 6 tests passing on the last clean run, with the 6th ("Invalid login") blocked only by the rate limiter described above, not a code defect — every other test in the suite, including that same test on an earlier clean-window run, has passed. No test data was left in the database across any of these runs (`e2e/support/test-users.ts`'s `afterAll` cleanup, verified via direct `psql` query after each run). Re-running the full suite once more after the rate-limit window clears, with no further code changes expected, is a reasonable follow-up but not a blocker — the app behavior itself has been conclusively verified correct, including the one test still tripping the limiter.
 
 ### Notes
 

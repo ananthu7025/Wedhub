@@ -36,7 +36,8 @@ Screens implemented (matching the approved mockup in ../wedhub-frontend/)
 + Basic accessibility (semantic HTML, labeled form fields, keyboard-operable interactive elements)
 + Metadata/SEO basics for public pages (title, meta description, canonical — full SEO is Frontend Arch Phase 11)
 + Manual verification against the running backend (see "Verification standard" below)
-+ Documentation (this phase's entry in `11-progress-log.md`)
++ A headed Playwright spec under wedhub-frontend-app/e2e/, run and watched, passing (see "Mandatory: headed Playwright verification" below)
++ Documentation (this phase's entry in `11-progress-log.md`, including the Playwright run's outcome)
 ```
 
 A phase is **not** done just because the page renders with mock/placeholder data.
@@ -57,6 +58,17 @@ For every individual screen/route:
 ## Verification standard
 
 Same non-negotiable as the backend build (`../docs/01-reference-cross-cutting.md` implies this throughout, stated explicitly here): **never claim a screen "works" without actually running it against the live backend** (`npm run dev` in `wedhub-backend/`, real Postgres/Redis, real seeded data) and observing the real response in the browser/network tab. Screens that only compile, or that only render against hand-written mock JSON, are not verified. If the backend has a genuine gap for a screen (an endpoint that doesn't exist yet, e.g. admin subscription listing per [Open Question 2](10-risks-and-open-questions.md#2-admin-subscriptions-screen-has-no-backing-list-endpoint)), say so explicitly in that phase's progress-log entry rather than silently shipping against invented data.
+
+### Mandatory: headed Playwright verification before marking any phase done
+
+Every Frontend Arch Phase must have a Playwright spec under `../wedhub-frontend-app/e2e/` (one file per phase, `phase-NN-<name>.spec.ts`) that exercises the phase's actual user-visible flows end to end against the real running backend, and that spec must be **run headed** (`npm run test:e2e:watch`, or `npx playwright test --headed`) with a human watching the browser before the phase is marked done in `11-progress-log.md`. This is in addition to, not instead of, any `curl`-level API verification — curl proves the backend contract, Playwright proves the actual UI works the way a person would use it.
+
+Rules for these specs, learned the hard way while building Frontend Arch Phase 0/1's own suite (`e2e/phase-01-auth.spec.ts`):
+
+- **Every spec that creates data must delete it afterward** (`test.afterAll`/`afterEach`) — see `e2e/support/test-users.ts` for the pattern (register via the real API, delete via `psql` against the dev DB directly). Leftover `e2e-*@wedhub.dev` accounts in the database are a sign a spec's cleanup is broken, not something to leave for later.
+- **A failing assertion is not automatically an app bug.** Before "fixing" the app, check whether the *test* mis-modeled the real flow (e.g. an intermediate wizard step the test skipped) or hit real, correct backend behavior (e.g. a rate limiter — see the note in `phase-01-auth.spec.ts` about the login/register limiters in `wedhub-backend/src/common/middleware/rate-limit.middleware.ts`, which are real, in-memory, and will trip during repeated back-to-back debug runs). Use `page.on("request"/"response")` logging and Playwright's trace/video artifacts (`test-results/`) to find the actual cause before changing anything.
+- **Prefer asserting the real observed behavior over the intuitively-expected one**, once you've confirmed the real behavior is correct. Example from Phase 1: an already-authenticated user hitting a route blocked by their role gets redirected by `proxy.ts` to `/login`, then immediately bounced by the login page's own already-authenticated redirect back to *their own* dashboard — never to the blocked route, but also never staying on `/login`. The first version of the test wrongly asserted "ends up at `/login`"; the correct assertion is "ends up back at their own dashboard, never at the blocked route."
+- A phase's spec does not need to cover every acceptance-criteria bullet with a dedicated `test()` — grouping related steps into one flow-shaped test (matching how a real user would move through the screens) is preferred over one assertion per test, since the point is watching a coherent flow, not a checklist.
 
 ## Repo & app layout
 
