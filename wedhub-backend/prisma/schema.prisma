@@ -56,6 +56,7 @@ model User {
   leadNotes                LeadNote[]
   reviews                  Review[]
   reviewReports            ReviewReport[]
+  featuredListingsCreated  FeaturedListing[]
 
   @@index([role])
   @@index([status])
@@ -241,6 +242,7 @@ model Category {
   services         Service[]
   vendorCategories VendorCategory[]
   enquiries        Enquiry[]
+  featuredListings FeaturedListing[]
 
   @@index([parentId])
   @@index([isActive])
@@ -289,6 +291,7 @@ model Location {
   vendorsWithPrimaryCity Vendor[]            @relation("VendorPrimaryCity")
   vendorServiceAreas     VendorServiceArea[]
   enquiries              Enquiry[]
+  featuredListings       FeaturedListing[]
 
   @@unique([parentId, slug])
   @@index([type])
@@ -338,23 +341,24 @@ model Vendor {
   updatedAt           DateTime             @updatedAt @map("updated_at")
   deletedAt           DateTime?            @map("deleted_at")
 
-  owner           User?                  @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
-  city            Location?              @relation("VendorPrimaryCity", fields: [cityId], references: [id], onDelete: SetNull)
-  profile         VendorProfile?
-  categories      VendorCategory[]
-  serviceAreas    VendorServiceArea[]
-  attributeValues VendorAttributeValue[]
-  services        VendorService[]
-  packages        Package[]
-  invitations     VendorInvitation[]
-  statusHistory   VendorStatusHistory[]
-  media           Media[]
-  albums          Album[]
-  shortlistItems  ShortlistItem[]
-  leads           Lead[]
-  reviews         Review[]
-  subscriptions   Subscription[]
-  pendingPayments Payment[]
+  owner            User?                  @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  city             Location?              @relation("VendorPrimaryCity", fields: [cityId], references: [id], onDelete: SetNull)
+  profile          VendorProfile?
+  categories       VendorCategory[]
+  serviceAreas     VendorServiceArea[]
+  attributeValues  VendorAttributeValue[]
+  services         VendorService[]
+  packages         Package[]
+  invitations      VendorInvitation[]
+  statusHistory    VendorStatusHistory[]
+  media            Media[]
+  albums           Album[]
+  shortlistItems   ShortlistItem[]
+  leads            Lead[]
+  reviews          Review[]
+  subscriptions    Subscription[]
+  pendingPayments  Payment[]
+  featuredListings FeaturedListing[]
 
   @@index([status])
   @@index([cityId])
@@ -1008,12 +1012,13 @@ model Payment {
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
 
-  subscription  Subscription?     @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  pendingVendor Vendor?           @relation(fields: [pendingVendorId], references: [id], onDelete: Cascade)
-  pendingPlan   SubscriptionPlan? @relation(fields: [pendingPlanId], references: [id], onDelete: Restrict)
-  pendingCoupon Coupon?           @relation(fields: [pendingCouponId], references: [id], onDelete: SetNull)
-  invoice       Invoice?
-  refunds       Refund[]
+  subscription    Subscription?     @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  pendingVendor   Vendor?           @relation(fields: [pendingVendorId], references: [id], onDelete: Cascade)
+  pendingPlan     SubscriptionPlan? @relation(fields: [pendingPlanId], references: [id], onDelete: Restrict)
+  pendingCoupon   Coupon?           @relation(fields: [pendingCouponId], references: [id], onDelete: SetNull)
+  invoice         Invoice?
+  refunds         Refund[]
+  featuredListing FeaturedListing?
 
   @@index([subscriptionId])
   @@index([pendingVendorId])
@@ -1098,4 +1103,52 @@ model Coupon {
   pendingPayments Payment[]
 
   @@map("coupons")
+}
+
+// Arch Phase 13 (thin slice per 02-mvp-cut-line.md): data model + admin CRUD
+// only. Automatic activation/expiry scheduling, vendor self-purchase, and
+// actual homepage/search-result placement logic are all deferred — status
+// is admin-set by hand for now, not flipped by any scheduler.
+enum PlacementType {
+  HOMEPAGE
+  CATEGORY_PAGE
+  CITY_PAGE
+  SEARCH_RESULTS
+}
+
+enum FeaturedListingStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model FeaturedListing {
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId        String                @map("vendor_id") @db.Uuid
+  placementType   PlacementType         @map("placement_type")
+  categoryId      String?               @map("category_id") @db.Uuid
+  cityId          String?               @map("city_id") @db.Uuid
+  priority        Int                   @default(0)
+  price           Decimal               @db.Decimal(10, 2)
+  currency        String                @default("INR")
+  startDate       DateTime              @map("start_date")
+  endDate         DateTime              @map("end_date")
+  status          FeaturedListingStatus @default(DRAFT)
+  paymentId       String?               @unique @map("payment_id") @db.Uuid
+  createdByUserId String                @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  vendor    Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category  Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  city      Location? @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  payment   Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  createdBy User      @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([vendorId])
+  @@index([status, startDate, endDate])
+  @@index([placementType, categoryId, cityId])
+  @@map("featured_listings")
 }
