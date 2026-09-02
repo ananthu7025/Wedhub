@@ -51,6 +51,9 @@ model User {
   searchLogs               SearchLog[]
   shortlists               Shortlist[]
   analyticsEvents          AnalyticsEvent[]
+  enquiries                Enquiry[]
+  leadStatusChanges        LeadStatusHistory[]
+  leadNotes                LeadNote[]
 
   @@index([role])
   @@index([status])
@@ -235,6 +238,7 @@ model Category {
   attributes       CategoryAttribute[]
   services         Service[]
   vendorCategories VendorCategory[]
+  enquiries        Enquiry[]
 
   @@index([parentId])
   @@index([isActive])
@@ -282,6 +286,7 @@ model Location {
   children               Location[]          @relation("LocationHierarchy")
   vendorsWithPrimaryCity Vendor[]            @relation("VendorPrimaryCity")
   vendorServiceAreas     VendorServiceArea[]
+  enquiries              Enquiry[]
 
   @@unique([parentId, slug])
   @@index([type])
@@ -342,6 +347,7 @@ model Vendor {
   media           Media[]
   albums          Album[]
   shortlistItems  ShortlistItem[]
+  leads           Lead[]
 
   @@index([status])
   @@index([cityId])
@@ -459,6 +465,7 @@ model Service {
 
   category       Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   vendorServices VendorService[]
+  enquiries      Enquiry[]
 
   @@unique([categoryId, slug])
   @@map("services")
@@ -687,4 +694,129 @@ model AnalyticsEvent {
   @@index([eventType, createdAt])
   @@index([vendorId])
   @@map("analytics_events")
+}
+
+enum EnquiryRoutingMode {
+  SINGLE_VENDOR
+  MULTI_VENDOR
+  CATEGORY_REQUEST
+}
+
+enum LeadSource {
+  WEB
+  TELEGRAM
+  ADMIN
+  FUTURE_WHATSAPP
+}
+
+enum PreferredContactMethod {
+  EMAIL
+  PHONE
+  WHATSAPP
+}
+
+// Platform-level record of what the user asked for (product.md §17/§19).
+// Deliberately separate from Lead: one enquiry can fan out into several
+// leads (MULTI_VENDOR routing), and enquiry-level fields never change once
+// submitted — they describe the user's original request, not any one
+// vendor's handling of it. product.md §20 is explicit that "vendor lead
+// status is not necessarily the same as platform enquiry status," which is
+// exactly why these are two models, not one with a vendorId column.
+model Enquiry {
+  id                     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                 String?                 @map("user_id") @db.Uuid
+  routingMode            EnquiryRoutingMode      @map("routing_mode")
+  source                 LeadSource              @default(WEB)
+  categoryId             String?                 @map("category_id") @db.Uuid
+  cityId                 String?                 @map("city_id") @db.Uuid
+  serviceId              String?                 @map("service_id") @db.Uuid
+  contactName            String                  @map("contact_name")
+  contactEmail           String                  @map("contact_email")
+  contactPhone           String?                 @map("contact_phone")
+  preferredContactMethod PreferredContactMethod? @map("preferred_contact_method")
+  weddingDate            DateTime?               @map("wedding_date") @db.Date
+  weddingLocation        String?                 @map("wedding_location")
+  budget                 Decimal?                @db.Decimal(12, 2)
+  guestCount             Int?                    @map("guest_count")
+  message                String?
+  createdAt              DateTime                @default(now()) @map("created_at")
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  city     Location? @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  service  Service?  @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  leads    Lead[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("enquiries")
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  RESPONDED
+  QUALIFIED
+  MEETING
+  QUOTED
+  WON
+  LOST
+  SPAM
+  CLOSED
+}
+
+// The vendor-facing unit of work. A Lead's own status lifecycle (product.md
+// §20) is independent of its parent Enquiry, which never changes state.
+model Lead {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  enquiryId    String     @map("enquiry_id") @db.Uuid
+  vendorId     String     @map("vendor_id") @db.Uuid
+  status       LeadStatus @default(NEW)
+  contactedAt  DateTime?  @map("contacted_at")
+  respondedAt  DateTime?  @map("responded_at")
+  isSpam       Boolean    @default(false) @map("is_spam")
+  dedupeKey    String     @map("dedupe_key")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  enquiry       Enquiry             @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  vendor        Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  statusHistory LeadStatusHistory[]
+  notes         LeadNote[]
+
+  @@index([vendorId, status])
+  @@index([vendorId, createdAt])
+  @@index([enquiryId])
+  @@index([dedupeKey])
+  @@map("leads")
+}
+
+model LeadStatusHistory {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leadId          String     @map("lead_id") @db.Uuid
+  fromStatus      LeadStatus? @map("from_status")
+  toStatus        LeadStatus @map("to_status")
+  changedByUserId String?    @map("changed_by_user_id") @db.Uuid
+  reason          String?
+  createdAt       DateTime   @default(now()) @map("created_at")
+
+  lead      Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  changedBy User? @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@map("lead_status_history")
+}
+
+model LeadNote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leadId    String   @map("lead_id") @db.Uuid
+  authorId  String   @map("author_id") @db.Uuid
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  lead   Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("lead_notes")
 }

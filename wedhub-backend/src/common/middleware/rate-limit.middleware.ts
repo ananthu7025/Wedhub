@@ -42,3 +42,9 @@ export const searchRateLimiter = createRateLimiter({
   max: 60,
   message: "Too many search requests. Please slow down.",
 });
+
+export const enquiryRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Too many enquiries submitted. Please try again later.",
+});
