@@ -2,15 +2,26 @@
 
 import type { ApiResponse } from "./types";
 import type {
+  AdminCreateAttributeBody,
+  AdminCreateCategoryBody,
   AdminCreateInvitationBody,
+  AdminCreateLocationBody,
   AdminCreateVendorBody,
+  AdminLeadStatusUpdateResult,
+  AdminModerateReviewBody,
   AdminReasonBody,
+  AdminReviewStatusUpdateResult,
   AdminSetVerificationBody,
   AdminSuspendUserResult,
+  AdminUpdateAttributeBody,
+  AdminUpdateCategoryBody,
+  AdminUpdateLeadStatusBody,
+  AdminUpdateLocationBody,
   AdminUpdateVendorBody,
   AdminVendorInvitation,
   AdminVendorScalarOnly,
 } from "./admin.types";
+import type { Category, CategoryAttribute, Location, LocationType } from "./vendors.types";
 
 /**
  * Client-side calls through the generic authenticated proxy for the admin
@@ -69,4 +80,46 @@ export function suspendAdminUser(id: string, body: AdminReasonBody) {
 
 export function restoreAdminUser(id: string) {
   return call<AdminSuspendUserResult>(`/admin/users/${id}/restore`, "POST");
+}
+
+/** Frontend Arch Phase 9 — Admin Catalog & Moderation. */
+
+export function createAdminCategory(body: AdminCreateCategoryBody) {
+  return call<Category>("/categories", "POST", body);
+}
+
+export function updateAdminCategory(id: string, body: AdminUpdateCategoryBody) {
+  return call<Category>(`/categories/${id}`, "PATCH", body);
+}
+
+export function createAdminAttribute(categoryId: string, body: AdminCreateAttributeBody) {
+  return call<CategoryAttribute>(`/categories/${categoryId}/attributes`, "POST", body);
+}
+
+export function updateAdminAttribute(categoryId: string, attributeId: string, body: AdminUpdateAttributeBody) {
+  return call<CategoryAttribute>(`/categories/${categoryId}/attributes/${attributeId}`, "PATCH", body);
+}
+
+export function deleteAdminAttribute(categoryId: string, attributeId: string) {
+  return call<{ deleted: true }>(`/categories/${categoryId}/attributes/${attributeId}`, "DELETE");
+}
+
+export function listAdminLocationsClient(type: LocationType, parentId: string) {
+  return call<Location[]>(`/locations?type=${type}&parentId=${parentId}&includeInactive=true`, "GET");
+}
+
+export function createAdminLocation(body: AdminCreateLocationBody) {
+  return call<Location>("/locations", "POST", body);
+}
+
+export function updateAdminLocation(id: string, body: AdminUpdateLocationBody) {
+  return call<Location>(`/locations/${id}`, "PATCH", body);
+}
+
+export function updateAdminLeadStatus(id: string, body: AdminUpdateLeadStatusBody) {
+  return call<AdminLeadStatusUpdateResult>(`/admin/leads/${id}/status`, "PATCH", body);
+}
+
+export function moderateAdminReview(id: string, body: AdminModerateReviewBody) {
+  return call<AdminReviewStatusUpdateResult>(`/admin/reviews/${id}/status`, "PATCH", body);
 }

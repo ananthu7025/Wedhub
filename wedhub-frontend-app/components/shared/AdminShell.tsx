@@ -4,9 +4,9 @@ import { AdminLogoutButton } from "./AdminLogoutButton";
 /**
  * Sidebar shell for all (admin) routes, matching wedhub-frontend/admin/*.html's
  * .app-shell/.sidebar pattern (section-labeled groups, unlike VendorShell's
- * flat list). Dashboard/Vendors/Users link to real routes as of Frontend
- * Arch Phase 8; Catalog/Leads (Phase 9) and Monetization/Trust & safety/
- * Platform (Phase 10) are not yet built.
+ * flat list). Dashboard/Vendors/Users (Phase 8) and Catalog/Leads/Reviews
+ * (Phase 9) link to real routes; Monetization/Roles & permissions/Audit
+ * log/Platform (Phase 10) are not yet built.
  */
 
 interface NavItem {
@@ -58,6 +58,36 @@ const sections: NavSection[] = [
         href: "/admin/users",
         label: "All users",
         icon: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a8 8 0 0116 0v1" /></>,
+      },
+    ],
+  },
+  {
+    label: "Catalog",
+    items: [
+      {
+        href: "/admin/categories-locations",
+        label: "Categories & locations",
+        icon: <><rect x="4" y="4" width="7" height="7" /><rect x="13" y="4" width="7" height="7" /><rect x="13" y="13" width="7" height="7" /><rect x="4" y="13" width="7" height="7" /></>,
+      },
+    ],
+  },
+  {
+    label: "Leads",
+    items: [
+      {
+        href: "/admin/leads",
+        label: "All leads",
+        icon: <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />,
+      },
+    ],
+  },
+  {
+    label: "Trust & safety",
+    items: [
+      {
+        href: "/admin/reviews",
+        label: "Reviews",
+        icon: <path d="M12 17.3l-6.2 3.6 1.6-7-5.4-4.7 7.1-.6L12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7z" />,
       },
     ],
   },

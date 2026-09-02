@@ -19,11 +19,11 @@
 | 6 | Vendor Leads & Reviews | [Stage 3](05-stage-vendor-experience.md) | ✅ Done | 2026-09-02 |
 | 7 | Vendor Monetization | [Stage 3](05-stage-vendor-experience.md) | ⚠️ Built, Playwright pending | 2026-09-02 |
 | 8 | Admin Core | [Stage 4](06-stage-admin-platform.md) | ⚠️ Built, Playwright pending | 2026-09-02 |
-| 9 | Admin Catalog & Moderation | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
+| 9 | Admin Catalog & Moderation | [Stage 4](06-stage-admin-platform.md) | ⚠️ Built, Playwright pending | 2026-09-02 |
 | 10 | Admin Monetization, Governance & Audit | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | ⬜ Not Started (11b blocked on backend Arch Phase 17) | — |
 
-**Overall: 7 / 12 Frontend Arch Phases fully verified complete, +2 built and code-complete pending a combined Playwright pass (Phases 7 and 8 — see their entries below for why).** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
+**Overall: 7 / 12 Frontend Arch Phases fully verified complete, +3 built and code-complete pending a combined Playwright pass (Phases 7, 8, and 9 — see their entries below for why).** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
 
 ---
 
@@ -733,4 +733,89 @@ One real bug was caught during this curl verification (not a test-authoring mist
 ### Notes
 
 - `phase8-admin-test@wedhub.dev` (a manually-provisioned ADMIN account used for all live curl verification) is **intentionally left in the dev database** as reusable fixture data, same rationale as prior phases' fixtures — it could not be cleaned up via the usual `deleteTestUser` even if desired, since a real `VendorInvitation` row now references it as `invited_by_admin_id` (a foreign-key constraint, not an oversight). All other curl-created throwaway accounts (`phase8-pending-vendor@wedhub.dev`, `phase8-reject-vendor@wedhub.dev`) were deleted after verification.
+- `npx tsc --noEmit` and `eslint` both pass cleanly on every new/changed file across both the frontend and backend.
+
+---
+
+## Frontend Arch Phase 9 — Admin Catalog & Moderation
+
+### What this unlocks
+
+An admin can now manage the category/location taxonomy (create categories, enable/disable them, browse and extend the location tree), oversee every lead across the whole platform (not just one vendor's own leads) with the ability to override a lead's status even past a terminal state, and moderate reviews (approve, flag, hide) with real reviewer/reporter identity visible for the first time. This completes the "internal operations" half of Stage 4 — only Frontend Arch Phase 10 (monetization/governance/audit) remains.
+
+### Backend research findings (three small, justified additions — see below)
+
+- Categories and locations have **no separate `/admin/*` route mount at all** — genuinely surprising vs. every other admin module built so far (vendors, users, dashboard, audit logs all live under `/admin/...`). Instead, write operations (POST/PATCH/DELETE) are gated per-route on the *same* public `categoriesRouter`/`locationsRouter` already used since Frontend Arch Phase 2. This means admin catalog writes are mechanically guaranteed to affect the exact same data the couple-facing search filters and vendor self-service pickers read — there is no cache or separate table to go stale, confirmed by construction rather than by testing a sync mechanism.
+- Neither module has a disable-specific or reorder-specific endpoint — both are just `PATCH` with `isActive`/`sortOrder` in the body, same endpoint as any other field edit. Neither has a delete endpoint at all.
+- `omitUndefined` (the shared partial-update helper used throughout this codebase) was independently re-verified safe for `isActive: false` specifically — a boolean `false` is not `undefined`, so it survives the strip-undefined-keys step and reaches Prisma as a real `false`, confirmed by reading the helper's source directly rather than assuming.
+- The admin leads list (`GET /admin/leads`) validates a `search` query param via its shared schema but **silently ignores it** — the admin service/repository functions only ever read `{status, page, limit}` from the filter object. Confirmed by reading `findAllLeadsAdmin`/`countAllLeadsAdmin` directly, not inferred from the schema alone — a search box would have looked functional and done nothing, so none was built.
+- Admin lead status overrides (`PATCH /admin/leads/:id/status`) genuinely bypass the terminal-status lock that governs the vendor-facing leads board (Frontend Arch Phase 6) — re-confirmed by reading `updateStatusAdmin`, which never calls `assertNotLeavingTerminalStatus`. The admin UI's status control is therefore never disabled, unlike the vendor board's.
+- Review moderation is a single `status` field PATCH to one of exactly 4 real target values (`APPROVED`/`REJECTED`/`FLAGGED`/`HIDDEN` — `PENDING` isn't even a valid PATCH target per the schema's own enum) — narrower than the mockup's "approve/hide/remove/dispute" framing implied. `recalculateVendorRating` fires correctly whenever a review's status moves into or out of `APPROVED` (confirmed via reading `moderateReview`'s logic, not assumed from Phase 6's earlier partial read).
+- Three real gaps required backend additions this phase (all per explicit user decisions, 2026-09-02, all "Recommended" options): (1) reviews had no reviewer/reporter identity anywhere — resolved by joining a minimal safe `user`/`reporter` select onto the relevant review queries; (2) disabling a category or location made it permanently unlistable, even to the admin who disabled it — resolved by a new admin-only `includeInactive=true` param on both list endpoints; (3) the mockup's "Remove"/"Disputed" concepts have no real backend equivalent — resolved by relabeling (Remove→the real `HIDDEN` status) and omission (no Disputed anywhere), not a backend change.
+
+### Routes implemented
+
+- `(admin)/admin/categories-locations` — two-tab category tree + location tree
+- `(admin)/admin/leads` — platform-wide lead list with status filter
+- `(admin)/admin/leads/[id]` — lead detail with admin status override (no terminal-status lock)
+- `(admin)/admin/reviews` — review moderation queue
+
+### Components added
+
+- `app/(admin)/admin/categories-locations/`: `CatalogBoard.tsx` (tab switcher, category create/enable-disable, client-side parent/subcategory grouping from the flat category list since no endpoint returns a nested tree), `LocationTree.tsx` (on-demand cascading country→state→city→area tree — no bulk tree endpoint exists, each expand triggers a real `GET /locations?type=X&parentId=Y` call)
+- `app/(admin)/admin/leads/AdminLeadsTable.tsx`, `[id]/AdminLeadDetailBoard.tsx`
+- `app/(admin)/admin/reviews/AdminReviewsBoard.tsx` — real reviewer-name resolution, real report display, 4-action real moderation
+- `components/shared/AdminShell.tsx` — Catalog/Leads/Trust & safety sections added to the sidebar
+- `lib/api/admin.types.ts`, `admin.ts`, `admin-client.ts` — extended with catalog write bodies, `AdminLeadListItem`/`AdminLeadStatusUpdateResult`, `AdminReviewListItem`/`AdminReviewDetail`/`AdminReviewStatusUpdateResult`/`ReviewReport`. Deliberately reuses `Category`/`Location`/`CategoryAttribute` from `vendors.types.ts` (Phase 2's types) rather than duplicating them — confirmed field-for-field identical, since admin reads the same endpoints
+
+### Backend endpoints consumed
+
+`GET/POST /categories`, `PATCH /categories/:id`, `POST/PATCH/DELETE /categories/:id/attributes(/:attributeId)`, `GET/POST /locations`, `PATCH /locations/:id`, `GET /admin/leads`, `GET /admin/leads/:id`, `PATCH /admin/leads/:id/status`, `GET /admin/reviews`, `GET /admin/reviews/:id`, `PATCH /admin/reviews/:id/status`.
+
+### Flow
+
+```
+Before writing any frontend code: dispatched a research pass covering
+categories/locations (routes/schema/service — including a direct read of
+omitUndefined's isActive:false handling and confirmation of genuinely
+dead code for an admin category list), leads admin (re-confirming the
+terminal-status bypass and the no-reassignment gap from Phase 6/Open
+Question 3), and reviews admin (the real 4-value moderation action set,
+recalculateVendorRating triggering, and the reviewer/reporter identity
+gap). This surfaced three real, small backend gaps — resolved as explicit
+user-confirmed scope decisions before any UI was built around them.
+
+/admin/categories-locations → GET /categories?includeInactive=true (flat
+   list, grouped into parent/subcategory pairs client-side) + GET
+   /locations?type=COUNTRY (first level only) → toggle a category's
+   isActive → PATCH /categories/:id → real disable, immediately reflected
+   (and no longer a one-way trap, thanks to includeInactive) → expand a
+   location node → GET /locations?type=STATE&parentId=... (on demand) →
+   real cascading tree
+
+/admin/leads?status=WON → GET /admin/leads (includes vendor summary,
+   unlike the vendor-scoped list) → select a lead → GET /admin/leads/:id
+   (no vendor field here — confirmed via curl) → override status past WON
+   → PATCH .../status {status: "CONTACTED"} → real LeadStatusHistory row,
+   no terminal-status rejection (unlike the vendor board)
+
+/admin/reviews → GET /admin/reviews (now includes real user/reporter
+   identity) → a flagged review's report reason + reporter name render for
+   real → "Approve (dismiss report)" → PATCH .../status {status:
+   "APPROVED"} → real recalculateVendorRating fires since the review is
+   moving into APPROVED
+```
+
+### Playwright verification
+
+`e2e/phase-09-admin-catalog-moderation.spec.ts` was written (4 tests: a category create→disable→reload→confirm-still-visible-and-marked-disabled→re-enable round trip, proving the includeInactive fix works end-to-end; a location tree expand test confirming real cascading fetches; a real lead created via the full couple→vendor→enquiry pipeline then admin-overridden past a WON terminal status; a review moderation test confirming a real reviewer email renders on the card and Approve works) and passes `tsc --noEmit`/`eslint` cleanly, but **has not yet been run** — batched with the rest of Stage 4, same explicit user instruction as Phase 8.
+
+Every backend integration point for this phase was independently confirmed via live curl before this pause, most notably a complete, real disable→includeInactive-visible→re-enable round trip for both a category and a location (not just spot-checked — verified the exact count of items visible at each step: 20→19 active after disabling, 20 total with the disabled one flagged via `includeInactive=true`, back to 20 active after re-enabling), plus a real report→FLAGGED→re-approve cycle for a review with reporter identity confirmed present in the response.
+
+One real bug was caught during this curl verification (same category as Phase 7's cancel/undo-cancel and Phase 8's vendor-write findings — this is now a recognized pattern worth checking for on every future admin-write endpoint before trusting its response shape): both `PATCH /admin/leads/:id/status` and `PATCH /admin/reviews/:id/status` return scalar-only rows with zero relations, confirmed by reading `updateLeadStatus`/`setReviewStatus` in their respective repositories (both plain `prisma.X.update()` calls with no `include`). Caught and fixed before any component code was written against the richer GET shapes, by introducing dedicated `AdminLeadStatusUpdateResult`/`AdminReviewStatusUpdateResult` types.
+
+### Notes
+
+- Category reordering (drag-and-drop, shown in the mockup) was not built — confirmed no reorder-specific endpoint exists; reordering would require one `sortOrder` PATCH per affected row with no batch endpoint, and the mockup's own inline tree view doesn't actually demonstrate a working drag interaction to port either. Revisit if this becomes a real operational need.
+- Category attribute/filter CRUD (create/edit a `CategoryAttribute`) is real and fully wired at the API-client level (`createAdminAttribute`/`updateAdminAttribute`/`deleteAdminAttribute` all exist in `admin-client.ts`) but has no UI surface yet on the catalog page — the mockup itself doesn't show an inline attribute editor either (just an attribute *count* in each category's meta line), so this was deliberately left as a client-ready-but-not-yet-surfaced capability rather than guessed at.
 - `npx tsc --noEmit` and `eslint` both pass cleanly on every new/changed file across both the frontend and backend.
