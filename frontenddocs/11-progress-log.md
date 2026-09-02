@@ -20,10 +20,10 @@
 | 7 | Vendor Monetization | [Stage 3](05-stage-vendor-experience.md) | ⚠️ Built, Playwright pending | 2026-09-02 |
 | 8 | Admin Core | [Stage 4](06-stage-admin-platform.md) | ⚠️ Built, Playwright pending | 2026-09-02 |
 | 9 | Admin Catalog & Moderation | [Stage 4](06-stage-admin-platform.md) | ⚠️ Built, Playwright pending | 2026-09-02 |
-| 10 | Admin Monetization, Governance & Audit | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
+| 10 | Admin Monetization, Governance & Audit | [Stage 4](06-stage-admin-platform.md) | ⚠️ Built, Playwright pending | 2026-09-02 |
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | ⬜ Not Started (11b blocked on backend Arch Phase 17) | — |
 
-**Overall: 7 / 12 Frontend Arch Phases fully verified complete, +3 built and code-complete pending a combined Playwright pass (Phases 7, 8, and 9 — see their entries below for why).** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
+**Overall: 7 / 12 Frontend Arch Phases fully verified complete, +4 built and code-complete pending a combined Playwright pass (Phases 7, 8, 9, and 10 — see their entries below for why). Stage 4 (Admin Platform) is now fully code-complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
 
 ---
 
@@ -819,3 +819,88 @@ One real bug was caught during this curl verification (same category as Phase 7'
 - Category reordering (drag-and-drop, shown in the mockup) was not built — confirmed no reorder-specific endpoint exists; reordering would require one `sortOrder` PATCH per affected row with no batch endpoint, and the mockup's own inline tree view doesn't actually demonstrate a working drag interaction to port either. Revisit if this becomes a real operational need.
 - Category attribute/filter CRUD (create/edit a `CategoryAttribute`) is real and fully wired at the API-client level (`createAdminAttribute`/`updateAdminAttribute`/`deleteAdminAttribute` all exist in `admin-client.ts`) but has no UI surface yet on the catalog page — the mockup itself doesn't show an inline attribute editor either (just an attribute *count* in each category's meta line), so this was deliberately left as a client-ready-but-not-yet-surfaced capability rather than guessed at.
 - `npx tsc --noEmit` and `eslint` both pass cleanly on every new/changed file across both the frontend and backend.
+
+---
+
+## Frontend Arch Phase 10 — Admin Monetization, Governance & Audit
+
+### What this unlocks
+
+An admin can now manage platform pricing for real (create/edit/deactivate subscription plans — the one piece of Stage 4 monetization that was both fully backed and product-critical, since `product.md` explicitly requires admin-configurable pricing rather than hardcoded plan data), see exactly which parts of the mockup's monetization/governance vision have no backend behind them yet (Active Subscriptions, Transactions, Webhooks, Coupons-list — all rendered as honest, visible "not available" states rather than silently mocked), view the real (if currently unenforced) RBAC data model with an accurate warning about its inert status, and filter a real platform-wide audit trail. This completes Stage 4 (Admin Platform) — every Frontend Arch Phase in Stage 4 (8, 9, 10) is now code-complete.
+
+### Backend research findings
+
+- **Plans is the one fully real surface this phase**: `GET /plans` (public, active-only), `GET /admin/plans` (all plans incl. inactive), `POST /admin/plans`, `PATCH /admin/plans/:id` all exist exactly as needed. `tier`/`billingInterval`/`currency` are only settable at creation (confirmed via `updatePlanSchema` omitting all three) — deactivation is just `PATCH` with `isActive: false`, no dedicated endpoint. Verified via a full live curl round trip: created a real test plan, confirmed it appeared in `/admin/plans` but not the public `/plans`... then deactivated it and confirmed it disappeared from the public list while staying visible (marked inactive) in the admin list — then deleted the test row directly.
+- **No admin subscriptions/transactions/webhooks list endpoint exists anywhere** (re-confirmed, this was already Open Question 2 going into this phase) — `/admin/subscriptions` carries only `POST .../refunds` and `POST .../coupons`; `modules/payments/` is an empty stub directory; `WebhookEvent` rows are actively populated by the real webhook handler but have zero admin-facing GET endpoints. All three read gaps were resolved as explicit UI unavailable-states, not backend additions, per user decision.
+- **Coupons is create-only**: `POST /admin/subscriptions/coupons` is real (verified: creates a genuine `Coupon` row), but there is no GET/PATCH/DELETE for it anywhere — a coupon's `isActive` can in fact never be flipped to `false` by any endpoint today.
+- **Roles & Permissions is real and read-only by design, confirmed via the backend's own code comment**: `GET /admin/roles` (with nested `rolePermissions.permission`), `GET /admin/permissions`, `GET /admin/admin-users` all work exactly as documented, and the repository layer itself carries a comment confirming `authorize()` only ever checks the coarse `User.role='ADMIN'` enum — nothing in the codebase consults `Role`/`Permission`/`RolePermission`/`AdminUser` for real access-control decisions. Verified live: a fresh test admin correctly saw real seeded roles/permissions and an empty `admin-users` list (since no `AdminUser` row existed for that test account, which is itself expected/correct behavior, not a bug).
+- **Audit log filters are narrower than the mockup implies**: only `entityType`/`entityId`/`actorId` (all exact-match) plus pagination are server-filterable — confirmed via a direct read of `buildWhere()`. No action-type dropdown, no date-range filter, no free-text search exists server-side. `before`/`after` are shallow, hand-picked key/value snapshots that differ per call site (not a universal full-entity diff) — rendered generically rather than assuming a fixed shape.
+- **Settings has zero backend representation of any kind** — confirmed via a full schema.prisma read plus a grep for `Settings`/`FeatureFlag` across the entire backend (the only hits were an unrelated `shortlist.service.ts` function of the same name). Built as a fully static, visibly-disabled placeholder per user decision, not a working form with nowhere to persist to.
+- No backend changes were required or made this phase — every real endpoint used already existed with exactly the researched shape.
+
+### Routes implemented
+
+- `(admin)/admin/subscriptions` — 5-tab layout: Plans (real CRUD), Active Subscriptions/Transactions/Webhooks (unavailable-state panels), Coupons (real create form + unavailable-state list)
+- `(admin)/admin/roles-permissions` — real, read-only roles/permissions/admin-users view with the accurate inert-RBAC warning banner
+- `(admin)/admin/audit-log` — filterable audit trail (entityType/entityId/actorId + pagination) with before/after diff rendering
+- `(admin)/admin/settings` — fully static placeholder
+- `(admin)/admin/cms` — placeholder, matching the mockup's own "coming in a future phase" framing
+
+### Components added
+
+- `components/admin/UnavailablePanel.tsx` — shared "not available in this backend yet" state, reused across Active Subscriptions/Transactions/Webhooks/Coupons-list
+- `app/(admin)/admin/subscriptions/`: `SubscriptionsBoard.tsx` (tab switcher, real plan cards with edit/deactivate, real coupon create form), `PlanFormModal.tsx` (create/edit modal, tier/billingInterval locked once editing)
+- `app/(admin)/admin/roles-permissions/RolesPermissionsBoard.tsx` — admin-users table, role→permission matrix rendered as read-only badges
+- `app/(admin)/admin/audit-log/AuditLogBoard.tsx` — filter bar (only the 3 real server-filterable fields), paginated table, generic before/after JSON diff rendering
+- `app/(admin)/admin/settings/page.tsx`, `app/(admin)/admin/cms/page.tsx` — static placeholders
+- `components/shared/AdminShell.tsx` — Monetization/Roles & permissions/Audit log/Platform sections added to the sidebar (every section now links to a real route)
+- `lib/api/admin.types.ts`, `admin.ts`, `admin-client.ts` — extended with `AdminPlan`/`AdminCreatePlanBody`/`AdminUpdatePlanBody`, `AdminCoupon`/`AdminCreateCouponBody`, `AdminRole`/`AdminPermission`/`AdminUserRoleAssignment`, `AdminAuditLogFilters`. The pre-existing Phase 8 `listAdminAuditLogs` was consolidated into this phase's extended version (same endpoint, now typed against the shared `AdminAuditLogFilters` type) rather than left duplicated
+
+### Backend endpoints consumed
+
+`GET /plans`, `GET/POST/PATCH /admin/plans(/:id)`, `POST /admin/subscriptions/coupons`, `GET /admin/roles`, `GET /admin/permissions`, `GET /admin/admin-users`, `GET /admin/audit-logs`.
+
+### Flow
+
+```
+Before writing any frontend code: dispatched a research pass covering
+plans, subscriptions (admin), transactions/payments, webhooks, coupons,
+roles/permissions, audit-log filters, and settings/feature-flags — 8
+areas total. This confirmed Plans as the one fully real, product-critical
+surface, and everything else (subscriptions/transactions/webhooks lists,
+coupons list, settings) as genuine backend gaps requiring an explicit
+scope decision (via AskUserQuestion) rather than a guess.
+
+/admin/subscriptions (Plans tab) → GET /admin/plans (all plans, incl.
+   inactive) → real create → POST /admin/plans → real edit/deactivate →
+   PATCH /admin/plans/:id {isActive: false} → confirmed via live curl
+   that a deactivated plan vanishes from the public GET /plans list while
+   staying visible in the admin list
+
+/admin/subscriptions (Coupons tab) → real POST
+   /admin/subscriptions/coupons → success message shows the created code
+   once → UnavailablePanel below explains there is no way to view it
+   again (no list endpoint exists)
+
+/admin/roles-permissions → GET /admin/roles + /admin/permissions +
+   /admin/admin-users in parallel → real seeded roles/permissions render
+   as read-only badges, with the backend's own "this is inert" framing
+   reproduced verbatim in the warning banner
+
+/admin/audit-log?entityType=vendor → GET /admin/audit-logs (server-side
+   exact-match filter) → real audit rows with real actor emails and real
+   action codes (ADMIN_APPROVED_VENDOR, ADMIN_SUSPENDED_USER, etc.)
+```
+
+### Playwright verification
+
+`e2e/phase-10-admin-monetization-governance.spec.ts` was written (4 tests: a real plan create→edit→deactivate round trip plus confirming the three unavailable-state panels render for Active Subscriptions/Transactions/Webhooks; a real coupon create via the create-only endpoint; real roles/permissions rendering with the read-only warning banner; audit log listing plus the entityType filter) and passes `tsc --noEmit`/`eslint` cleanly, but **has not yet been run** — this was the last phase before the combined Stage 4 Playwright pass (Phases 7–10 together), per the standing user instruction from Phase 7.
+
+Every backend integration point was independently confirmed via live curl before this pause: a full Plans create→deactivate→public-list-exclusion round trip (with cleanup), real `GET /admin/roles`/`permissions`/`admin-users` calls against a freshly provisioned admin account, and `GET /admin/audit-logs` both unfiltered and with `entityType=vendor`. Additionally — beyond what prior phases did — all five new pages were fetched through the actual running Next.js dev server (not just the backend directly) using a real authenticated admin session cookie obtained via the frontend's own `/api/auth/login` route, confirming each returned HTTP 200 with real data present in the rendered HTML (real plan prices ₹5,999/₹12,999, the real "This screen is read-only." banner text, real audit action codes like `ADMIN_APPROVED_VENDOR`) before considering the phase code-complete.
+
+### Notes
+
+- This phase required no backend additions — the first admin phase (of 8, 9, 10) where research confirmed everything needed already existed. The real work was scope discipline: correctly identifying which mockup affordances (Active Subscriptions table, Transactions table, Webhooks log, Coupons list, every Settings control) have no backend counterpart, and building honest unavailable/placeholder states instead of either fabricating data or silently building broken-looking controls.
+- The pre-existing Phase 8 `listAdminAuditLogs` function in `admin.ts` was consolidated into this phase's extended version rather than duplicated — same endpoint and behavior, now typed against the new `AdminAuditLogFilters` type shared with the audit-log page's server component.
+- `npx tsc --noEmit` and `eslint` both pass cleanly on every new/changed file.
+- **Stage 4 (Admin Platform) is now fully code-complete** — Frontend Arch Phases 8, 9, and 10 are all built, curl-verified, and Playwright-spec-written, pending only the single combined Playwright run across all four of Phases 7–10.

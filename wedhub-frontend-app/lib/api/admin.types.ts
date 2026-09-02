@@ -367,3 +367,163 @@ export interface AdminReviewStatusUpdateResult {
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Frontend Arch Phase 10 — Admin Monetization, Governance & Audit.
+ * Verified against wedhub-backend/src/modules/{plans,subscriptions,
+ * admin-roles,admin-audit-logs} during research, then re-confirmed via
+ * live curl (a real Plans create -> deactivate -> public-list-exclusion
+ * round trip, and real GET /admin/roles, /admin/permissions,
+ * /admin/admin-users, /admin/audit-logs?entityType= calls).
+ *
+ * Confirmed backend gaps (per user decision, 2026-09-02 — see
+ * frontenddocs/10-risks-and-open-questions.md for the full entries):
+ * - No GET /admin/subscriptions list endpoint exists at all — only
+ *   POST /admin/subscriptions/refunds and POST .../coupons. The Active
+ *   Subscriptions and Transactions/Payments admin screens therefore have
+ *   NO live list data source (Payment/Invoice models exist but nothing
+ *   exposes them) and render an explicit unavailable-state instead of a
+ *   table.
+ * - WebhookEvent rows are persisted by the real webhook handler but no
+ *   admin GET endpoint exists to list them — same unavailable-state
+ *   treatment.
+ * - Coupons has a real POST (create) but no GET/PATCH/DELETE — the
+ *   Coupons screen wires a real create form but shows the same
+ *   unavailable-state panel where a list would go.
+ * - Settings (feature flags, notification/lead/subscription rules) has
+ *   zero backend representation of any kind — built as a fully static
+ *   placeholder page, no working controls.
+ */
+
+// ---- GET /plans (public), GET /admin/plans, POST/PATCH /admin/plans ----
+export type PlanTier = "FREE" | "PRO" | "PREMIUM";
+export type BillingInterval = "MONTHLY" | "YEARLY";
+
+export interface AdminPlanFeatures {
+  analytics_level?: "basic" | "advanced";
+  lead_access?: boolean;
+  featured_eligibility?: boolean;
+  promotional_placement?: boolean;
+  response_tools?: boolean;
+  priority_support?: boolean;
+}
+
+export interface AdminPlanLimits {
+  portfolio_limit?: number;
+  video_limit?: number;
+}
+
+export interface AdminPlan {
+  id: string;
+  tier: PlanTier;
+  billingInterval: BillingInterval;
+  name: string;
+  price: string;
+  currency: string;
+  trialDays: number;
+  features: AdminPlanFeatures;
+  limits: AdminPlanLimits;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// tier/billingInterval/currency are only settable at creation — confirmed
+// via updatePlanSchema, which omits all three.
+export interface AdminCreatePlanBody {
+  tier: PlanTier;
+  billingInterval: BillingInterval;
+  name: string;
+  price: number;
+  currency?: string;
+  trialDays?: number;
+  features?: AdminPlanFeatures;
+  limits?: AdminPlanLimits;
+}
+
+export interface AdminUpdatePlanBody {
+  name?: string;
+  price?: number;
+  trialDays?: number;
+  features?: AdminPlanFeatures;
+  limits?: AdminPlanLimits;
+  isActive?: boolean;
+}
+
+// ---- POST /admin/subscriptions/coupons ----
+// The only coupon endpoint that exists — no list/update/delete (confirmed).
+export type CouponDiscountType = "PERCENTAGE" | "FIXED_AMOUNT";
+
+export interface AdminCreateCouponBody {
+  code: string;
+  discountType: CouponDiscountType;
+  discountValue: number;
+  maxRedemptions?: number;
+  validFrom?: string;
+  validUntil?: string;
+}
+
+export interface AdminCoupon {
+  id: string;
+  code: string;
+  discountType: CouponDiscountType;
+  discountValue: string;
+  maxRedemptions: number | null;
+  timesRedeemed: number;
+  validFrom: string | null;
+  validUntil: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// ---- POST /admin/subscriptions/refunds ----
+export interface AdminRefundBody {
+  razorpayPaymentId: string;
+  amountInSmallestUnit?: number;
+  reason?: string;
+}
+
+// ---- GET /admin/roles, GET /admin/permissions, GET /admin/admin-users ----
+// Read-only visibility only (confirmed via the backend repository's own
+// comment) — authorize() gates every admin route on the coarse
+// User.role='ADMIN' enum; nothing consults these tables for real
+// access-control decisions. No POST/PATCH/DELETE exists for any of
+// Role/Permission/RolePermission/AdminUser.
+export interface AdminPermission {
+  id: string;
+  resource: string;
+  action: string;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface AdminRole {
+  id: string;
+  name: string;
+  description: string | null;
+  isSystem: boolean;
+  createdAt: string;
+  updatedAt: string;
+  rolePermissions: Array<{ roleId: string; permissionId: string; permission: AdminPermission }>;
+}
+
+export interface AdminUserRoleAssignment {
+  userId: string;
+  roleId: string;
+  createdAt: string;
+  updatedAt: string;
+  user: { id: string; email: string; role: UserRole; status: UserStatus };
+  role: AdminRole;
+}
+
+// ---- GET /admin/audit-logs (extended filters) ----
+// Server-filterable fields are exactly entityType/entityId/actorId (all
+// exact-match) plus pagination — confirmed via buildWhere() read and live
+// curl. No action-type or date-range filter exists server-side.
+export interface AdminAuditLogFilters {
+  entityType?: string;
+  entityId?: string;
+  actorId?: string;
+  page?: number;
+  limit?: number;
+}

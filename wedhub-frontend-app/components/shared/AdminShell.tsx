@@ -4,9 +4,8 @@ import { AdminLogoutButton } from "./AdminLogoutButton";
 /**
  * Sidebar shell for all (admin) routes, matching wedhub-frontend/admin/*.html's
  * .app-shell/.sidebar pattern (section-labeled groups, unlike VendorShell's
- * flat list). Dashboard/Vendors/Users (Phase 8) and Catalog/Leads/Reviews
- * (Phase 9) link to real routes; Monetization/Roles & permissions/Audit
- * log/Platform (Phase 10) are not yet built.
+ * flat list). All sections now link to real routes as of Frontend Arch
+ * Phase 10 (Monetization/Roles & permissions/Audit log/Platform).
  */
 
 interface NavItem {
@@ -82,12 +81,52 @@ const sections: NavSection[] = [
     ],
   },
   {
+    label: "Monetization",
+    items: [
+      {
+        href: "/admin/subscriptions",
+        label: "Subscriptions & payments",
+        icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></>,
+      },
+    ],
+  },
+  {
     label: "Trust & safety",
     items: [
       {
         href: "/admin/reviews",
         label: "Reviews",
         icon: <path d="M12 17.3l-6.2 3.6 1.6-7-5.4-4.7 7.1-.6L12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7z" />,
+      },
+      {
+        href: "/admin/roles-permissions",
+        label: "Roles & permissions",
+        icon: <path d="M12 2l8 4v6c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6z" />,
+      },
+      {
+        href: "/admin/audit-log",
+        label: "Audit log",
+        icon: <><path d="M9 12h6M9 16h6M9 8h6" /><path d="M5 4h14v16H5z" /></>,
+      },
+    ],
+  },
+  {
+    label: "Platform",
+    items: [
+      {
+        href: "/admin/cms",
+        label: "CMS",
+        icon: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18" /></>,
+      },
+      {
+        href: "/admin/settings",
+        label: "Settings",
+        icon: (
+          <>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 01-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 010-4h.09a1.7 1.7 0 001.55-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34H9a1.7 1.7 0 001-1.55V3a2 2 0 014 0v.09a1.7 1.7 0 001 1.55 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87V9a1.7 1.7 0 001.55 1H21a2 2 0 010 4h-.09a1.7 1.7 0 00-1.55 1z" />
+          </>
+        ),
       },
     ],
   },

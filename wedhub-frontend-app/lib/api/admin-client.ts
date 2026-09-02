@@ -2,13 +2,17 @@
 
 import type { ApiResponse } from "./types";
 import type {
+  AdminCoupon,
   AdminCreateAttributeBody,
   AdminCreateCategoryBody,
+  AdminCreateCouponBody,
   AdminCreateInvitationBody,
   AdminCreateLocationBody,
+  AdminCreatePlanBody,
   AdminCreateVendorBody,
   AdminLeadStatusUpdateResult,
   AdminModerateReviewBody,
+  AdminPlan,
   AdminReasonBody,
   AdminReviewStatusUpdateResult,
   AdminSetVerificationBody,
@@ -17,6 +21,7 @@ import type {
   AdminUpdateCategoryBody,
   AdminUpdateLeadStatusBody,
   AdminUpdateLocationBody,
+  AdminUpdatePlanBody,
   AdminUpdateVendorBody,
   AdminVendorInvitation,
   AdminVendorScalarOnly,
@@ -122,4 +127,20 @@ export function updateAdminLeadStatus(id: string, body: AdminUpdateLeadStatusBod
 
 export function moderateAdminReview(id: string, body: AdminModerateReviewBody) {
   return call<AdminReviewStatusUpdateResult>(`/admin/reviews/${id}/status`, "PATCH", body);
+}
+
+/** Frontend Arch Phase 10 — Admin Monetization, Governance & Audit. */
+
+export function createAdminPlan(body: AdminCreatePlanBody) {
+  return call<AdminPlan>("/admin/plans", "POST", body);
+}
+
+export function updateAdminPlan(id: string, body: AdminUpdatePlanBody) {
+  return call<AdminPlan>(`/admin/plans/${id}`, "PATCH", body);
+}
+
+// The only coupon endpoint that exists — no list/update/delete (confirmed
+// via research). Kept here rather than admin.ts since it's a mutation.
+export function createAdminCoupon(body: AdminCreateCouponBody) {
+  return call<AdminCoupon>("/admin/subscriptions/coupons", "POST", body);
 }

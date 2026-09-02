@@ -2,13 +2,18 @@ import { apiFetch } from "./client";
 import type { PaginationMeta } from "./types";
 import type {
   AdminAuditLogEntry,
+  AdminAuditLogFilters,
   AdminDashboardMetrics,
   AdminLeadDetail,
   AdminLeadListItem,
+  AdminPermission,
+  AdminPlan,
   AdminReviewDetail,
   AdminReviewListItem,
+  AdminRole,
   AdminUserDetail,
   AdminUserListItem,
+  AdminUserRoleAssignment,
   AdminVendorDetail,
   AdminVendorListItem,
   AdminVendorStatusHistoryEntry,
@@ -70,18 +75,6 @@ export function getAdminUserDetail(id: string) {
   return apiFetch<AdminUserDetail>(`/admin/users/${id}`);
 }
 
-export function listAdminAuditLogs(params: { entityType?: string; entityId?: string; actorId?: string; page?: number; limit?: number } = {}) {
-  return apiFetch<AdminAuditLogEntry[], PaginationMeta>("/admin/audit-logs", {
-    query: {
-      entityType: params.entityType,
-      entityId: params.entityId,
-      actorId: params.actorId,
-      page: params.page ?? 1,
-      limit: params.limit ?? 20,
-    },
-  });
-}
-
 /**
  * Frontend Arch Phase 9 — reuses the same public GET /categories,
  * GET /locations endpoints Phase 2 built against (see admin.types.ts's
@@ -116,4 +109,38 @@ export function listAdminReviews(params: { status?: ReviewModerationStatus; page
 
 export function getAdminReviewDetail(id: string) {
   return apiFetch<AdminReviewDetail>(`/admin/reviews/${id}`);
+}
+
+/**
+ * Frontend Arch Phase 10 — Admin Monetization, Governance & Audit.
+ * See admin.types.ts's header comment for the confirmed backend gaps
+ * (no subscriptions/transactions/webhooks list endpoints, coupons is
+ * create-only, settings has no backend representation at all).
+ */
+export function listAdminPlans() {
+  return apiFetch<AdminPlan[]>("/admin/plans");
+}
+
+export function listAdminRoles() {
+  return apiFetch<AdminRole[]>("/admin/roles");
+}
+
+export function listAdminPermissions() {
+  return apiFetch<AdminPermission[]>("/admin/permissions");
+}
+
+export function listAdminUserRoleAssignments() {
+  return apiFetch<AdminUserRoleAssignment[]>("/admin/admin-users");
+}
+
+export function listAdminAuditLogs(params: AdminAuditLogFilters = {}) {
+  return apiFetch<AdminAuditLogEntry[], PaginationMeta>("/admin/audit-logs", {
+    query: {
+      entityType: params.entityType,
+      entityId: params.entityId,
+      actorId: params.actorId,
+      page: params.page ?? 1,
+      limit: params.limit ?? 20,
+    },
+  });
 }
