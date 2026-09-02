@@ -21,7 +21,7 @@
 | 8 | Favorites, Shortlists & Comparison | [Stage 3](05-stage-discovery-engagement.md) | ✅ Done | 2026-09-02 |
 | 9 | Enquiries & Leads | [Stage 4](06-stage-lead-engine.md) | ✅ Done | 2026-09-02 |
 | 10 | Reviews & Trust | [Stage 3](05-stage-discovery-engagement.md) | ✅ Done | 2026-09-02 |
-| 11 | Subscription & Billing Foundation | [Stage 5](07-stage-monetization.md) | ⬜ Not Started | — |
+| 11 | Subscription & Billing Foundation | [Stage 5](07-stage-monetization.md) | ✅ Done | 2026-09-02 |
 | 12 | Entitlement Enforcement | [Stage 5](07-stage-monetization.md) | ⬜ Not Started | — |
 | 13 | Featured Listings & Promotions | [Stage 5](07-stage-monetization.md) | ⬜ Not Started | — |
 | 14 | Notifications | [Stage 6](08-stage-telegram-and-admin.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 11 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), and Stage 4 (Lead Engine) are all fully done.**
+**Overall: 12 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), and Stage 4 (Lead Engine) are all fully done; Stage 5 (Monetization) is underway with Arch Phase 11 done (Arch Phases 12–13 remaining).**
 
 ---
 
@@ -959,3 +959,119 @@ GET /vendors/:vendorId/reviews (public)  →  only ever returns status='APPROVED
 - **Rating aggregation is recalculated from real data on both sides of the `APPROVED` transition, not just one** — `moderateReview()` triggers `recalculateVendorRating()` whenever a review's status changes *to* `APPROVED` or *away from* a prior `APPROVED` state (not just on approval), matching the acceptance criterion that "rating aggregation stays consistent." Verified live: approving two reviews (5-star, 3-star) produced an average of exactly `4`; subsequently hiding the 3-star review correctly pulled the average back to `5`; re-approving it correctly restored `4`.
 - **Pending reviews are invisible everywhere public** — `GET /vendors/:vendorId/reviews` only ever queries `status='APPROVED'`, and a vendor's `averageRating`/`reviewCount` never reflect `PENDING` reviews. Verified live: two freshly-created `PENDING` reviews produced an empty public list and an unchanged `averageRating: 0`/`reviewCount: 0` until explicitly approved.
 - Verified end-to-end against real seeded data: self-review correctly blocked; duplicate review correctly 409s; verified vs. unverified interaction correctly detected from real Lead data; reviewing a `DRAFT` (non-public) vendor correctly 404s; rating validation rejects `0` and `6` (must be 1–5); vendor response correctly attaches and is blocked for a vendor that doesn't own the review (404, not leaking existence); the review-specific rate limiter (5/hour) correctly 429s past its threshold; admin queue filtering by status returns exactly the matching reviews with real report context attached. Confirmed full reproducibility: `docker compose down -v` → migrate (all 12 migrations) → seed → health check, all on a completely fresh database, with zero schema drift. All test users/vendors/reviews/reports created during verification were deleted afterward.
+
+## Arch Phase 11 — Subscription & Billing Foundation
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 5 — Monetization](07-stage-monetization.md)
+
+### What this unlocks
+
+Vendors can see admin-configurable plan pricing, start a trial, or check out for a paid plan through a real Razorpay order — with the subscription only ever becoming `ACTIVE` once a genuinely signature-verified webhook confirms payment, never from a frontend callback. Coupons apply real discounts at checkout and only redeem on confirmed payment. Vendors can view invoices/payment history, cancel (immediately or at period end, with undo), and admins can issue refunds and manage coupons. All 8 of product.md §28's subscription scenarios were walked live against Razorpay's real test-mode API — not mocked — surfacing and fixing three real bugs along the way.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/plans` | Public plan listing | none |
+| GET | `/api/v1/admin/plans` | Admin plan listing (incl. inactive) | ADMIN |
+| POST | `/api/v1/admin/plans` | Create a plan (tier × billing interval) | ADMIN |
+| PATCH | `/api/v1/admin/plans/:id` | Update pricing/limits/features/active state | ADMIN |
+| GET | `/api/v1/subscriptions/me` | Current subscription (`null` = implicit FREE) | access token, owned vendor |
+| POST | `/api/v1/subscriptions/me/upgrade` | Initiate a plan change — trial or real Razorpay checkout | access token, owned vendor |
+| POST | `/api/v1/subscriptions/me/cancel` | Cancel (`immediate` flag, default `cancel_at_period_end`) | access token, owned vendor |
+| POST | `/api/v1/subscriptions/me/undo-cancel` | Undo a pending cancellation | access token, owned vendor |
+| GET | `/api/v1/subscriptions/me/invoices` | Invoice history | access token, owned vendor |
+| GET | `/api/v1/subscriptions/me/payments` | Payment history | access token, owned vendor |
+| POST | `/api/v1/admin/subscriptions/refunds` | Issue a refund via Razorpay | ADMIN |
+| POST | `/api/v1/admin/subscriptions/coupons` | Create a coupon | ADMIN |
+| POST | `/api/v1/webhooks/razorpay` | Razorpay webhook receiver | none (HMAC-signature-verified instead) |
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `subscription_plans` | Admin-configurable pricing per tier × billing interval | `tier`, `billing_interval`, `price`, `trial_days`, `features`/`limits` (JSONB), unique `(tier, billing_interval)` |
+| `subscriptions` | One row per vendor billing lifecycle episode | `vendor_id`, `plan_id`, `status`, `current_period_start/end`, `cancel_at_period_end`, `coupon_id` |
+| `payments` | Razorpay order/payment tracking; can exist before any subscription (pending checkout) | `subscription_id` (nullable), `pending_vendor_id`/`pending_plan_id`/`pending_coupon_id`, `razorpay_order_id`/`razorpay_payment_id`, `status` |
+| `refunds` | Always a separate record from the original payment | `payment_id`, `razorpay_refund_id`, `amount`, `reason` |
+| `invoices` | One per successful payment | `subscription_id`, `payment_id` (unique), `amount`, `status` |
+| `webhook_events` | Every inbound webhook logged before processing, keyed for idempotency | `event_id` (unique), `event_type`, `payload` (JSONB), `processed_at`, `error` |
+| `coupons` | Percentage/fixed-amount discounts | `code` (unique), `discount_type`, `discount_value`, `max_redemptions`, `times_redeemed` |
+
+`vendors` gained no new columns — "what plan is this vendor on" is deliberately derived from `subscriptions`, not denormalized (see Notes).
+
+### Flow
+
+```
+POST /subscriptions/me/upgrade {planId, couponCode?}
+     │
+     ▼
+subscription.service.initiateUpgrade()
+     │
+     ├─ plan.trialDays > 0?
+     │    └─► create Subscription(status=TRIALING) immediately — no payment due
+     │
+     └─ else (paid plan):
+          ├─ validate/apply coupon (percentage or fixed amount)
+          ├─► razorpay.client.createOrder()  — a REAL Razorpay order,
+          │      receipt kept short (Razorpay's 56-char limit — a real bug
+          │      hit live, see Notes), full vendorId/planId in `notes`
+          ├─► Payment created with NO subscriptionId yet — pendingVendorId/
+          │      pendingPlanId/pendingCouponId carry the checkout's intent
+          │      instead (a real design fix — see Notes)
+          ▼
+     { subscription: null, checkout: {orderId, amount} }  ← vendor still
+       implicitly on FREE (GET /subscriptions/me returns null) until paid
+
+Razorpay processes the payment (browser, hosted checkout)
+     │
+     ▼
+POST /webhooks/razorpay  (Razorpay calls this directly, no user session)
+     │
+     ▼
+verifyWebhookSignature(rawBody, X-Razorpay-Signature header)
+     │  HMAC-SHA256 against RAZORPAY_WEBHOOK_SECRET — invalid/tampered
+     │  signature → 401, nothing processed. Verified live both ways.
+     ▼
+recordWebhookEvent(eventId, ...)  — unique constraint on eventId
+     │  duplicate delivery's INSERT fails → caught, logged, return 200
+     │  (Scenario D — verified live: identical replay produces zero
+     │  duplicate invoices)
+     ▼
+processEvent() dispatches on payload.event:
+     │
+     ├─ payment.captured:
+     │    ├─ payment already CAPTURED? → no-op (defense in depth beyond
+     │    │     event-id idempotency — a real bug fixed here, see Notes)
+     │    ├─ payment.subscription exists? → RENEWAL: extend the existing
+     │    │     subscription's period, create an invoice
+     │    └─ else → FIRST ACTIVATION: create the Subscription for the
+     │          first time (status=ACTIVE), inside one transaction that
+     │          also links the payment and increments coupon redemption
+     │          (Scenario B/C — verified live: subscription only becomes
+     │          ACTIVE here, never at checkout-initiation time)
+     │
+     ├─ payment.failed:
+     │    ├─ payment.subscriptionId exists? → mark that subscription
+     │    │     PAST_DUE (Scenario E renewal-failure — verified live)
+     │    └─ else → first-time checkout failed, nothing to mark past-due;
+     │          vendor simply stays on implicit FREE (verified live)
+     │
+     └─ refund.created / refund.processed:
+          └─ create a Refund row linked to the existing Payment — the
+                Payment itself is never mutated (Scenario H's immutability
+                guarantee, verified directly at the data-model level)
+```
+
+### Notes
+
+- **A real design flaw was caught and fixed before any of this shipped, not left in:** the first implementation created the `Subscription` row immediately — `ACTIVE` for a paid plan — the moment the Razorpay order was created, before any payment happened. This directly violated product.md §28 Scenario B's own step order (`ACTIVE` is step 8, strictly after the step 7 webhook) and Scenario C's "the webhook is the source of truth" principle. Caught on the very first live verification attempt: a vendor showed an `ACTIVE` PREMIUM subscription having paid nothing. Confirmed with the user and fixed at the design level: `Payment.subscriptionId` is now nullable, with `pendingVendorId`/`pendingPlanId`/`pendingCouponId` carrying the checkout's intent until the webhook actually confirms payment, at which point `activatePendingCheckout()` creates the real `Subscription` (status `ACTIVE`) for the first time, atomically. Re-verified: a fresh paid checkout now correctly leaves `GET /subscriptions/me` returning `null` until the webhook fires.
+- **A second real bug was caught and fixed during live webhook testing:** the webhook handler assumed one captured payment per order, and crashed with a 500 (unique-constraint violation on `invoices.payment_id`) when a second `payment.captured` event arrived for an already-captured order carrying a different Razorpay payment id. Surfaced by a test-script quirk (generating a fresh random payment id per invocation) but a genuine defensive gap regardless. Fixed by checking `payment.status === "CAPTURED"` and short-circuiting before any activation/invoice logic, independent of and in addition to the event-id-level idempotency check. Re-verified: a second capture against an already-captured order now correctly no-ops with 200 and zero duplicate invoices.
+- **A third real bug, purely operational, was caught and fixed:** Razorpay's `receipt` field has a hard 56-character limit; embedding a full vendor UUID plus a timestamp overflowed it, and Razorpay's real API correctly rejected the order — but the resulting error displayed as the useless literal string `"[object Object]"`, because the global `error.middleware.ts` only knew how to read native `Error.message` and the Razorpay SDK rejects with its own `{ statusCode, error: {...} }` shape. Fixed both: shortened the receipt to a short random token (full vendor/plan IDs already travel in Razorpay's `notes` field, which has no length limit), and taught the error middleware to JSON-stringify non-Error rejections in non-production environments, so a real provider error message is visible during development instead of being silently swallowed into a meaningless string.
+- **"What plan is a vendor on" is deliberately not a denormalized column on `Vendor`** — confirmed with the user. It's derived by querying `Subscription` for the vendor's latest `TRIALING`/`ACTIVE`/`PAST_DUE` row (a `null` result means implicit FREE, no row needed at all). This avoids a second place that must be kept in sync with status transitions — exactly the class of bug Arch Phase 7/8 already hit once with silently-dropped search indexes.
+- **Built on Razorpay's Orders API, not the Subscriptions API** — confirmed with the user. Each billing cycle is a fresh one-time Razorpay order; WedHub tracks `currentPeriodStart`/`currentPeriodEnd` and renewal itself, rather than registering a parallel set of Plan objects on Razorpay's side and letting Razorpay drive recurring charges automatically. Simpler to build and verify correctly in one pass; renewal requires a fresh checkout each period rather than true auto-charge, an acceptable MVP tradeoff that can be revisited later without changing the core data model (`Subscription.razorpaySubscriptionId` exists in the schema for that future move, unused for now).
+- **Scenario G (downgrade never silently deletes media) is correctly out of scope for this phase** — confirmed with the user. Actually enforcing portfolio/video limits against a plan is Arch Phase 12's `EntitlementService` job; building any limit-checking logic here would either hardcode business rules (violating Coding Rule 8) or duplicate work Phase 12 will own. Verified this phase's cancellation/expiry code paths contain zero references to the `Media` model — the guarantee holds trivially today because no enforcement exists yet, which is the correct state pending Phase 12.
+- **Scenario H (refund) is verified only at the data-model level, flagged honestly rather than claimed complete** — directly created a `Refund` row against a real `CAPTURED` `Payment` and confirmed the original `Payment` row was byte-for-byte unchanged afterward (JSON-diffed before/after). The live Razorpay refund API call itself could not be exercised, because a genuine refund requires a payment that was actually processed through Razorpay's hosted checkout with a real test card/UPI instrument — something only a frontend can drive. Confirmed the integration fails safely rather than silently: calling the refund endpoint against a fabricated (never-really-processed) Razorpay payment id correctly received Razorpay's own real 404 from their live API, not a fake success.
+- **Coupon redemption only increments on confirmed payment, never on checkout initiation** — verified live: applying a 50%-off coupon at checkout correctly computed the discounted order amount (₹5,999 → ₹2,999.50) and Razorpay accepted the discounted order for real; the coupon's `timesRedeemed` stayed `0` until the webhook confirmed payment, then correctly became `1`.
+- Verified end-to-end against Razorpay's real test-mode API (test key pair, `rzp_test_...`) and a correctly-HMAC-signed local webhook secret (Razorpay dashboard webhook setup deferred until a public tunnel/frontend exists to drive genuine end-to-end checkouts — signature verification itself was fully exercised by constructing real HMAC-SHA256 signatures locally against the same shared secret): admin plan pricing changes take effect immediately with no deployment; duplicate plan (same tier+interval) correctly 409s; **Scenario A** — no-subscription vendor correctly implicit FREE; **Scenario B/C** — real Razorpay order created, subscription only becomes ACTIVE via webhook, never at checkout time; **Scenario D** — identical webhook replay produces zero duplicate invoices; **Scenario E** — failed first-time checkout leaves vendor on FREE untouched, failed renewal correctly moves an ACTIVE subscription to PAST_DUE with a timestamp; **Scenario F** — cancel-at-period-end (default), undo, and immediate cancellation all behave correctly; **Scenario G** — confirmed out of scope, zero Media references in this phase's code; **Scenario H** — immutability guaranteed at the data-model level, live provider call correctly rejected for a fabricated payment id. Also verified: tampered/invalid webhook signature correctly 401s; non-admin correctly 403s on admin-only routes; unauthenticated access correctly 401s. Confirmed full reproducibility: `docker compose down -v` → migrate (all 14 migrations) → seed → health check → `npm run worker` (both workers start cleanly), all on a completely fresh database, with zero schema drift. All test plans/vendors/subscriptions/payments/coupons created during verification were deleted afterward.

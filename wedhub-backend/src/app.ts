@@ -8,12 +8,23 @@ import { notFoundMiddleware } from "./common/middleware/not-found.middleware";
 import { errorMiddleware } from "./common/middleware/error.middleware";
 import { successResponse } from "./common/utils/api-response.util";
 import { apiV1Router } from "./routes";
+import "./modules/webhooks/webhook.types";
 
 export function createApp(): Express {
   const app = express();
 
   app.disable("x-powered-by");
-  app.use(express.json());
+  // Captures the exact raw request body onto req.rawBody before JSON parsing
+  // consumes it — Razorpay's webhook signature (Coding Rule 6: all external
+  // webhooks are verified) is computed over the raw bytes, not the
+  // re-serialized parsed object, which can differ in key order/whitespace.
+  app.use(
+    express.json({
+      verify: (req, _res, buf) => {
+        (req as express.Request).rawBody = buf;
+      },
+    }),
+  );
   app.use(cookieParser());
   app.use(requestIdMiddleware);
   app.use(

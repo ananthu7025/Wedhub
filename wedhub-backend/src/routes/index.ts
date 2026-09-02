@@ -15,6 +15,9 @@ import { comparisonRouter } from "../modules/comparison";
 import { enquiryRouter } from "../modules/enquiries";
 import { leadAdminRouter, leadRouter } from "../modules/leads";
 import { reviewAdminRouter, reviewRouter, vendorReviewsPublicRouter } from "../modules/reviews";
+import { planAdminRouter, planRouter } from "../modules/plans";
+import { subscriptionAdminRouter, subscriptionRouter } from "../modules/subscriptions";
+import { webhookRouter } from "../modules/webhooks";
 
 export const apiV1Router = Router();
 
@@ -36,6 +39,11 @@ apiV1Router.use("/leads", leadRouter);
 apiV1Router.use("/admin/leads", leadAdminRouter);
 apiV1Router.use("/reviews", reviewRouter);
 apiV1Router.use("/admin/reviews", reviewAdminRouter);
+apiV1Router.use("/plans", planRouter);
+apiV1Router.use("/admin/plans", planAdminRouter);
+apiV1Router.use("/subscriptions", subscriptionRouter);
+apiV1Router.use("/admin/subscriptions", subscriptionAdminRouter);
+apiV1Router.use("/webhooks", webhookRouter);
 
 // Mounted BEFORE /vendors: vendorRouter's public GET /:slug would otherwise
 // greedily match /vendors/claim/:token, /vendors/me/albums, /vendors/:slug/albums,
