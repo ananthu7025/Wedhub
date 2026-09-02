@@ -54,6 +54,8 @@ model User {
   enquiries                Enquiry[]
   leadStatusChanges        LeadStatusHistory[]
   leadNotes                LeadNote[]
+  reviews                  Review[]
+  reviewReports            ReviewReport[]
 
   @@index([role])
   @@index([status])
@@ -330,6 +332,8 @@ model Vendor {
   approvedAt          DateTime?            @map("approved_at")
   submittedAt         DateTime?            @map("submitted_at")
   profileCompleteness Int                  @default(0) @map("profile_completeness")
+  averageRating       Decimal              @default(0) @map("average_rating") @db.Decimal(3, 2)
+  reviewCount         Int                  @default(0) @map("review_count")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
   deletedAt           DateTime?            @map("deleted_at")
@@ -348,6 +352,7 @@ model Vendor {
   albums          Album[]
   shortlistItems  ShortlistItem[]
   leads           Lead[]
+  reviews         Review[]
 
   @@index([status])
   @@index([cityId])
@@ -466,6 +471,7 @@ model Service {
   category       Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   vendorServices VendorService[]
   enquiries      Enquiry[]
+  reviews        Review[]
 
   @@unique([categoryId, slug])
   @@map("services")
@@ -819,4 +825,65 @@ model LeadNote {
 
   @@index([leadId])
   @@map("lead_notes")
+}
+
+// Arch Phase 10. Status set matches architecture.md's own concrete schema
+// section (PENDING/APPROVED/REJECTED/FLAGGED/HIDDEN) rather than product.md's
+// looser prose list of admin actions (approve/hide/remove/investigate/mark
+// disputed) — used as authoritative per the stage file's own note, since one
+// is a real enum and the other is a description of intent.
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+  HIDDEN
+}
+
+// One review per (user, vendor) — enforced by the compound unique constraint
+// below — regardless of how many leads/enquiries exist between them.
+// verifiedInteraction is true when the reviewing user has at least one Lead
+// against this vendor at the time of submission (any status); confirmed with
+// the user as the "legitimate interaction" signal now that Arch Phase 9
+// exists, rather than requiring a WON outcome specifically.
+model Review {
+  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String       @map("user_id") @db.Uuid
+  vendorId            String       @map("vendor_id") @db.Uuid
+  serviceId           String?      @map("service_id") @db.Uuid
+  rating              Int
+  title               String?
+  content             String?
+  eventDate           DateTime?    @map("event_date") @db.Date
+  verifiedInteraction Boolean      @default(false) @map("verified_interaction")
+  status              ReviewStatus @default(PENDING)
+  vendorResponse      String?      @map("vendor_response")
+  vendorRespondedAt   DateTime?    @map("vendor_responded_at")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vendor  Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  service Service?        @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  reports ReviewReport[]
+
+  @@unique([userId, vendorId])
+  @@index([vendorId, status])
+  @@index([status])
+  @@map("reviews")
+}
+
+model ReviewReport {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reviewId   String   @map("review_id") @db.Uuid
+  reporterId String   @map("reporter_id") @db.Uuid
+  reason     String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reporter User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, reporterId])
+  @@index([reviewId])
+  @@map("review_reports")
 }

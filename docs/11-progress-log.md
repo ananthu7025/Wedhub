@@ -20,7 +20,7 @@
 | 7 | Search & Discovery | [Stage 3](05-stage-discovery-engagement.md) | ✅ Done | 2026-09-02 |
 | 8 | Favorites, Shortlists & Comparison | [Stage 3](05-stage-discovery-engagement.md) | ✅ Done | 2026-09-02 |
 | 9 | Enquiries & Leads | [Stage 4](06-stage-lead-engine.md) | ✅ Done | 2026-09-02 |
-| 10 | Reviews & Trust | [Stage 3](05-stage-discovery-engagement.md) | ⬜ Not Started | — |
+| 10 | Reviews & Trust | [Stage 3](05-stage-discovery-engagement.md) | ✅ Done | 2026-09-02 |
 | 11 | Subscription & Billing Foundation | [Stage 5](07-stage-monetization.md) | ⬜ Not Started | — |
 | 12 | Entitlement Enforcement | [Stage 5](07-stage-monetization.md) | ⬜ Not Started | — |
 | 13 | Featured Listings & Promotions | [Stage 5](07-stage-monetization.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 10 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), and Stage 4 (Lead Engine) are fully done; Stage 3 (Discovery & Engagement) is underway with Arch Phases 7 and 8 done (Arch Phase 10 remaining).**
+**Overall: 11 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), and Stage 4 (Lead Engine) are all fully done.**
 
 ---
 
@@ -878,3 +878,84 @@ GET /leads/analytics → received/contacted/responseRate/avgResponseTime/
 - **Terminal lead statuses are enforced, but loosely** — product.md §20 describes the lifecycle as a suggested progression, not a strict finite-state machine (a vendor can jump straight from `NEW` to `LOST` or `SPAM`). The only rule enforced in `lead.service.ts` is that once a lead reaches `WON`/`LOST`/`SPAM`/`CLOSED`, a vendor cannot move it to a different status themselves — only `/admin/leads/:id/status` can reopen one, matching product.md §20's "Admin can view and intervene." Verified live: a vendor moving a `WON` lead back to `CONTACTED` correctly 400s; the admin endpoint successfully reopened the same lead to `QUALIFIED`.
 - **Spam detection foundation is a status, not a model** — `Lead.isSpam` flips to `true` automatically whenever a lead's status is set to `SPAM` (by a vendor or admin). No automated spam-scoring exists yet, matching this stage file's own recommendation to start rule-based rather than build a scored model prematurely.
 - Verified end-to-end against real seeded data, including all three product.md acceptance-walkthrough scenarios: **§57 single-vendor** — enquiry created a real `NEW` lead, notification queued, resubmission within 15 minutes correctly 409'd, same contact info to a different vendor correctly succeeded; **§58 multi-vendor** — missing consent correctly 400'd, consent present correctly selected 3 ranked vendors (highest-completeness, platform-verified vendor ranked first) each with their own lead and notification (after the price-filter bug above was found and fixed); **§59 venue** — a venue single-vendor enquiry with guest count/budget/message succeeded identically to the photography case. Also verified: enquiring against a DRAFT (non-public) vendor correctly 404s; missing required fields correctly 400 via Zod; anonymous (no-token) enquiry submission succeeds with `userId: null`; vendor lead dashboard listing/filtering/searching all scoped correctly to the owning vendor; status transitions correctly stamp `contactedAt`/`respondedAt` exactly once; notes attach correctly; cross-vendor lead access (detail and status update) correctly 404s; admin can list all leads, filter by status, and reopen a terminal lead. Lead analytics verified to compute `responseRate`, `averageResponseTimeMs`, `qualifiedLeads`, `wonLeads`, `lostLeads`, and `conversionRate` correctly from real lead data. Confirmed full reproducibility: `docker compose down -v` → migrate (all 11 migrations) → seed → health check → `npm run worker` (both the media-processing and lead-notification workers start cleanly), all on a completely fresh database, with zero schema drift. All test users/vendors/enquiries/leads created during verification were deleted afterward.
+
+## Arch Phase 10 — Reviews & Trust
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 3 — Discovery & Engagement](05-stage-discovery-engagement.md) — **this phase completes Stage 3.**
+
+### What this unlocks
+
+Users who have interacted with a vendor (or even those who haven't) can leave a rating and written review, which only becomes publicly visible once an admin approves it. Vendors can respond publicly to their own reviews. Anyone can report an abusive or fake-looking review, which immediately surfaces it in the admin moderation queue with real context (who reported it, why). A vendor's public `averageRating`/`reviewCount` are always a live, correct reflection of exactly which reviews are currently `APPROVED` — including when a review is un-approved after the fact. Vendors are permanently blocked from reviewing themselves.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| POST | `/api/v1/reviews` | Create a review for a vendor | access token |
+| GET | `/api/v1/vendors/:vendorId/reviews` | Public listing of a vendor's `APPROVED` reviews | none |
+| POST | `/api/v1/reviews/:id/respond` | Vendor responds to a review on their own vendor | access token, owned vendor |
+| POST | `/api/v1/reviews/:id/report` | Report a review as abusive/fake | access token |
+| GET | `/api/v1/admin/reviews` | Admin moderation queue, filterable by status | ADMIN |
+| GET | `/api/v1/admin/reviews/:id` | Review detail including all reports against it | ADMIN |
+| PATCH | `/api/v1/admin/reviews/:id/status` | Moderate a review (`APPROVED/REJECTED/FLAGGED/HIDDEN`) | ADMIN |
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `reviews` | One review per (user, vendor) pair | `user_id`, `vendor_id`, `rating`, `verified_interaction`, `status`, `vendor_response`, unique `(user_id, vendor_id)` |
+| `review_reports` | Who reported a review and why | `review_id`, `reporter_id`, `reason`, unique `(review_id, reporter_id)` |
+
+`vendors` gained `average_rating` (`Decimal(3,2)`) and `review_count` (`Int`), both recalculated from real `Review` rows rather than incrementally maintained.
+
+### Flow
+
+```
+POST /reviews
+     │
+     ▼
+authenticateMiddleware → reviewRateLimiter (strict, 5/hour)
+     │
+     ▼
+review.service.createReview()
+     │
+     ├─ assertVendorIsPublic(vendorId)         404 if not APPROVED
+     ├─ vendor.ownerUserId === userId?         400 — vendors cannot review themselves
+     ├─ findExistingReview(userId, vendorId)   409 if already reviewed (compound unique)
+     ├─ hasAnyLeadWithVendor(userId, vendorId) → verifiedInteraction = true/false
+     │    (any Lead status counts — confirmed with the user, not just WON)
+     ▼
+review created, status=PENDING (never publicly visible yet)
+     │
+     ▼
+logAnalyticsEvent("review_created")  best-effort, never blocks
+
+PATCH /admin/reviews/:id/status                    POST /reviews/:id/report
+     │  ADMIN only                                       │  any authenticated user
+     ▼                                                    ▼
+review.service.moderateReview()                    review.service.reportReview()
+     │  setReviewStatus(newStatus)                        │  createReport() — 409 if
+     │                                                     │    already reported by this user
+     ├─ was APPROVED, now something else? ─┐               ├─ status APPROVED/PENDING?
+     ├─ wasn't APPROVED, now IS APPROVED? ──┤                    → flip to FLAGGED
+     │                                      ▼                    → recalculateVendorRating()
+     │                            recalculateVendorRating(vendorId)   (a real bug was caught
+     │                              aggregate over Review WHERE            and fixed here —
+     │                              vendorId=X AND status='APPROVED'       see Notes)
+     │                              → Vendor.averageRating/reviewCount updated atomically
+     ▼
+GET /vendors/:vendorId/reviews (public)  →  only ever returns status='APPROVED' rows
+```
+
+### Notes
+
+- **Review status enum resolved in favor of the concrete schema, not the prose description** — product.md §24 lists admin actions loosely (Approve/Hide/Remove/Investigate/Mark disputed), but architecture.md's own schema section defines a concrete 5-state enum (`PENDING/APPROVED/REJECTED/FLAGGED/HIDDEN`) with no `REMOVED` or `DISPUTED` state. Used the concrete enum, per this stage file's pre-existing note that architecture.md's schema is authoritative here.
+- **"Verified interaction" is a real signal now, not a placeholder** — confirmed with the user: a review is `verifiedInteraction: true` when the reviewing user has at least one `Lead` (any status, not requiring `WON`) against that vendor, using Arch Phase 9's real data. Verified live: a user with a seeded `Lead` against the vendor got `verifiedInteraction: true`; a user with no lead history got `false` on an otherwise-identical review.
+- **"One review per legitimate interaction" enforced as one review per (user, vendor), not one per lead** — a compound unique constraint on `(userId, vendorId)` blocks a second review regardless of how many leads/enquiries exist between the same user and vendor. Confirmed with the user as the simpler, sufficient interpretation. Verified live: a second review attempt from the same user against the same vendor correctly 409s.
+- **Vendors cannot review themselves — enforced at the service layer, checked before the duplicate check** — `review.service.createReview()` compares the reviewing `userId` against `Vendor.ownerUserId` and rejects with a 400 before any other validation runs. Verified live.
+- **"Review report" built as a dedicated `ReviewReport` table**, not a bare status flip — confirmed with the user so the admin moderation queue carries real triage context (who reported, when, why) rather than an unexplained status change. A report immediately flips an `APPROVED`/`PENDING` review to `FLAGGED` rather than waiting for a report-count threshold — a false positive is cheap for an admin to reverse, but a genuinely abusive review sitting live and unflagged is the worse failure mode. A `(reviewId, reporterId)` unique constraint prevents the same user from reporting the same review twice. Verified live: reporting an approved review correctly flips it to `FLAGGED` and surfaces it in `GET /admin/reviews?status=FLAGGED` with the real reason text attached; a second report attempt from the same user correctly 409s.
+- **A real bug was caught and fixed during this phase's own verification, not left in:** reporting an `APPROVED` review correctly flipped its status to `FLAGGED`, but the report-handling code path called `setReviewStatus()` directly instead of going through the same rating-recalculation logic the explicit moderation endpoint uses — so the vendor's `averageRating`/`reviewCount` silently kept counting a review that was no longer publicly visible, until some unrelated future moderation action happened to trigger a recalculation. Caught live: reported an approved 3-star review (alongside an approved 5-star review, average 4) and found the vendor's rating hadn't moved. Fixed by calling `recalculateVendorRating()` inside `reportReview()` too, the same function `moderateReview()` uses. Re-verified: the same report action now correctly recalculates the rating immediately (dropped back to `5` — the average of only the still-approved review).
+- **Rating aggregation is recalculated from real data on both sides of the `APPROVED` transition, not just one** — `moderateReview()` triggers `recalculateVendorRating()` whenever a review's status changes *to* `APPROVED` or *away from* a prior `APPROVED` state (not just on approval), matching the acceptance criterion that "rating aggregation stays consistent." Verified live: approving two reviews (5-star, 3-star) produced an average of exactly `4`; subsequently hiding the 3-star review correctly pulled the average back to `5`; re-approving it correctly restored `4`.
+- **Pending reviews are invisible everywhere public** — `GET /vendors/:vendorId/reviews` only ever queries `status='APPROVED'`, and a vendor's `averageRating`/`reviewCount` never reflect `PENDING` reviews. Verified live: two freshly-created `PENDING` reviews produced an empty public list and an unchanged `averageRating: 0`/`reviewCount: 0` until explicitly approved.
+- Verified end-to-end against real seeded data: self-review correctly blocked; duplicate review correctly 409s; verified vs. unverified interaction correctly detected from real Lead data; reviewing a `DRAFT` (non-public) vendor correctly 404s; rating validation rejects `0` and `6` (must be 1–5); vendor response correctly attaches and is blocked for a vendor that doesn't own the review (404, not leaking existence); the review-specific rate limiter (5/hour) correctly 429s past its threshold; admin queue filtering by status returns exactly the matching reviews with real report context attached. Confirmed full reproducibility: `docker compose down -v` → migrate (all 12 migrations) → seed → health check, all on a completely fresh database, with zero schema drift. All test users/vendors/reviews/reports created during verification were deleted afterward.

@@ -48,3 +48,9 @@ export const enquiryRateLimiter = createRateLimiter({
   max: 10,
   message: "Too many enquiries submitted. Please try again later.",
 });
+
+export const reviewRateLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: "Too many reviews submitted. Please try again later.",
+});

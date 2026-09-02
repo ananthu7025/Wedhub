@@ -14,6 +14,7 @@ import { shortlistRouter } from "../modules/shortlists";
 import { comparisonRouter } from "../modules/comparison";
 import { enquiryRouter } from "../modules/enquiries";
 import { leadAdminRouter, leadRouter } from "../modules/leads";
+import { reviewAdminRouter, reviewRouter, vendorReviewsPublicRouter } from "../modules/reviews";
 
 export const apiV1Router = Router();
 
@@ -33,12 +34,15 @@ apiV1Router.use("/comparison", comparisonRouter);
 apiV1Router.use("/enquiries", enquiryRouter);
 apiV1Router.use("/leads", leadRouter);
 apiV1Router.use("/admin/leads", leadAdminRouter);
+apiV1Router.use("/reviews", reviewRouter);
+apiV1Router.use("/admin/reviews", reviewAdminRouter);
 
 // Mounted BEFORE /vendors: vendorRouter's public GET /:slug would otherwise
-// greedily match /vendors/claim/:token, /vendors/me/albums, /vendors/:slug/albums
-// style paths first.
+// greedily match /vendors/claim/:token, /vendors/me/albums, /vendors/:slug/albums,
+// /vendors/:vendorId/reviews style paths first.
 apiV1Router.use("/vendors/claim", vendorClaimRouter);
 apiV1Router.use("/vendors/me/albums", albumSelfRouter);
 apiV1Router.use("/vendors/:slug/albums", albumPublicRouter);
+apiV1Router.use("/vendors/:vendorId/reviews", vendorReviewsPublicRouter);
 apiV1Router.use("/vendors", vendorRouter);
 apiV1Router.use("/admin/vendors", vendorAdminRouter);
