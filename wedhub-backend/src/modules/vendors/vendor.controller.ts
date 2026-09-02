@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import { successResponse, paginatedResponse } from "../../common/utils/api-response.util";
 import { AuthenticationError, NotFoundError } from "../../common/errors";
+import { logAnalyticsEvent } from "../../common/utils/analytics.util";
+import { getVendorAnalytics } from "../entitlements/vendor-analytics.service";
 import { getOwnedVendorOrThrow } from "./vendor.policy";
 import * as vendorService from "./vendor.service";
 import * as vendorRepository from "./vendor.repository";
@@ -168,11 +170,21 @@ export async function submit(req: Request, res: Response): Promise<void> {
   res.json(successResponse(vendor));
 }
 
+export async function getMyAnalytics(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const owned = await getOwnedVendorOrThrow(userId);
+  const analytics = await getVendorAnalytics(owned.id);
+  res.json(successResponse(analytics));
+}
+
 export async function getPublicVendor(req: Request, res: Response): Promise<void> {
   const vendor = await vendorRepository.findApprovedVendorBySlug(req.params.slug as string);
   if (!vendor) {
     throw new NotFoundError("Vendor not found");
   }
+  // Feeds the vendor's own basic/advanced analytics view (Arch Phase 12) —
+  // best-effort, never blocks the response (see logAnalyticsEvent).
+  void logAnalyticsEvent({ userId: req.user?.id, eventType: "vendor_profile_viewed", vendorId: vendor.id });
   res.json(successResponse(vendor));
 }
 

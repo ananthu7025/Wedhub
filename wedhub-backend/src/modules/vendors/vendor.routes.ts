@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../../common/utils/async-handler.util";
 import { validateBody, validateQuery } from "../../common/middleware/validate.middleware";
-import { authenticateMiddleware } from "../../common/middleware/authenticate.middleware";
+import { authenticateMiddleware, optionalAuthenticateMiddleware } from "../../common/middleware/authenticate.middleware";
 import { authorize } from "../../common/middleware/authorize.middleware";
 import { Role } from "../../common/enums/roles.enum";
 import * as vendorController from "./vendor.controller";
@@ -22,7 +22,7 @@ export const vendorRouter = Router();
 
 // Public routes
 vendorRouter.get("/", validateQuery(listVendorsQuerySchema), asyncHandler(vendorController.listPublicVendors));
-vendorRouter.get("/:slug", asyncHandler(vendorController.getPublicVendor));
+vendorRouter.get("/:slug", optionalAuthenticateMiddleware, asyncHandler(vendorController.getPublicVendor));
 
 // Vendor self-service routes
 vendorRouter.post(
@@ -34,6 +34,8 @@ vendorRouter.post(
 );
 
 vendorRouter.get("/me/detail", authenticateMiddleware, asyncHandler(vendorController.getMyVendor));
+
+vendorRouter.get("/me/analytics", authenticateMiddleware, asyncHandler(vendorController.getMyAnalytics));
 
 vendorRouter.patch(
   "/me/detail",

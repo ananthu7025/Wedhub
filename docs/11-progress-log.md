@@ -22,7 +22,7 @@
 | 9 | Enquiries & Leads | [Stage 4](06-stage-lead-engine.md) | ✅ Done | 2026-09-02 |
 | 10 | Reviews & Trust | [Stage 3](05-stage-discovery-engagement.md) | ✅ Done | 2026-09-02 |
 | 11 | Subscription & Billing Foundation | [Stage 5](07-stage-monetization.md) | ✅ Done | 2026-09-02 |
-| 12 | Entitlement Enforcement | [Stage 5](07-stage-monetization.md) | ⬜ Not Started | — |
+| 12 | Entitlement Enforcement | [Stage 5](07-stage-monetization.md) | ✅ Done | 2026-09-02 |
 | 13 | Featured Listings & Promotions | [Stage 5](07-stage-monetization.md) | ⬜ Not Started | — |
 | 14 | Notifications | [Stage 6](08-stage-telegram-and-admin.md) | ⬜ Not Started | — |
 | 15 | Telegram Bot MVP | [Stage 6](08-stage-telegram-and-admin.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 12 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), and Stage 4 (Lead Engine) are all fully done; Stage 5 (Monetization) is underway with Arch Phase 11 done (Arch Phases 12–13 remaining).**
+**Overall: 13 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), and Stage 4 (Lead Engine) are all fully done; Stage 5 (Monetization) is underway with Arch Phases 11–12 done (Arch Phase 13 remaining).**
 
 ---
 
@@ -1075,3 +1075,88 @@ processEvent() dispatches on payload.event:
 - **Scenario H (refund) is verified only at the data-model level, flagged honestly rather than claimed complete** — directly created a `Refund` row against a real `CAPTURED` `Payment` and confirmed the original `Payment` row was byte-for-byte unchanged afterward (JSON-diffed before/after). The live Razorpay refund API call itself could not be exercised, because a genuine refund requires a payment that was actually processed through Razorpay's hosted checkout with a real test card/UPI instrument — something only a frontend can drive. Confirmed the integration fails safely rather than silently: calling the refund endpoint against a fabricated (never-really-processed) Razorpay payment id correctly received Razorpay's own real 404 from their live API, not a fake success.
 - **Coupon redemption only increments on confirmed payment, never on checkout initiation** — verified live: applying a 50%-off coupon at checkout correctly computed the discounted order amount (₹5,999 → ₹2,999.50) and Razorpay accepted the discounted order for real; the coupon's `timesRedeemed` stayed `0` until the webhook confirmed payment, then correctly became `1`.
 - Verified end-to-end against Razorpay's real test-mode API (test key pair, `rzp_test_...`) and a correctly-HMAC-signed local webhook secret (Razorpay dashboard webhook setup deferred until a public tunnel/frontend exists to drive genuine end-to-end checkouts — signature verification itself was fully exercised by constructing real HMAC-SHA256 signatures locally against the same shared secret): admin plan pricing changes take effect immediately with no deployment; duplicate plan (same tier+interval) correctly 409s; **Scenario A** — no-subscription vendor correctly implicit FREE; **Scenario B/C** — real Razorpay order created, subscription only becomes ACTIVE via webhook, never at checkout time; **Scenario D** — identical webhook replay produces zero duplicate invoices; **Scenario E** — failed first-time checkout leaves vendor on FREE untouched, failed renewal correctly moves an ACTIVE subscription to PAST_DUE with a timestamp; **Scenario F** — cancel-at-period-end (default), undo, and immediate cancellation all behave correctly; **Scenario G** — confirmed out of scope, zero Media references in this phase's code; **Scenario H** — immutability guaranteed at the data-model level, live provider call correctly rejected for a fabricated payment id. Also verified: tampered/invalid webhook signature correctly 401s; non-admin correctly 403s on admin-only routes; unauthenticated access correctly 401s. Confirmed full reproducibility: `docker compose down -v` → migrate (all 14 migrations) → seed → health check → `npm run worker` (both workers start cleanly), all on a completely fresh database, with zero schema drift. All test plans/vendors/subscriptions/payments/coupons created during verification were deleted afterward.
+
+---
+
+## Arch Phase 12 — Entitlement Enforcement
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 5 — Monetization](07-stage-monetization.md)
+
+### What this unlocks
+
+Subscriptions now actually mean something: a vendor's plan (derived from Arch Phase 11's `Subscription` rows, never a denormalized column) controls how many portfolio images/videos they can upload and whether they see basic or advanced analytics — all read through a single `EntitlementService`, with zero `plan.tier === "PREMIUM"`-style checks anywhere in application code. Downgrading (including the grace-period and cancel-at-period-end paths landing back on FREE) never deletes a vendor's media — excess items are marked inactive and hidden, then automatically restored the moment the vendor upgrades, renews, or starts a trial again. The old hardcoded global `MEDIA_MAX_PORTFOLIO_ITEMS` env var — the exact anti-pattern this phase exists to remove — is gone.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/vendors/me/analytics` | Basic/advanced analytics summary, gated by `analytics_level` | access token, owned vendor |
+
+No other new routes — this phase is mostly plumbing behind two *existing* surfaces:
+- `POST /api/v1/media/upload-requests` now calls `EntitlementService.canVendorUpload()` instead of a hardcoded env limit (portfolio and video limits are independent, both plan-derived).
+- `GET /api/v1/vendors/:slug` (public profile view) now logs a `vendor_profile_viewed` analytics event (best-effort, never blocks the response) — this event type didn't exist before this phase, and the new analytics endpoint needed real data to report on.
+- `POST /api/v1/subscriptions/me/cancel` (already existed from Phase 11) is now also the downgrade-to-FREE path — there is no separate downgrade endpoint (see Notes).
+
+### Tables / schema changes
+
+| Change | Purpose |
+|---|---|
+| `MediaStatus` enum gained `INACTIVE` | Scenario G: media hidden by an entitlement limit, distinct from `DELETED` (gone forever) and from `MediaModerationStatus.HIDDEN` (a moderator's trust/safety action on a different axis) |
+| `SubscriptionPlan.limits`/`.features` JSON now has real seeded values | `{portfolio_limit, video_limit}` / `{analytics_level, lead_access, featured_eligibility, promotional_placement, response_tools, priority_support}` — the entitlement keys this phase's `EntitlementService` reads, seeded for all 5 plan rows (`prisma/seed.ts`) matching product.md §26's real feature tables |
+| `env.MEDIA_MAX_PORTFOLIO_ITEMS` removed | Was the pre-Phase-12 hardcoded global portfolio limit; fully superseded by the plan-derived check, confirmed unreferenced anywhere else before deleting |
+
+No new tables — this phase is entirely a new `entitlements` module (`entitlement.constants.ts`, `entitlement.repository.ts`, `entitlement.service.ts`, `vendor-analytics.repository.ts`, `vendor-analytics.service.ts`) plus a small `subscriptions/billing-period.util.ts` extraction (moved `GRACE_PERIOD_DAYS`/`periodEndFor` out of `subscription.service.ts` so `entitlement.service.ts` could read them without a circular import, since `subscription.service.ts` also calls into `entitlement.service.ts` for the media sweep).
+
+### Flow
+
+```
+Any entitlement check (media upload, analytics read, ...)
+     │
+     ▼
+EntitlementService.getEffectivePlan(vendorId)
+     │
+     ├─ no Subscription row at all → implicit FREE (Scenario A, no DB write)
+     │
+     ├─ status=PAST_DUE, pastDueSince + GRACE_PERIOD_DAYS < now?
+     │    └─► LAZILY: expireSubscription() + sweepMediaToLimits(FREE)
+     │          (Scenario E's grace-period-elapsed fallback — evaluated at
+     │          read time, not by a new cron/scheduler subsystem: none
+     │          exists yet anywhere in this codebase, confirmed with the
+     │          user as out of scope for a "minimal" Phase 12)
+     │
+     ├─ status=ACTIVE, cancelAtPeriodEnd=true, currentPeriodEnd < now?
+     │    └─► LAZILY: expireSubscription() + sweepMediaToLimits(FREE)
+     │          (Scenario F's "keep benefits until period end" promise,
+     │          now actually enforced once that end passes)
+     │
+     └─ else → real plan's limits/features, read from
+           SubscriptionPlan.limits/.features JSON
+
+canVendorUpload(vendorId, mediaType)
+     │
+     ├─ countActiveMedia(vendorId, mediaType) >= plan.limits[...] ?
+     │    └─► throw AuthorizationError (403) — checked BEFORE any R2 call
+     └─ else → allowed
+
+sweepMediaToLimits(vendorId, newLimits)          [Scenario G]
+     │  oldest-active-first, mark excess READY media as INACTIVE
+     │  (never DELETED) — called on immediate cancellation and on the
+     │  two lazy-expiry paths above
+
+restoreInactiveMediaToLimits(vendorId, newLimits)  [Scenario G's inverse]
+     │  oldest-inactive-first, mark up to (newLimit - activeCount) of them
+     │  back to READY — called on: trial start, and inside the real
+     │  webhook handler's renewal AND first-activation branches
+```
+
+### Notes
+
+- **No separate "downgrade" endpoint exists, by design, confirmed with the user:** a vendor downgrading Premium/Pro → Free simply calls the *existing* `POST /subscriptions/me/cancel` with `immediate: false` (the already-recommended default from Phase 11). Downgrade and "cancel, don't renew" are the same event from the system's point of view — there was no need to invent new subscription-state machinery for it.
+- **The grace-period-elapsed and cancel-at-period-end-elapsed transitions are both evaluated lazily, at read time** — inside `getEffectivePlan()`, the very first entitlement check after the deadline passes flips the `Subscription` to `EXPIRED` and runs the media sweep in the same call, rather than a scheduled sweep. Confirmed with the user: no BullMQ repeatable-job/cron infrastructure exists anywhere in this codebase yet (`jobs/schedules/` is an empty scaffold), and building one was judged out of scope for a phase whose own stage file explicitly calls it "minimal." Verified live for both paths (see below) by backdating `pastDueSince` / `currentPeriodEnd` and confirming the very next API call triggers the correct transition and sweep, with no change at all while the deadline hasn't yet passed.
+- **Scenario G's "mark inactive" is a new `MediaStatus.INACTIVE` value, not a reuse of `MediaModerationStatus.HIDDEN`** — confirmed with the user. These are orthogonal axes: moderation is a trust/safety judgment by a human moderator; `INACTIVE` is purely "your current plan doesn't cover this many items." Conflating them would make a future moderation UI unable to tell the two apart, and would risk a re-upgrade wrongly un-hiding content a moderator had actually rejected.
+- **Restoring hidden media on upgrade/trial-start/renewal (Scenario G's inverse) was confirmed with the user as in-scope**, even though product.md only states the downgrade direction explicitly — reasoned from "preserve for a retention period" implying the data was kept specifically so it could return once the vendor's capacity did. Verified live through three separate real code paths, not just a direct function call: (1) starting a trial via `POST /subscriptions/me/upgrade` restored previously-inactive media immediately; (2) a real signed `payment.captured` webhook for a first-time activation restored media inside `activatePendingCheckout`'s branch; (3) a real signed `payment.captured` webhook for a renewal restored media inside the renewal branch — confirmed by re-hiding 5 items, sending the real HMAC-signed webhook, and observing all 15 flip back to `READY` with a `restoredCount: 5` log line.
+- **A genuine gap found and closed, not part of the original ask:** there was no vendor-facing analytics read endpoint at all before this phase, and no `vendor_profile_viewed` event was ever logged from the public vendor-profile route (`GET /vendors/:slug`) — only write-side `AnalyticsEvent` logging existed from Arch Phase 7/8 for other event types (search views, lead creation, etc.). Confirmed with the user: added the logging call, and built a thin `GET /vendors/me/analytics` on top of it plus `Lead`/`Review` counts — FREE gets a 30-day window with totals only, PRO/PREMIUM get a 90-day window plus a day-by-day breakdown (`$queryRaw` grouped by day) — gated through `canVendorAccess(vendorId, "analytics_level")`. Deliberately not Arch Phase 18's full analytics pipeline; just enough real data for the `analytics_level` entitlement to have something genuine to enforce, rather than leaving it an unverifiable no-op function.
+- **`featured_eligibility`/`promotional_placement`/`response_tools`/`priority_support` are declared and seeded with real per-plan values but gate nothing yet** — same schema-completeness-without-an-endpoint precedent as `Subscription.razorpaySubscriptionId` from Phase 11. Featured Listings (Arch Phase 13) doesn't exist yet, and there's no backend surface at all for "response tools" or "priority support" — building fake gates for non-existent features would have been scope creep, not entitlement plumbing. `canVendorUse()` correctly returns the right boolean for each if/when Phase 13+ needs it.
+- **Portfolio and video limits are independent, not a shared pool** — matches architecture.md §26 listing them as separate entitlement keys. Verified live: a FREE vendor at exactly 10/10 portfolio items was correctly blocked from an 11th portfolio upload (403) while a video upload succeeded in the same request sequence (0/1 video used).
+- Verified live end-to-end on a real running Postgres/Redis stack, using a freshly registered+approved test vendor (deleted afterward along with all media/subscriptions/payments created during testing): FREE-tier 10-item portfolio limit correctly blocks an 11th upload with a 403 *before* any R2 call is made; PRO-tier (100-item limit) correctly allows it once an ACTIVE subscription exists; analytics endpoint correctly returns `level: "basic"`/30-day window with no `profileViewsByDay` key for FREE and `level: "advanced"`/90-day window with the breakdown present for PRO, backed by real `vendor_profile_viewed` events generated by hitting the public profile endpoint; immediate cancellation with 15 active portfolio items (5 over the FREE limit) correctly marked exactly the 5 oldest `INACTIVE` and left the newest 10 `READY`, with zero rows deleted; the grace-period-elapsed lazy fallback correctly flipped a backdated `PAST_DUE` subscription to `EXPIRED` and swept 20→10 active items on the very next API call; the cancel-at-period-end lazy fallback behaved identically once `currentPeriodEnd` had passed, while an otherwise-identical subscription whose period had **not** yet ended correctly stayed `ACTIVE` with all 20 items still visible and `analytics_level: "advanced"` — confirming Scenario F's "keep benefits until period end" promise holds up to the actual moment, not just conceptually. `npm run typecheck` and `npm run lint` both pass with zero errors; no test suite exists yet in this codebase to run (consistent with every prior phase).

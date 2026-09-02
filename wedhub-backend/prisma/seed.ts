@@ -218,6 +218,130 @@ async function seedLocations(): Promise<void> {
   console.info(`Seeded India, ${INDIA_STATES.length} states, and ${cityCount} cities.`);
 }
 
+// product.md §26's three initial plans, with real prices and the
+// entitlement keys Arch Phase 12's EntitlementService reads (see
+// entitlement.constants.ts) — never hardcoded in application code, only
+// here as seed data admins can subsequently edit via /admin/plans.
+interface PlanSeed {
+  tier: "FREE" | "PRO" | "PREMIUM";
+  billingInterval: "MONTHLY" | "YEARLY";
+  name: string;
+  price: number;
+  trialDays: number;
+  limits: Record<string, number>;
+  features: Record<string, unknown>;
+}
+
+const SUBSCRIPTION_PLANS: PlanSeed[] = [
+  {
+    tier: "FREE",
+    billingInterval: "MONTHLY",
+    name: "Free",
+    price: 0,
+    trialDays: 0,
+    limits: { portfolio_limit: 10, video_limit: 1 },
+    features: {
+      analytics_level: "basic",
+      lead_access: true,
+      featured_eligibility: false,
+      promotional_placement: false,
+      response_tools: false,
+      priority_support: false,
+    },
+  },
+  {
+    tier: "PRO",
+    billingInterval: "MONTHLY",
+    name: "Pro",
+    price: 5999,
+    trialDays: 14,
+    limits: { portfolio_limit: 100, video_limit: 10 },
+    features: {
+      analytics_level: "advanced",
+      lead_access: true,
+      featured_eligibility: false,
+      promotional_placement: false,
+      response_tools: true,
+      priority_support: false,
+    },
+  },
+  {
+    tier: "PRO",
+    billingInterval: "YEARLY",
+    name: "Pro (Yearly)",
+    price: 59990,
+    trialDays: 14,
+    limits: { portfolio_limit: 100, video_limit: 10 },
+    features: {
+      analytics_level: "advanced",
+      lead_access: true,
+      featured_eligibility: false,
+      promotional_placement: false,
+      response_tools: true,
+      priority_support: false,
+    },
+  },
+  {
+    tier: "PREMIUM",
+    billingInterval: "MONTHLY",
+    name: "Premium",
+    price: 12999,
+    trialDays: 14,
+    limits: { portfolio_limit: 500, video_limit: 50 },
+    features: {
+      analytics_level: "advanced",
+      lead_access: true,
+      featured_eligibility: true,
+      promotional_placement: true,
+      response_tools: true,
+      priority_support: true,
+    },
+  },
+  {
+    tier: "PREMIUM",
+    billingInterval: "YEARLY",
+    name: "Premium (Yearly)",
+    price: 129990,
+    trialDays: 14,
+    limits: { portfolio_limit: 500, video_limit: 50 },
+    features: {
+      analytics_level: "advanced",
+      lead_access: true,
+      featured_eligibility: true,
+      promotional_placement: true,
+      response_tools: true,
+      priority_support: true,
+    },
+  },
+];
+
+async function seedSubscriptionPlans(): Promise<void> {
+  for (const plan of SUBSCRIPTION_PLANS) {
+    await prisma.subscriptionPlan.upsert({
+      where: { tier_billingInterval: { tier: plan.tier, billingInterval: plan.billingInterval } },
+      update: {
+        name: plan.name,
+        price: plan.price,
+        trialDays: plan.trialDays,
+        limits: plan.limits,
+        features: plan.features,
+      },
+      create: {
+        tier: plan.tier,
+        billingInterval: plan.billingInterval,
+        name: plan.name,
+        price: plan.price,
+        currency: "INR",
+        trialDays: plan.trialDays,
+        limits: plan.limits,
+        features: plan.features,
+      },
+    });
+  }
+
+  console.info(`Seeded ${SUBSCRIPTION_PLANS.length} subscription plans.`);
+}
+
 async function main(): Promise<void> {
   const permissionRecords = await Promise.all(
     SYSTEM_PERMISSIONS.map((p) =>
@@ -265,6 +389,7 @@ async function main(): Promise<void> {
   await seedCategories();
   await seedServices();
   await seedLocations();
+  await seedSubscriptionPlans();
 }
 
 main()

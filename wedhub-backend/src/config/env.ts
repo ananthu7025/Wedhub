@@ -21,7 +21,6 @@ const envSchema = z.object({
 
   MEDIA_MAX_IMAGE_SIZE_MB: z.coerce.number().positive().default(10),
   MEDIA_MAX_VIDEO_SIZE_MB: z.coerce.number().positive().default(100),
-  MEDIA_MAX_PORTFOLIO_ITEMS: z.coerce.number().int().positive().default(50),
 
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),

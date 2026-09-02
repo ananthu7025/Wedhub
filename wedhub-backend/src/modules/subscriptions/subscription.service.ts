@@ -1,20 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { createOrder, createRefund } from "../../integrations/payment/razorpay.client";
+import * as entitlementService from "../entitlements/entitlement.service";
 import * as planRepository from "../plans/plan.repository";
 import * as subscriptionRepository from "./subscription.repository";
-
-const GRACE_PERIOD_DAYS = 7; // product.md §28 Scenario E: "grace period can be configured" — env-configurable later if needed
-
-function periodEndFor(interval: "MONTHLY" | "YEARLY", from: Date): Date {
-  const end = new Date(from);
-  if (interval === "MONTHLY") {
-    end.setMonth(end.getMonth() + 1);
-  } else {
-    end.setFullYear(end.getFullYear() + 1);
-  }
-  return end;
-}
 
 async function getOwnedVendorOrThrow(vendorId: string, ownerUserId: string) {
   const vendor = await subscriptionRepository.findVendorOwned(vendorId, ownerUserId);
@@ -106,6 +95,9 @@ export async function initiateUpgrade(
       trialEndsAt,
       couponId,
     });
+    // The vendor may have entitlement-hidden media from an earlier
+    // downgrade — starting a trial regains that capacity immediately.
+    await entitlementService.restoreInactiveMediaToLimits(vendorId, entitlementService.readLimits(plan));
     return { subscription, checkout: null };
   }
 
@@ -136,7 +128,9 @@ export async function initiateUpgrade(
 
 // Vendor cancellation (Scenario F). Default is cancel_at_period_end=true
 // per product.md's explicit recommendation — immediate cancellation must be
-// opted into.
+// opted into. This is also how a vendor downgrades to FREE: there is no
+// separate "downgrade" endpoint — Premium/Pro → Free is simply "cancel,
+// don't renew" — confirmed with the user.
 export async function cancelSubscription(vendorId: string, ownerUserId: string, immediate: boolean) {
   await getOwnedVendorOrThrow(vendorId, ownerUserId);
   const subscription = await subscriptionRepository.findCurrentSubscription(vendorId);
@@ -145,8 +139,15 @@ export async function cancelSubscription(vendorId: string, ownerUserId: string, 
   }
 
   if (immediate) {
-    return subscriptionRepository.cancelImmediately(subscription.id);
+    const cancelled = await subscriptionRepository.cancelImmediately(subscription.id);
+    // Scenario G: immediate cancellation drops the vendor to FREE right now,
+    // not at some future period end — sweep excess media in the same beat.
+    await entitlementService.sweepMediaToLimits(vendorId, entitlementService.FREE_PLAN_DEFAULT_LIMITS);
+    return cancelled;
   }
+  // cancelAtPeriodEnd=true: paid benefits continue until currentPeriodEnd
+  // (Scenario F). The Scenario G sweep happens lazily, the first time
+  // getEffectivePlan() is called after that date elapses.
   return subscriptionRepository.setCancelAtPeriodEnd(subscription.id, true);
 }
 
@@ -191,5 +192,3 @@ export async function createCoupon(input: {
   }
   return subscriptionRepository.createCoupon(input);
 }
-
-export { GRACE_PERIOD_DAYS, periodEndFor };

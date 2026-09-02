@@ -1,8 +1,9 @@
 import { AuthenticationError, ValidationError } from "../../common/errors";
 import { logger } from "../../config/logger";
 import { verifyWebhookSignature } from "../../integrations/payment/razorpay.client";
+import * as entitlementService from "../entitlements/entitlement.service";
+import { periodEndFor } from "../subscriptions/billing-period.util";
 import * as subscriptionRepository from "../subscriptions/subscription.repository";
-import { periodEndFor } from "../subscriptions/subscription.service";
 import type { RazorpayWebhookPayload } from "./webhook.types";
 
 // Razorpay does not send a single top-level event id — the convention is to
@@ -114,6 +115,12 @@ async function handlePaymentCaptured(payload: RazorpayWebhookPayload): Promise<v
       amount: Number(payment.amount),
       currency: payment.currency,
     });
+    // Scenario G's inverse: a successful renewal means the vendor is paid up
+    // again — restore any entitlement-hidden media up to this plan's limits.
+    await entitlementService.restoreInactiveMediaToLimits(
+      payment.subscription.vendorId,
+      entitlementService.readLimits(payment.subscription.plan),
+    );
     return;
   }
 
@@ -131,6 +138,7 @@ async function handlePaymentCaptured(payload: RazorpayWebhookPayload): Promise<v
     amount: Number(payment.amount),
     currency: payment.currency,
   });
+  await entitlementService.restoreInactiveMediaToLimits(subscription.vendorId, entitlementService.readLimits(payment.pendingPlan));
 }
 
 async function handlePaymentFailed(payload: RazorpayWebhookPayload): Promise<void> {

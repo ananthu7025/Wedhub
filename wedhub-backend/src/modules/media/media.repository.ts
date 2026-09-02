@@ -2,12 +2,6 @@ import type { MediaModerationStatus, MediaStatus, MediaType } from "@prisma/clie
 import { prisma } from "../../config/database";
 import { omitUndefined } from "../../common/utils/object.util";
 
-export function countActivePortfolioMedia(vendorId: string) {
-  return prisma.media.count({
-    where: { vendorId, mediaType: "PORTFOLIO", status: { not: "DELETED" } },
-  });
-}
-
 export function createMedia(data: {
   vendorId: string;
   albumId: string | undefined;

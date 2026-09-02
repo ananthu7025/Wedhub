@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { env } from "../../config/env";
-import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
+import { NotFoundError, ConflictError, ValidationError } from "../../common/errors";
 import { getPublicUrl, getSignedUploadUrl, objectExists, deleteObject } from "../../integrations/storage/r2.client";
 import { enqueueMediaProcessing } from "../../jobs/queues/media-processing.queue";
+import * as entitlementService from "../entitlements/entitlement.service";
 import * as mediaRepository from "./media.repository";
 import { IMAGE_MIME_TYPES, VIDEO_MIME_TYPES } from "./media.schema";
 import type { CreateUploadRequestInput, UpdateMediaInput } from "./media.types";
@@ -41,14 +42,11 @@ export async function createUploadRequest(vendorId: string, input: CreateUploadR
     );
   }
 
-  if (input.mediaType === "PORTFOLIO") {
-    const currentCount = await mediaRepository.countActivePortfolioMedia(vendorId);
-    if (currentCount >= env.MEDIA_MAX_PORTFOLIO_ITEMS) {
-      throw new ConflictError(
-        `Portfolio limit reached (${env.MEDIA_MAX_PORTFOLIO_ITEMS} items). Remove existing media before adding more.`,
-      );
-    }
-  }
+  // Portfolio/video capacity is plan-derived, not a global env constant —
+  // architecture.md §26 (Coding Rule 8): entitlements over hardcoded checks.
+  // canVendorUpload throws (403) if the vendor is already at their current
+  // plan's limit for this media type.
+  await entitlementService.canVendorUpload(vendorId, input.mediaType);
 
   const objectKey = `vendors/${vendorId}/${randomUUID()}${extensionFor(input.filename)}`;
 
