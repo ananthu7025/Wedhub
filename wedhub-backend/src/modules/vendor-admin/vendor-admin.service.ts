@@ -122,7 +122,7 @@ export async function listVendors(filter: {
 }
 
 export async function getVendorDetail(id: string) {
-  const vendor = await vendorRepository.findVendorById(id);
+  const vendor = await vendorRepository.findVendorByIdForAdmin(id);
   if (!vendor) {
     throw new NotFoundError("Vendor not found");
   }

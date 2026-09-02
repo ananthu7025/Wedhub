@@ -12,6 +12,15 @@ export const VENDOR_FULL_INCLUDE = {
   city: true,
 } satisfies Prisma.VendorInclude;
 
+// Admin-only — adds the owner account's contact info. Deliberately NOT
+// merged into VENDOR_FULL_INCLUDE, which also backs the public GET
+// /vendors/:slug endpoint; leaking an owner's email/phone there would be a
+// real privacy issue (Frontend Arch Phase 8 research, 2026-09-02).
+export const VENDOR_ADMIN_INCLUDE = {
+  ...VENDOR_FULL_INCLUDE,
+  owner: { select: { id: true, email: true, phone: true } },
+} satisfies Prisma.VendorInclude;
+
 export const VENDOR_COMPLETENESS_INCLUDE = {
   profile: true,
   categories: true,
@@ -27,6 +36,10 @@ export function findVendorByOwnerId(ownerUserId: string) {
 
 export function findVendorById(id: string) {
   return prisma.vendor.findUnique({ where: { id }, include: VENDOR_FULL_INCLUDE });
+}
+
+export function findVendorByIdForAdmin(id: string) {
+  return prisma.vendor.findUnique({ where: { id }, include: VENDOR_ADMIN_INCLUDE });
 }
 
 export function findVendorForCompleteness(id: string) {
