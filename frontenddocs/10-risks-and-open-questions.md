@@ -142,3 +142,12 @@
 - **Recommendation:** Build and verify everything up to the Checkout.js handoff (real order id/amount/currency from a real backend call); render a clear "payments not configured in this environment" state when `NEXT_PUBLIC_RAZORPAY_KEY_ID` is unset rather than a broken button. The PRO plan's real 14-day trial (`trialDays: 14` in seeded plan data) provides genuine coverage of the same `initiateUpgrade` endpoint via a no-payment path, which is the best available substitute for full checkout coverage without real credentials. Revisit with real test-mode credentials if/when available — nothing about the current implementation should need to change, only the verification depth.
 - **Status:** Open — accepted as an environment limitation, not a code gap (per user decision, 2026-09-02).
 - **Related stage files:** [05-stage-vendor-experience.md](05-stage-vendor-experience.md)
+
+## 16. Admin vendor detail had no owner-account field (resolved)
+
+- **Citations:** `wedhub-backend/src/modules/vendors/vendor.repository.ts` (`VENDOR_FULL_INCLUDE` — never joined `owner`, since it also backs the public `GET /vendors/:slug` endpoint), `wedhub-backend/src/modules/vendor-admin/vendor-admin.service.ts` (`getVendorDetail` used the same shared include)
+- **Description:** `wedhub-frontend/admin/vendor-detail.html`'s "Owner account" field (the vendor's registered login email) had no backend data source — `GET /admin/vendors/:id` returned the same `VENDOR_FULL_INCLUDE` shape as every other vendor-detail-returning endpoint, none of which join the owning `User`.
+- **Impact:** The admin vendor-detail page could not show who owns/manages a given vendor listing, a real operational need (e.g. contacting a vendor directly, verifying account provenance).
+- **Recommendation:** Add a small, admin-only include rather than touching the shared one — merging `owner` into `VENDOR_FULL_INCLUDE` directly would have leaked an owner's email/phone on the public vendor profile page, a real privacy issue.
+- **Status:** ✅ Resolved (2026-09-02, during Frontend Arch Phase 8) — added `VENDOR_ADMIN_INCLUDE` (`VENDOR_FULL_INCLUDE` + `owner: { select: { id, email, phone } }`) and a new `findVendorByIdForAdmin()` repository function, used only by the admin `getVendorDetail` service function. Verified via curl that the public `GET /vendors/:slug` endpoint still has no `owner` field after this change.
+- **Related stage files:** [06-stage-admin-platform.md](06-stage-admin-platform.md)

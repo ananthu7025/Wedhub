@@ -18,12 +18,12 @@
 | 5 | Vendor Onboarding & Profile Mgmt | [Stage 3](05-stage-vendor-experience.md) | ✅ Done | 2026-09-02 |
 | 6 | Vendor Leads & Reviews | [Stage 3](05-stage-vendor-experience.md) | ✅ Done | 2026-09-02 |
 | 7 | Vendor Monetization | [Stage 3](05-stage-vendor-experience.md) | ⚠️ Built, Playwright pending | 2026-09-02 |
-| 8 | Admin Core | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
+| 8 | Admin Core | [Stage 4](06-stage-admin-platform.md) | ⚠️ Built, Playwright pending | 2026-09-02 |
 | 9 | Admin Catalog & Moderation | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 10 | Admin Monetization, Governance & Audit | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | ⬜ Not Started (11b blocked on backend Arch Phase 17) | — |
 
-**Overall: 7 / 12 Frontend Arch Phases fully verified complete, +1 built and code-complete pending a combined Playwright pass (Phase 7 — see its entry below for why).** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
+**Overall: 7 / 12 Frontend Arch Phases fully verified complete, +2 built and code-complete pending a combined Playwright pass (Phases 7 and 8 — see their entries below for why).** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
 
 ---
 
@@ -646,3 +646,91 @@ One real bug was caught during this curl verification (not a test-authoring mist
 - The subscription page only surfaces MONTHLY-interval plans in the 3-card grid, matching the mockup's simple layout — YEARLY variants exist in the real seeded plan data (confirmed via `GET /plans`) but a billing-interval toggle wasn't built, since nothing in the mockup calls for one. Revisit if a future pass wants yearly pricing exposed.
 - `phase6-seed-vendor@wedhub.dev` (reused from Phase 6's fixture data) now carries a real TRIALING Pro subscription as of this phase's live curl verification — left in place intentionally as richer fixture data for any future phase needing a non-Free vendor to test against.
 - `npx tsc --noEmit` and `eslint` both pass cleanly on every new/changed file (one real unused-variable warning was caught and fixed during this pass, not left as a lint suppression).
+
+---
+
+## Frontend Arch Phase 8 — Admin Core
+
+### What this unlocks
+
+An admin user (provisioned directly in the database — there is no self-registration path for `Role.ADMIN`) can now log in, see real platform-wide metrics, review and act on pending vendor approvals (approve/reject/suspend/restore/deactivate, all respecting the backend's real status-transition rules), update a vendor's verification level, manually onboard a vendor via invitation, and view/suspend/restore any user account — all backed by real data, with every privileged action producing a real audit-log entry. This is the first admin-facing frontend work in the whole engagement; `(admin)` is a route group inside the same `wedhub-frontend-app` Next.js app (confirmed via `frontenddocs/00-index.md` — there is no separate admin app), and `proxy.ts`/`roleHomeRoute`/`requireRole` from Frontend Arch Phase 1 already had `ADMIN` wired in, needing no changes.
+
+### Backend research findings (one small, justified addition — see below)
+
+- Admin auth is not a separate flow — same `/auth/login`, same JWT shape, same `authenticateMiddleware` + `authorize(Role.ADMIN)` two-middleware pattern used everywhere else in the codebase. `ADMIN` cannot self-register (`registerSchema.role` only allows `END_USER`/`VENDOR`) — confirmed admin accounts are backend-provisioned only, matching a note from Frontend Arch Phase 1.
+- `GET /admin/dashboard` is a real, already-computed aggregate endpoint (`totalUsers`, `newRegistrations` with its real window, `totalVendors`, `activeVendors`, `paidVendors` — ACTIVE-or-TRIALING subscriptions count as "paid" here, a real surprise vs. a naive reading of the mockup — `totalLeads`, `totalEnquiries`, `conversionRate` as a 0-1 fraction, `revenue.total`/`.thisMonth`, `mrr` — ACTIVE-only, YEARLY normalized ÷12). It does not include "recent activity" or "pending approvals" — those are two separate real calls (`GET /admin/audit-logs?limit=5`, `GET /admin/vendors?status=PENDING_APPROVAL&limit=4`), not one combined endpoint, despite the mockup showing them together.
+- `vendor-admin` module's status transitions are a strict, server-enforced allow-list (`transitionStatus()`'s `allowedFromStatuses` per action) — approve/reject only from `PENDING_APPROVAL`, suspend only from `APPROVED`, restore only from `SUSPENDED`, deactivate from any non-terminal status. Every transition plus `setVerification` writes both a `VendorStatusHistory` row and a real `AuditLog` row in one transaction.
+- `admin-users` module is confirmed solid, already-hardened ground — it had a real password-hash-leak bug fixed in it before this phase (an unscoped `prisma.user.update()` was returning `passwordHash` in the API response; now correctly `select`s only safe fields). No role-change endpoint exists — only `status` is admin-mutable.
+- The `Role`/`Permission`/`RolePermission`/`AdminUser` tables (a more granular, per-staff-role RBAC system, distinct from the flat `User.role` enum) exist and are seeded, but are confirmed **100% read-only and unenforced** — `authorize()` gates every route on the coarse `User.role === ADMIN` check alone; nothing in the codebase consults these tables for an actual access-control decision. Deferred entirely to Frontend Arch Phase 10 (read-only visibility only, per the stage doc's existing instruction) — not touched this phase.
+- Several mockup affordances have no real backing data, confirmed via research rather than assumed: vendor list search/Plan-column/Verified-and-Featured-pills, the vendor-detail page's "optional approval notes" and "Save as draft" actions, the vendor-create form's category/city/phone/internal-note fields, and the users page's "Reported" filter and free-text search. All omitted from the real implementation rather than built against nothing — see the stage file's Phase 8 checklist for the specific reasoning behind each.
+- One real, small gap required a backend addition (the only one this phase needed): `GET /admin/vendors/:id` had no way to resolve the vendor's owner account — resolved by adding `VENDOR_ADMIN_INCLUDE` (extends the shared `VENDOR_FULL_INCLUDE` with `owner: { select: { id, email, phone } }`) and a new `findVendorByIdForAdmin()` repository function, used only by the admin service — deliberately not merged into the shared include, which also backs the public vendor-profile endpoint, to avoid leaking an owner's contact info publicly. Verified via curl both that the admin endpoint now returns `owner` and that the public endpoint still doesn't.
+
+Two explicit scope decisions were made with the user before building (both "Recommended"): add the small `owner`-include backend addition rather than omit the field; build the vendor-create form as only the two real fields (business name + invite email) rather than extending the backend to accept the mockup's richer field set.
+
+### Routes implemented
+
+- `(admin)/admin/dashboard` — metric grid, recent activity, pending approvals
+- `(admin)/admin/vendors` — status-filtered list with an actions menu
+- `(admin)/admin/vendors/[id]` — full detail, verification control, approve/reject/suspend/restore/deactivate, status history
+- `(admin)/admin/vendors/create` — admin-initiated vendor creation + invitation
+- `(admin)/admin/users` — status-filtered list with an actions menu
+- `(admin)/admin/users/[id]` — account detail, suspend/restore, linked vendor (if any)
+
+### Components added
+
+- `components/shared/AdminShell.tsx` (section-labeled sidebar, matching the mockup's grouped nav — distinct from `VendorShell`'s flat list) + `AdminLogoutButton.tsx`
+- `components/admin/AuditActivityRow.tsx` — renders one real audit-log entry as human-readable text from its real `action` enum + `before`/`after` JSON, shared between the dashboard's "Recent activity" card and the Frontend Arch Phase 10 audit-log page
+- `lib/auth/require-admin.ts` — purely role-gated (unlike `require-vendor.ts`'s ownership check — confirmed via research that every admin route is role-gated only, nothing to "own")
+- `lib/api/admin.types.ts`, `admin.ts` (server reads), `admin-client.ts` (client writes) — new; `AdminVendor`/`AdminVendorDetail` are standalone types rather than extending `VendorSelf` (Phase 5's self-service shape), since the real scalar field sets genuinely differ (admin responses include `ownerUserId`, `creationSource`, `suspensionReason`, `approvedAt`, `deletedAt`, none of which `VendorSelf` carries)
+- `app/(admin)/admin/vendors/VendorsTable.tsx`, `[id]/VendorDetailBoard.tsx`, `create/CreateVendorForm.tsx`, `app/(admin)/admin/users/UsersTable.tsx`, `[id]/UserDetailBoard.tsx`
+
+### Backend endpoints consumed
+
+`GET /admin/dashboard`, `GET /admin/vendors`, `GET /admin/vendors/:id`, `GET /admin/vendors/:id/status-history`, `POST /admin/vendors`, `POST /admin/vendors/:id/invitations`, `POST /admin/vendors/:id/verify`, `POST /admin/vendors/:id/approve`, `POST /admin/vendors/:id/reject`, `POST /admin/vendors/:id/suspend`, `POST /admin/vendors/:id/restore`, `POST /admin/vendors/:id/deactivate`, `GET /admin/users`, `GET /admin/users/:id`, `POST /admin/users/:id/suspend`, `POST /admin/users/:id/restore`, `GET /admin/audit-logs`.
+
+### Flow
+
+```
+Before writing any frontend code: dispatched a research pass covering
+admin auth, dashboard aggregation, vendor-admin (routes/schema/service —
+including the exact status-transition allow-list), admin-users, and the
+RBAC visibility system, plus a full inventory of all 13 admin mockup
+screens. This surfaced the one real backend gap (owner-account field) and
+several mockup-vs-backend mismatches (search, Plan column, approval
+notes, vendor-create's extra fields, "Reported" users) before any UI was
+built around them — resolved as explicit, user-confirmed scope decisions.
+
+Admin logs in via the existing /login (no separate admin auth) →
+   /admin/dashboard → GET /admin/dashboard + GET /admin/audit-logs?limit=5
+   + GET /admin/vendors?status=PENDING_APPROVAL&limit=4 (parallel) → real
+   metrics, real recent activity, real pending-approval quick-list
+
+/admin/vendors?status=PENDING_APPROVAL → GET /admin/vendors → select a
+   vendor → /admin/vendors/:id → GET /admin/vendors/:id (now includes
+   owner) + GET .../status-history (parallel) → real profile display →
+   "Approve vendor" → POST .../approve (no body) → real VendorStatusHistory
+   + AuditLog rows written transactionally → UI merges the scalar-only
+   response into existing rich state (see "real bug caught" below) →
+   router.refresh() re-fetches the full detail
+
+/admin/vendors/create → business name + optional invite email → POST
+   /admin/vendors (businessName only) → POST .../invitations (invitedEmail
+   only) → real DRAFT vendor + real VendorInvitation row
+
+/admin/users → GET /admin/users → select a user → suspend (real reason
+   required) → POST .../suspend → real AuditLog row → restore → POST
+   .../restore
+```
+
+### Playwright verification
+
+`e2e/phase-08-admin-core.spec.ts` was written (4 tests: dashboard metrics/recent-activity/pending-approvals; a full pending-vendor approve→verify→suspend→restore lifecycle on the detail page plus a separate real create-vendor-and-invite flow; real user suspend/restore reflected without reload) and passes `tsc --noEmit`/`eslint` cleanly, but **has not yet been run** — per the same explicit user instruction that paused Frontend Arch Phase 7's Playwright run, verification for this phase is batched together with the rest of Stage 4 (Frontend Arch Phases 9–10) into one combined pass, run once Stage 4 is fully built rather than after each phase.
+
+In place of a Playwright run, every backend integration point for this phase was independently confirmed via live curl against a freshly-provisioned ADMIN account and real seeded/created vendor and user data: dashboard metrics (including confirming `paidVendors`/`mrr` behave exactly as the TRIALING-vs-ACTIVE distinction implies), a full vendor lifecycle (create → invite → set verification → approve/reject → suspend → restore, each checked against real status-history and audit-log rows), and user suspend/restore.
+
+One real bug was caught during this curl verification (not a test-authoring mistake, and not caught by code review, same category as Phase 7's cancel/undo-cancel finding): **every** admin vendor write endpoint (verify, approve, reject, suspend, restore, deactivate, and the generic `PATCH .../detail`) returns a scalar-only `Vendor` row with zero relations included — confirmed by direct inspection of `vendor-admin.service.ts`'s `transitionStatus()`/`setVerificationLevel()`, both of which call `prisma.vendor.update()` with no `include` at all, unlike `GET /admin/vendors`/`GET /admin/vendors/:id` which use the full `VENDOR_FULL_INCLUDE`/`VENDOR_ADMIN_INCLUDE`. An initial pass typed every write-endpoint response as the rich `AdminVendorDetail` shape and replaced full component state with it directly (`setVendor(result.data)`), which would have silently wiped `profile`/`categories`/`owner` from the detail page's UI immediately after any single admin action (approve, suspend, etc.) — caught before any Playwright run even started, purely from re-reading the actual curl output against the declared types. Fixed by introducing a narrower `AdminVendorScalarOnly` type for every write endpoint's real response shape, and changing every handler to merge (`{ ...prev, ...result.data }`) into existing state rather than replace it.
+
+### Notes
+
+- `phase8-admin-test@wedhub.dev` (a manually-provisioned ADMIN account used for all live curl verification) is **intentionally left in the dev database** as reusable fixture data, same rationale as prior phases' fixtures — it could not be cleaned up via the usual `deleteTestUser` even if desired, since a real `VendorInvitation` row now references it as `invited_by_admin_id` (a foreign-key constraint, not an oversight). All other curl-created throwaway accounts (`phase8-pending-vendor@wedhub.dev`, `phase8-reject-vendor@wedhub.dev`) were deleted after verification.
+- `npx tsc --noEmit` and `eslint` both pass cleanly on every new/changed file across both the frontend and backend.
