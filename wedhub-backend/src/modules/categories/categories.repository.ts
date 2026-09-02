@@ -20,6 +20,13 @@ export function findAllCategories() {
   });
 }
 
+export function findFeaturedCategories() {
+  return prisma.category.findMany({
+    where: { isActive: true, isFeaturedOnHomepage: true },
+    orderBy: { homepageSortOrder: "asc" },
+  });
+}
+
 export function findCategoryBySlug(slug: string) {
   return prisma.category.findUnique({
     where: { slug },
@@ -60,6 +67,10 @@ export interface CategoryUpdateFields {
   description: string | undefined;
   sortOrder: number | undefined;
   isActive: boolean | undefined;
+  imageUrl: string | null | undefined;
+  isFeaturedOnHomepage: boolean | undefined;
+  homepageSortOrder: number | undefined;
+  startingPriceLabel: string | null | undefined;
 }
 
 export function updateCategory(id: string, data: CategoryUpdateFields) {

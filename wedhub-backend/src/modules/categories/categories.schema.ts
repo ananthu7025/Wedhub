@@ -11,6 +11,14 @@ export const updateCategorySchema = z.object({
   description: z.string().max(2000).optional(),
   sortOrder: z.coerce.number().int().optional(),
   isActive: z.boolean().optional(),
+  // Homepage presentation fields — admin-controlled, presentation-only.
+  // imageUrl/startingPriceLabel are nullable (not just optional) so an
+  // admin can explicitly clear a previously-set value, not just leave it
+  // unchanged — same pattern as VendorProfile.logoMediaId/coverMediaId.
+  imageUrl: z.string().url().max(2000).nullable().optional(),
+  isFeaturedOnHomepage: z.boolean().optional(),
+  homepageSortOrder: z.coerce.number().int().optional(),
+  startingPriceLabel: z.string().max(60).nullable().optional(),
 });
 
 const attributeDataType = z.enum(["BOOLEAN", "NUMBER", "TEXT", "SELECT", "MULTI_SELECT"]);

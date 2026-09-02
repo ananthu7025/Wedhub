@@ -11,6 +11,10 @@ export interface UpdateCategoryInput {
   description: string | undefined;
   sortOrder: number | undefined;
   isActive: boolean | undefined;
+  imageUrl: string | null | undefined;
+  isFeaturedOnHomepage: boolean | undefined;
+  homepageSortOrder: number | undefined;
+  startingPriceLabel: string | null | undefined;
 }
 
 export interface CreateAttributeInput {

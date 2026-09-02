@@ -40,8 +40,19 @@ export async function updateCategory(req: Request, res: Response): Promise<void>
     description: body.description,
     sortOrder: body.sortOrder,
     isActive: body.isActive,
+    imageUrl: body.imageUrl,
+    isFeaturedOnHomepage: body.isFeaturedOnHomepage,
+    homepageSortOrder: body.homepageSortOrder,
+    startingPriceLabel: body.startingPriceLabel,
   });
   res.json(successResponse(category));
+}
+
+// Public — backs the homepage category carousel/bento grid with real,
+// admin-curated categories (see categoriesService.listFeaturedCategories).
+export async function listFeaturedCategories(_req: Request, res: Response): Promise<void> {
+  const categories = await categoriesService.listFeaturedCategories();
+  res.json(successResponse(categories));
 }
 
 export async function createAttribute(req: Request, res: Response): Promise<void> {

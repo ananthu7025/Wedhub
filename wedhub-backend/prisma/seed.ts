@@ -116,6 +116,23 @@ const CATEGORY_SERVICES: Record<string, string[]> = {
   "Makeup Artists": ["Bridal Makeup", "Groom Makeup", "Party Makeup", "Trial Session"],
 };
 
+// Homepage carousel/bento-grid curation — same 7 categories the frontend's
+// hardcoded design previously used, now real admin-editable data (see
+// Category.isFeaturedOnHomepage/imageUrl/startingPriceLabel, added
+// 2026-09-03; frontenddocs/10-risks-and-open-questions.md Open Question
+// 21). imageUrl points at the bundled local design assets that ship with
+// wedhub-frontend-app/public/images/capsules/ — an admin can override any
+// of these via the category admin UI at any time.
+const HOMEPAGE_FEATURED_CATEGORIES: Array<{ name: string; imageUrl: string; startingPriceLabel: string; sortOrder: number }> = [
+  { name: "Photography", imageUrl: "/images/capsules/photo.jpg", startingPriceLabel: "₹ 50,000", sortOrder: 0 },
+  { name: "Venues", imageUrl: "/images/capsules/venue.jpg", startingPriceLabel: "₹ 1,50,000", sortOrder: 1 },
+  { name: "Makeup Artists", imageUrl: "/images/capsules/makeup.jpg", startingPriceLabel: "₹ 18,000", sortOrder: 2 },
+  { name: "Mehndi Artists", imageUrl: "/images/capsules/mehndi.jpg", startingPriceLabel: "₹ 8,000", sortOrder: 3 },
+  { name: "Decorators", imageUrl: "/images/capsules/decor.jpg", startingPriceLabel: "₹ 75,000", sortOrder: 4 },
+  { name: "Bridal Wear", imageUrl: "/images/capsules/wear.jpg", startingPriceLabel: "₹ 45,000", sortOrder: 5 },
+  { name: "Caterers", imageUrl: "/images/capsules/catering.jpg", startingPriceLabel: "₹ 800 / plate", sortOrder: 6 },
+];
+
 interface LocationSeed {
   name: string;
   cities?: string[];
@@ -164,6 +181,25 @@ async function seedCategories(): Promise<void> {
   }
 
   console.info(`Seeded ${WEDDING_CATEGORIES.length} categories.`);
+}
+
+async function seedHomepageFeaturedCategories(): Promise<void> {
+  for (const featured of HOMEPAGE_FEATURED_CATEGORIES) {
+    const category = await prisma.category.findUnique({ where: { slug: slugify(featured.name) } });
+    if (!category) continue;
+
+    await prisma.category.update({
+      where: { id: category.id },
+      data: {
+        isFeaturedOnHomepage: true,
+        imageUrl: featured.imageUrl,
+        startingPriceLabel: featured.startingPriceLabel,
+        homepageSortOrder: featured.sortOrder,
+      },
+    });
+  }
+
+  console.info(`Marked ${HOMEPAGE_FEATURED_CATEGORIES.length} categories as featured on homepage.`);
 }
 
 async function seedServices(): Promise<void> {
@@ -387,6 +423,7 @@ async function main(): Promise<void> {
   console.info(`Seeded ${permissionRecords.length} permissions and ${SYSTEM_ROLES.length} roles.`);
 
   await seedCategories();
+  await seedHomepageFeaturedCategories();
   await seedServices();
   await seedLocations();
   await seedSubscriptionPlans();

@@ -19,6 +19,8 @@ export const categoriesRouter = Router();
 // categoriesController.listCategories) — every other caller sees the
 // exact same public, isActive:true-only list as before.
 categoriesRouter.get("/", optionalAuthenticateMiddleware, asyncHandler(categoriesController.listCategories));
+// Must precede /:slug — otherwise "featured" would be parsed as a slug.
+categoriesRouter.get("/featured/homepage", asyncHandler(categoriesController.listFeaturedCategories));
 categoriesRouter.get("/:slug", asyncHandler(categoriesController.getCategory));
 
 categoriesRouter.post(

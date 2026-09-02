@@ -16,6 +16,12 @@ export function listAllCategoriesForAdmin() {
   return categoriesRepository.findAllCategories();
 }
 
+// Backs the public homepage's category carousel/bento grid — real,
+// admin-curated categories instead of a hardcoded frontend array.
+export function listFeaturedCategories() {
+  return categoriesRepository.findFeaturedCategories();
+}
+
 export async function getCategoryBySlug(slug: string) {
   const category = await categoriesRepository.findCategoryBySlug(slug);
   if (!category) {
@@ -66,6 +72,10 @@ export async function updateCategory(id: string, input: UpdateCategoryInput) {
     description: input.description,
     sortOrder: input.sortOrder,
     isActive: input.isActive,
+    imageUrl: input.imageUrl,
+    isFeaturedOnHomepage: input.isFeaturedOnHomepage,
+    homepageSortOrder: input.homepageSortOrder,
+    startingPriceLabel: input.startingPriceLabel,
   });
 }
 

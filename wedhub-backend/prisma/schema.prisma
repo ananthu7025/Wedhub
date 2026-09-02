@@ -240,6 +240,15 @@ model Category {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  // Homepage presentation fields — admin-controlled, presentation-only
+  // (not used by search/matching logic). Added to back the public
+  // homepage's category carousel/bento grid with real, admin-editable
+  // data instead of a hardcoded frontend array.
+  imageUrl             String?  @map("image_url")
+  isFeaturedOnHomepage  Boolean @default(false) @map("is_featured_on_homepage")
+  homepageSortOrder     Int     @default(0) @map("homepage_sort_order")
+  startingPriceLabel    String? @map("starting_price_label")
+
   parent           Category?           @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children         Category[]          @relation("CategoryHierarchy")
   attributes       CategoryAttribute[]
@@ -250,6 +259,7 @@ model Category {
 
   @@index([parentId])
   @@index([isActive])
+  @@index([isFeaturedOnHomepage])
   @@map("categories")
 }
 
@@ -561,6 +571,9 @@ enum MediaType {
   PORTFOLIO
   VIDEO
   REVIEW_PHOTO
+  // Admin-only, platform-owned image (no vendorId/userId) — e.g. the
+  // homepage category carousel's Category.imageUrl. Added 2026-09-03.
+  CATEGORY_IMAGE
 }
 
 enum MediaStatus {
