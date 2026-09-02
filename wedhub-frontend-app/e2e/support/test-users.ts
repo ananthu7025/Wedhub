@@ -40,3 +40,21 @@ export function deleteTestUser(email: string): void {
     { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
   );
 }
+
+/**
+ * Directly flips a vendor to APPROVED via psql — used by specs (Frontend
+ * Arch Phase 6) that need a vendor reachable by the real
+ * POST /enquiries/single-vendor (which requires status === "APPROVED",
+ * see wedhub-backend/src/modules/enquiries/enquiry.service.ts) without
+ * scripting the full admin-review UI, which doesn't exist yet.
+ */
+export function approveVendor(vendorId: string): void {
+  execFileSync(
+    "psql",
+    [
+      "-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev",
+      "-c", `UPDATE vendors SET status = 'APPROVED', approved_at = now() WHERE id = '${vendorId}';`,
+    ],
+    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
+  );
+}

@@ -3,11 +3,11 @@ import { VendorLogoutButton } from "./VendorLogoutButton";
 
 /**
  * Sidebar shell for all (vendor) routes, matching
- * wedhub-frontend/vendor/*.html's .app-shell/.sidebar pattern. Only the
- * Frontend Arch Phase 5 pages (Dashboard/Profile/Portfolio/Packages) link
- * to real routes; Leads/Reviews/Subscription/Analytics/Settings are Phase
- * 6/7 scope — shown in the nav (matching the mockup) but not yet built, so
- * they're rendered as disabled/greyed rather than linking to a 404.
+ * wedhub-frontend/vendor/*.html's .app-shell/.sidebar pattern. Dashboard/
+ * Profile/Portfolio/Packages (Phase 5) and Leads/Reviews (Phase 6) link to
+ * real routes; Subscription/Analytics are Phase 7 scope — shown in the nav
+ * (matching the mockup) but not yet built, so they're rendered as
+ * disabled/greyed rather than linking to a 404.
  */
 
 const navLinks = [
@@ -27,11 +27,19 @@ const navLinks = [
     label: "Packages & Pricing",
     icon: <><path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z" /><circle cx="6.5" cy="6.5" r="1.5" /></>,
   },
+  {
+    href: "/vendor/leads",
+    label: "Leads",
+    icon: <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />,
+  },
+  {
+    href: "/vendor/reviews",
+    label: "Reviews",
+    icon: <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />,
+  },
 ];
 
 const comingSoonLinks = [
-  { label: "Leads", icon: <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /> },
-  { label: "Reviews", icon: <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" /> },
   { label: "Subscription", icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></> },
   { label: "Analytics", icon: <path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3" /> },
 ];

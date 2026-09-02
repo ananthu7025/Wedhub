@@ -16,14 +16,14 @@
 | 3 | Shortlist, Compare & Enquiry | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
 | 4 | Couple Account | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
 | 5 | Vendor Onboarding & Profile Mgmt | [Stage 3](05-stage-vendor-experience.md) | ✅ Done | 2026-09-02 |
-| 6 | Vendor Leads & Reviews | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
+| 6 | Vendor Leads & Reviews | [Stage 3](05-stage-vendor-experience.md) | ✅ Done | 2026-09-02 |
 | 7 | Vendor Monetization | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
 | 8 | Admin Core | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 9 | Admin Catalog & Moderation | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 10 | Admin Monetization, Governance & Audit | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | ⬜ Not Started (11b blocked on backend Arch Phase 17) | — |
 
-**Overall: 6 / 12 Frontend Arch Phases complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
+**Overall: 7 / 12 Frontend Arch Phases complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
 
 ---
 
@@ -477,3 +477,76 @@ Test-authoring mistakes (not app bugs), for the record: an early version of the 
 - **Location section was simplified to a flat city select + service-area checkboxes**, not the mockup's full country→state→city cascading selects — the real seeded location data only has 1 country and 6 cities total, so a 3-level cascade would be speculative UI for data that doesn't exist yet. `AREA`-type locations (the mockup's "Indiranagar" free-text field) have no real backend data at all and were omitted rather than faked with a free-text input with nowhere real to persist to.
 - `phase5-vendor-test@wedhub.dev` (a manually-created VENDOR account used for live curl verification, including setting a real logo via a real R2-uploaded photo) is **intentionally left in the dev database** as reusable fixture data, same rationale as prior phases' fixtures — its vendor listing sits at `PENDING_VERIFICATION` with a real logo, a real package, and a real attached service, useful for Frontend Arch Phase 6/7 work. All Playwright-created test accounts (`e2e-phase5-*@wedhub.dev`) were deleted via `afterEach` per the established convention.
 - `npx tsc --noEmit`, `eslint`, and `next build` all pass cleanly on both the frontend and backend sides.
+
+---
+
+## Frontend Arch Phase 6 — Vendor Leads & Reviews
+
+### What this unlocks
+
+A vendor can now see real enquiries land as leads, work them through the real (non-strict) status lifecycle, leave internal notes, and view and respond to real approved reviews — closing the loop the couple-facing enquiry/review flows (Stage 2) feed into. No backend endpoints needed to be added — both `/leads/*` and `/reviews/:id/respond` already existed with exactly the shapes required, confirmed via a dedicated research pass before writing any frontend code, then re-confirmed field-by-field via live curl calls against a real seeded vendor/lead/review before touching Playwright.
+
+### Backend research findings (no schema/endpoint changes required this phase)
+
+- `leads` and `enquiries` are two ends of one pipeline, not duplicate modules: a couple's `Enquiry` fans out into one `Lead` row per vendor; `Enquiry` itself has no status field by design (status lives per-vendor on `Lead`). Vendors manage `Lead` rows via the `leads` module (`GET/PATCH /leads`, `POST /leads/:id/notes`, `GET /leads/analytics`), which mirrors the `/vendors/me/*` ownership pattern exactly (`getOwnedVendorOrThrow(userId)` in every controller function).
+- There is no allowed-transitions state machine — confirmed by reading `lead.service.ts`'s own comment: product.md's lifecycle is "a suggested progression, not a strict finite-state machine." The only enforced rule is a terminal-status lock (`WON/LOST/SPAM/CLOSED` cannot move to a different status once reached; admin has a separate bypass route, out of scope here).
+- `LeadNote` is a flat, vendor-authored note with no thread/reply-to structure and no couple-visible channel — the mockup's live two-way "Conversation" chat and "follow-up reminder" have zero backing data anywhere (`Lead` has no reminder field), so both were omitted rather than built as fake/local-only UI.
+- The vendor's own review list reuses the exact same public `GET /vendors/:vendorId/reviews` endpoint the couple-facing profile page already calls (APPROVED-only, no vendor-scoped "all statuses" endpoint exists) — so a PENDING/FLAGGED/HIDDEN review is invisible to the vendor too. `vendorResponse`/`vendorRespondedAt` are plain fields on `Review` (one reply per review, overwritten on a second call, no reply history).
+- No star-histogram endpoint exists (confirmed already in [Open Question 9](10-risks-and-open-questions.md#9-no-star-rating-distribution-breakdown-available-anywhere-in-the-backend)) — the reviews page computes its 5/4/3/2/1 breakdown client-side from the fetched (already APPROVED-only) review list.
+- No couple-facing "rating-summary component" existed to reuse from Stage 2, contrary to this stage file's original task-checklist assumption — the couple-facing vendor page's rating markup was always inlined directly in `app/(public)/vendors/[slug]/page.tsx`, never extracted. The Phase 6 reviews page builds its own summary rather than extracting/sharing one, since doing so wasn't necessary to hit real data and was out of this phase's scope.
+
+### Routes implemented
+
+- `(vendor)/vendor/leads` — master-detail leads board
+- `(vendor)/vendor/reviews` — rating summary + review list + respond action
+
+### Components added
+
+- `app/(vendor)/vendor/leads/LeadsBoard.tsx` — status pill-tab filters (built from the real 10-value `LeadStatus` enum), master list, detail panel (contact info, wedding date/budget/guest count, original enquiry message), status-update control (disabled once a lead is terminal), internal notes list + add form
+- `app/(vendor)/vendor/reviews/ReviewsBoard.tsx` — average+per-star summary (computed client-side), filter tabs (All/5★/4★/3★ & below/Awaiting response), review list with photos, inline respond form
+- `lib/api/leads.types.ts`, `leads.ts` (server reads), `leads-client.ts` (client writes) — new, since no leads-module types existed yet
+- `lib/api/reviews.types.ts` (just the respond-body type — the read side deliberately reuses `VendorReview`/`VendorReviewPhoto` from the existing `vendors.types.ts` and `getVendorReviews` from `catalog.ts` rather than duplicating them, since Phase 6 confirmed it's the same endpoint and shape the couple-facing page already uses), `reviews-client.ts` (client write for the respond action)
+- `components/shared/VendorShell.tsx` — Leads and Reviews moved from `comingSoonLinks` to real `navLinks`
+
+### Backend endpoints consumed
+
+`GET /leads`, `GET /leads/:id`, `PATCH /leads/:id/status`, `POST /leads/:id/notes`, `GET /vendors/:vendorId/reviews`, `POST /reviews/:id/respond`.
+
+### Flow
+
+```
+Before writing any frontend code: dispatched a research pass covering both
+the leads and reviews modules in full (schema, routes, service-layer
+transition logic, ownership pattern, response shapes) — see "Backend
+research findings" above. This surfaced that no backend changes were
+needed, unlike Phases 4 and 5, and clarified two real scope cuts (no
+reminder/conversation-thread backing data, no vendor-scoped all-statuses
+review list) before any UI was designed around them.
+
+Couple submits a real enquiry (POST /enquiries/single-vendor, requires an
+   APPROVED vendor) → fans out into a real Lead (status NEW) →
+/vendor/leads → GET /leads → lead appears in the master list → select it →
+   GET /leads/:id → real detail (contact info, enquiry message, notes,
+   status history) → change status via the select + "Update status" →
+   PATCH /leads/:id/status → real contactedAt/respondedAt side effects →
+   add an internal note → POST /leads/:id/notes → appears immediately
+
+Couple's real APPROVED review (verifiedInteraction: true because they have
+   a real Lead with the vendor) → /vendor/reviews → GET
+   /vendors/:vendorId/reviews (same public endpoint the couple-facing page
+   uses) → real average/per-star summary → "Respond" → POST
+   /reviews/:id/respond → real vendorResponse persisted, rendered inline
+   without a reload
+```
+
+### Playwright verification
+
+`e2e/phase-06-vendor-leads-reviews.spec.ts` — 2 tests: a real enquiry submitted via direct API call (mirroring the real submission path, same convention as Phase 5's `registerVendorAndCreateListing` helper) appears as a lead on `/vendor/leads`, and a real status change plus a real internal note both persist and reflect immediately in the UI; a real APPROVED review (seeded via the review-creation endpoint, then approved directly via psql since no admin-moderation UI exists yet — same "reach past a missing admin UI" pattern `deleteTestUser` already established for direct DB access) renders with a correct rating summary and verified-booking badge, and a real reply via the respond action appears without reload. Both vendors used in this spec are flipped to `APPROVED` directly via a new `approveVendor()` psql helper in `e2e/support/test-users.ts`, since `POST /enquiries/single-vendor` 404s on any non-APPROVED vendor and there's no admin-review UI yet to reach that state through the real flow. Run headed, watched, 2/2 passing. Full suite re-run after this phase: 31/31 passing across Phases 1–6, no regressions.
+
+Real friction hit and fixed during this phase (not an app bug, but a real recurring problem): the backend's in-memory rate limiters (login, register, enquiry, review — all previously fixed constants) repeatedly tripped mid-verification, both from manual curl-based seeding and from Playwright's own registration-heavy test accounts, especially when running the full suite back-to-back (the registration limiter tripped on a 31-test run even after the login limiter alone had been raised). Rather than continuing the established "wait it out or restart the backend" workaround, all four limiters were made env-configurable with unchanged production defaults — see [Open Question 14](10-risks-and-open-questions.md#14-dev-only-rate-limit-overrides-added-for-playwright-friction). This also required killing a large number (~50+) of stray leftover `tsx watch` dev-server processes accumulated across the whole engagement's sessions before a clean single-instance restart would take effect — a one-time cleanup, not a recurring step.
+
+### Notes
+
+- Lead notification surfacing (dashboard/nav unread counts for new leads) was scoped out of this phase — no real UI element needed it yet, since the vendor shell's notification bell predates this phase and isn't wired to any module's unread count.
+- `phase6-seed-vendor@wedhub.dev` / `phase6-seed-couple@wedhub.dev` (manually-created accounts used for live curl verification, including one real APPROVED review) are **intentionally left in the dev database** as reusable fixture data, same rationale as prior phases' fixtures. All Playwright-created test accounts (`e2e-phase6-*@wedhub.dev`) were deleted via `afterEach` per the established convention.
+- `npx tsc --noEmit` and `eslint` both pass cleanly on the new/changed files.
