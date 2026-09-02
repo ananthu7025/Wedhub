@@ -5,6 +5,18 @@ import type { ApiResponse } from "./types";
 interface UpdateProfileBody {
   firstName?: string;
   lastName?: string;
+  avatarUrl?: string;
+  bio?: string;
+  // Whole-object replace, not a merge — matches the real backend's
+  // updateProfileSchema (see lib/api/account.types.ts's header comment).
+  preferences?: {
+    notifications: {
+      emailMarketing: boolean;
+      emailTransactional: boolean;
+      smsEnabled: boolean;
+    };
+    preferredCategories: string[];
+  };
 }
 
 export async function updateMyProfile(body: UpdateProfileBody): Promise<ApiResponse<unknown>> {

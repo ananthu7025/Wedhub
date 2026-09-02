@@ -179,6 +179,13 @@ export interface VendorAlbum {
 }
 
 // ---- GET /vendors/:vendorId/reviews ----
+export interface VendorReviewPhoto {
+  id: string;
+  optimizedObjectKey: string | null;
+  thumbnailObjectKey: string | null;
+  originalObjectKey: string;
+}
+
 export interface VendorReview {
   id: string;
   userId: string;
@@ -193,6 +200,7 @@ export interface VendorReview {
   vendorResponse: string | null;
   vendorRespondedAt: string | null;
   createdAt: string;
+  photos: VendorReviewPhoto[];
 }
 
 // ---- GET /featured-listings ----

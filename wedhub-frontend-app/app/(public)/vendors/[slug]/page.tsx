@@ -192,6 +192,18 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                     {review.title && <div className="mb-1 text-sm font-bold">{review.title}</div>}
                     {review.content && <p className="mb-2 text-[13px] leading-relaxed">{review.content}</p>}
                     {review.verifiedInteraction && <Badge variant="green">✓ Verified booking</Badge>}
+                    {review.photos.length > 0 && (
+                      <div className="mt-2.5 flex gap-2">
+                        {review.photos.map((photo) => {
+                          const key = photo.thumbnailObjectKey ?? photo.optimizedObjectKey ?? photo.originalObjectKey;
+                          return (
+                            <div key={photo.id} className="relative h-16 w-16 overflow-hidden rounded-md bg-surface-input">
+                              <Image src={getPublicMediaUrl(key)} alt="" fill className="object-cover" />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     {review.vendorResponse && (
                       <div className="mt-2.5 rounded-md bg-surface-input p-3.5 text-[13px]">
                         <strong className="mb-1 block text-xs">Response from {vendor.businessName}</strong>

@@ -14,7 +14,7 @@
 | 1 | Auth Flows | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 2 | Public Discovery | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
 | 3 | Shortlist, Compare & Enquiry | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
-| 4 | Couple Account | [Stage 2](04-stage-couple-experience.md) | ⬜ Not Started | — |
+| 4 | Couple Account | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
 | 5 | Vendor Onboarding & Profile Mgmt | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
 | 6 | Vendor Leads & Reviews | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
 | 7 | Vendor Monetization | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
@@ -23,7 +23,7 @@
 | 10 | Admin Monetization, Governance & Audit | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | ⬜ Not Started (11b blocked on backend Arch Phase 17) | — |
 
-**Overall: 4 / 12 Frontend Arch Phases complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
+**Overall: 5 / 12 Frontend Arch Phases complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
 
 ---
 
@@ -302,3 +302,88 @@ Test-authoring mistakes (not app bugs), for the record: an early version of the 
 - **A second real, fully-APPROVED Photography vendor was built for this phase** ("Lens & Light Studios", slug `lens-light-studios`) entirely through the real backend API (register → build profile/category/attributes/service/package → submit → verify email → auto-advance → admin-approve — the same real workflow documented in Phase 2's notes), specifically so `/compare`'s same-category, 2+-vendor backend validation had real, distinct data to render (different starting price, years of experience, and `photography_style` attribute value from Frame & Co.). Left in the dev database as reusable fixture data alongside Frame & Co., for the same reasons given in Phase 2's notes.
 - **[Open Question 11](10-risks-and-open-questions.md#11-no-list-my-enquiries-endpoint-exists-for-the-couple-side) newly filed**: no backend endpoint exists to list a couple's own past enquiries — confirmed by reading the entire `enquiries` module, not assumed. This blocks Frontend Arch Phase 4's `(couple)/enquiries` tracker page until resolved (new backend endpoint vs. an explicit "not yet available" state) — a decision to make when Phase 4 is actually reached, not now.
 - Test accounts (`e2e-phase3-*@wedhub.dev`, created fresh per test run) were all deleted via `afterEach`/`afterAll` per the established convention — confirmed via `git status`-adjacent DB check, no leftover clutter beyond the two intentional vendor fixtures.
+
+## Frontend Arch Phase 4 — Couple Account
+
+### What this unlocks
+
+A logged-in couple can now track every enquiry they've sent through its real per-vendor status, write a real review (with real R2-uploaded photos) once a vendor marks a lead WON, see their real notifications, and manage their wedding/account details and notification preferences — the full authenticated couple-account surface product.md's discovery/lead-engine loop depends on.
+
+### Backend additions (required before this phase could be built against real data — see `../docs/11-progress-log.md`'s 2026-09-02 addendum for the full backend-side write-up)
+
+- `GET /enquiries/mine` — couple-scoped, paginated, joins `Enquiry` → fanned-out `Lead[]` → `vendor` summary.
+- `GET /reviews/mine` — couple-scoped, paginated, with vendor summary + attached photos.
+- New `review-media` module (`POST /review-media/upload-requests`, `POST /review-media/:id/confirm`) + `POST /reviews`'s new optional `mediaIds[]` — a parallel, non-vendor-scoped photo-upload path (`Media.vendorId` is now nullable; new `Media.userId`/`reviewId` columns; new `MediaType.REVIEW_PHOTO`), reusing the existing R2 client and media-processing queue/worker unmodified.
+
+All three verified live end-to-end (real R2 upload → real worker processing to `READY` with generated WebP variants → real admin approval → real public visibility on `GET /vendors/:vendorId/reviews`) before any frontend code was written against them — see that commit's own verification trace.
+
+### Routes implemented
+
+- `(couple)/enquiries` — status pill-tabs (All/Awaiting/In conversation/Closed), one card per Lead with a real 4-step status track and a "Write a review" action on WON leads
+- `(couple)/reviews/write` — `?vendor=<slug>`-driven review form: star picker, service selector, text, multi-photo upload
+- `(couple)/notifications` — real unread/read list, click-to-mark-read, mark-all-read
+- `(couple)/account` — wedding details, account details (name editable; phone/email read-only, no backend endpoint updates them post-registration), notification preference toggles, logout, deactivate, delete
+
+### Components added
+
+- `components/shared/LeadStatusTrack.tsx` — maps the real 10-value `LeadStatus` enum onto the mockup's 4-step visual tracker (Sent/Viewed/Responded/Closed), plus a `statusBadge()` helper for the outcome badge
+- `app/(couple)/enquiries/page.tsx` (Server Component, no separate client file needed — pill-tab filtering is URL-driven like the search page)
+- `app/(couple)/reviews/write/page.tsx` + `ReviewForm.tsx` (Client Component: star picker, photo selection/preview/removal, upload-then-submit flow)
+- `app/(couple)/notifications/page.tsx` + `NotificationsList.tsx` (Client Component: optimistic read-state updates)
+- `app/(couple)/account/page.tsx` + `AccountForms.tsx` (4 independent Client Component forms: `WeddingDetailsForm`, `AccountDetailsForm`, `NotificationPreferencesForm`, `AccountActions`)
+- `lib/api/account.types.ts`, `lib/api/account.ts` (server-only reads), `lib/api/account-client.ts` (client-side writes), `lib/media/upload.ts` (`uploadReviewPhoto()` — presigned-PUT-then-confirm, mirrors the pattern proven in Phase 2's vendor-portfolio upload)
+- `components/shared/CoupleShell.tsx` extended with Enquiries/Notifications/Profile nav + a notification bell
+
+### Backend endpoints consumed
+
+`GET /enquiries/mine`, `GET /reviews/mine`, `POST /reviews` (with `mediaIds`), `POST /review-media/upload-requests`, `POST /review-media/:id/confirm`, `GET /notifications/me`, `POST /notifications/me/:id/read`, `POST /notifications/me/read-all`, `GET /users/me`, `PATCH /users/me`, `PUT /users/me/wedding-profile`, `POST /users/me/deactivate`, `DELETE /users/me`.
+
+### Flow
+
+```
+Before writing any frontend code: dispatched a research pass that read
+wedhub-backend source directly across enquiries/, reviews/, notifications/,
+users/, and media/ — confirmed 3 real gaps (no couple-scoped enquiry list,
+no couple-scoped review list, no review-photo upload path), presented to
+the user as a scope decision (add the backend endpoints vs. ship reduced
+scope), user chose to add all 3 endpoints before building the frontend.
+
+/enquiries → GET /enquiries/mine → one card per Lead (not per Enquiry — a
+   multi-vendor enquiry fans into independent per-vendor conversations) →
+   LeadStatusTrack maps real LeadStatus onto the mockup's 4-step visual
+
+WON lead → "Write a review" → /reviews/write?vendor=<slug> → GET
+   /vendors/:slug (reused from Phase 2, gives real vendor.id + services[])
+   → ReviewForm: star rating (required) → optional service → optional text
+   → optional photos (each uploaded via POST /review-media/upload-requests
+   → real PUT to R2 → POST /review-media/:id/confirm) → POST /reviews with
+   collected mediaIds → real PENDING review, verifiedInteraction computed
+   automatically server-side from the real Lead history
+
+/notifications → GET /notifications/me → click a row or "Mark all as read"
+   → POST /notifications/me/:id/read or /read-all → optimistic UI, real
+   confirmation
+
+/account → GET /users/me → 4 independent save actions, each hitting its own
+   real endpoint (wedding-profile PUT is whole-resource upsert; profile
+   PATCH's preferences field is whole-object-replace, not a merge — matched
+   in the frontend's persist() calls to avoid accidentally dropping other
+   preference fields on a single toggle)
+```
+
+### Playwright verification
+
+`e2e/phase-04-couple-account.spec.ts` — 7 tests: enquiry tracker shows a real empty state then a real enquiry sent via the actual UI form; a lead moved to WON via the real vendor-side `PATCH /leads/:id/status` shows "Won · Booked" and a working "Write a review" link; a full review submission (5 stars + text) round-trips to `GET /reviews/mine`; the real "Welcome to WedHub" verification-email notification appears and marking it read updates the unread count live; wedding-details and account-details forms both save to their real endpoints and persist correctly across a full page reload; a notification-preference toggle persists across reload; logout clears the session and blocks re-entry to `/account`. Run headed, watched, 7/7 passing on the final clean run — 5 passed together in one run, the remaining 2 (which independently make extra login calls) confirmed passing on an isolated re-run after a rate-limiter reset, same documented pattern as Phase 3. Also re-verified Phases 1 (6/6), 2 (7/7), and 3 (6/6) individually — no regressions.
+
+A genuinely pre-existing infrastructure issue was found and fixed as a pragmatic, dev-only, user-approved action (not an application code bug in the app built this phase — the review-photo pipeline itself worked correctly end-to-end on the first real attempt): the notification-delivery BullMQ queue had ~87 stale jobs accumulated from earlier phases' test-account cleanup cycles, at least one referencing a since-deleted `Notification` row — this crashed the worker on startup (`P2025`) every time, blocking review-photo processing verification. Cleared via a direct Redis `DEL` of the stale queue keys (approved by the user before acting, since it's queue-state deletion) rather than papering over it with a code change.
+
+Test-authoring mistakes (not app bugs), for the record: an early Playwright locator for "Awaiting response" matched both the pill-tab button and the status badge (fixed with `{ exact: true }`); an early "save both forms" test used `.nth(1)` for the second "Save changes" button, which broke once the first button's own text changed to "Saved ✓" (shrinking the matched set) — fixed by scoping locators to each `<section>` via its heading instead of positional indexing.
+
+### Notes
+
+- **Two real, systemic product gaps found and filed as new Open Questions, not silently worked around**: [Open Question 11](10-risks-and-open-questions.md#11-no-list-my-enquiries-endpoint-exists-for-the-couple-side) (now resolved via this phase's backend addition) and [Open Question 12](10-risks-and-open-questions.md#12-no-notification-ever-tells-a-couple-a-vendor-responded-to-their-enquiry) (still open — confirmed via an exhaustive search of all 9 `notify()` call sites in the codebase that literally no event ever notifies a couple about vendor-side activity, including a lead moving to WON. The notifications page itself is correctly built and fully functional; it just has nothing real to show for that specific, most-anticipated scenario yet. Left open rather than fixed, since it's new backend business logic in `leads/`, not the small mechanical read-endpoint additions this phase's other 2 gaps needed).
+- **The Phase 2 vendor test account's password had to be reset directly via psql** (`UPDATE users SET password_hash = ...`) before this phase's Playwright spec could log in as the vendor to move a lead to WON — the original password was never written down anywhere readable in this project's docs. Pragmatic, dev-only, reversible; documented inline in the spec file itself so it isn't rediscovered as a mystery later.
+- `phase4-couple-test@wedhub.dev` (a manually-created account used for live curl verification before any Playwright was written) and its real enquiry/review/photo against Frame & Co. Photography are **intentionally left in the dev database** as reusable fixture data, same rationale as Phase 2/3's fixtures. All Playwright-created test accounts (`e2e-phase4-*@wedhub.dev`) were deleted via `afterEach` per the established convention.
+- `npx tsc --noEmit`, `eslint`, and `next build` all pass cleanly on both the frontend and backend sides.
+
+**This completes Stage 2 (Couple Experience) — Frontend Arch Phases 2, 3, and 4 are all done.**
