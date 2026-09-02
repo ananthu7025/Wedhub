@@ -8,6 +8,7 @@ import { Role } from "../../common/enums/roles.enum";
 import * as reviewController from "./review.controller";
 import {
   createReviewSchema,
+  listMyReviewsQuerySchema,
   listReviewsAdminQuerySchema,
   listVendorReviewsQuerySchema,
   moderateReviewSchema,
@@ -23,6 +24,17 @@ reviewRouter.post(
   reviewRateLimiter,
   validateBody(createReviewSchema),
   asyncHandler(reviewController.createReview),
+);
+
+// Couple-scoped "my reviews" list (Frontend Arch Phase 4) — registered
+// before /:id-shaped routes so Express never treats "mine" as an :id value
+// (no collision today since the /:id routes below are all POST, but this
+// keeps the ordering correct if a GET /:id is ever added to this router).
+reviewRouter.get(
+  "/mine",
+  authenticateMiddleware,
+  validateQuery(listMyReviewsQuerySchema),
+  asyncHandler(reviewController.listMyReviews),
 );
 
 reviewRouter.post(

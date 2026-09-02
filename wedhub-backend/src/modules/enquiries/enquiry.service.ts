@@ -224,3 +224,10 @@ export async function createMultiVendorEnquiry(
 
   return { enquiry, leads };
 }
+
+export function listMyEnquiries(userId: string, page: number, limit: number) {
+  return Promise.all([
+    enquiryRepository.listMyEnquiries(userId, page, limit),
+    enquiryRepository.countMyEnquiries(userId),
+  ]);
+}

@@ -41,6 +41,18 @@
 
 **Paused here, 2026-09-02, by user decision:** the backend build-out is deliberately pausing before Arch Phase 17 to wire up the frontend against everything shipped so far (Arch Phases 0–16 cover the full couple/vendor-facing product surface — auth, vendors, media, search, shortlists, leads, reviews, subscriptions, entitlements, featured listings, notifications, Telegram, and admin). Arch Phase 17 (CMS & SEO Backend) is still full MVP scope per `02-mvp-cut-line.md` and remains the next Arch Phase to resume with — this is a sequencing choice to get real frontend-integration signal before adding more backend surface, not a scope change. Arch Phases 18–25 stay post-MVP except for the baseline security/testing carve-out already noted in `02-mvp-cut-line.md`.
 
+### Addendum, 2026-09-02 — 3 small endpoints added during Frontend Arch Phase 4 integration (not a new Arch Phase)
+
+While pausing on Arch Phase 17, Frontend Arch Phase 4 (Couple Account) research found 3 real gaps blocking the couple-facing enquiry tracker and review flow, none requiring a new Arch Phase — small, additive extensions to already-shipped modules:
+
+- **`GET /enquiries/mine`** (`modules/enquiries/`) — couple-scoped enquiry list, paginated, joining each `Enquiry` to its fanned-out `Lead[]` (with `vendor` summary). `Enquiry.userId` was already populated for authenticated submitters (Arch Phase 9) and well-indexed; this was purely a missing read endpoint, no schema change.
+- **`GET /reviews/mine`** (`modules/reviews/`) — couple-scoped "my reviews" list, paginated, with vendor summary + attached photos. No schema change.
+- **Review photos** — new `review-media` module (parallel to `modules/media/`, not a retrofit of it — that module is deeply vendor-scoped via `getOwnedVendorOrThrow`/`entitlementService.canVendorUpload`/a required `Media.vendorId`, none of which fit a couple uploading a review photo). Schema change: `Media.vendorId` is now nullable, with new nullable `Media.userId`/`Media.reviewId` columns and a new `MediaType.REVIEW_PHOTO` value (migration `20260902151801_add_review_photos_media`). Reuses the existing R2 client and media-processing queue/worker unmodified (both are already generic, keyed only by `mediaId`). `POST /review-media/upload-requests` + `POST /review-media/:id/confirm` mirror the vendor media flow's shape; `POST /reviews` now accepts an optional `mediaIds[]` (max 6) to atomically attach already-uploaded, owned, unattached photos to the new review.
+
+All three verified live end-to-end against the real dev DB/Redis/R2 (see `../frontenddocs/11-progress-log.md`'s Frontend Arch Phase 4 entry for the full verification trace) — a real enquiry → `GET /enquiries/mine` round-trip, a real review with a real R2-uploaded photo processed through the actual worker to `READY` with generated WebP variants, then approved and confirmed visible on the public `GET /vendors/:vendorId/reviews`. One unrelated pre-existing bug surfaced and fixed along the way: the notification-delivery BullMQ queue had ~87 stale jobs accumulated from earlier test-cleanup cycles, at least one referencing a since-deleted `Notification` row, which crashed the worker on startup (`P2025`) — cleared as dev-only queue state, not an application code bug.
+
+`npx tsc --noEmit` and `npm run build` both pass cleanly. No test suite exists yet in this codebase (consistent with every prior phase).
+
 ---
 
 ## How each phase entry is written (template — copy this block per phase when it ships)

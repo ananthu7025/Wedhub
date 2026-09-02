@@ -1,7 +1,15 @@
 import type { Request, Response } from "express";
-import { successResponse } from "../../common/utils/api-response.util";
+import { paginatedResponse, successResponse } from "../../common/utils/api-response.util";
+import { AuthenticationError } from "../../common/errors";
 import * as enquiryService from "./enquiry.service";
-import type { CreateMultiVendorEnquiryBody, CreateSingleVendorEnquiryBody } from "./enquiry.schema";
+import type { CreateMultiVendorEnquiryBody, CreateSingleVendorEnquiryBody, ListMyEnquiriesQuery } from "./enquiry.schema";
+
+function requireUserId(req: Request): string {
+  if (!req.user) {
+    throw new AuthenticationError();
+  }
+  return req.user.id;
+}
 
 export async function createSingleVendorEnquiry(req: Request, res: Response): Promise<void> {
   const body = req.body as CreateSingleVendorEnquiryBody;
@@ -19,6 +27,20 @@ export async function createSingleVendorEnquiry(req: Request, res: Response): Pr
     message: body.message,
   });
   res.status(201).json(successResponse(result));
+}
+
+export async function listMyEnquiries(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const query = req.validatedQuery as ListMyEnquiriesQuery;
+  const [enquiries, total] = await enquiryService.listMyEnquiries(userId, query.page, query.limit);
+  res.json(
+    paginatedResponse(enquiries, {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.ceil(total / query.limit),
+    }),
+  );
 }
 
 export async function createMultiVendorEnquiry(req: Request, res: Response): Promise<void> {

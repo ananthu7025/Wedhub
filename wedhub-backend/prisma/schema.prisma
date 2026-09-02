@@ -60,6 +60,7 @@ model User {
   notifications            Notification[]
   notificationPreferences  NotificationPreference[]
   telegramUser             TelegramUser?
+  uploadedMedia            Media[]                  @relation("MediaUploader")
 
   @@index([role])
   @@index([status])
@@ -559,6 +560,7 @@ enum MediaType {
   COVER
   PORTFOLIO
   VIDEO
+  REVIEW_PHOTO
 }
 
 enum MediaStatus {
@@ -585,7 +587,14 @@ enum AlbumVisibility {
 
 model Media {
   id                 String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId           String                @map("vendor_id") @db.Uuid
+  // Nullable: a REVIEW_PHOTO is owned by the reviewing user (userId +
+  // reviewId), not a vendor — every other mediaType still requires vendorId,
+  // enforced at the application layer (media.service.ts /
+  // review-media.service.ts), not the DB, since Prisma has no portable
+  // conditional-required-column constraint.
+  vendorId           String?               @map("vendor_id") @db.Uuid
+  userId             String?               @map("user_id") @db.Uuid
+  reviewId           String?               @map("review_id") @db.Uuid
   albumId            String?               @map("album_id") @db.Uuid
   mediaType          MediaType             @map("media_type")
   storageProvider    String                @default("cloudflare_r2") @map("storage_provider")
@@ -605,7 +614,9 @@ model Media {
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
 
-  vendor              Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendor              Vendor?         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  uploader            User?           @relation("MediaUploader", fields: [userId], references: [id], onDelete: Cascade)
+  review              Review?         @relation("ReviewPhotos", fields: [reviewId], references: [id], onDelete: Cascade)
   album               Album?          @relation("AlbumMedia", fields: [albumId], references: [id], onDelete: SetNull)
   userProfiles        UserProfile[]   @relation("UserProfileAvatar")
   vendorProfileLogos  VendorProfile[] @relation("VendorProfileLogo")
@@ -613,6 +624,8 @@ model Media {
   albumCoverFor       Album[]         @relation("AlbumCover")
 
   @@index([vendorId])
+  @@index([userId])
+  @@index([reviewId])
   @@index([albumId])
   @@index([status])
   @@map("media")
@@ -877,6 +890,7 @@ model Review {
   vendor  Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   service Service?       @relation(fields: [serviceId], references: [id], onDelete: SetNull)
   reports ReviewReport[]
+  photos  Media[]        @relation("ReviewPhotos")
 
   @@unique([userId, vendorId])
   @@index([vendorId, status])

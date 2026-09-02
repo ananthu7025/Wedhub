@@ -1,6 +1,7 @@
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
 import * as notificationService from "../notifications/notification.service";
+import { reviewMediaService } from "../review-media";
 import * as reviewRepository from "./review.repository";
 
 async function assertVendorIsPublic(vendorId: string) {
@@ -20,6 +21,7 @@ export async function createReview(
     title: string | undefined;
     content: string | undefined;
     eventDate: Date | undefined;
+    mediaIds: string[] | undefined;
   },
 ) {
   const vendor = await assertVendorIsPublic(input.vendorId);
@@ -52,6 +54,10 @@ export async function createReview(
     verifiedInteraction: !!hasInteraction,
   });
 
+  if (input.mediaIds && input.mediaIds.length > 0) {
+    await reviewMediaService.attachPhotosToReview(input.mediaIds, review.id, userId);
+  }
+
   await logAnalyticsEvent({
     userId,
     eventType: "review_created",
@@ -79,6 +85,13 @@ export function listVendorReviews(vendorId: string, page: number, limit: number)
   return Promise.all([
     reviewRepository.listVendorReviews(vendorId, page, limit),
     reviewRepository.countVendorReviews(vendorId),
+  ]);
+}
+
+export function listMyReviews(userId: string, page: number, limit: number) {
+  return Promise.all([
+    reviewRepository.listMyReviews(userId, page, limit),
+    reviewRepository.countMyReviews(userId),
   ]);
 }
 

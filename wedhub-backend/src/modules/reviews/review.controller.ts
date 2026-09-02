@@ -4,6 +4,7 @@ import { AuthenticationError } from "../../common/errors";
 import * as reviewService from "./review.service";
 import type {
   CreateReviewBody,
+  ListMyReviewsQuery,
   ListReviewsAdminQuery,
   ListVendorReviewsQuery,
   ModerateReviewBody,
@@ -28,6 +29,7 @@ export async function createReview(req: Request, res: Response): Promise<void> {
     title: body.title,
     content: body.content,
     eventDate: body.eventDate,
+    mediaIds: body.mediaIds,
   });
   res.status(201).json(successResponse(review));
 }
@@ -39,6 +41,20 @@ export async function listVendorReviews(req: Request, res: Response): Promise<vo
     query.page,
     query.limit,
   );
+  res.json(
+    paginatedResponse(reviews, {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.ceil(total / query.limit),
+    }),
+  );
+}
+
+export async function listMyReviews(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const query = req.validatedQuery as ListMyReviewsQuery;
+  const [reviews, total] = await reviewService.listMyReviews(userId, query.page, query.limit);
   res.json(
     paginatedResponse(reviews, {
       page: query.page,

@@ -7,6 +7,10 @@ export const createReviewSchema = z.object({
   title: z.string().trim().max(200).optional(),
   content: z.string().trim().max(3000).optional(),
   eventDate: z.coerce.date().optional(),
+  // Ids from POST /review-media/upload-requests, already uploaded+confirmed
+  // and owned by the caller — see review-media module. Optional: a review
+  // with no photos is the common case.
+  mediaIds: z.array(z.string().uuid()).max(6).optional(),
 });
 
 export const respondToReviewSchema = z.object({
@@ -32,9 +36,15 @@ export const listReviewsAdminQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+export const listMyReviewsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
 export type CreateReviewBody = z.infer<typeof createReviewSchema>;
 export type RespondToReviewBody = z.infer<typeof respondToReviewSchema>;
 export type ReportReviewBody = z.infer<typeof reportReviewSchema>;
 export type ModerateReviewBody = z.infer<typeof moderateReviewSchema>;
 export type ListVendorReviewsQuery = z.infer<typeof listVendorReviewsQuerySchema>;
 export type ListReviewsAdminQuery = z.infer<typeof listReviewsAdminQuerySchema>;
+export type ListMyReviewsQuery = z.infer<typeof listMyReviewsQuerySchema>;

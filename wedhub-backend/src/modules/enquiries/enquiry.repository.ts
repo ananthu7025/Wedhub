@@ -92,3 +92,30 @@ export function findVendorOwnersByIds(vendorIds: string[]) {
     select: { id: true, ownerUserId: true, businessName: true },
   });
 }
+
+// Couple-scoped enquiry tracker (Frontend Arch Phase 4) — Enquiry itself has
+// no status field by design (see the model comment in schema.prisma), so the
+// couple's view of "what happened" is each Enquiry's fanned-out Lead rows,
+// each carrying its own independent LeadStatus.
+const MY_ENQUIRY_INCLUDE = {
+  leads: {
+    include: {
+      vendor: { select: { id: true, businessName: true, slug: true } },
+    },
+    orderBy: { createdAt: "asc" as const },
+  },
+} as const;
+
+export function listMyEnquiries(userId: string, page: number, limit: number) {
+  return prisma.enquiry.findMany({
+    where: { userId },
+    include: MY_ENQUIRY_INCLUDE,
+    orderBy: { createdAt: "desc" },
+    skip: (page - 1) * limit,
+    take: limit,
+  });
+}
+
+export function countMyEnquiries(userId: string) {
+  return prisma.enquiry.count({ where: { userId } });
+}

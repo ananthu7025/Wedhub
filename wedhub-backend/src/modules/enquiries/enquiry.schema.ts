@@ -27,5 +27,11 @@ export const createMultiVendorEnquirySchema = z.object({
   ...baseFields,
 });
 
+export const listMyEnquiriesQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
 export type CreateSingleVendorEnquiryBody = z.infer<typeof createSingleVendorEnquirySchema>;
 export type CreateMultiVendorEnquiryBody = z.infer<typeof createMultiVendorEnquirySchema>;
+export type ListMyEnquiriesQuery = z.infer<typeof listMyEnquiriesQuerySchema>;

@@ -44,13 +44,21 @@ export function createReview(data: {
   });
 }
 
+// READY-only, same principle as vendor portfolio media (Frontend Arch Phase
+// 2's album handling) — a photo mid-upload/processing has no usable object
+// key yet and shouldn't be surfaced.
+const REVIEW_PHOTOS_INCLUDE = {
+  photos: { where: { status: "READY" as const }, orderBy: { sortOrder: "asc" as const } },
+} as const;
+
 export function findReviewById(id: string) {
-  return prisma.review.findUnique({ where: { id }, include: { reports: true } });
+  return prisma.review.findUnique({ where: { id }, include: { reports: true, ...REVIEW_PHOTOS_INCLUDE } });
 }
 
 export function listVendorReviews(vendorId: string, page: number, limit: number) {
   return prisma.review.findMany({
     where: { vendorId, status: "APPROVED" },
+    include: REVIEW_PHOTOS_INCLUDE,
     orderBy: { createdAt: "desc" },
     skip: (page - 1) * limit,
     take: limit,
@@ -59,6 +67,20 @@ export function listVendorReviews(vendorId: string, page: number, limit: number)
 
 export function countVendorReviews(vendorId: string) {
   return prisma.review.count({ where: { vendorId, status: "APPROVED" } });
+}
+
+export function listMyReviews(userId: string, page: number, limit: number) {
+  return prisma.review.findMany({
+    where: { userId },
+    include: { vendor: { select: { id: true, businessName: true, slug: true } }, ...REVIEW_PHOTOS_INCLUDE },
+    orderBy: { createdAt: "desc" },
+    skip: (page - 1) * limit,
+    take: limit,
+  });
+}
+
+export function countMyReviews(userId: string) {
+  return prisma.review.count({ where: { userId } });
 }
 
 export function addVendorResponse(id: string, vendorResponse: string) {

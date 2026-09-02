@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { asyncHandler } from "../../common/utils/async-handler.util";
-import { validateBody } from "../../common/middleware/validate.middleware";
-import { optionalAuthenticateMiddleware } from "../../common/middleware/authenticate.middleware";
+import { validateBody, validateQuery } from "../../common/middleware/validate.middleware";
+import { authenticateMiddleware, optionalAuthenticateMiddleware } from "../../common/middleware/authenticate.middleware";
 import { enquiryRateLimiter } from "../../common/middleware/rate-limit.middleware";
 import * as enquiryController from "./enquiry.controller";
-import { createMultiVendorEnquirySchema, createSingleVendorEnquirySchema } from "./enquiry.schema";
+import { createMultiVendorEnquirySchema, createSingleVendorEnquirySchema, listMyEnquiriesQuerySchema } from "./enquiry.schema";
 
 export const enquiryRouter = Router();
 
@@ -25,4 +25,15 @@ enquiryRouter.post(
   "/multi-vendor",
   validateBody(createMultiVendorEnquirySchema),
   asyncHandler(enquiryController.createMultiVendorEnquiry),
+);
+
+// Couple-scoped enquiry tracker (Frontend Arch Phase 4) — unlike the two
+// POST routes above, this genuinely requires a real account (there is no
+// anonymous "my enquiries" concept), so it layers the strictly-stronger
+// authenticateMiddleware on top of the router-wide optional one.
+enquiryRouter.get(
+  "/mine",
+  authenticateMiddleware,
+  validateQuery(listMyEnquiriesQuerySchema),
+  asyncHandler(enquiryController.listMyEnquiries),
 );
