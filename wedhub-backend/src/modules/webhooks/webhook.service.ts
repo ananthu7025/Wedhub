@@ -2,6 +2,7 @@ import { AuthenticationError, ValidationError } from "../../common/errors";
 import { logger } from "../../config/logger";
 import { verifyWebhookSignature } from "../../integrations/payment/razorpay.client";
 import * as entitlementService from "../entitlements/entitlement.service";
+import * as notificationService from "../notifications/notification.service";
 import { periodEndFor } from "../subscriptions/billing-period.util";
 import * as subscriptionRepository from "../subscriptions/subscription.repository";
 import type { RazorpayWebhookPayload } from "./webhook.types";
@@ -139,6 +140,21 @@ async function handlePaymentCaptured(payload: RazorpayWebhookPayload): Promise<v
     currency: payment.currency,
   });
   await entitlementService.restoreInactiveMediaToLimits(subscription.vendorId, entitlementService.readLimits(payment.pendingPlan));
+
+  // Scenario B step 9 ("feature entitlements updated") + product.md §45's
+  // SUBSCRIPTION_ACTIVATED event — first-time activation only, not renewal
+  // (renewal isn't "newly activated", see the renewal branch above which
+  // deliberately doesn't fire this).
+  const vendor = await subscriptionRepository.findVendorOwner(subscription.vendorId);
+  if (vendor?.ownerUserId) {
+    await notificationService.notify({
+      userId: vendor.ownerUserId,
+      eventType: "SUBSCRIPTION_ACTIVATED",
+      data: { planName: payment.pendingPlan.name },
+      relatedEntityType: "subscription",
+      relatedEntityId: subscription.id,
+    });
+  }
 }
 
 async function handlePaymentFailed(payload: RazorpayWebhookPayload): Promise<void> {
@@ -162,6 +178,23 @@ async function handlePaymentFailed(payload: RazorpayWebhookPayload): Promise<voi
   // subscription.service's GRACE_PERIOD_DAYS), not inline here.
   if (payment.subscriptionId) {
     await subscriptionRepository.markPastDue(payment.subscriptionId);
+  }
+
+  // product.md §45's PAYMENT_FAILED fires either way — confirmed with the
+  // user: a vendor whose first checkout attempt was declined deserves to
+  // know why they're still on FREE, not just a renewal-failure vendor who
+  // at least sees PAST_DUE in their own dashboard.
+  const vendorId = payment.subscription?.vendorId ?? payment.pendingVendorId;
+  if (vendorId) {
+    const vendor = await subscriptionRepository.findVendorOwner(vendorId);
+    if (vendor?.ownerUserId) {
+      await notificationService.notify({
+        userId: vendor.ownerUserId,
+        eventType: "PAYMENT_FAILED",
+        relatedEntityType: "payment",
+        relatedEntityId: payment.id,
+      });
+    }
   }
 }
 

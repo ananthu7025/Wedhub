@@ -1,6 +1,7 @@
 import { logger } from "../../config/logger";
 import { AuthenticationError, ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { Role } from "../../common/enums/roles.enum";
+import * as notificationService from "../notifications/notification.service";
 import { comparePassword, hashPassword } from "../../common/utils/password.util";
 import {
   generateOpaqueToken,
@@ -77,11 +78,11 @@ export async function register(
     expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
   });
 
-  // TODO(Arch Phase 14): replace with real email delivery via the notification service.
-  logger.info(
-    { userId: user.id, verificationToken },
-    "Email verification link (stubbed — no email delivery yet)",
-  );
+  await notificationService.notify({
+    userId: user.id,
+    eventType: "VERIFICATION",
+    data: { token: verificationToken },
+  });
 
   return { user: toAuthenticatedUserView(user) };
 }
@@ -215,8 +216,11 @@ export async function forgotPassword(email: string): Promise<void> {
     expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
   });
 
-  // TODO(Arch Phase 14): replace with real email delivery via the notification service.
-  logger.info({ userId: user.id, resetToken }, "Password reset link (stubbed — no email delivery yet)");
+  await notificationService.notify({
+    userId: user.id,
+    eventType: "PASSWORD_RESET",
+    data: { token: resetToken },
+  });
 }
 
 export async function resetPassword(presentedToken: string, newPassword: string): Promise<void> {

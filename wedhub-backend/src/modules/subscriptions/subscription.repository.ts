@@ -20,6 +20,14 @@ export function findVendorOwned(vendorId: string, ownerUserId: string) {
   return prisma.vendor.findFirst({ where: { id: vendorId, ownerUserId }, select: { id: true } });
 }
 
+// Notification recipient lookup — an ACTIVE/TRIALING/PAST_DUE subscription
+// always has a real vendorId; this resolves that vendor's owning user (may
+// be null for the same reason as elsewhere: an admin-created, unclaimed
+// vendor genuinely has no one to notify yet).
+export function findVendorOwner(vendorId: string) {
+  return prisma.vendor.findUnique({ where: { id: vendorId }, select: { ownerUserId: true, businessName: true } });
+}
+
 export function createSubscription(data: {
   vendorId: string;
   planId: string;

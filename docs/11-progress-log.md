@@ -24,7 +24,7 @@
 | 11 | Subscription & Billing Foundation | [Stage 5](07-stage-monetization.md) | ✅ Done | 2026-09-02 |
 | 12 | Entitlement Enforcement | [Stage 5](07-stage-monetization.md) | ✅ Done | 2026-09-02 |
 | 13 | Featured Listings & Promotions | [Stage 5](07-stage-monetization.md) | ✅ Done | 2026-09-02 |
-| 14 | Notifications | [Stage 6](08-stage-telegram-and-admin.md) | ⬜ Not Started | — |
+| 14 | Notifications | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
 | 15 | Telegram Bot MVP | [Stage 6](08-stage-telegram-and-admin.md) | ⬜ Not Started | — |
 | 16 | Admin Platform Backend | [Stage 6](08-stage-telegram-and-admin.md) | ⬜ Not Started | — |
 | 17 | CMS & SEO Backend | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
@@ -37,7 +37,7 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 14 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), and Stage 5 (Monetization) are all fully done. Stage 6 (Telegram & Admin) is next.**
+**Overall: 15 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), and Stage 5 (Monetization) are all fully done; Stage 6 (Telegram & Admin) is underway with Arch Phase 14 done (Arch Phases 15–16 remaining).**
 
 ---
 
@@ -1228,3 +1228,89 @@ Phase 12's media handling, applied here to the listing record itself
 - **A real bug was caught and fixed during live verification:** `FeaturedListing.paymentId`'s unique constraint is correctly enforced at the database level, but attempting to link an already-linked payment to a second listing surfaced as a raw `500 INTERNAL_SERVER_ERROR` with a leaked Prisma stack trace in the response body — the service layer didn't catch Prisma's `P2002` unique-constraint error before it reached the generic handler. Fixed using the exact same `isUniqueConstraintViolation`/`ConflictError` pattern already established in `categories.service.ts` (Arch Phase 4) for the same class of problem. Re-verified: the identical request now correctly returns `409 CONFLICT` with a clear message.
 - **Cancellation is soft, never a real delete** — `DELETE /admin/featured-listings/:id` sets `status=CANCELLED`, a terminal state; the row itself is never removed, and both further `PATCH` and further `DELETE` calls against a terminal-status listing (`CANCELLED` or `EXPIRED`) are correctly rejected with a `400` rather than silently no-oping or erroring unpredictably. Verified live for both the double-cancel and the modify-after-cancel cases.
 - Verified live end-to-end on a real running Postgres/Redis stack, using a freshly created test admin + vendor + real category/city (deleted afterward along with all listings/payments created during testing): full create → activate → appear-publicly → cancel → terminal-state-rejected lifecycle confirmed for a `CATEGORY_PAGE` listing (with both categoryId/cityId resolved and returned as summaries) and a `HOMEPAGE` listing; nonexistent vendor/category/city/payment references all correctly 404 before any write; a future-dated `ACTIVE` listing correctly excluded from the public endpoint while a currently-in-window one correctly included; admin list filtering by `status`/`vendorId` confirmed correct counts; unauthenticated admin access correctly 401s, non-admin (VENDOR role) access correctly 403s. `npm run typecheck` and `npm run lint` both pass with zero errors; no test suite exists yet in this codebase to run (consistent with every prior phase). All test data cleaned up.
+
+---
+
+## Arch Phase 14 — Notifications
+
+**Status:** ✅ Done — 2026-09-02
+**Stage:** [Stage 6 — Telegram & Admin](08-stage-telegram-and-admin.md)
+
+### What this unlocks
+
+Every module built so far can now notify a real user through a real channel: registration/email-verification, password reset, vendor approval/rejection, vendor claim invitations, new leads, reviews received, and subscription/payment events all deliver through one `NotificationService`, respecting per-user channel preferences, with real retries and dead-lettering on failure. This phase also closed four pre-existing `TODO(Arch Phase 14)` stubs left behind by earlier phases (email verification and password reset in `auth.service.ts`, vendor claim invitations in `vendor-admin.service.ts`, and Arch Phase 9's stubbed lead-notification processor) — none of them were left stubbed after this phase.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/notifications/me` | List the caller's in-app notifications (paginated, `unreadOnly` filter) | access token |
+| GET | `/api/v1/notifications/me/unread-count` | Unread in-app count | access token |
+| POST | `/api/v1/notifications/me/:id/read` | Mark one notification read | access token |
+| POST | `/api/v1/notifications/me/read-all` | Mark all read | access token |
+| GET | `/api/v1/notifications/me/preferences` | List the caller's channel-preference overrides | access token |
+| PUT | `/api/v1/notifications/me/preferences` | Set an (eventType, channel) preference | access token |
+
+No admin-specific notification routes this phase — admin's own notification-history/audit view is Arch Phase 16's job.
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `notifications` | One row per (recipient, event, channel) delivery — simultaneously the in-app notification, the delivery/retry history, and (via `status=FAILED`) the dead-letter record | `user_id`, `event_type`, `channel`, `status`, `title`/`body`, `related_entity_type`/`related_entity_id`, `attempts`, `last_error`, `sent_at`, `read_at` |
+| `notification_preferences` | Per-user channel opt-outs; no row means enabled | `user_id`, `event_type`, `channel`, `is_enabled`, unique `(user_id, event_type, channel)` |
+
+New enums: `NotificationEventType` (17 values — product.md §45's 12 events, Arch Phase 9's 5 lead-specific events carried over unchanged, plus `PASSWORD_RESET` beyond product.md's literal list), `NotificationChannel` (`IN_APP`/`EMAIL`/`TELEGRAM`), `NotificationStatus` (`PENDING`/`SENT`/`FAILED`/`READ`).
+
+Deleted: Arch Phase 9's narrow `lead-notification` BullMQ queue/processor (`LeadNotificationEventType`, its own queue and stub worker) — fully superseded, confirmed with the user, rather than left running alongside the new generic system.
+
+### Flow
+
+```
+Any module calls notificationService.notify({userId, eventType, data, relatedEntity...})
+     │
+     ├─ resolveChannels(): DEFAULT_CHANNELS[eventType] filtered by any
+     │    NotificationPreference override for this (user, eventType) —
+     │    no override row = default applies, opt-out model
+     │
+     ├─ renderNotification(eventType, data) → {title, body}
+     │    (16 short per-event templates, not a templating engine)
+     │
+     └─ per resolved channel:
+          ├─ IN_APP → Notification row created, marked SENT immediately
+          │    (no external delivery step — the row itself IS what
+          │    GET /notifications/me reads)
+          │
+          └─ EMAIL/TELEGRAM → Notification row created (PENDING),
+               enqueued to the notification-delivery BullMQ queue
+               (Coding Rule 7: row committed before the job that
+               delivers it runs)
+                    │
+                    ▼
+               notification-delivery worker:
+                    ├─ EMAIL → resend.client.sendEmail() (real Resend API)
+                    ├─ TELEGRAM → logged stub (Arch Phase 15's bot doesn't
+                    │    exist yet — same deferral pattern as Arch Phase 9)
+                    ├─ success → markSent()
+                    └─ failure → incrementAttempts(), throw
+                         (BullMQ retries up to MAX_DELIVERY_ATTEMPTS=3,
+                         exponential backoff)
+                              │
+                              ▼
+                    worker.on("failed"): only on the TRULY final attempt
+                    (attemptsMade >= configured attempts) → markFailed()
+                    — this IS the dead-letter path (see Notes for the
+                    real bug this fixed)
+
+notify() itself never throws — wrapped in try/catch, logs and returns —
+so a notification-system failure can never fail the action that
+triggered it (this stage's own acceptance criterion).
+```
+
+### Notes
+
+- **A real bug was caught and fixed during live verification:** the first version of `worker.on("failed", ...)` called `markFailed()` (which also incremented `attempts` a second time, double-counting against the processor's own `incrementAttempts()` in its catch block) on *every* failed attempt, not just the final one, and used a fire-and-forget `void` call with no await. Live testing with a genuinely invalid Resend API key (see below) surfaced the actual consequence: after all 3 retries were exhausted, the `Notification` row was observed still `status=PENDING` with `lastError=null` — the failure write had raced and lost against the job's own lifecycle. Fixed by (1) only writing the terminal `FAILED` state when `job.attemptsMade >= job.opts.attempts` (BullMQ retries below that, logged as `warn`, not the dead-letter path), (2) properly awaiting the write via a returned promise from the listener, and (3) removing the duplicate increment from `markFailed` itself. Re-verified: a second genuinely-failing delivery now correctly ends with `status=FAILED`, `attempts=3` (not 6), and a real `lastError` message.
+- **The Resend API key initially present in `.env` (unused since it was added, presumably during earlier environment setup) was genuinely invalid** — confirmed via Resend's own API returning a real `401 API key is invalid`, not a bug in the integration. Flagged to the user rather than worked around; the user supplied a corrected key, and a full live send was then verified end-to-end (see below) — the same standard of live verification applied to the Razorpay integration in Arch Phase 11, now also applied here: first proving the *failure* path works correctly (a more informative test than a lucky first-try success would have been), then proving the *success* path once a working key was available.
+- **New judgment calls, confirmed with the user during implementation:** (1) Arch Phase 9's `lead-notification` queue/processor is retired entirely, not left running alongside the new generic system — `enquiry.service.ts` now resolves the lead's vendor owner and calls `notificationService.notify(..., "NEW_LEAD", ...)` directly, with a new `enquiryRepository.findVendorOwnersByIds()` lookup (an admin-created, not-yet-claimed vendor has no owner and is correctly skipped, not errored). (2) Default channels are asymmetric: account/business-critical events default to `EMAIL`+`IN_APP`; high-frequency lead/message events default to `IN_APP` only (a vendor with real deal flow getting emailed per-lead by default would look like spam) — vendors can opt in via preferences. (3) `PASSWORD_RESET` was added as a 17th event type beyond product.md §45's literal 12, specifically because `auth.service.ts` already had a pre-existing `TODO(Arch Phase 14)` stub expecting real delivery for it — email-only by default, since a locked-out user can't see in-app notifications yet. (4) The vendor-claim invitation email (`vendor-admin.service.ts`) deliberately bypasses `notificationService.notify()` entirely and calls `resend.client.sendEmail()` directly — the invitee has no `User` row yet (that's the point of an invitation), so there's no recipient to attach a `Notification`/preference row to; modeling it as a notification event would have required a fictional user. (5) `SUBSCRIPTION_EXPIRING` and `FEATURED_CAMPAIGN_STARTED`/`FEATURED_CAMPAIGN_ENDING` are declared (enum, template, default channels) but have no trigger yet — both need a look-ahead scheduler that doesn't exist anywhere in this codebase (the same gap Arch Phase 12 hit for grace-period expiry, resolved there by lazy-at-read-time evaluation, which doesn't fit a "notify before something happens" case) — confirmed with the user as out of scope for this phase, left as a documented gap rather than a rushed one-off scheduler.
+- **register() sends one email, not two** — confirmed with the user: `VERIFICATION`'s template now carries both the welcome message and the actual verification link, rather than firing a separate `REGISTRATION` email with no actionable content in the same second. `REGISTRATION` stays declared (schema-complete) for a possible future standalone touch.
+- Verified live end-to-end against a real running Postgres/Redis stack and the real Resend API (not mocked): registration → real `VERIFICATION` email delivered (`IN_APP` + `EMAIL`, both `SENT`) and correctly visible via `GET /notifications/me` (only the `IN_APP` row — `EMAIL` rows are delivery-only, not inbox items); opting out of `EMAIL` for `VERIFICATION` correctly suppressed the `EMAIL` row on a subsequent event while leaving `IN_APP` unaffected; `POST /notifications/me/:id/read` correctly dropped the unread count from 1 to 0; vendor approval and rejection both correctly fired `IN_APP`+`EMAIL` with the rejection reason correctly interpolated into the body; a review submission correctly notified the vendor owner (`IN_APP`+`EMAIL`) with the real rating; a lead-creating enquiry correctly notified the vendor owner `IN_APP`-only (no `EMAIL` row created, per the default matrix) with `relatedEntityType="lead"`/`relatedEntityId` correctly pointing at the real lead; the vendor-claim invitation's direct-`sendEmail()` bypass path succeeded with a real `201` and no error; `forgotPassword()` correctly sent an `EMAIL`-only `PASSWORD_RESET` notification with a working reset link. `npm run typecheck` and `npm run lint` both pass with zero errors; no test suite exists yet in this codebase to run (consistent with every prior phase). All test users/vendors/notifications created during verification were deleted afterward.

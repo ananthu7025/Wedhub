@@ -57,6 +57,8 @@ model User {
   reviews                  Review[]
   reviewReports            ReviewReport[]
   featuredListingsCreated  FeaturedListing[]
+  notifications            Notification[]
+  notificationPreferences  NotificationPreference[]
 
   @@index([role])
   @@index([status])
@@ -1151,4 +1153,96 @@ model FeaturedListing {
   @@index([status, startDate, endDate])
   @@index([placementType, categoryId, cityId])
   @@map("featured_listings")
+}
+
+// Arch Phase 14: product.md §45's 12 notification events, superseding Arch
+// Phase 9's narrower LeadNotificationEventType (NEW_LEAD/LEAD_REMINDER/
+// USER_REPLIED/LEAD_FOLLOW_UP/HIGH_INTENT_LEAD are carried over unchanged
+// below) — one generic notification system rather than a lead-specific one
+// plus a separate general one, confirmed with the user. PASSWORD_RESET is
+// one extra event beyond product.md's literal 12 — auth.service.ts already
+// had a pre-existing stub expecting real email delivery for it.
+enum NotificationEventType {
+  REGISTRATION
+  VERIFICATION
+  PASSWORD_RESET
+  VENDOR_APPROVED
+  VENDOR_REJECTED
+  NEW_LEAD
+  LEAD_REMINDER
+  USER_REPLIED
+  LEAD_FOLLOW_UP
+  HIGH_INTENT_LEAD
+  NEW_MESSAGE
+  REVIEW_RECEIVED
+  SUBSCRIPTION_ACTIVATED
+  PAYMENT_FAILED
+  SUBSCRIPTION_EXPIRING
+  FEATURED_CAMPAIGN_STARTED
+  FEATURED_CAMPAIGN_ENDING
+}
+
+// SMS/WhatsApp are explicitly "later" per product.md §22 — not modeled yet.
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  TELEGRAM
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+// One row per (recipient, event, channel) delivery — this is simultaneously
+// the in-app notification record a user reads, the delivery/retry history,
+// and (via status=FAILED with maxed-out attempts) the dead-letter record.
+// No separate table for "notification history" — this table already is
+// that history, matching Coding Rule 7 (external effects happen after DB
+// commit, via a job) since the row is written before the queue job that
+// actually delivers it runs.
+model Notification {
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String                @map("user_id") @db.Uuid
+  eventType         NotificationEventType @map("event_type")
+  channel           NotificationChannel
+  status            NotificationStatus    @default(PENDING)
+  title             String
+  body              String
+  data              Json?
+  relatedEntityType String?               @map("related_entity_type")
+  relatedEntityId   String?               @map("related_entity_id")
+  attempts          Int                   @default(0)
+  lastError         String?               @map("last_error")
+  sentAt            DateTime?             @map("sent_at")
+  readAt            DateTime?             @map("read_at")
+  createdAt         DateTime              @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, readAt])
+  @@index([eventType])
+  @@index([relatedEntityType, relatedEntityId])
+  @@map("notifications")
+}
+
+// Opt-out model: no row means enabled (product.md §45: "users and vendors
+// can control channel preferences where appropriate" — the default must
+// not silence anyone who never touched their settings).
+model NotificationPreference {
+  id        String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String                @map("user_id") @db.Uuid
+  eventType NotificationEventType @map("event_type")
+  channel   NotificationChannel
+  isEnabled Boolean               @default(true) @map("is_enabled")
+  createdAt DateTime              @default(now()) @map("created_at")
+  updatedAt DateTime              @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventType, channel])
+  @@map("notification_preferences")
 }

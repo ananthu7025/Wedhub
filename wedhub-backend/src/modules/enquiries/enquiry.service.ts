@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { ConflictError, NotFoundError } from "../../common/errors";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
-import { enqueueLeadNotification } from "../../jobs/queues/lead-notification.queue";
+import * as notificationService from "../notifications/notification.service";
 import * as searchRepository from "../search/search.repository";
 import { rankVendors } from "../search/vendor-ranking.service";
 import * as enquiryRepository from "./enquiry.repository";
@@ -70,10 +70,25 @@ async function queueNotificationsAndAnalytics(
 ): Promise<void> {
   // Notification delivery happens after commit, via a job — Coding Rule 7's
   // transactional-mutation pattern (external effects never happen inside
-  // the DB transaction itself). Full channel delivery (email/Telegram/etc.)
-  // is Arch Phase 14's job; this phase only needs the hook that queues a
-  // "new lead" job per product.md §22's notification-events task.
-  await Promise.all(leads.map((lead) => enqueueLeadNotification(lead.id, "NEW_LEAD")));
+  // the DB transaction itself). notify() itself never throws, so a
+  // notification-system failure can never fail enquiry/lead creation.
+  const vendors = await enquiryRepository.findVendorOwnersByIds(leads.map((lead) => lead.vendorId));
+  const vendorById = new Map(vendors.map((v) => [v.id, v]));
+  await Promise.all(
+    leads.map((lead) => {
+      const vendor = vendorById.get(lead.vendorId);
+      if (!vendor?.ownerUserId) {
+        return Promise.resolve(); // admin-created, not-yet-claimed vendor — no one to notify yet
+      }
+      return notificationService.notify({
+        userId: vendor.ownerUserId,
+        eventType: "NEW_LEAD",
+        data: { businessName: vendor.businessName },
+        relatedEntityType: "lead",
+        relatedEntityId: lead.id,
+      });
+    }),
+  );
   await Promise.all(
     leads.map((lead) =>
       logAnalyticsEvent({ userId, eventType: "lead_created", vendorId: lead.vendorId, metadata: { routingMode, leadId: lead.id } }),

@@ -1,5 +1,6 @@
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
+import * as notificationService from "../notifications/notification.service";
 import * as reviewRepository from "./review.repository";
 
 async function assertVendorIsPublic(vendorId: string) {
@@ -57,6 +58,16 @@ export async function createReview(
     vendorId: input.vendorId,
     metadata: { reviewId: review.id, verifiedInteraction: !!hasInteraction },
   });
+
+  if (vendor.ownerUserId) {
+    await notificationService.notify({
+      userId: vendor.ownerUserId,
+      eventType: "REVIEW_RECEIVED",
+      data: { rating: input.rating },
+      relatedEntityType: "review",
+      relatedEntityId: review.id,
+    });
+  }
 
   // Rating aggregation only counts APPROVED reviews (see recalculateVendorRating),
   // and a brand-new review starts PENDING, so no recalculation is needed here —

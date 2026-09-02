@@ -4,6 +4,10 @@ import { generateOpaqueToken, hashToken } from "../../common/utils/token.util";
 import { logger } from "../../config/logger";
 import { slugify } from "../../common/utils/slug.util";
 import { omitUndefined } from "../../common/utils/object.util";
+import { sendEmail } from "../../integrations/email/resend.client";
+import { renderEmailHtml } from "../notifications/notification.templates";
+import * as notificationService from "../notifications/notification.service";
+import { env } from "../../config/env";
 import * as vendorRepository from "../vendors/vendor.repository";
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -65,11 +69,26 @@ export async function createInvitation(
     },
   });
 
-  // TODO(Arch Phase 14): replace with real email delivery via the notification service.
-  logger.info(
-    { vendorId, invitationId: invitation.id, token },
-    "Vendor claim invitation link (stubbed — no email delivery yet)",
-  );
+  // Bypasses the notification service on purpose: the invitee has no User
+  // row yet (that's the whole point of an invitation), so there's no
+  // recipient to attach a Notification/preference row to — this is a raw
+  // transactional email to an address, not a notification about a user's
+  // own activity. Best-effort: an invitation record still exists and can be
+  // resent even if this particular send fails.
+  if (invitedEmail) {
+    try {
+      await sendEmail({
+        to: invitedEmail,
+        subject: "You're invited to claim your WedHub vendor profile",
+        html: renderEmailHtml({
+          title: "Claim your vendor profile",
+          body: `You've been invited to claim "${vendor.businessName}" on WedHub. Use this link to set up your account: ${env.FRONTEND_URL}/vendor-claim?token=${token}`,
+        }),
+      });
+    } catch (err) {
+      logger.error({ err, vendorId, invitationId: invitation.id }, "Failed to send vendor claim invitation email");
+    }
+  }
 
   return invitation;
 }
@@ -189,8 +208,8 @@ async function transitionStatus(input: {
   return results[0];
 }
 
-export function approveVendor(vendorId: string, adminId: string) {
-  return transitionStatus({
+export async function approveVendor(vendorId: string, adminId: string) {
+  const vendor = await transitionStatus({
     vendorId,
     adminId,
     toStatus: "APPROVED",
@@ -199,10 +218,20 @@ export function approveVendor(vendorId: string, adminId: string) {
     auditAction: "ADMIN_APPROVED_VENDOR",
     extraData: { approvedAt: new Date(), rejectionReason: null },
   });
+  if (vendor.ownerUserId) {
+    await notificationService.notify({
+      userId: vendor.ownerUserId,
+      eventType: "VENDOR_APPROVED",
+      data: { businessName: vendor.businessName },
+      relatedEntityType: "vendor",
+      relatedEntityId: vendor.id,
+    });
+  }
+  return vendor;
 }
 
-export function rejectVendor(vendorId: string, adminId: string, reason: string) {
-  return transitionStatus({
+export async function rejectVendor(vendorId: string, adminId: string, reason: string) {
+  const vendor = await transitionStatus({
     vendorId,
     adminId,
     toStatus: "REJECTED",
@@ -211,6 +240,16 @@ export function rejectVendor(vendorId: string, adminId: string, reason: string) 
     auditAction: "ADMIN_REJECTED_VENDOR",
     extraData: { rejectionReason: reason },
   });
+  if (vendor.ownerUserId) {
+    await notificationService.notify({
+      userId: vendor.ownerUserId,
+      eventType: "VENDOR_REJECTED",
+      data: { businessName: vendor.businessName, reason },
+      relatedEntityType: "vendor",
+      relatedEntityId: vendor.id,
+    });
+  }
+  return vendor;
 }
 
 export function suspendVendor(vendorId: string, adminId: string, reason: string) {

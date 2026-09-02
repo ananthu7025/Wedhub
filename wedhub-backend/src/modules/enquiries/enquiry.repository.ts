@@ -82,3 +82,13 @@ export function findRecentLeadByDedupeKey(dedupeKey: string, since: Date) {
 export function findVendorStatus(vendorId: string) {
   return prisma.vendor.findUnique({ where: { id: vendorId }, select: { id: true, status: true } });
 }
+
+// Notification recipient lookup: a lead's "vendor" is notified via its
+// owning User row — an admin-created, not-yet-claimed vendor has no owner
+// and is correctly skipped by the caller rather than erroring.
+export function findVendorOwnersByIds(vendorIds: string[]) {
+  return prisma.vendor.findMany({
+    where: { id: { in: vendorIds } },
+    select: { id: true, ownerUserId: true, businessName: true },
+  });
+}
