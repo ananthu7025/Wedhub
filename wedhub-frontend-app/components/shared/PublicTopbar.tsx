@@ -24,11 +24,19 @@ export async function PublicTopbar() {
             {link.label}
           </Link>
         ))}
+        {session && (
+          <Link
+            href="/shortlist"
+            className="rounded-md px-3.5 py-2 text-sm font-semibold text-text-grey no-underline hover:bg-surface-input hover:text-text-dark"
+          >
+            Shortlist
+          </Link>
+        )}
       </nav>
       <div className="flex items-center gap-3.5">
         {session ? (
           <Link
-            href="/couple/home"
+            href="/shortlist"
             className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-ink-soft text-sm font-bold text-white no-underline"
           >
             {session.userId.slice(0, 2).toUpperCase()}

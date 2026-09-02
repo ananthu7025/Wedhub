@@ -24,10 +24,15 @@ test.beforeAll(async () => {
 });
 
 test.describe("Design system smoke test", () => {
-  test("home page renders ported tokens and buttons", async ({ page }) => {
+  // The home page was a Phase 0 placeholder when this test was first
+  // written; Frontend Arch Phase 2 replaced it with the real hero
+  // search/category-browse/featured-vendors page (see
+  // frontenddocs/04-stage-couple-experience.md) — updated here to match
+  // what's actually there now, since Phase 2's own verification run covered
+  // this content under its own spec, not this one.
+  test("home page renders ported tokens and real content", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "WedHub" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Primary" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /discover and connect/i })).toBeVisible();
     await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Sign up" })).toBeVisible();
   });
@@ -61,24 +66,23 @@ test.describe("Signup + login flow (END_USER)", () => {
     await expect(page.getByText("You're all set!")).toBeVisible();
     await page.getByRole("button", { name: "Go to home" }).click();
 
-    await expect(page).toHaveURL(/\/couple\/home/);
-
-    // /couple/home has no page yet (Frontend Arch Phase 2) — proxy.ts letting
-    // an END_USER session reach a 404 here (not a redirect to /login) is
-    // itself the thing under test.
-    await expect(page.getByText(/404|not found/i)).toBeVisible();
+    // roleHomeRoute sends END_USER to /shortlist (a real (couple) route,
+    // fixed during Frontend Arch Phase 3 — it previously pointed at
+    // /couple/home, a URL that could never resolve since (couple) is a route
+    // GROUP and doesn't add a literal /couple/ path segment).
+    await expect(page).toHaveURL(/\/shortlist/);
+    await expect(page.getByRole("heading", { name: "Your shortlist" })).toBeVisible();
 
     // Role gating: this END_USER session must never actually reach vendor or
     // admin routes. proxy.ts redirects both to /login; the login page then
-    // sees the still-valid session and bounces straight to /couple/home
+    // sees the still-valid session and bounces straight back to /shortlist
     // (its own already-authenticated redirect) rather than showing the
-    // login form again — so the correct final landing spot is back at
-    // /couple/home, never /vendor/dashboard or /admin/dashboard.
+    // login form again.
     await page.goto("/vendor/dashboard");
-    await expect(page).toHaveURL(/\/couple\/home/, { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/shortlist/, { timeout: 10_000 });
 
     await page.goto("/admin/dashboard");
-    await expect(page).toHaveURL(/\/couple\/home/, { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/shortlist/, { timeout: 10_000 });
 
     // Log out via the Route Handler directly (POST /api/auth/logout) — there
     // is no logout *button* anywhere yet, since no authenticated
@@ -97,7 +101,7 @@ test.describe("Signup + login flow (END_USER)", () => {
     await page.getByPlaceholder("Password").fill(password);
     await page.getByRole("button", { name: "Log in" }).click();
 
-    await expect(page).toHaveURL(/\/couple\/home/);
+    await expect(page).toHaveURL(/\/shortlist/);
   });
 });
 
@@ -129,10 +133,10 @@ test.describe("Signup flow (VENDOR)", () => {
     await expect(page).toHaveURL(/\/vendor\/dashboard/);
 
     // Same real behavior as the END_USER test above: proxy.ts blocks
-    // /couple/home for a VENDOR session, then /login bounces the still-valid
+    // /shortlist for a VENDOR session, then /login bounces the still-valid
     // session straight back to /vendor/dashboard rather than showing the
     // login form.
-    await page.goto("/couple/home");
+    await page.goto("/shortlist");
     await expect(page).toHaveURL(/\/vendor\/dashboard/, { timeout: 10_000 });
   });
 });

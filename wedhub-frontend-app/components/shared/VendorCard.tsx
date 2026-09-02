@@ -1,8 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
+import { VendorHeartButton } from "./VendorHeartButton";
 
 export function VendorCard({
+  vendorId,
   slug,
   businessName,
   logoUrl,
@@ -10,7 +12,9 @@ export function VendorCard({
   startingPrice,
   currency,
   featured = false,
+  isAuthenticated = false,
 }: {
+  vendorId?: string;
   slug: string;
   businessName: string;
   logoUrl: string | null;
@@ -18,6 +22,7 @@ export function VendorCard({
   startingPrice: string | null;
   currency: string | null;
   featured?: boolean;
+  isAuthenticated?: boolean;
 }) {
   return (
     <Link
@@ -34,6 +39,9 @@ export function VendorCard({
           <span className="absolute top-2.5 left-2.5">
             <Badge variant="crimson">Featured</Badge>
           </span>
+        )}
+        {vendorId && (
+          <VendorHeartButton vendorId={vendorId} isAuthenticated={isAuthenticated} className="absolute top-2.5 right-2.5" />
         )}
       </div>
       <div className="p-3.5">

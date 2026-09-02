@@ -1,12 +1,16 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { VendorAttributes } from "@/components/shared/VendorAttributes";
+import { VendorHeartButton } from "@/components/shared/VendorHeartButton";
+import { EnquiryCta } from "@/components/shared/EnquiryCta";
 import { getVendorAlbums, getVendorBySlug, getVendorReviews } from "@/lib/api/catalog";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { ApiRequestError } from "@/lib/api/types";
 import { Badge } from "@/components/ui/Badge";
+import { getOptionalSession } from "@/lib/auth/dal";
 
 interface VendorPageProps {
   params: Promise<{ slug: string }>;
@@ -48,9 +52,10 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
   const { slug } = await params;
   const vendor = await loadVendor(slug);
 
-  const [{ data: albums }, reviewsResult] = await Promise.all([
+  const [{ data: albums }, reviewsResult, session] = await Promise.all([
     getVendorAlbums(slug),
     getVendorReviews(vendor.id, 1, 10).catch(() => ({ data: [], meta: undefined })),
+    getOptionalSession(),
   ]);
   const reviews = reviewsResult.data;
 
@@ -91,6 +96,19 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                 <> · {vendor.profile.yearsExperience} yrs experience</>
               )}
             </p>
+          </div>
+          <div className="flex items-center gap-2.5 pb-2">
+            <VendorHeartButton
+              vendorId={vendor.id}
+              isAuthenticated={session !== null}
+              className="static h-10 w-10 border border-border bg-white shadow-none"
+            />
+            <Link
+              href={`/shortlist?compareVendorId=${vendor.id}`}
+              className="rounded-md border border-border bg-white px-4 py-2.5 text-sm font-bold text-text-dark no-underline hover:bg-surface-input"
+            >
+              Add to compare
+            </Link>
           </div>
         </div>
 
@@ -196,18 +214,12 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                 </p>
               )}
 
-              {/* Enquiry submission is Frontend Arch Phase 3 scope (see
-                  frontenddocs/04-stage-couple-experience.md) — the CTA
-                  exists now so the page structure matches the mockup, but
-                  it links to login rather than opening a working modal,
-                  since there is nowhere yet for an unauthenticated visitor's
-                  enquiry intent to go. */}
-              <a
-                href={`/login?next=/vendors/${vendor.slug}`}
-                className="mt-3 block w-full rounded-md bg-brand-primary py-3 text-center text-sm font-bold text-white no-underline shadow-[0_4px_12px_rgba(224,11,65,0.18)] hover:bg-brand-primary-hover"
-              >
-                Send Enquiry
-              </a>
+              <EnquiryCta
+                vendorId={vendor.id}
+                vendorSlug={vendor.slug}
+                vendorName={vendor.businessName}
+                isAuthenticated={session !== null}
+              />
 
               <div className="mt-5 border-t border-border pt-4">
                 {vendor.profile?.phone && (

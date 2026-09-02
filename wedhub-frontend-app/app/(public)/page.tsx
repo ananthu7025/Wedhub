@@ -4,6 +4,7 @@ import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { VendorCard } from "@/components/shared/VendorCard";
 import { listCategories, listFeaturedListings, searchVendors } from "@/lib/api/catalog";
 import { getCategoryIcon } from "@/lib/media/category-icons";
+import { getOptionalSession } from "@/lib/auth/dal";
 
 export const metadata: Metadata = {
   title: "WedHub — Find trusted wedding vendors",
@@ -29,7 +30,11 @@ async function getFeaturedVendorCards() {
 }
 
 export default async function HomePage() {
-  const [{ data: categories }, featuredVendors] = await Promise.all([listCategories(), getFeaturedVendorCards()]);
+  const [{ data: categories }, featuredVendors, session] = await Promise.all([
+    listCategories(),
+    getFeaturedVendorCards(),
+    getOptionalSession(),
+  ]);
 
   return (
     <>
@@ -91,6 +96,7 @@ export default async function HomePage() {
             {featuredVendors.map((vendor) => (
               <VendorCard
                 key={vendor.id}
+                vendorId={vendor.id}
                 slug={vendor.slug}
                 businessName={vendor.businessName}
                 logoUrl={vendor.logoUrl}
@@ -98,6 +104,7 @@ export default async function HomePage() {
                 startingPrice={vendor.startingPrice}
                 currency={vendor.currency}
                 featured
+                isAuthenticated={session !== null}
               />
             ))}
           </div>

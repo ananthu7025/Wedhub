@@ -4,6 +4,7 @@ import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { VendorCard } from "@/components/shared/VendorCard";
 import { listCategories, listLocations, searchVendors } from "@/lib/api/catalog";
 import type { SearchSort } from "@/lib/api/vendors.types";
+import { getOptionalSession } from "@/lib/auth/dal";
 import { SortSelect } from "./SortSelect";
 
 export const metadata: Metadata = {
@@ -28,7 +29,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
   const page = params.page ? Number(params.page) : 1;
 
-  const [{ data: vendors, meta }, { data: categories }, { data: cities }] = await Promise.all([
+  const [{ data: vendors, meta }, { data: categories }, { data: cities }, session] = await Promise.all([
     searchVendors({
       keyword: params.keyword,
       categoryId: params.categoryId,
@@ -42,6 +43,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     }),
     listCategories(),
     listLocations("CITY"),
+    getOptionalSession(),
   ]);
 
   const selectedCategory = categories.find((c) => c.id === params.categoryId);
@@ -159,12 +161,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               {vendors.map((vendor) => (
                 <VendorCard
                   key={vendor.id}
+                  vendorId={vendor.id}
                   slug={vendor.slug}
                   businessName={vendor.businessName}
                   logoUrl={vendor.logoUrl}
                   shortDescription={vendor.shortDescription}
                   startingPrice={vendor.startingPrice}
                   currency={vendor.currency}
+                  isAuthenticated={session !== null}
                 />
               ))}
             </div>

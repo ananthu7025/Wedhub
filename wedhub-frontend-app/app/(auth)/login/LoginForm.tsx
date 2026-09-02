@@ -8,7 +8,7 @@ import { login } from "@/lib/api/auth-client";
 import type { UserRole } from "@/lib/auth/types";
 
 const roleHomeRoute: Record<UserRole, string> = {
-  END_USER: "/couple/home",
+  END_USER: "/shortlist",
   VENDOR: "/vendor/dashboard",
   ADMIN: "/admin/dashboard",
 };

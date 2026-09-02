@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 const roleHomeRoute: Record<string, string> = {
-  END_USER: "/couple/home",
+  END_USER: "/shortlist",
   VENDOR: "/vendor/dashboard",
   ADMIN: "/admin/dashboard",
 };

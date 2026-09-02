@@ -12,7 +12,7 @@ type AccountType = "END_USER" | "VENDOR";
 type Step = "credentials" | "account-type" | "profile" | "done";
 
 const roleHomeRoute: Record<UserRole, string> = {
-  END_USER: "/couple/home",
+  END_USER: "/shortlist",
   VENDOR: "/vendor/dashboard",
   ADMIN: "/admin/dashboard",
 };

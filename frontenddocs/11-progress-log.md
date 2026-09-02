@@ -13,7 +13,7 @@
 | 0 | Project Setup & Design System | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 1 | Auth Flows | [Stage 1](03-stage-foundation.md) | ✅ Done | 2026-09-02 |
 | 2 | Public Discovery | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
-| 3 | Shortlist, Compare & Enquiry | [Stage 2](04-stage-couple-experience.md) | ⬜ Not Started | — |
+| 3 | Shortlist, Compare & Enquiry | [Stage 2](04-stage-couple-experience.md) | ✅ Done | 2026-09-02 |
 | 4 | Couple Account | [Stage 2](04-stage-couple-experience.md) | ⬜ Not Started | — |
 | 5 | Vendor Onboarding & Profile Mgmt | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
 | 6 | Vendor Leads & Reviews | [Stage 3](05-stage-vendor-experience.md) | ⬜ Not Started | — |
@@ -23,7 +23,7 @@
 | 10 | Admin Monetization, Governance & Audit | [Stage 4](06-stage-admin-platform.md) | ⬜ Not Started | — |
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | ⬜ Not Started (11b blocked on backend Arch Phase 17) | — |
 
-**Overall: 3 / 12 Frontend Arch Phases complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
+**Overall: 4 / 12 Frontend Arch Phases complete.** Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (16/26 Arch Phases, Stages 1–6) is done and paused before backend Arch Phase 17 specifically to let this frontend build-out happen next.
 
 ---
 
@@ -230,3 +230,75 @@ Vendor detail → GET /vendors/:slug (identity/profile/categories/packages/
 - **Real, cited backend gaps found and worked around, not silently papered over** — see [Open Questions 7-10](10-risks-and-open-questions.md#7-vendor-detail-endpoint-cannot-resolve-the-vendors-logocover-image): (7) the vendor detail endpoint cannot resolve `logoMediaId`/`coverMediaId` to a URL at all (no relation joined, no public media-by-id endpoint) — worked around with an album-cover fallback for hero imagery; (8) search results carry no city/category name, rating, or review count — search cards show only what the backend actually returns rather than fabricating or making N+1 calls; (9) no star-rating distribution endpoint exists anywhere in the backend — omitted rather than approximated; (10) featured-listings returns minimal vendor data and categories have no icon field — cross-referenced against search and used a static frontend icon map respectively.
 - **A real, useful backend finding not filed as an Open Question** (informational, not a gap requiring frontend work): `PATCH /vendors/me/detail` only accepts `businessName` — `cityId` looked like it should live there by symmetry with other "detail" fields, but actually lives on `PUT /vendors/me/profile`. Confirmed by reading `vendor.schema.ts` directly after a live 200-but-no-effect response revealed the assumption was wrong. No frontend action needed since Phase 2 only reads vendor data; flagged here for whoever builds Frontend Arch Phase 5's vendor profile editor.
 - Test vendor (`frame-co-photography`, owned by `phase2-vendor-test@wedhub.dev`) and the temporarily-promoted admin account (`phase2-admin-test@wedhub.dev`) are **intentionally left in the dev database**, not cleaned up — unlike Phase 0/1's test accounts, this one is real, reusable fixture data that Frontend Arch Phase 3 (shortlist/enquiry against a real approved vendor), Phase 4 (reviews/enquiry-tracking), and Phase 5 (vendor-side view of this same vendor) all benefit from having available rather than recreating. If it ever needs to be rebuilt, the exact sequence of API calls is preserved in this entry's Notes above.
+
+## Frontend Arch Phase 3 — Shortlist, Compare & Enquiry
+
+### What this unlocks
+
+A logged-in couple can now favorite vendors from any card (home/search/vendor detail), review their shortlist, select vendors to compare side-by-side, and submit a real enquiry to a vendor from their profile page. This is the first phase to introduce an authenticated `(couple)` route group, and the shared shell (`CoupleShell`) it built will carry through Frontend Arch Phase 4's remaining couple-account pages.
+
+### Routes implemented
+
+- `app/(couple)/layout.tsx` — the first real `(couple)` layout, calling `requireRole("END_USER")` (the actual enforcement point; `proxy.ts` already optimistically gated `/shortlist`/`/compare` since Frontend Arch Phase 1)
+- `(couple)/shortlist` — real shortlist grid, checkbox multi-select, "Compare selected", remove-from-shortlist
+- `(couple)/compare` — real side-by-side comparison table via `GET /comparison/vendors`
+
+### Components added
+
+- `components/shared/VendorHeartButton.tsx` — shortlist favorite/unfavorite toggle, used on `VendorCard` (home/search) and the vendor detail page header
+- `components/shared/EnquiryCta.tsx` / `EnquiryModal.tsx` — the vendor-profile "Send Enquiry" button and its modal, prefilled from `GET /users/me`
+- `components/shared/CoupleShell.tsx` — shared topbar + mobile bottom-nav shell for all `(couple)` routes (built now, ahead of Frontend Arch Phase 4's checklist item, since Phase 3 already needed it)
+- `app/(couple)/shortlist/ShortlistGrid.tsx` — Client Component for the interactive parts of `/shortlist` (checkbox selection, remove action)
+- `lib/api/shortlists.types.ts`, `lib/api/shortlists.ts` (server-only reads), `lib/api/shortlists-client.ts` (client-side writes through the generic authenticated proxy)
+
+### Backend endpoints consumed
+
+`POST /shortlists/favorites/items`, `DELETE /shortlists/favorites/items/:vendorId`, `GET /shortlists`, `POST /enquiries/single-vendor`, `GET /comparison/vendors`, `GET /users/me` (enquiry modal prefill).
+
+### Flow
+
+```
+Before writing any frontend code: dispatched a research pass that read
+wedhub-backend source directly (shortlist.routes.ts/.schema.ts/.service.ts,
+enquiry.routes.ts/.schema.ts/.service.ts, lead.routes.ts/.schema.ts,
+comparison.routes.ts/.schema.ts/.service.ts, authenticate.middleware.ts) —
+this surfaced that /enquiries has no "list my enquiries" endpoint at all
+(Open Question 11), that a dedicated /comparison/vendors endpoint already
+exists and should be used instead of building the table from N vendor
+fetches, and the exact real field names for enquiry submission (contactName,
+contactEmail, contactPhone, weddingDate, budget, guestCount — not the
+mockup's assumed shape).
+
+Heart button (any VendorCard or vendor detail) → POST/DELETE
+   /shortlists/favorites/items(/:vendorId) → optimistic UI, reverts on a
+   failed response (the endpoint is not idempotent — 409 on duplicate add)
+
+/shortlist → GET /shortlists (default "Favorites" list, vendor summaries
+   embedded) → checkbox-select 2-5 → "Compare selected" → /compare?vendorIds=...
+
+/compare → GET /comparison/vendors?vendorIds=a,b,c → real backend validation
+   (2-5 vendors, same primary category) surfaced as-is, not reinvented
+   client-side
+
+Vendor profile "Send Enquiry" (authenticated only — unauthenticated visitors
+   get a /login link instead) → modal prefilled from GET /users/me → POST
+   /enquiries/single-vendor → real success/error state
+```
+
+### Playwright verification
+
+`e2e/phase-03-shortlist-enquiry.spec.ts` — 6 tests: unauthenticated heart-click redirects to login; a logged-in couple can favorite from search, see it on `/shortlist`, and unfavorite it; unauthenticated "Send Enquiry" links to login; a logged-in couple can open the enquiry modal (email prefilled from real `GET /users/me` data), fill it, and submit a real enquiry (success screen confirmed); selecting 2 real shortlisted vendors and comparing shows real, visibly distinct data per column (different starting price, years experience, and `photography_style` attribute value); visiting `/compare` with only 1 vendor id shows the backend's real validation message. Run headed, watched, 6/6 passing on the final clean run (also re-verified `phase-01-auth.spec.ts` 6/6 and `phase-02-discovery.spec.ts` 7/7 still pass after this phase's changes — no regressions).
+
+Real bugs this run caught (not test-authoring mistakes):
+1. **`roleHomeRoute`'s `END_USER` entry pointed at `/couple/home` since Frontend Arch Phase 1** — a URL that could never resolve, because `(couple)` is a Next.js route *group* (parentheses strip from the URL) rather than a literal `/couple/` path segment. This was invisible until Phase 3 built the first real `(couple)` page to actually land on. Traced by comparing `curl -I` responses for `/couple/home` (404) vs. `/home` (307, same routing table) with a real session cookie. Fixed by pointing `END_USER` at `/shortlist` in all four files that defined `roleHomeRoute` (`LoginForm.tsx`, `login/page.tsx`, `signup/page.tsx`, `SignupWizard.tsx`); updated `phase-01-auth.spec.ts`'s role-gating assertions to match the corrected, now-real behavior.
+2. **`GET /comparison/vendors`'s price fields serialize as strings, not numbers** — an earlier research pass reported `startingPrice: number`, which was wrong (missed that Prisma Decimal-over-JSON applies here too, same as everywhere else in this codebase). Caught visually in a headed run (`₹75000` instead of `₹75,000` — `.toLocaleString()` silently no-ops on a string that's already all-digits with no separators needed... actually returns the string unchanged since `String.prototype.toLocaleString` does locale-aware string comparison, not number formatting). Confirmed via a direct curl to the real endpoint, fixed the type (`lib/api/shortlists.types.ts`) and the render (`Number(vendor.startingPrice).toLocaleString(...)`).
+3. **`phase-01-auth.spec.ts`'s "Design system smoke test" was already stale** (asserted a "WedHub" placeholder heading and "Primary" button that Frontend Arch Phase 2 had already replaced with the real home page) — found incidentally while regression-running Phase 1 alongside Phase 3, fixed to assert on the real hero heading instead.
+
+Test-authoring mistakes (not app bugs), for the record: an early version of the enquiry-submit test never filled the modal's required "Your name" field (the test account had no `profile.firstName`/`lastName` to prefill it from, unlike email), so the native HTML5 `required` validation silently blocked the fetch — no network request was ever sent. Traced by adding response/console logging and a full-body dump on failure rather than guessing; fixed by filling the field explicitly in the test, with a comment explaining why it's needed here and not for email/phone.
+
+### Notes
+
+- **The real login rate limiter (10/15min, in-memory, IP-keyed) was tripped repeatedly during this phase's debugging** — restarting the backend dev process (which resets in-memory limiter state, a previously-documented safe move) was used between debug iterations rather than waiting out the window each time. Any Phase 1/2/3 combined run in one sitting will likely trip it too (documented, not a regression) — run phases separately, or restart the backend between attempts, if debugging across phases.
+- **A second real, fully-APPROVED Photography vendor was built for this phase** ("Lens & Light Studios", slug `lens-light-studios`) entirely through the real backend API (register → build profile/category/attributes/service/package → submit → verify email → auto-advance → admin-approve — the same real workflow documented in Phase 2's notes), specifically so `/compare`'s same-category, 2+-vendor backend validation had real, distinct data to render (different starting price, years of experience, and `photography_style` attribute value from Frame & Co.). Left in the dev database as reusable fixture data alongside Frame & Co., for the same reasons given in Phase 2's notes.
+- **[Open Question 11](10-risks-and-open-questions.md#11-no-list-my-enquiries-endpoint-exists-for-the-couple-side) newly filed**: no backend endpoint exists to list a couple's own past enquiries — confirmed by reading the entire `enquiries` module, not assumed. This blocks Frontend Arch Phase 4's `(couple)/enquiries` tracker page until resolved (new backend endpoint vs. an explicit "not yet available" state) — a decision to make when Phase 4 is actually reached, not now.
+- Test accounts (`e2e-phase3-*@wedhub.dev`, created fresh per test run) were all deleted via `afterEach`/`afterAll` per the established convention — confirmed via `git status`-adjacent DB check, no leftover clutter beyond the two intentional vendor fixtures.
