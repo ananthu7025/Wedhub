@@ -67,14 +67,29 @@ export async function updateOwnVendor(vendorId: string, input: UpdateVendorInput
   return vendorRepository.updateVendor(vendorId, { businessName: input.businessName, cityId: undefined });
 }
 
+async function assertOwnReadyMediaOrNull(vendorId: string, mediaId: string | null | undefined): Promise<void> {
+  if (mediaId === null || mediaId === undefined) {
+    return;
+  }
+  const media = await vendorRepository.findOwnMediaById(vendorId, mediaId);
+  if (!media || media.status !== "READY") {
+    throw new ValidationError("logoMediaId/coverMediaId must reference your own, fully-processed media");
+  }
+}
+
 export async function upsertProfile(vendorId: string, input: UpsertVendorProfileInput) {
-  const { cityId, ...profileFields } = input;
+  const { cityId, logoMediaId, coverMediaId, ...profileFields } = input;
 
   if (cityId !== undefined) {
     await vendorRepository.updateVendor(vendorId, { businessName: undefined, cityId });
   }
 
-  const profile = await vendorRepository.upsertVendorProfile(vendorId, profileFields);
+  await Promise.all([
+    assertOwnReadyMediaOrNull(vendorId, logoMediaId),
+    assertOwnReadyMediaOrNull(vendorId, coverMediaId),
+  ]);
+
+  const profile = await vendorRepository.upsertVendorProfile(vendorId, { ...profileFields, logoMediaId, coverMediaId });
   await recalculateCompleteness(vendorId);
   return profile;
 }

@@ -33,6 +33,8 @@ export interface UpsertVendorProfileInput {
   seoDescription: string | undefined;
   canonicalUrl: string | undefined;
   cityId: string | undefined;
+  logoMediaId: string | null | undefined;
+  coverMediaId: string | null | undefined;
 }
 
 export interface SetCategoriesInput {

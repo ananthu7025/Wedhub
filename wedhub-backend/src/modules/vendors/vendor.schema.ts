@@ -35,6 +35,12 @@ export const upsertProfileSchema = z.object({
   seoDescription: z.string().max(300).optional(),
   canonicalUrl: z.string().url().optional(),
   cityId: z.string().uuid().optional(),
+  // Nullable (not just optional) so a vendor can explicitly clear a
+  // previously-set logo/cover, not just set one — omitUndefined in the
+  // repository layer only strips `undefined`, so `null` passes through as a
+  // real "unset this" write.
+  logoMediaId: z.string().uuid().nullable().optional(),
+  coverMediaId: z.string().uuid().nullable().optional(),
 });
 
 export const setCategoriesSchema = z.object({

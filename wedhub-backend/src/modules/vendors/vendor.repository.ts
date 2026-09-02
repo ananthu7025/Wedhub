@@ -3,7 +3,7 @@ import { prisma } from "../../config/database";
 import { omitUndefined } from "../../common/utils/object.util";
 
 export const VENDOR_FULL_INCLUDE = {
-  profile: true,
+  profile: { include: { logoMedia: true, coverMedia: true } },
   categories: { include: { category: true } },
   serviceAreas: { include: { location: true } },
   services: { include: { service: true } },
@@ -119,6 +119,13 @@ export function upsertVendorProfile(vendorId: string, data: Record<string, unkno
     create: { vendorId, ...fields },
     update: fields,
   });
+}
+
+// Ownership+readiness check for setting VendorProfile.logoMediaId/coverMediaId
+// (PUT /vendors/me/profile) — Media itself belongs to the media module, but
+// this is a same-database Prisma read, not a cross-module service call.
+export function findOwnMediaById(vendorId: string, mediaId: string) {
+  return prisma.media.findFirst({ where: { id: mediaId, vendorId }, select: { id: true, status: true } });
 }
 
 export function replaceVendorCategories(

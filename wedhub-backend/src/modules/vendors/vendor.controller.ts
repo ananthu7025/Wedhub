@@ -80,6 +80,8 @@ export async function upsertProfile(req: Request, res: Response): Promise<void> 
     seoDescription: body.seoDescription,
     canonicalUrl: body.canonicalUrl,
     cityId: body.cityId,
+    logoMediaId: body.logoMediaId,
+    coverMediaId: body.coverMediaId,
   });
   res.json(successResponse(profile));
 }

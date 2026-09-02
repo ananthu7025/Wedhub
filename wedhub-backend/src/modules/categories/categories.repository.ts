@@ -20,7 +20,15 @@ export function findAllCategories() {
 export function findCategoryBySlug(slug: string) {
   return prisma.category.findUnique({
     where: { slug },
-    include: { attributes: { orderBy: { sortOrder: "asc" } }, children: true },
+    include: {
+      attributes: { orderBy: { sortOrder: "asc" } },
+      children: true,
+      // Vendor-facing "services offered" checkboxes (Frontend Arch Phase 5)
+      // need a real catalog of this category's services — there is no
+      // separate services module/endpoint, this was the smallest addition
+      // that unblocks it without inventing new admin CRUD.
+      services: { where: { isActive: true }, orderBy: { name: "asc" } },
+    },
   });
 }
 
