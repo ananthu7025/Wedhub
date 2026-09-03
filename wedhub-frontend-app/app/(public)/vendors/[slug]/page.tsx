@@ -59,13 +59,26 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
   ]);
   const reviews = reviewsResult.data;
 
-  // profile.logoMediaId/coverMediaId cannot be resolved to a URL (no public
-  // media-by-id endpoint, no relation joined into the vendor-detail query —
-  // see frontenddocs/10-risks-and-open-questions.md Open Question 7).
-  // Fall back to the vendor's first public album's cover photo.
+  // GET /vendors/:slug now joins profile.logoMedia/coverMedia directly
+  // (vendor.repository.ts's include) — the earlier "no way to resolve
+  // logoMediaId/coverMediaId to a URL" limitation (frontenddocs/
+  // 10-risks-and-open-questions.md Open Question 7) no longer applies, but
+  // this page was never updated to use it, so a vendor's logo/cover never
+  // rendered even when uploaded. Cover falls back to the vendor's first
+  // public album photo if no cover image is set; logo falls back to the
+  // first-letter badge.
+  const coverMedia = vendor.profile?.coverMedia;
   const heroMedia = albums[0]?.media[0];
-  const heroImageKey = heroMedia?.optimizedObjectKey ?? heroMedia?.originalObjectKey;
+  const heroImageKey =
+    coverMedia?.optimizedObjectKey ??
+    coverMedia?.originalObjectKey ??
+    heroMedia?.optimizedObjectKey ??
+    heroMedia?.originalObjectKey;
   const heroImageUrl = heroImageKey ? getPublicMediaUrl(heroImageKey) : null;
+
+  const logoMedia = vendor.profile?.logoMedia;
+  const logoImageKey = logoMedia?.optimizedObjectKey ?? logoMedia?.originalObjectKey;
+  const logoImageUrl = logoImageKey ? getPublicMediaUrl(logoImageKey) : null;
 
   const verificationLabel = VERIFICATION_LABEL[vendor.verificationLevel];
   const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? vendor.categories[0]?.category;
@@ -80,8 +93,12 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
 
       <div className="mx-auto max-w-[1200px] px-10 max-[900px]:px-4">
         <div className="-mt-16 flex items-end gap-5 max-[900px]:flex-wrap">
-          <div className="flex h-32 w-32 flex-shrink-0 items-center justify-center rounded-2xl border-4 border-white bg-surface-input text-3xl font-bold text-text-grey shadow-[var(--shadow-card)]">
-            {vendor.businessName.charAt(0)}
+          <div className="relative flex h-32 w-32 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-surface-input text-3xl font-bold text-text-grey shadow-[var(--shadow-card)]">
+            {logoImageUrl ? (
+              <Image src={logoImageUrl} alt={vendor.businessName} fill className="object-cover" />
+            ) : (
+              vendor.businessName.charAt(0)
+            )}
           </div>
           <div className="flex-1 pb-2">
             <div className="mb-1 inline-flex flex-wrap items-center gap-2.5 bg-white">

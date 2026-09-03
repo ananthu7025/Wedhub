@@ -113,12 +113,21 @@ export interface VendorPackage {
   isActive: boolean;
 }
 
+export interface VendorProfileMedia {
+  id: string;
+  optimizedObjectKey: string | null;
+  thumbnailObjectKey: string | null;
+  originalObjectKey: string;
+}
+
 export interface VendorProfile {
   vendorId: string;
   shortDescription: string | null;
   description: string | null;
   logoMediaId: string | null;
   coverMediaId: string | null;
+  logoMedia: VendorProfileMedia | null;
+  coverMedia: VendorProfileMedia | null;
   vendorType: string | null;
   tags: string[];
   address: string | null;
