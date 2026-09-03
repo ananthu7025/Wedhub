@@ -125,6 +125,7 @@ export function listReviewsAdmin(filter: { status: ReviewStatus | undefined; pag
       vendor: { select: { id: true, businessName: true, slug: true } },
       user: { select: REVIEWER_SELECT },
       reports: { include: { reporter: { select: REVIEWER_SELECT } } },
+      ...REVIEW_PHOTOS_INCLUDE,
     },
     orderBy: { createdAt: "desc" },
     skip: (filter.page - 1) * filter.limit,

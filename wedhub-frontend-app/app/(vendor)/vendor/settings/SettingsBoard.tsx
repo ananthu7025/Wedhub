@@ -62,6 +62,7 @@ export function SettingsBoard({
   const [phone, setPhone] = useState(vendor.profile?.phone ?? "");
   const [savingBusiness, setSavingBusiness] = useState(false);
   const [businessSaved, setBusinessSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [preferences, setPreferences] = useState(initialPreferences);
   const [savingToggle, setSavingToggle] = useState<string | null>(null);
@@ -73,16 +74,26 @@ export function SettingsBoard({
     event.preventDefault();
     setSavingBusiness(true);
     setBusinessSaved(false);
+    setSaveError(null);
+    // firstName/lastName/phone are optional on the backend but reject an
+    // empty string outright (min(1)/min(6)) — omit rather than send "" for
+    // a field the vendor never filled in, so an unrelated blank field
+    // (e.g. no phone on file yet) can't silently fail every save, business
+    // name included. Previously always sent, always 400'd for a vendor who
+    // never filled these in during onboarding, with no error surfaced.
     const [vendorResult, userResult, profileResult] = await Promise.all([
       businessName !== vendor.businessName ? updateMyVendorDetail({ businessName }) : Promise.resolve({ success: true as const, data: null }),
-      updateMyProfile({ firstName, lastName }),
-      upsertMyProfile({ phone }),
+      updateMyProfile({ firstName: firstName || undefined, lastName: lastName || undefined }),
+      upsertMyProfile({ phone: phone || undefined }),
     ]);
     setSavingBusiness(false);
     if (vendorResult.success && userResult.success && profileResult.success) {
       setBusinessSaved(true);
       setTimeout(() => setBusinessSaved(false), 2000);
+      return;
     }
+    const firstError = [vendorResult, userResult, profileResult].find((r) => !r.success);
+    setSaveError(firstError && !firstError.success ? firstError.error.message : "Could not save your changes.");
   }
 
   async function handleToggle(eventType: NotificationEventType, channel: NotificationChannel, nextValue: boolean) {
@@ -161,6 +172,7 @@ export function SettingsBoard({
             />
           </label>
         </div>
+        {saveError && <p className="mb-3 rounded-md bg-red-10 p-3 text-[13px] text-red-70">{saveError}</p>}
         <button
           type="submit"
           disabled={savingBusiness}
