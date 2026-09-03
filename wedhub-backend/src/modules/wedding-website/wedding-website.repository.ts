@@ -137,6 +137,31 @@ export function createPendingPayment(data: { weddingWebsiteId: string; razorpayO
   });
 }
 
+// Telegram's Payment Link path — same purpose/status/amount shape as
+// createPendingPayment above, keyed by razorpayPaymentLinkId instead of
+// razorpayOrderId (see schema.prisma's Payment.razorpayPaymentLinkId
+// comment for why the two paths can't share one correlation key).
+export function createPendingPaymentLinkPayment(data: {
+  weddingWebsiteId: string;
+  razorpayPaymentLinkId: string;
+  amount: number;
+  currency: string;
+}) {
+  return prisma.payment.create({
+    data: {
+      purpose: "WEDDING_WEBSITE",
+      weddingWebsiteId: data.weddingWebsiteId,
+      razorpayPaymentLinkId: data.razorpayPaymentLinkId,
+      amount: data.amount,
+      currency: data.currency,
+    },
+  });
+}
+
+export function findPaymentByPaymentLinkId(razorpayPaymentLinkId: string) {
+  return prisma.payment.findUnique({ where: { razorpayPaymentLinkId } });
+}
+
 // Events
 
 export function listEvents(weddingWebsiteId: string) {

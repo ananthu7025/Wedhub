@@ -1,4 +1,4 @@
-import type { Prisma, TelegramConversationState, TelegramMessageDirection } from "@prisma/client";
+import type { Prisma, TelegramConversationState, TelegramFlowType, TelegramMessageDirection } from "@prisma/client";
 import { prisma } from "../../config/database";
 
 export function findTelegramUserByTelegramId(telegramUserId: bigint) {
@@ -54,9 +54,15 @@ export function createConversation(telegramUserRowId: string) {
 export async function resetOrCreateConversation(telegramUserRowId: string) {
   const existing = await findOpenConversation(telegramUserRowId);
   if (existing) {
+    // Also resets flowType/weddingWebsiteId back to their ENQUIRY-flow
+    // defaults (Arch Phase 26) — without this, a user who abandoned a
+    // WEDDING_WEBSITE flow mid-way and later types /start intending to
+    // search for a vendor would have advanceConversation still routed
+    // through the WW_* switch branches, since flowType would otherwise
+    // stay stale from the earlier attempt.
     return prisma.telegramConversation.update({
       where: { id: existing.id },
-      data: { state: "START", collectedData: {}, enquiryId: null },
+      data: { state: "START", collectedData: {}, enquiryId: null, flowType: "ENQUIRY", weddingWebsiteId: null },
     });
   }
   return createConversation(telegramUserRowId);
@@ -64,9 +70,29 @@ export async function resetOrCreateConversation(telegramUserRowId: string) {
 
 export function updateConversation(
   id: string,
-  data: { state?: TelegramConversationState; collectedData?: Prisma.InputJsonValue; enquiryId?: string },
+  data: {
+    state?: TelegramConversationState;
+    collectedData?: Prisma.InputJsonValue;
+    enquiryId?: string;
+    flowType?: TelegramFlowType;
+    weddingWebsiteId?: string;
+  },
 ) {
   return prisma.telegramConversation.update({ where: { id }, data });
+}
+
+// webhook.service.ts's payment_link.paid handler needs to push a
+// "you're published!" message outside any normal conversation turn —
+// this finds the (chatId, conversationId) pair to send it to. Includes
+// COMPLETED conversations too (unlike findOpenConversation) since the
+// flow may have already been left at WW_AWAITING_PAYMENT with no
+// further messages sent by the user before paying.
+export function findConversationByWeddingWebsiteId(weddingWebsiteId: string) {
+  return prisma.telegramConversation.findFirst({
+    where: { weddingWebsiteId },
+    orderBy: { createdAt: "desc" },
+    include: { telegramUser: true },
+  });
 }
 
 export function recordMessage(data: {

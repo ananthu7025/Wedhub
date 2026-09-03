@@ -4,6 +4,14 @@ export function findOwnedDraft(weddingWebsiteId: string, ownerUserId: string) {
   return prisma.weddingWebsite.findFirst({ where: { id: weddingWebsiteId, ownerUserId }, select: { id: true } });
 }
 
+// Telegram-owned counterpart — needed for the bot's WW_COLLECTING_PHOTOS
+// state (Arch Phase 26). Kept as a separate, explicitly-named function
+// rather than overloading findOwnedDraft's second parameter, since the
+// two owner columns are genuinely different Prisma where-clauses.
+export function findOwnedDraftForTelegramUser(weddingWebsiteId: string, ownerTelegramUserId: string) {
+  return prisma.weddingWebsite.findFirst({ where: { id: weddingWebsiteId, ownerTelegramUserId }, select: { id: true } });
+}
+
 export function createUnattachedPhoto(data: { weddingWebsiteId: string; originalObjectKey: string; mimeType: string; fileSize: number }) {
   return prisma.media.create({
     data: {

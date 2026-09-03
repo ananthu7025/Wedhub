@@ -1,14 +1,21 @@
 import type { TelegramConversation } from "@prisma/client";
+import { env } from "../../config/env";
 import * as categoriesRepository from "../categories/categories.repository";
 import * as locationsRepository from "../locations/locations.repository";
 import * as searchRepository from "../search/search.repository";
 import { rankVendors } from "../search/vendor-ranking.service";
 import * as enquiryService from "../enquiries/enquiry.service";
+import * as weddingWebsiteService from "../wedding-website/wedding-website.service";
+import * as weddingWebsiteMediaService from "../wedding-website-media/wedding-website-media.service";
+import { downloadTelegramFile } from "../../integrations/telegram/telegram.client";
 import type { InlineButton } from "../../integrations/telegram/messaging-provider";
+import { NotFoundError } from "../../common/errors";
 import * as telegramRepository from "./telegram.repository";
-import type { CollectedData } from "./telegram.conversation.types";
+import type { EnquiryCollectedData, WeddingWebsiteCollectedData, WeddingWebsiteTemplateChoice } from "./telegram.conversation.types";
+import type { TelegramPhotoSize } from "./telegram.api-types";
 
 const CANDIDATE_SHORTLIST_SIZE = 3;
+const MAX_TELEGRAM_PHOTO_SIZE_BYTES = 20 * 1024 * 1024; // Telegram's own inbound-file cap
 
 interface StepResult {
   text: string;
@@ -17,6 +24,14 @@ interface StepResult {
 
 function skipRow(): InlineButton[][] {
   return [[{ text: "Skip", callbackData: "skip" }]];
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    rows.push(items.slice(i, i + size));
+  }
+  return rows;
 }
 
 function parseDate(input: string): Date | undefined {
@@ -39,18 +54,27 @@ function parseGuestCount(input: string): number | undefined {
   return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
-// product.md §34's welcome screen — "1. Find a vendor" is the only branch
-// this MVP implements (the other four — venues, recommendations without a
-// specific service, resuming/saved requests — aren't in architecture.md's
-// Phase 15 task list and would need their own design; declared as a visible
-// gap rather than silently only supporting one path with no acknowledgment).
+// product.md §34's welcome screen — "1. Find a vendor" was the only
+// branch the original MVP implemented (the other four — venues,
+// recommendations without a specific service, resuming/saved requests —
+// aren't in architecture.md's Phase 15 task list). Arch Phase 26 adds a
+// second, real branch: "Create Your Wedding Website – ₹49".
 export async function startConversation(telegramUserRowId: string): Promise<StepResult> {
   await telegramRepository.resetOrCreateConversation(telegramUserRowId);
   return {
     text: "Welcome to WedHub! What are you planning?",
-    buttons: [[{ text: "Find a vendor", callbackData: "start:find_vendor" }]],
+    buttons: [
+      [{ text: "Find a vendor", callbackData: "start:find_vendor" }],
+      [{ text: "💍 Create Your Wedding Website – ₹49", callbackData: "start:create_website" }],
+    ],
   };
 }
+
+// ============================================================
+// ENQUIRY flow — unchanged from before Arch Phase 26, just moved into
+// its own properly-typed function so advanceConversation can dispatch
+// on flowType without every case needing a runtime type guard.
+// ============================================================
 
 async function promptCategory(): Promise<StepResult> {
   const categories = await categoriesRepository.findActiveCategories();
@@ -90,7 +114,7 @@ function promptContact(): StepResult {
   return { text: "What's the best phone number to reach you? (or Skip)", buttons: skipRow() };
 }
 
-async function promptVendorMatches(data: CollectedData): Promise<StepResult> {
+async function promptVendorMatches(data: EnquiryCollectedData): Promise<StepResult> {
   if (!data.categoryId || !data.cityId) {
     return { text: "Something went wrong matching vendors — let's start over. Send /start to try again." };
   }
@@ -128,7 +152,7 @@ async function promptVendorMatches(data: CollectedData): Promise<StepResult> {
   };
 }
 
-function promptConfirmation(data: CollectedData): StepResult {
+function promptConfirmation(data: EnquiryCollectedData): StepResult {
   const lines = [
     `Category: ${data.categoryName ?? "-"}`,
     `City: ${data.cityName ?? "-"}`,
@@ -148,24 +172,13 @@ function promptConfirmation(data: CollectedData): StepResult {
   };
 }
 
-function chunk<T>(items: T[], size: number): T[][] {
-  const rows: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    rows.push(items.slice(i, i + size));
-  }
-  return rows;
-}
-
-// One entry point for both free-text messages and button taps — a button
-// tap arrives as a callback_data string (e.g. "category:<uuid>"), a typed
-// reply arrives as plain text; the state itself decides which it expects.
-export async function advanceConversation(
+async function advanceEnquiryConversation(
   conversation: TelegramConversation,
   telegramUserRowId: string,
   input: { text: string | undefined; callbackData: string | undefined },
   contextForConfirmation: { userId: string | undefined; contactName: string; telegramUserId: bigint },
 ): Promise<StepResult> {
-  const data = (conversation.collectedData as CollectedData | null) ?? {};
+  const data = (conversation.collectedData as EnquiryCollectedData | null) ?? {};
 
   switch (conversation.state) {
     case "START": {
@@ -303,4 +316,319 @@ export async function advanceConversation(
     default:
       return startConversation(telegramUserRowId);
   }
+}
+
+// ============================================================
+// WEDDING_WEBSITE flow — Arch Phase 26. Unlike ENQUIRY's "nothing
+// durable until the end" pattern, the real WeddingWebsite row is
+// created early (WW_SELECTING_TEMPLATE -> WW_COLLECTING_COUPLE_NAMES),
+// per docs/12-stage-wedding-website.md's "Telegram flow design"
+// decision — photo uploads need a real weddingWebsiteId to attach to.
+// Every state after that writes straight to the real WeddingWebsite/
+// WeddingWebsiteEvent rows via wedding-website.service.ts's
+// TELEGRAM_USER owner-ref functions; collectedData only holds the
+// template choice (before the draft exists) and an in-progress event
+// being built across a few short prompts.
+// ============================================================
+
+const TEMPLATE_CHOICES: Array<{ id: WeddingWebsiteTemplateChoice; label: string }> = [
+  { id: "ROYAL_WEDDING", label: "Royal Wedding" },
+  { id: "MINIMAL_ELEGANT", label: "Minimal Elegant" },
+  { id: "TRADITIONAL_INDIAN", label: "Traditional Indian Wedding" },
+];
+
+function promptTemplate(): StepResult {
+  return {
+    text: "Let's create your wedding website for just ₹49 💍\n\nChoose a template:",
+    buttons: TEMPLATE_CHOICES.map((t): InlineButton[] => [{ text: t.label, callbackData: `ww_template:${t.id}` }]),
+  };
+}
+
+function promptBrideName(): StepResult {
+  return { text: "What's the bride's name?" };
+}
+
+function promptGroomName(): StepResult {
+  return { text: "And the groom's name?" };
+}
+
+function promptWeddingDateWW(): StepResult {
+  return { text: "When's the big day? (e.g. 2027-06-20, or Skip)", buttons: skipRow() };
+}
+
+function promptVenue(): StepResult {
+  return { text: "Where's the venue? (or Skip)", buttons: skipRow() };
+}
+
+function promptAddEvent(): StepResult {
+  return {
+    text: "Want to add a wedding event (like Mehendi, Haldi, or Reception)?",
+    buttons: [
+      [
+        { text: "+ Add an event", callbackData: "ww_event:add" },
+        { text: "Done with events", callbackData: "ww_event:done" },
+      ],
+    ],
+  };
+}
+
+function promptEventName(): StepResult {
+  return { text: "What's the event called? (e.g. Mehendi)" };
+}
+
+function promptEventVenue(): StepResult {
+  return { text: "Where's that event? (or Skip)", buttons: skipRow() };
+}
+
+function promptPhotos(): StepResult {
+  return {
+    text: "Send a few photos for your wedding website (cover photo, couple photo, gallery) — or tap Done when you're finished.",
+    buttons: [[{ text: "Done with photos", callbackData: "ww_photos:done" }]],
+  };
+}
+
+function promptPreviewReady(): StepResult {
+  return {
+    text: "Your wedding website is ready ❤️",
+    buttons: [[{ text: "Preview Website", callbackData: "ww_preview:generate" }]],
+  };
+}
+
+function promptPublishCta(previewUrl: string | undefined): StepResult {
+  return {
+    text: "Love it? Publish your wedding website for just ₹49 to get your permanent shareable link.",
+    buttons: [
+      ...(previewUrl ? [[{ text: "View Preview", url: previewUrl }] as InlineButton[]] : []),
+      [{ text: "Publish My Website – ₹49", callbackData: "ww_publish:start" }],
+    ],
+  };
+}
+
+async function advanceWeddingWebsiteConversation(
+  conversation: TelegramConversation,
+  telegramUserRowId: string,
+  input: { text: string | undefined; callbackData: string | undefined; photo: TelegramPhotoSize[] | undefined },
+  contextForConfirmation: { contactName: string; contactPhone: string | undefined },
+): Promise<StepResult> {
+  const data = (conversation.collectedData as WeddingWebsiteCollectedData | null) ?? {};
+  const owner = { kind: "TELEGRAM_USER" as const, id: telegramUserRowId };
+
+  switch (conversation.state) {
+    case "WW_SELECTING_TEMPLATE": {
+      const template = input.callbackData?.startsWith("ww_template:")
+        ? (input.callbackData.slice(12) as WeddingWebsiteTemplateChoice)
+        : undefined;
+      if (!template || !TEMPLATE_CHOICES.some((t) => t.id === template)) {
+        return promptTemplate();
+      }
+      await telegramRepository.updateConversation(conversation.id, {
+        state: "WW_COLLECTING_COUPLE_NAMES",
+        collectedData: { ...data, template },
+      });
+      return promptBrideName();
+    }
+
+    case "WW_COLLECTING_COUPLE_NAMES": {
+      // Two-part prompt (bride then groom), tracked by whether
+      // brideNameDraft has been recorded yet. The groom-name half (and
+      // real draft creation) is handled one level up in
+      // advanceConversation, since it needs createDraftForTelegramUser
+      // rather than an owner-scoped mutation — every other WW_* case
+      // here operates on an already-existing draft via getOwnedDraftOrThrow.
+      if (!data.brideNameDraft) {
+        if (!input.text?.trim()) return promptBrideName();
+        await telegramRepository.updateConversation(conversation.id, {
+          collectedData: { ...data, brideNameDraft: input.text.trim() },
+        });
+        return promptGroomName();
+      }
+      return promptGroomName();
+    }
+
+    case "WW_COLLECTING_WEDDING_DATE": {
+      if (input.callbackData !== "skip" && input.text) {
+        const parsed = parseDate(input.text);
+        if (!parsed) {
+          return { text: "I couldn't read that date. Try a format like 2027-06-20, or tap Skip.", buttons: skipRow() };
+        }
+        await weddingWebsiteService.updateDraft(conversation.weddingWebsiteId as string, owner, { weddingDate: parsed });
+      }
+      await telegramRepository.updateConversation(conversation.id, { state: "WW_COLLECTING_VENUE" });
+      return promptVenue();
+    }
+
+    case "WW_COLLECTING_VENUE": {
+      if (input.callbackData !== "skip" && input.text) {
+        await weddingWebsiteService.updateDraft(conversation.weddingWebsiteId as string, owner, { venueName: input.text.trim() });
+      }
+      await telegramRepository.updateConversation(conversation.id, { state: "WW_COLLECTING_EVENTS" });
+      return promptAddEvent();
+    }
+
+    case "WW_COLLECTING_EVENTS": {
+      if (input.callbackData === "ww_event:done") {
+        await telegramRepository.updateConversation(conversation.id, { state: "WW_COLLECTING_PHOTOS" });
+        return promptPhotos();
+      }
+      if (input.callbackData === "ww_event:add") {
+        return promptEventName();
+      }
+      // Check the pending-venue reply BEFORE the "bare text = new event
+      // name" fallback below — otherwise a venue reply like "Taj Hotel"
+      // would be misread as the name of a second event, since both
+      // arrive as plain text at this same state.
+      if (data.pendingEventName) {
+        const venue = input.callbackData === "skip" ? undefined : input.text?.trim();
+        await weddingWebsiteService.createEvent(conversation.weddingWebsiteId as string, owner, {
+          name: data.pendingEventName,
+          venue,
+        });
+        await telegramRepository.updateConversation(conversation.id, { collectedData: { ...data, pendingEventName: undefined } });
+        return promptAddEvent();
+      }
+      // A bare text reply while at this junction (not "add"/"done" yet) is
+      // treated as the event name directly, so a user who just starts
+      // typing an event name isn't forced to tap "+ Add an event" first.
+      if (input.text?.trim()) {
+        await telegramRepository.updateConversation(conversation.id, {
+          collectedData: { ...data, pendingEventName: input.text.trim() },
+        });
+        return promptEventVenue();
+      }
+      return promptAddEvent();
+    }
+
+    case "WW_COLLECTING_PHOTOS": {
+      if (input.callbackData === "ww_photos:done") {
+        await telegramRepository.updateConversation(conversation.id, { state: "WW_PREVIEW_READY" });
+        return promptPreviewReady();
+      }
+      if (input.photo && input.photo.length > 0) {
+        // Largest = last, per Telegram's own documented ordering.
+        const best = input.photo[input.photo.length - 1] as TelegramPhotoSize;
+        if ((best.file_size ?? 0) > MAX_TELEGRAM_PHOTO_SIZE_BYTES) {
+          return { text: "That photo is too large — please try a smaller one, or tap Done.", buttons: [[{ text: "Done with photos", callbackData: "ww_photos:done" }]] };
+        }
+        const { bytes, mimeType } = await downloadTelegramFile(best.file_id);
+        const media = await weddingWebsiteMediaService.ingestTelegramPhoto(telegramUserRowId, {
+          weddingWebsiteId: conversation.weddingWebsiteId as string,
+          fileBytes: bytes,
+          fileSize: bytes.length,
+          mimeType,
+          fileExtension: ".jpg",
+        });
+        // First photo becomes the cover automatically — subsequent ones
+        // just join the gallery (same "first upload = cover" convenience
+        // the web wizard doesn't have, since Telegram has no dedicated
+        // "cover photo" upload slot the way the web Photos step does).
+        const draft = await weddingWebsiteService.getOwnDraft(conversation.weddingWebsiteId as string, owner);
+        if (!draft.coverMedia) {
+          await weddingWebsiteService.updateDraft(conversation.weddingWebsiteId as string, owner, { coverMediaId: media.id });
+        }
+        return { text: "Got it! Send another photo, or tap Done.", buttons: [[{ text: "Done with photos", callbackData: "ww_photos:done" }]] };
+      }
+      return promptPhotos();
+    }
+
+    case "WW_PREVIEW_READY": {
+      if (input.callbackData === "ww_preview:generate") {
+        const result = await weddingWebsiteService.generatePreview(conversation.weddingWebsiteId as string, owner);
+        await telegramRepository.updateConversation(conversation.id, { state: "WW_AWAITING_PAYMENT" });
+        return promptPublishCta(`${env.FRONTEND_URL}/preview/${result.previewToken}`);
+      }
+      return promptPreviewReady();
+    }
+
+    case "WW_AWAITING_PAYMENT": {
+      if (input.callbackData === "ww_publish:start") {
+        const result = await weddingWebsiteService.createPublishPaymentLink(conversation.weddingWebsiteId as string, telegramUserRowId, {
+          contactName: contextForConfirmation.contactName,
+          contactPhone: contextForConfirmation.contactPhone,
+        });
+        return {
+          text: `Tap below to pay ₹${result.amount} securely and publish your wedding website:`,
+          buttons: [[{ text: `Pay ₹${result.amount} to Publish`, url: result.shortUrl }]],
+        };
+      }
+      return promptPublishCta(undefined);
+    }
+
+    case "WW_PUBLISHED":
+    default:
+      return startConversation(telegramUserRowId);
+  }
+}
+
+// One entry point for both free-text messages and button taps — a button
+// tap arrives as a callback_data string (e.g. "category:<uuid>"), a typed
+// reply arrives as plain text; the state itself decides which it expects.
+// Arch Phase 26: dispatches on conversation.flowType before doing
+// anything else, so ENQUIRY and WEDDING_WEBSITE never share a data cast.
+export async function advanceConversation(
+  conversation: TelegramConversation,
+  telegramUserRowId: string,
+  input: { text: string | undefined; callbackData: string | undefined; photo?: TelegramPhotoSize[] | undefined },
+  contextForConfirmation: { userId: string | undefined; contactName: string; contactPhone: string | undefined; telegramUserId: bigint },
+): Promise<StepResult> {
+  if (conversation.state === "START") {
+    if (input.callbackData === "start:create_website") {
+      await telegramRepository.updateConversation(conversation.id, {
+        flowType: "WEDDING_WEBSITE",
+        state: "WW_SELECTING_TEMPLATE",
+      });
+      return promptTemplate();
+    }
+    if (input.callbackData !== "start:find_vendor") {
+      return startConversation(telegramUserRowId);
+    }
+  }
+
+  if (conversation.flowType === "WEDDING_WEBSITE") {
+    // WW_COLLECTING_COUPLE_NAMES's second half (groom name) both creates
+    // the real draft AND advances the state — handled here, one level up
+    // from the switch, since it needs createDraftForTelegramUser
+    // (owner-creation, not an owner-scoped mutation, so it doesn't fit
+    // getOwnedDraftOrThrow's shape the way every other WW_* transition
+    // does). Only fires once brideNameDraft is already recorded — the
+    // first half (collecting the bride's name) is handled inside the
+    // switch in advanceWeddingWebsiteConversation below.
+    if (conversation.state === "WW_COLLECTING_COUPLE_NAMES" && input.text?.trim()) {
+      const data = (conversation.collectedData as WeddingWebsiteCollectedData | null) ?? {};
+      if (data.brideNameDraft) {
+        const draft = await weddingWebsiteService.createDraftForTelegramUser(telegramUserRowId, {
+          template: data.template ?? "ROYAL_WEDDING",
+          brideName: data.brideNameDraft,
+          groomName: input.text.trim(),
+        });
+        await telegramRepository.updateConversation(conversation.id, {
+          state: "WW_COLLECTING_WEDDING_DATE",
+          weddingWebsiteId: draft.id,
+          collectedData: { template: data.template },
+        });
+        return promptWeddingDateWW();
+      }
+    }
+
+    try {
+      return await advanceWeddingWebsiteConversation(
+        conversation,
+        telegramUserRowId,
+        { text: input.text, callbackData: input.callbackData, photo: input.photo },
+        { contactName: contextForConfirmation.contactName, contactPhone: contextForConfirmation.contactPhone },
+      );
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        // The draft was deleted or somehow became unreachable mid-flow —
+        // fail safe back to the main menu rather than a dead conversation.
+        return startConversation(telegramUserRowId);
+      }
+      throw err;
+    }
+  }
+
+  return advanceEnquiryConversation(conversation, telegramUserRowId, input, {
+    userId: contextForConfirmation.userId,
+    contactName: contextForConfirmation.contactName,
+    telegramUserId: contextForConfirmation.telegramUserId,
+  });
 }

@@ -34,6 +34,14 @@ function requireUserId(req: Request): string {
   return req.user.id;
 }
 
+// Every web-facing route in this controller is a real logged-in User —
+// the Telegram-owned-draft path (WeddingWebsiteOwnerRef's TELEGRAM_USER
+// variant) is only ever constructed from telegram.conversation.service.ts,
+// which calls weddingWebsiteService functions directly, not through HTTP.
+function ownerRefFor(userId: string): { kind: "USER"; id: string } {
+  return { kind: "USER", id: userId };
+}
+
 export async function createDraft(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
   const body = req.body as CreateWeddingWebsiteBody;
@@ -49,20 +57,20 @@ export async function listOwnDrafts(req: Request, res: Response): Promise<void> 
 
 export async function getOwnDraft(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
-  const website = await weddingWebsiteService.getOwnDraft(req.params.id as string, userId);
+  const website = await weddingWebsiteService.getOwnDraft(req.params.id as string, ownerRefFor(userId));
   res.json(successResponse(website));
 }
 
 export async function updateDraft(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
   const body = req.body as UpdateWeddingWebsiteBody;
-  const website = await weddingWebsiteService.updateDraft(req.params.id as string, userId, body);
+  const website = await weddingWebsiteService.updateDraft(req.params.id as string, ownerRefFor(userId), body);
   res.json(successResponse(website));
 }
 
 export async function generatePreview(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
-  const result = await weddingWebsiteService.generatePreview(req.params.id as string, userId);
+  const result = await weddingWebsiteService.generatePreview(req.params.id as string, ownerRefFor(userId));
   res.status(201).json(successResponse(result));
 }
 
@@ -88,7 +96,7 @@ export async function listPublishedSlugs(_req: Request, res: Response): Promise<
 
 export async function createPublishOrder(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
-  const result = await weddingWebsiteService.createPublishOrder(req.params.id as string, userId);
+  const result = await weddingWebsiteService.createPublishOrder(req.params.id as string, ownerRefFor(userId));
   res.status(201).json(successResponse(result));
 }
 
@@ -96,27 +104,27 @@ export async function createPublishOrder(req: Request, res: Response): Promise<v
 
 export async function listEvents(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
-  const events = await weddingWebsiteService.listEvents(req.params.id as string, userId);
+  const events = await weddingWebsiteService.listEvents(req.params.id as string, ownerRefFor(userId));
   res.json(successResponse(events));
 }
 
 export async function createEvent(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
   const body = req.body as CreateWeddingWebsiteEventBody;
-  const event = await weddingWebsiteService.createEvent(req.params.id as string, userId, body);
+  const event = await weddingWebsiteService.createEvent(req.params.id as string, ownerRefFor(userId), body);
   res.status(201).json(successResponse(event));
 }
 
 export async function updateEvent(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
   const body = req.body as UpdateWeddingWebsiteEventBody;
-  const event = await weddingWebsiteService.updateEvent(req.params.eventId as string, userId, body);
+  const event = await weddingWebsiteService.updateEvent(req.params.eventId as string, ownerRefFor(userId), body);
   res.json(successResponse(event));
 }
 
 export async function deleteEvent(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
-  await weddingWebsiteService.deleteEvent(req.params.eventId as string, userId);
+  await weddingWebsiteService.deleteEvent(req.params.eventId as string, ownerRefFor(userId));
   res.json(successResponse({ deleted: true }));
 }
 
@@ -130,7 +138,7 @@ export async function submitRsvp(req: Request, res: Response): Promise<void> {
 
 export async function listRsvps(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
-  const rsvps = await weddingWebsiteService.listRsvps(req.params.id as string, userId);
+  const rsvps = await weddingWebsiteService.listRsvps(req.params.id as string, ownerRefFor(userId));
   res.json(successResponse(rsvps));
 }
 

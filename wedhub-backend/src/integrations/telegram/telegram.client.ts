@@ -29,7 +29,11 @@ function getClient(): TelegramBot {
 
 function toInlineKeyboard(buttons: InlineButton[][]) {
   return {
-    inline_keyboard: buttons.map((row) => row.map((btn) => ({ text: btn.text, callback_data: btn.callbackData }))),
+    inline_keyboard: buttons.map((row) =>
+      row.map((btn): { text: string; url: string } | { text: string; callback_data: string } =>
+        btn.url !== undefined ? { text: btn.text, url: btn.url } : { text: btn.text, callback_data: btn.callbackData as string },
+      ),
+    ),
   };
 }
 
@@ -60,6 +64,25 @@ export const telegramProvider: MessagingProvider = new TelegramProvider();
 // since it has no equivalent in a generic messaging abstraction.
 export async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
   await getClient().answerCallbackQuery(callbackQueryId, text !== undefined ? { text } : {});
+}
+
+// Arch Phase 26's WW_COLLECTING_PHOTOS state — resolves an inbound
+// photo's file_id to Telegram's real download URL, then fetches the
+// bytes ourselves (the bot server, not a browser, is the one pushing to
+// R2 — see wedding-website-media.service.ts's ingestTelegramPhoto).
+export async function downloadTelegramFile(fileId: string): Promise<{ bytes: Buffer; mimeType: string }> {
+  const url = await getClient().getFileLink(fileId);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new ExternalServiceError(`Failed to download Telegram file: HTTP ${response.status}`);
+  }
+  const bytes = Buffer.from(await response.arrayBuffer());
+  // Telegram doesn't return a Content-Type header reliably for file
+  // downloads — photos are always JPEG on Telegram's side regardless of
+  // what the user originally sent (server-side re-encoding), so this is
+  // not a guess.
+  const mimeType = response.headers.get("content-type") ?? "image/jpeg";
+  return { bytes, mimeType };
 }
 
 export async function registerWebhook(url: string): Promise<void> {

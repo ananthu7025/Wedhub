@@ -49,6 +49,43 @@ export async function fetchPayment(paymentId: string) {
   return getClient().payments.fetch(paymentId);
 }
 
+// Payment Links (not Orders+Checkout.js) — the ₹49 wedding-website publish
+// charge's Telegram path, since there's no browser inside a Telegram chat
+// to run Checkout.js against a pre-created order. Returns a real,
+// short, shareable URL the bot sends as a button; the eventual payment
+// fires Razorpay's own payment_link.paid webhook event (see
+// webhook.service.ts), correlated back to our Payment row via this
+// link's own id (echoed in that event, set in `notes` here) — not via
+// razorpayOrderId, since a Payment Link generates its own internal order
+// that we never created or stored ahead of time.
+export async function createPaymentLink(input: {
+  amountInSmallestUnit: number;
+  currency: string;
+  description: string;
+  contactName: string;
+  // Telegram's Bot API never exposes a user's phone number unless they
+  // explicitly share a contact card (a separate, unbuilt request_contact
+  // flow) — omitted entirely rather than sent as a synthesized
+  // placeholder. A real bug caught live: Razorpay's test-mode API
+  // rejects placeholder-looking numbers outright ("Recurring digits in
+  // customer contact are disallowed" for "9999999999"), and `contact` is
+  // optional in Razorpay's own customer schema, so omitting it is both
+  // simpler and more honest than guessing a fake number that happens to
+  // pass validation.
+  contactPhone: string | undefined;
+  notes: Record<string, string>;
+}): Promise<{ paymentLinkId: string; shortUrl: string }> {
+  const link = await getClient().paymentLink.create({
+    amount: input.amountInSmallestUnit,
+    currency: input.currency,
+    description: input.description,
+    customer: input.contactPhone ? { name: input.contactName, contact: input.contactPhone } : { name: input.contactName },
+    notify: { sms: false, email: false },
+    notes: input.notes,
+  });
+  return { paymentLinkId: link.id, shortUrl: link.short_url };
+}
+
 export async function createRefund(paymentId: string, amountInSmallestUnit: number | undefined) {
   // Omitting `amount` refunds the payment's full remaining amount, per
   // Razorpay's API — an empty object is the documented way to request that,

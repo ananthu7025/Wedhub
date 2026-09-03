@@ -4,10 +4,13 @@
 // depends on this interface, never on `node-telegram-bot-api` directly.
 // TelegramProvider is the only implementation today; WhatsAppProvider/
 // WebChatProvider are the named "later" providers in the same section.
-export interface InlineButton {
-  text: string;
-  callbackData: string;
-}
+// Exactly one of callbackData/url is set — a callback button round-trips
+// through our own conversation state machine (advanceConversation), a url
+// button opens an external link directly (Telegram never sends us a
+// callback_query for it). Arch Phase 26 needs url buttons for the
+// Razorpay Payment Link sent inside WW_AWAITING_PAYMENT — a
+// callback_data button can't open an external checkout page.
+export type InlineButton = { text: string; callbackData: string; url?: undefined } | { text: string; url: string; callbackData?: undefined };
 
 export interface SendMessageOptions {
   buttons?: InlineButton[][];

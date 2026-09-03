@@ -2,6 +2,7 @@ import { logger } from "../../config/logger";
 import { AuthenticationError, ValidationError } from "../../common/errors";
 import { telegramProvider, answerCallbackQuery } from "../../integrations/telegram/telegram.client";
 import { verifyWebhookSecret } from "../../integrations/telegram/telegram.client";
+import type { InlineButton } from "../../integrations/telegram/messaging-provider";
 import * as telegramRepository from "./telegram.repository";
 import { advanceConversation, startConversation } from "./telegram.conversation.service";
 import type { TelegramApiUser, TelegramMessage, TelegramCallbackQuery, TelegramUpdate } from "./telegram.api-types";
@@ -31,7 +32,7 @@ async function sendAndLog(
   telegramUserRowId: string,
   chatId: bigint,
   conversationId: string | undefined,
-  step: { text: string; buttons?: { text: string; callbackData: string }[][] },
+  step: { text: string; buttons?: InlineButton[][] },
 ): Promise<void> {
   const sent = await telegramProvider.sendMessage(String(chatId), step.text, step.buttons ? { buttons: step.buttons } : {});
   await telegramRepository.recordMessage({
@@ -45,7 +46,10 @@ async function sendAndLog(
 
 async function handleTextMessage(message: TelegramMessage): Promise<void> {
   const apiUser = message.from;
-  if (!apiUser || !message.text) return;
+  // Photos arrive with no message.text (only message.photo) — Arch Phase
+  // 26's WW_COLLECTING_PHOTOS state needs those, so this can no longer
+  // bail out on "!message.text" the way the ENQUIRY-only version did.
+  if (!apiUser || (!message.text && !message.photo)) return;
 
   const telegramUser = await upsertTelegramUserFromApiUser(apiUser, message.chat.id);
   await telegramRepository.recordMessage({
@@ -53,7 +57,7 @@ async function handleTextMessage(message: TelegramMessage): Promise<void> {
     conversationId: undefined,
     direction: "INBOUND",
     telegramMessageId: BigInt(message.message_id),
-    text: message.text,
+    text: message.text ?? (message.photo ? "[photo]" : ""),
   });
 
   // /start (or any restart) always begins a fresh conversation — product.md
@@ -62,7 +66,7 @@ async function handleTextMessage(message: TelegramMessage): Promise<void> {
   // row stays whatever state it was in — nothing to clean up, no partial
   // Enquiry/Lead was ever created for it since that only happens at
   // CONFIRMING_ENQUIRY).
-  if (message.text.trim() === "/start") {
+  if (message.text?.trim() === "/start") {
     const step = await startConversation(telegramUser.id);
     await sendAndLog(telegramUser.id, telegramUser.chatId, undefined, step);
     return;
@@ -72,8 +76,13 @@ async function handleTextMessage(message: TelegramMessage): Promise<void> {
   const step = await advanceConversation(
     conversation,
     telegramUser.id,
-    { text: message.text, callbackData: undefined },
-    { userId: telegramUser.userId ?? undefined, contactName: contactNameFor(apiUser), telegramUserId: telegramUser.telegramUserId },
+    { text: message.text, callbackData: undefined, photo: message.photo },
+    {
+      userId: telegramUser.userId ?? undefined,
+      contactName: contactNameFor(apiUser),
+      contactPhone: undefined,
+      telegramUserId: telegramUser.telegramUserId,
+    },
   );
   await sendAndLog(telegramUser.id, telegramUser.chatId, conversation.id, step);
 }
@@ -99,9 +108,30 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery): Promis
     conversation,
     telegramUser.id,
     { text: undefined, callbackData: callbackQuery.data },
-    { userId: telegramUser.userId ?? undefined, contactName: contactNameFor(apiUser), telegramUserId: telegramUser.telegramUserId },
+    {
+      userId: telegramUser.userId ?? undefined,
+      contactName: contactNameFor(apiUser),
+      contactPhone: undefined,
+      telegramUserId: telegramUser.telegramUserId,
+    },
   );
   await sendAndLog(telegramUser.id, telegramUser.chatId, conversation.id, step);
+}
+
+// Called from webhook.service.ts's payment_link.paid handler (Razorpay
+// webhook, not a Telegram update) — the only proactive, out-of-turn push
+// this bot sends. Silently no-ops if no conversation row is found (e.g.
+// the website was published through the web flow, not Telegram, and
+// nothing to notify).
+export async function notifyWeddingWebsitePublished(weddingWebsiteId: string, publishedUrl: string): Promise<void> {
+  const conversation = await telegramRepository.findConversationByWeddingWebsiteId(weddingWebsiteId);
+  if (!conversation) return;
+
+  await telegramRepository.updateConversation(conversation.id, { state: "WW_PUBLISHED" });
+  await sendAndLog(conversation.telegramUser.id, conversation.telegramUser.chatId, conversation.id, {
+    text: "🎉 Payment received! Your wedding website is live.",
+    buttons: [[{ text: "View Your Website", url: publishedUrl }]],
+  });
 }
 
 export async function handleWebhook(body: unknown, secretTokenHeader: string | undefined): Promise<void> {

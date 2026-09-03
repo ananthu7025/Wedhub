@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { env } from "../../config/env";
 import { NotFoundError, ValidationError } from "../../common/errors";
-import { getSignedUploadUrl, objectExists } from "../../integrations/storage/r2.client";
+import { getSignedUploadUrl, objectExists, uploadObject } from "../../integrations/storage/r2.client";
 import { enqueueMediaProcessing } from "../../jobs/queues/media-processing.queue";
 import * as weddingWebsiteMediaRepository from "./wedding-website-media.repository";
 import { MAX_GALLERY_PHOTOS } from "./wedding-website-media.schema";
@@ -75,6 +75,52 @@ export async function confirmUpload(ownerUserId: string, mediaId: string) {
   await weddingWebsiteMediaRepository.markProcessing(mediaId);
   await enqueueMediaProcessing(mediaId);
   return weddingWebsiteMediaRepository.findPhotoById(mediaId);
+}
+
+// Telegram photo ingestion (Arch Phase 26's WW_COLLECTING_PHOTOS state).
+// Fundamentally different upload shape from createUploadRequest/
+// confirmUpload above: there is no browser to PUT against a signed R2
+// URL, since the bytes originate from Telegram's own file-download URL
+// (resolved server-side via node-telegram-bot-api's getFileLink, called
+// by the Telegram module before this function runs). The bot server
+// itself fetches those bytes and pushes them directly to R2 via
+// uploadObject — a single call creates a real, immediately-READY-for-
+// processing Media row, with no separate "confirm" step (there is
+// nothing async on the client side to wait for; enqueueMediaProcessing
+// is still the same background resize/optimize step every other upload
+// path uses).
+export async function ingestTelegramPhoto(
+  ownerTelegramUserId: string,
+  input: { weddingWebsiteId: string; fileBytes: Buffer; fileSize: number; mimeType: string; fileExtension: string },
+) {
+  const draft = await weddingWebsiteMediaRepository.findOwnedDraftForTelegramUser(input.weddingWebsiteId, ownerTelegramUserId);
+  if (!draft) {
+    throw new NotFoundError("Wedding website not found");
+  }
+
+  const maxSize = env.MEDIA_MAX_IMAGE_SIZE_MB * 1024 * 1024;
+  if (input.fileSize > maxSize) {
+    throw new ValidationError(`File exceeds the maximum allowed size of ${env.MEDIA_MAX_IMAGE_SIZE_MB}MB`);
+  }
+
+  const existingCount = await weddingWebsiteMediaRepository.countPhotosForWebsite(input.weddingWebsiteId);
+  if (existingCount >= MAX_GALLERY_PHOTOS) {
+    throw new ValidationError(`You can upload up to ${MAX_GALLERY_PHOTOS} photos to a wedding website`);
+  }
+
+  const objectKey = `wedding-websites/${input.weddingWebsiteId}/${randomUUID()}${input.fileExtension}`;
+  await uploadObject(objectKey, input.fileBytes, input.mimeType);
+
+  const media = await weddingWebsiteMediaRepository.createUnattachedPhoto({
+    weddingWebsiteId: input.weddingWebsiteId,
+    originalObjectKey: objectKey,
+    mimeType: input.mimeType,
+    fileSize: input.fileSize,
+  });
+
+  await weddingWebsiteMediaRepository.markProcessing(media.id);
+  await enqueueMediaProcessing(media.id);
+  return media;
 }
 
 export async function deletePhoto(ownerUserId: string, mediaId: string): Promise<void> {

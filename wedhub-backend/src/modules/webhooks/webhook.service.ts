@@ -1,8 +1,10 @@
 import { AuthenticationError, ValidationError } from "../../common/errors";
+import { env } from "../../config/env";
 import { logger } from "../../config/logger";
 import { verifyWebhookSignature } from "../../integrations/payment/razorpay.client";
 import * as entitlementService from "../entitlements/entitlement.service";
 import * as notificationService from "../notifications/notification.service";
+import { notifyWeddingWebsitePublished } from "../telegram/telegram.webhook.service";
 import { periodEndFor } from "../subscriptions/billing-period.util";
 import * as subscriptionRepository from "../subscriptions/subscription.repository";
 import * as weddingWebsiteService from "../wedding-website/wedding-website.service";
@@ -14,7 +16,11 @@ import type { RazorpayWebhookPayload } from "./webhook.types";
 // event, so `${event}:${entityId}` is stable and unique per real event,
 // while a genuine redelivery of the same event carries the same value).
 function idempotencyKeyFor(payload: RazorpayWebhookPayload): string {
-  const entityId = payload.payload.payment?.entity.id ?? payload.payload.refund?.entity.id ?? String(payload.created_at);
+  const entityId =
+    payload.payload.payment?.entity.id ??
+    payload.payload.refund?.entity.id ??
+    payload.payload.payment_link?.entity.id ??
+    String(payload.created_at);
   return `${payload.event}:${entityId}`;
 }
 
@@ -79,6 +85,9 @@ async function processEvent(payload: RazorpayWebhookPayload): Promise<void> {
     case "payment.failed":
       await handlePaymentFailed(payload);
       return;
+    case "payment_link.paid":
+      await handlePaymentLinkPaid(payload);
+      return;
     case "refund.created":
     case "refund.processed":
       // Refunds initiated directly from the Razorpay dashboard (outside our
@@ -126,6 +135,10 @@ async function handlePaymentCaptured(payload: RazorpayWebhookPayload): Promise<v
       return;
     }
     await subscriptionRepository.markPaymentCaptured(payment.id, paymentEntity.id);
+    // Web-checkout (Orders+Checkout.js) only ever charges a USER-owned
+    // draft (createPublishOrder is only reachable via the web controller)
+    // — no Telegram conversation can exist for this weddingWebsiteId, so
+    // unlike handlePaymentLinkPaid above there's no bot push to send here.
     await weddingWebsiteService.publishWeddingWebsite(payment.weddingWebsiteId);
     return;
   }
@@ -185,6 +198,47 @@ async function handlePaymentCaptured(payload: RazorpayWebhookPayload): Promise<v
       relatedEntityId: subscription.id,
     });
   }
+}
+
+// Arch Phase 26's Telegram ₹49 publish flow — the Payment Link
+// equivalent of handlePaymentCaptured above. Always WEDDING_WEBSITE
+// purpose (Payment Links are only ever created by
+// wedding-website.service.ts's createPublishPaymentLink), so this never
+// needs the subscription-shaped branches handlePaymentCaptured has.
+async function handlePaymentLinkPaid(payload: RazorpayWebhookPayload): Promise<void> {
+  const linkEntity = payload.payload.payment_link?.entity;
+  // Razorpay sends payload.payment.entity alongside payload.payment_link.entity
+  // on this event — the actual payment made against the link, same shape as
+  // a normal payment.captured event's payment entity. The link's own id is
+  // only used to look up our Payment row (see razorpayPaymentLinkId's
+  // schema comment); the underlying payment's id is what's stored as
+  // razorpayPaymentId, consistent with every other capture path.
+  const paymentEntity = payload.payload.payment?.entity;
+  if (!linkEntity || !paymentEntity) return;
+
+  const payment = await weddingWebsiteService.findPaymentByPaymentLinkId(linkEntity.id);
+  if (!payment) {
+    logger.warn({ paymentLinkId: linkEntity.id }, "Webhook for unknown payment link — ignoring");
+    return;
+  }
+
+  if (payment.status === "CAPTURED") {
+    logger.info({ paymentId: payment.id, paymentLinkId: linkEntity.id }, "Payment link already captured — ignoring");
+    return;
+  }
+  if (!payment.weddingWebsiteId) {
+    logger.warn({ paymentId: payment.id }, "WEDDING_WEBSITE payment link with no weddingWebsiteId — ignoring");
+    return;
+  }
+
+  await subscriptionRepository.markPaymentCaptured(payment.id, paymentEntity.id);
+  const { slug } = await weddingWebsiteService.publishWeddingWebsite(payment.weddingWebsiteId);
+  // Telegram-only owners have no User account and so no in-app place to
+  // see this confirmation — this webhook is the only moment we know
+  // payment succeeded, so the bot push happens right here rather than
+  // waiting for the user's next message. No-ops if the website wasn't
+  // Telegram-owned (see notifyWeddingWebsitePublished).
+  await notifyWeddingWebsitePublished(payment.weddingWebsiteId, `${env.FRONTEND_URL}/wedding/${slug}`);
 }
 
 async function handlePaymentFailed(payload: RazorpayWebhookPayload): Promise<void> {
