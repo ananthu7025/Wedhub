@@ -14,11 +14,18 @@ const roleHomeRoute: Record<string, string> = {
   ADMIN: "/admin/dashboard",
 };
 
-export default async function SignupPage() {
+interface SignupPageProps {
+  searchParams: Promise<{ type?: string }>;
+}
+
+export default async function SignupPage({ searchParams }: SignupPageProps) {
   const session = await getOptionalSession();
   if (session) {
     redirect(roleHomeRoute[session.role] ?? "/");
   }
+
+  const { type } = await searchParams;
+  const accountType = type === "vendor" ? "VENDOR" : "END_USER";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -35,7 +42,7 @@ export default async function SignupPage() {
             Log in
           </Link>
         </p>
-        <SignupWizard />
+        <SignupWizard accountType={accountType} />
       </div>
     </div>
   );

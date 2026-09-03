@@ -93,6 +93,13 @@ export function PublicFooter() {
                 </button>
               </form>
             )}
+
+            <Link
+              href="/signup?type=vendor"
+              className="mt-5 inline-flex items-center gap-1.5 rounded-md border border-brand-primary px-4 py-2 text-xs font-bold text-brand-primary no-underline transition-colors hover:bg-brand-primary-soft"
+            >
+              Register as a Vendor ↗
+            </Link>
           </div>
         </div>
 
@@ -125,9 +132,9 @@ export function PublicFooter() {
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-jet-black mb-3">For Vendors</h4>
             <ul className="space-y-2 text-xs text-text-grey list-none p-0 m-0">
-              <li><Link href="/signup" className="hover:text-brand-primary hover:underline">Register as a Vendor</Link></li>
+              <li><Link href="/signup?type=vendor" className="hover:text-brand-primary hover:underline">Register as a Vendor</Link></li>
               <li><Link href="/login" className="hover:text-brand-primary hover:underline">Vendor Dashboard Login</Link></li>
-              <li><Link href="/signup" className="hover:text-brand-primary hover:underline">Pricing &amp; Subscriptions</Link></li>
+              <li><Link href="/signup?type=vendor" className="hover:text-brand-primary hover:underline">Pricing &amp; Subscriptions</Link></li>
               <li><Link href="/login" className="hover:text-brand-primary hover:underline">Vendor Lead Management</Link></li>
               <li><Link href="/reviews/write" className="hover:text-brand-primary hover:underline">Review Guidelines</Link></li>
             </ul>

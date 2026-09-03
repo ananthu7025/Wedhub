@@ -10,7 +10,7 @@ import { createVendor } from "@/lib/api/vendor-onboarding-client";
 import type { UserRole } from "@/lib/auth/types";
 
 type AccountType = "END_USER" | "VENDOR";
-type Step = "credentials" | "account-type" | "profile" | "done";
+type Step = "credentials" | "profile" | "done";
 
 const roleHomeRoute: Record<UserRole, string> = {
   END_USER: "/shortlist",
@@ -18,12 +18,16 @@ const roleHomeRoute: Record<UserRole, string> = {
   ADMIN: "/admin/dashboard",
 };
 
-export function SignupWizard() {
+// Account type comes from where the user entered signup (the footer's
+// "Register as a Vendor" link is the only vendor entry point; every other
+// signup link/button is couple-only) rather than an in-flow picker — per
+// user decision, 2026-09-03: normal registration is end-user only, vendors
+// get a distinct, separately-linked flow.
+export function SignupWizard({ accountType }: { accountType: AccountType }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [accountType, setAccountType] = useState<AccountType>("END_USER");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [businessName, setBusinessName] = useState("");
@@ -33,19 +37,12 @@ export function SignupWizard() {
   async function handleCredentialsSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setStep("account-type");
-  }
-
-  async function handleAccountTypeSelect(type: AccountType) {
-    setAccountType(type);
-    setError(null);
     setPending(true);
 
-    const registerResult = await register(email, password, type);
+    const registerResult = await register(email, password, accountType);
     if (!registerResult.success) {
       setError(registerResult.error.message);
       setPending(false);
-      setStep("credentials");
       return;
     }
 
@@ -89,6 +86,14 @@ export function SignupWizard() {
   if (step === "credentials") {
     return (
       <form onSubmit={handleCredentialsSubmit} className="w-full max-w-md">
+        <h1 className="mb-1.5 text-xl font-bold">
+          {accountType === "VENDOR" ? "List your business on WedHub" : "Create your account"}
+        </h1>
+        <p className="mb-5 text-[13px] text-text-grey">
+          {accountType === "VENDOR"
+            ? "Set up a free vendor account to start receiving enquiries."
+            : "Discover and enquire with wedding vendors near you."}
+        </p>
         {error && (
           <div className="mb-4 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">
             {error}
@@ -120,49 +125,10 @@ export function SignupWizard() {
         <p className="mb-4.5 text-xs leading-relaxed text-text-grey">
           By continuing, you agree to WedHub&apos;s Terms of Service and Privacy Policy.
         </p>
-        <Button type="submit" variant="primary" block>
-          Continue
+        <Button type="submit" variant="primary" block disabled={pending}>
+          {pending ? "Creating your account…" : "Continue"}
         </Button>
       </form>
-    );
-  }
-
-  if (step === "account-type") {
-    return (
-      <div className="w-full max-w-md">
-        {error && (
-          <div className="mb-4 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">
-            {error}
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => handleAccountTypeSelect("END_USER")}
-            className="rounded-xl border-[1.5px] border-border p-6 text-center transition-colors hover:border-brand-primary hover:bg-brand-primary-soft disabled:opacity-50"
-          >
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary-soft text-brand-primary">
-              ♥
-            </div>
-            <h3 className="mb-1 text-[15px] font-bold">I&apos;m planning a wedding</h3>
-            <p className="text-xs text-text-grey">Discover and enquire with vendors near you.</p>
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => handleAccountTypeSelect("VENDOR")}
-            className="rounded-xl border-[1.5px] border-border p-6 text-center transition-colors hover:border-brand-primary hover:bg-brand-primary-soft disabled:opacity-50"
-          >
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary-soft text-brand-primary">
-              ⚑
-            </div>
-            <h3 className="mb-1 text-[15px] font-bold">I&apos;m a vendor</h3>
-            <p className="text-xs text-text-grey">List your business and receive enquiries.</p>
-          </button>
-        </div>
-        {pending && <p className="mt-4 text-center text-sm text-text-grey">Creating your account…</p>}
-      </div>
     );
   }
 
