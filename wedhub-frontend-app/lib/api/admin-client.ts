@@ -2,7 +2,9 @@
 
 import type { ApiResponse } from "./types";
 import type {
+  AdminAlbumScalarOnly,
   AdminCoupon,
+  AdminCreateAlbumForVendorBody,
   AdminCreateAttributeBody,
   AdminCreateCategoryBody,
   AdminCreateCouponBody,
@@ -25,6 +27,7 @@ import type {
   AdminSeoOverride,
   AdminSetVerificationBody,
   AdminSuspendUserResult,
+  AdminUpdateAlbumBody,
   AdminUpdateAttributeBody,
   AdminUpdateCategoryBody,
   AdminUpdateFeaturedMediaBody,
@@ -36,6 +39,8 @@ import type {
   AdminUpdateWeddingStoryBody,
   AdminVendorInvitation,
   AdminVendorScalarOnly,
+  AdminVendorUploadConfirmResult,
+  AdminVendorUploadRequestResult,
   AdminWeddingStory,
 } from "./admin.types";
 import type { Category, CategoryAttribute, Location, LocationType } from "./vendors.types";
@@ -166,6 +171,31 @@ export function createAdminImageUploadRequest(body: AdminCreateImageUploadReques
 
 export function confirmAdminImageUpload(mediaId: string) {
   return call<AdminImageConfirmResult>(`/admin/media-uploads/${mediaId}/confirm`, "POST");
+}
+
+// Admin uploading a real PORTFOLIO photo on a vendor's behalf — cold-start
+// seeding for Wedding Stories / Gallery Inspiration curation (Arch Phase
+// 17) when no vendor has uploaded their own approved photos yet.
+export function createAdminVendorUploadRequest(body: {
+  vendorId: string;
+  albumId?: string;
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+}) {
+  return call<AdminVendorUploadRequestResult>("/admin/media-uploads/vendor-upload-requests", "POST", body);
+}
+
+export function confirmAdminVendorUpload(mediaId: string) {
+  return call<AdminVendorUploadConfirmResult>(`/admin/media-uploads/vendor-upload-requests/${mediaId}/confirm`, "POST");
+}
+
+export function createAdminAlbumForVendor(body: AdminCreateAlbumForVendorBody) {
+  return call<AdminAlbumScalarOnly>("/admin/albums", "POST", body);
+}
+
+export function updateAdminAlbum(id: string, body: AdminUpdateAlbumBody) {
+  return call<AdminAlbumScalarOnly>(`/admin/albums/${id}`, "PATCH", body);
 }
 
 /** Frontend Arch Phase 17 — CMS & SEO Backend (added 2026-09-04). */

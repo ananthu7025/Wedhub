@@ -5,7 +5,7 @@ import { getOwnedVendorOrThrow } from "../vendors/vendor.policy";
 import * as vendorRepository from "../vendors/vendor.repository";
 import * as albumRepository from "./album.repository";
 import * as albumService from "./album.service";
-import type { CreateAlbumBody, UpdateAlbumBody } from "./album.schema";
+import type { CreateAlbumBody, CreateAlbumForVendorBody, UpdateAlbumBody } from "./album.schema";
 
 function requireUserId(req: Request): string {
   if (!req.user) {
@@ -59,6 +59,31 @@ export async function deleteAlbum(req: Request, res: Response): Promise<void> {
 export async function listAllPublicAlbumsAdmin(_req: Request, res: Response): Promise<void> {
   const albums = await albumRepository.listAllPublicAlbumsAdmin();
   res.json(successResponse(albums));
+}
+
+// Arch Phase 17 cold-start seeding — admin creates/updates an album
+// directly on a vendor's behalf when no vendor has one yet (see
+// album.service.ts's createAlbumForVendor).
+export async function createAlbumForVendor(req: Request, res: Response): Promise<void> {
+  const body = req.body as CreateAlbumForVendorBody;
+  const album = await albumService.createAlbumForVendor(body.vendorId, {
+    name: body.name,
+    description: body.description,
+    visibility: body.visibility,
+  });
+  res.status(201).json(successResponse(album));
+}
+
+export async function updateAlbumAsAdmin(req: Request, res: Response): Promise<void> {
+  const body = req.body as UpdateAlbumBody;
+  const album = await albumService.updateAlbumAsAdmin(req.params.id as string, {
+    name: body.name,
+    description: body.description,
+    coverMediaId: body.coverMediaId,
+    visibility: body.visibility,
+    sortOrder: body.sortOrder,
+  });
+  res.json(successResponse(album));
 }
 
 export async function listPublicAlbums(req: Request, res: Response): Promise<void> {

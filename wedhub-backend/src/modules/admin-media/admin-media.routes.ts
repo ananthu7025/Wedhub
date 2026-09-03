@@ -5,7 +5,7 @@ import { authenticateMiddleware } from "../../common/middleware/authenticate.mid
 import { authorize } from "../../common/middleware/authorize.middleware";
 import { Role } from "../../common/enums/roles.enum";
 import * as adminMediaController from "./admin-media.controller";
-import { createAdminImageUploadRequestSchema } from "./admin-media.schema";
+import { createAdminImageUploadRequestSchema, createAdminVendorUploadRequestSchema } from "./admin-media.schema";
 
 export const adminMediaRouter = Router();
 
@@ -18,3 +18,15 @@ adminMediaRouter.post(
 );
 
 adminMediaRouter.post("/:id/confirm", asyncHandler(adminMediaController.confirmUpload));
+
+// Admin uploading a real PORTFOLIO photo on a vendor's behalf (cold-start
+// seeding — see admin-media.service.ts's createVendorUploadRequest).
+// Distinct path from the routes above: those create platform-owned
+// CATEGORY_IMAGE media, these create real vendor-owned PORTFOLIO media.
+adminMediaRouter.post(
+  "/vendor-upload-requests",
+  validateBody(createAdminVendorUploadRequestSchema),
+  asyncHandler(adminMediaController.createVendorUploadRequest),
+);
+
+adminMediaRouter.post("/vendor-upload-requests/:id/confirm", asyncHandler(adminMediaController.confirmVendorUpload));

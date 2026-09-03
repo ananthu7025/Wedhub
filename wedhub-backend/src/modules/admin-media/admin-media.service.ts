@@ -68,3 +68,67 @@ function toPublicView(media: { id: string; status: string; optimizedObjectKey: s
     url: media.optimizedObjectKey ? getPublicUrl(media.optimizedObjectKey) : null,
   };
 }
+
+/**
+ * Admin uploading a real PORTFOLIO photo directly to a vendor's profile —
+ * the cold-start path for Wedding Stories / Gallery Inspiration curation
+ * (Arch Phase 17) when no vendor has uploaded their own approved photos
+ * yet. Deliberately skips entitlementService.canVendorUpload: an admin
+ * seeding a brand-new vendor's initial content shouldn't be blocked by
+ * that vendor's own plan/usage state, but the resulting row is a normal
+ * PORTFOLIO Media that counts toward the vendor's limit for any future
+ * upload (by the vendor or another admin action) — confirmed with the
+ * user. moderationStatus is set to APPROVED immediately (see
+ * admin-media.repository.ts's createVendorMedia) since admin-sourced
+ * content doesn't need an admin to moderate itself.
+ */
+export async function createVendorUploadRequest(input: {
+  vendorId: string;
+  albumId?: string | undefined;
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+}) {
+  const vendor = await adminMediaRepository.findVendorForUpload(input.vendorId);
+  if (!vendor) {
+    throw new NotFoundError("Vendor not found");
+  }
+
+  const maxSize = env.MEDIA_MAX_IMAGE_SIZE_MB * 1024 * 1024;
+  if (input.fileSize > maxSize) {
+    throw new ValidationError(`File exceeds the maximum allowed size of ${env.MEDIA_MAX_IMAGE_SIZE_MB}MB`);
+  }
+
+  const objectKey = `vendors/${input.vendorId}/${randomUUID()}${extensionFor(input.filename)}`;
+  const uploadUrl = await getSignedUploadUrl(objectKey, input.mimeType);
+
+  const media = await adminMediaRepository.createVendorMedia({
+    vendorId: input.vendorId,
+    albumId: input.albumId,
+    originalObjectKey: objectKey,
+    mimeType: input.mimeType,
+    fileSize: input.fileSize,
+  });
+
+  return { mediaId: media.id, uploadUrl, objectKey };
+}
+
+export async function confirmVendorUpload(mediaId: string) {
+  const media = await adminMediaRepository.findImageById(mediaId);
+  if (!media || media.mediaType !== "PORTFOLIO" || !media.vendorId) {
+    throw new NotFoundError("Media not found");
+  }
+  if (media.status !== "PENDING") {
+    return toPublicView(media); // already confirmed — idempotent from the caller's point of view
+  }
+
+  const exists = await objectExists(media.originalObjectKey);
+  if (!exists) {
+    throw new ValidationError("Upload not found in storage yet — has the browser upload completed?");
+  }
+
+  await adminMediaRepository.markProcessing(mediaId);
+  await enqueueMediaProcessing(mediaId);
+  const updated = await adminMediaRepository.findImageById(mediaId);
+  return updated ? toPublicView(updated) : null;
+}

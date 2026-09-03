@@ -5,6 +5,7 @@ import {
   listAdminApprovedMedia,
   listAdminFeaturedMedia,
   listAdminPublicAlbums,
+  listAdminVendors,
   listAdminWeddingStories,
 } from "@/lib/api/admin";
 import { WeddingStoriesBoard } from "./WeddingStoriesBoard";
@@ -31,12 +32,13 @@ const STILL_STUB_ITEMS = ["Pages", "Blog", "Guides", "FAQs", "Banners"];
 export default async function AdminCmsPage() {
   await requireAdmin();
 
-  const [{ data: albums }, { data: approvedMedia }, { data: weddingStories }, { data: featuredMedia }] =
+  const [{ data: albums }, { data: approvedMedia }, { data: weddingStories }, { data: featuredMedia }, { data: vendors }] =
     await Promise.all([
       listAdminPublicAlbums(),
       listAdminApprovedMedia(),
       listAdminWeddingStories(),
       listAdminFeaturedMedia(),
+      listAdminVendors({ status: "APPROVED", limit: 100 }),
     ]);
 
   return (
@@ -51,7 +53,7 @@ export default async function AdminCmsPage() {
         <p className="mb-4 text-[13px] text-text-grey">
           Homepage stories over real, public vendor albums — not independent editorial content.
         </p>
-        <WeddingStoriesBoard initialStories={weddingStories} albums={albums} />
+        <WeddingStoriesBoard initialStories={weddingStories} albums={albums} vendors={vendors} />
       </div>
 
       <div className="mb-6 rounded-xl border border-border bg-white p-6">
@@ -59,7 +61,7 @@ export default async function AdminCmsPage() {
         <p className="mb-4 text-[13px] text-text-grey">
           Real, approved vendor portfolio photos featured on the homepage gallery.
         </p>
-        <FeaturedMediaBoard initialFeatured={featuredMedia} approvedMedia={approvedMedia} />
+        <FeaturedMediaBoard initialFeatured={featuredMedia} approvedMedia={approvedMedia} vendors={vendors} />
       </div>
 
       <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-white px-6 py-16 text-center">

@@ -7,8 +7,9 @@ import {
   deleteAdminFeaturedMedia,
   updateAdminFeaturedMedia,
 } from "@/lib/api/admin-client";
-import type { AdminApprovedMedia, AdminFeaturedMedia } from "@/lib/api/admin.types";
+import type { AdminApprovedMedia, AdminFeaturedMedia, AdminVendorListItem } from "@/lib/api/admin.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import { VendorPhotoUploader } from "./VendorPhotoUploader";
 
 function mediaThumbUrl(media: { optimizedObjectKey: string | null; thumbnailObjectKey: string | null; originalObjectKey: string }): string {
   return getPublicMediaUrl(media.thumbnailObjectKey ?? media.optimizedObjectKey ?? media.originalObjectKey);
@@ -17,9 +18,11 @@ function mediaThumbUrl(media: { optimizedObjectKey: string | null; thumbnailObje
 export function FeaturedMediaBoard({
   initialFeatured,
   approvedMedia,
+  vendors,
 }: {
   initialFeatured: AdminFeaturedMedia[];
   approvedMedia: AdminApprovedMedia[];
+  vendors: AdminVendorListItem[];
 }) {
   const [featured, setFeatured] = useState(initialFeatured);
   const [picking, setPicking] = useState(false);
@@ -112,9 +115,9 @@ export function FeaturedMediaBoard({
             </button>
           </div>
           {pickableMedia.length === 0 ? (
-            <p className="text-xs text-text-grey">No unfeatured approved media available right now.</p>
+            <p className="mb-3 text-xs text-text-grey">No unfeatured approved media available right now.</p>
           ) : (
-            <div className="grid max-h-[360px] grid-cols-3 gap-2 overflow-y-auto rounded-md border border-border p-2 sm:grid-cols-5 md:grid-cols-8">
+            <div className="mb-3 grid max-h-[360px] grid-cols-3 gap-2 overflow-y-auto rounded-md border border-border p-2 sm:grid-cols-5 md:grid-cols-8">
               {pickableMedia.map((media) => (
                 <button
                   key={media.id}
@@ -132,6 +135,12 @@ export function FeaturedMediaBoard({
               ))}
             </div>
           )}
+          <div className="rounded-md border border-dashed border-border p-3">
+            <p className="mb-2 text-[11px] font-semibold text-text-grey">
+              No usable photo? Upload one directly for a vendor — it&apos;ll be auto-approved and featured immediately.
+            </p>
+            <VendorPhotoUploader vendors={vendors} onUploaded={(media) => handleFeature(media.id)} />
+          </div>
         </div>
       ) : (
         <button type="button" onClick={() => setPicking(true)} className="text-xs font-bold text-brand-primary hover:underline">

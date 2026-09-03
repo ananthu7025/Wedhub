@@ -5,7 +5,7 @@ import { authenticateMiddleware } from "../../common/middleware/authenticate.mid
 import { authorize } from "../../common/middleware/authorize.middleware";
 import { Role } from "../../common/enums/roles.enum";
 import * as albumController from "./album.controller";
-import { createAlbumSchema, updateAlbumSchema } from "./album.schema";
+import { createAlbumForVendorSchema, createAlbumSchema, updateAlbumSchema } from "./album.schema";
 
 // Mounted at /api/v1/vendors/me/albums
 export const albumSelfRouter = Router();
@@ -26,3 +26,5 @@ albumPublicRouter.get("/", asyncHandler(albumController.listPublicAlbums));
 export const albumAdminRouter = Router();
 albumAdminRouter.use(authenticateMiddleware, authorize(Role.ADMIN));
 albumAdminRouter.get("/", asyncHandler(albumController.listAllPublicAlbumsAdmin));
+albumAdminRouter.post("/", validateBody(createAlbumForVendorSchema), asyncHandler(albumController.createAlbumForVendor));
+albumAdminRouter.patch("/:id", validateBody(updateAlbumSchema), asyncHandler(albumController.updateAlbumAsAdmin));

@@ -576,6 +576,52 @@ export interface AdminAlbum {
   coverMedia: { id: string; optimizedObjectKey: string | null; thumbnailObjectKey: string | null; originalObjectKey: string } | null;
 }
 
+// POST /admin/albums returns the raw created Album row, no relations —
+// same shape gap AdminVendorScalarOnly documents for POST /admin/vendors.
+export interface AdminAlbumScalarOnly {
+  id: string;
+  vendorId: string;
+  name: string;
+  description: string | null;
+  coverMediaId: string | null;
+  visibility: string;
+  sortOrder: number;
+}
+
+export interface AdminCreateAlbumForVendorBody {
+  vendorId: string;
+  name: string;
+  description?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
+}
+
+export interface AdminUpdateAlbumBody {
+  name?: string;
+  description?: string;
+  coverMediaId?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
+  sortOrder?: number;
+}
+
+// ---- /admin/media-uploads/vendor-upload-requests ----
+// Admin uploading a real PORTFOLIO photo on a vendor's behalf (cold-start
+// seeding for Wedding Stories / Gallery Inspiration curation, Arch Phase
+// 17) — same presign/confirm shape as AdminImageUploadRequestResult/
+// AdminImageConfirmResult below, but the confirm result carries the full
+// media row (not just id/status/url) since callers need vendorId/
+// moderationStatus to use it immediately in the curation UIs.
+export interface AdminVendorUploadRequestResult {
+  mediaId: string;
+  uploadUrl: string;
+  objectKey: string;
+}
+
+export interface AdminVendorUploadConfirmResult {
+  id: string;
+  status: string;
+  url: string | null;
+}
+
 // ---- GET /admin/media/approved ----
 export interface AdminApprovedMedia {
   id: string;

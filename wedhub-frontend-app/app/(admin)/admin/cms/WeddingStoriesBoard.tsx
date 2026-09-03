@@ -3,12 +3,15 @@
 import { useState } from "react";
 import Image from "next/image";
 import {
+  createAdminAlbumForVendor,
   createAdminWeddingStory,
   deleteAdminWeddingStory,
+  updateAdminAlbum,
   updateAdminWeddingStory,
 } from "@/lib/api/admin-client";
-import type { AdminAlbum, AdminWeddingStory } from "@/lib/api/admin.types";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import type { AdminAlbum, AdminVendorListItem, AdminWeddingStory } from "@/lib/api/admin.types";
+import { getPublicMediaUrl, getObjectKeyFromPublicMediaUrl } from "@/lib/media/url";
+import { VendorPhotoUploader } from "./VendorPhotoUploader";
 
 interface FormValues {
   albumId: string;
@@ -21,19 +24,28 @@ interface FormValues {
 
 export function WeddingStoriesBoard({
   initialStories,
-  albums,
+  albums: initialAlbums,
+  vendors,
 }: {
   initialStories: AdminWeddingStory[];
   albums: AdminAlbum[];
+  vendors: AdminVendorListItem[];
 }) {
   const [stories, setStories] = useState(initialStories);
+  const [albums, setAlbums] = useState(initialAlbums);
   const [adding, setAdding] = useState(false);
+  const [creatingAlbum, setCreatingAlbum] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const albumsWithoutCover = albums.filter((a) => !a.coverMedia);
   const usableAlbums = albums.filter((a) => a.coverMedia);
+
+  function handleAlbumCreated(album: AdminAlbum) {
+    setAlbums((prev) => [album, ...prev]);
+    setCreatingAlbum(false);
+  }
 
   async function handleCreate(values: FormValues) {
     setPendingId("new");
@@ -193,7 +205,139 @@ export function WeddingStoriesBoard({
           selectable yet.
         </p>
       )}
+
+      <div className="mt-3 rounded-md border border-dashed border-border p-3">
+        {creatingAlbum ? (
+          <NewAlbumFromPhoto vendors={vendors} onCancel={() => setCreatingAlbum(false)} onCreated={handleAlbumCreated} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCreatingAlbum(true)}
+            className="text-xs font-bold text-brand-primary hover:underline"
+          >
+            + Create a new album from a vendor photo
+          </button>
+        )}
+      </div>
     </div>
+  );
+}
+
+// Cold-start seeding: creates a real public Album for a chosen vendor,
+// uploads a real photo onto it, and sets that photo as the album's cover —
+// all in one flow, so the album becomes immediately usable in the "Add
+// wedding story" form above without leaving this screen.
+function NewAlbumFromPhoto({
+  vendors,
+  onCancel,
+  onCreated,
+}: {
+  vendors: AdminVendorListItem[];
+  onCancel: () => void;
+  onCreated: (album: AdminAlbum) => void;
+}) {
+  const [vendorId, setVendorId] = useState(vendors[0]?.id ?? "");
+  const [albumName, setAlbumName] = useState("");
+  const [pendingAlbum, setPendingAlbum] = useState<{ id: string; vendorId: string; name: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCreateAlbum(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    if (!vendorId || !albumName.trim()) {
+      setError("Select a vendor and name the album");
+      return;
+    }
+    const result = await createAdminAlbumForVendor({ vendorId, name: albumName.trim(), visibility: "PUBLIC" });
+    if (!result.success) {
+      setError(result.error.message);
+      return;
+    }
+    setPendingAlbum({ id: result.data.id, vendorId: result.data.vendorId, name: result.data.name });
+  }
+
+  async function handlePhotoUploaded(media: { id: string; url: string }) {
+    if (!pendingAlbum) return;
+    setError(null);
+    const result = await updateAdminAlbum(pendingAlbum.id, { coverMediaId: media.id });
+    if (!result.success) {
+      setError(result.error.message);
+      return;
+    }
+    const vendor = vendors.find((v) => v.id === pendingAlbum.vendorId);
+    onCreated({
+      id: pendingAlbum.id,
+      vendorId: pendingAlbum.vendorId,
+      name: pendingAlbum.name,
+      description: null,
+      coverMediaId: media.id,
+      visibility: "PUBLIC",
+      vendor: vendor ? { id: vendor.id, businessName: vendor.businessName, slug: vendor.slug } : { id: pendingAlbum.vendorId, businessName: "", slug: "" },
+      coverMedia: {
+        id: media.id,
+        optimizedObjectKey: null,
+        thumbnailObjectKey: null,
+        originalObjectKey: getObjectKeyFromPublicMediaUrl(media.url),
+      },
+    });
+  }
+
+  if (pendingAlbum) {
+    return (
+      <div>
+        <p className="mb-2 text-[11px] font-semibold text-text-grey">
+          Album &quot;{pendingAlbum.name}&quot; created — now upload a photo to use as its cover.
+        </p>
+        <VendorPhotoUploader
+          vendors={vendors.filter((v) => v.id === pendingAlbum.vendorId)}
+          albumId={pendingAlbum.id}
+          onUploaded={handlePhotoUploaded}
+        />
+        {error && <p className="mt-1.5 text-xs text-red">{error}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleCreateAlbum} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+      <label className="block">
+        <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">Vendor</span>
+        <select
+          value={vendorId}
+          onChange={(e) => setVendorId(e.target.value)}
+          className="rounded-md border border-border px-2 py-1.5 text-xs"
+        >
+          {vendors.map((vendor) => (
+            <option key={vendor.id} value={vendor.id}>
+              {vendor.businessName}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block flex-1">
+        <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">Album name</span>
+        <input
+          value={albumName}
+          onChange={(e) => setAlbumName(e.target.value)}
+          maxLength={150}
+          placeholder="Wedding Shoots"
+          className="w-full rounded-md border border-border px-2 py-1.5 text-xs"
+        />
+      </label>
+      <div className="flex gap-2">
+        <button type="submit" className="rounded-md bg-brand-primary px-3 py-1.5 text-xs font-bold text-white">
+          Create album
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-bold text-text-dark"
+        >
+          Cancel
+        </button>
+      </div>
+      {error && <p className="text-xs text-red">{error}</p>}
+    </form>
   );
 }
 
