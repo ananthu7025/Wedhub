@@ -38,13 +38,16 @@ function stepForDraft(draft: WeddingWebsiteDraft, requestedStep?: WizardStepName
 
 /**
  * The full ₹49 Instant Wedding Website creation flow — Template → Details
- * → Events → Photos → Preview → Payment → Published. The draft is
+ * → Events → Photos → Story → Preview → Payment → Published. The draft is
  * persisted server-side after every step (PATCH /me/:id, or the relevant
  * sub-resource endpoint) rather than only held in local state, so a
  * refresh/close/abandon never loses entered information (feature spec's
- * Draft System requirement). Shared by both the vendor and couple
- * dashboard entry points — ownership of a WeddingWebsite doesn't depend
- * on the owner's role.
+ * Draft System requirement). "Story" is an 8th step not in the feature
+ * spec's own summary progress list (which shows 7), added as its own
+ * step rather than folded into Details/Photos since the spec's detailed
+ * walkthrough treats it as a distinct section — confirmed with the user
+ * 2026-09-03. Only END_USER-role couples get this from the web app, not
+ * vendors — see the couple dashboard page for that decision.
  */
 export function WeddingWebsiteWizard({
   initialDraft,
@@ -92,7 +95,10 @@ export function WeddingWebsiteWizard({
       )}
       {step === "Events" && <EventsStep draft={draft} onNext={() => setStep("Photos")} onError={setError} />}
       {step === "Photos" && (
-        <PhotosStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Preview")} onError={setError} />
+        <PhotosStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Story")} onError={setError} />
+      )}
+      {step === "Story" && (
+        <StoryStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Preview")} onError={setError} />
       )}
       {step === "Preview" && (
         <PreviewStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Payment")} onError={setError} />
@@ -475,7 +481,95 @@ function PhotosStep({
   );
 }
 
-// ---- Step 5: Preview ----
+// ---- Step 5: Story ----
+
+function StoryStep({
+  draft,
+  onSaved,
+  onNext,
+  onError,
+}: {
+  draft: WeddingWebsiteDraft;
+  onSaved: (d: WeddingWebsiteDraft) => void;
+  onNext: () => void;
+  onError: (message: string | null) => void;
+}) {
+  const [fields, setFields] = useState({
+    coupleStory: draft.coupleStory ?? "",
+    brideDescription: draft.brideDescription ?? "",
+    groomDescription: draft.groomDescription ?? "",
+    howWeMet: draft.howWeMet ?? "",
+  });
+  const [pending, setPending] = useState(false);
+
+  function set<K extends keyof typeof fields>(key: K, value: string) {
+    setFields((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    onError(null);
+    setPending(true);
+    const result = await updateWeddingWebsite(draft.id, {
+      coupleStory: fields.coupleStory || undefined,
+      brideDescription: fields.brideDescription || undefined,
+      groomDescription: fields.groomDescription || undefined,
+      howWeMet: fields.howWeMet || undefined,
+    });
+    setPending(false);
+    if (!result.success) {
+      onError(result.error.message);
+      return;
+    }
+    onSaved(result.data);
+    onNext();
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mx-auto max-w-2xl">
+      <h2 className="mb-1.5 text-lg font-bold">Your Story</h2>
+      <p className="mb-5 text-[13px] text-text-grey">Keep it simple — a few lines is plenty.</p>
+
+      <div className="mb-4">
+        <Field label="Couple story (optional)">
+          <textarea
+            value={fields.coupleStory}
+            onChange={(e) => set("coupleStory", e.target.value)}
+            rows={3}
+            maxLength={3000}
+            placeholder="Tell your guests a little about your journey together..."
+            className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+          />
+        </Field>
+      </div>
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label={`About ${draft.brideName} (optional)`}>
+          <textarea value={fields.brideDescription} onChange={(e) => set("brideDescription", e.target.value)} rows={3} maxLength={1000} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+        </Field>
+        <Field label={`About ${draft.groomName} (optional)`}>
+          <textarea value={fields.groomDescription} onChange={(e) => set("groomDescription", e.target.value)} rows={3} maxLength={1000} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+        </Field>
+      </div>
+      <div className="mb-6">
+        <Field label="How we met (optional)">
+          <textarea
+            value={fields.howWeMet}
+            onChange={(e) => set("howWeMet", e.target.value)}
+            rows={2}
+            maxLength={1000}
+            placeholder="A short note on how it all started..."
+            className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+          />
+        </Field>
+      </div>
+      <Button type="submit" block disabled={pending}>
+        {pending ? "Saving…" : "Continue"}
+      </Button>
+    </form>
+  );
+}
+
+// ---- Step 6: Preview ----
 
 function PreviewStep({
   draft,
@@ -540,7 +634,7 @@ function PreviewStep({
   );
 }
 
-// ---- Step 6: Payment ----
+// ---- Step 7: Payment ----
 
 function PaymentStep({
   draft,
@@ -626,7 +720,7 @@ function PublishCheckoutButtonLoader({
   return <PublishCheckoutButton orderId={order.orderId} amount={order.amount} currency={order.currency} coupleNames={coupleNames} onSuccess={onSuccess} />;
 }
 
-// ---- Step 7: Published ----
+// ---- Step 8: Published ----
 
 function PublishedStep({ draft, dashboardHref }: { draft: WeddingWebsiteDraft; dashboardHref: string }) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";

@@ -1,6 +1,11 @@
 "use client";
 
-const STEPS = ["Template", "Details", "Events", "Photos", "Preview", "Payment", "Published"] as const;
+// 8 steps — the feature spec's own summary progress indicator lists 7,
+// but its detailed walkthrough treats "Couple Story" as a distinct
+// section from Photos (its own numbered "Step 5"). Given its own
+// distinct step, it gets its own dot here too, rather than being crammed
+// into the Photos or Details screen — confirmed with the user 2026-09-03.
+const STEPS = ["Template", "Details", "Events", "Photos", "Story", "Preview", "Payment", "Published"] as const;
 export type WizardStepName = (typeof STEPS)[number];
 
 export function WizardProgress({ current }: { current: WizardStepName }) {
