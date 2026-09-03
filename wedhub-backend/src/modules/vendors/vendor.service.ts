@@ -1,6 +1,6 @@
 import { prisma } from "../../config/database";
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
-import { slugify } from "../../common/utils/slug.util";
+import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
 import { logger } from "../../config/logger";
 import * as vendorRepository from "./vendor.repository";
 import { calculateCompleteness, missingRequiredForSubmission } from "./vendor.completeness";
@@ -16,19 +16,6 @@ import type {
   UpsertVendorProfileInput,
 } from "./vendor.types";
 
-async function generateUniqueSlug(name: string): Promise<string> {
-  const base = slugify(name);
-  let candidate = base;
-  let suffix = 1;
-
-  while (await vendorRepository.findVendorBySlugAnyCase(candidate)) {
-    suffix += 1;
-    candidate = `${base}-${suffix}`;
-  }
-
-  return candidate;
-}
-
 export async function recalculateCompleteness(vendorId: string): Promise<CompletenessResult> {
   const vendor = await vendorRepository.findVendorForCompleteness(vendorId);
   const result = calculateCompleteness(vendor);
@@ -42,7 +29,9 @@ export async function createVendorForOwner(ownerUserId: string, input: CreateVen
     throw new ConflictError("You already have a vendor profile");
   }
 
-  const slug = await generateUniqueSlug(input.businessName);
+  const slug = await generateUniqueSlug(slugify(input.businessName), async (candidate) =>
+    Boolean(await vendorRepository.findVendorBySlugAnyCase(candidate)),
+  );
   const vendor = await vendorRepository.createVendor({
     businessName: input.businessName,
     slug,

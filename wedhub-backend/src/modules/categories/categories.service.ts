@@ -1,5 +1,5 @@
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
-import { slugify } from "../../common/utils/slug.util";
+import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
 import * as categoriesRepository from "./categories.repository";
 import type {
   CreateAttributeInput,
@@ -30,19 +30,6 @@ export async function getCategoryBySlug(slug: string) {
   return category;
 }
 
-async function generateUniqueSlug(name: string): Promise<string> {
-  const base = slugify(name);
-  let candidate = base;
-  let suffix = 1;
-
-  while (await categoriesRepository.findCategoryBySlugAnyCase(candidate)) {
-    suffix += 1;
-    candidate = `${base}-${suffix}`;
-  }
-
-  return candidate;
-}
-
 export async function createCategory(input: CreateCategoryInput) {
   if (input.parentId) {
     const parent = await categoriesRepository.findCategoryById(input.parentId);
@@ -51,7 +38,9 @@ export async function createCategory(input: CreateCategoryInput) {
     }
   }
 
-  const slug = await generateUniqueSlug(input.name);
+  const slug = await generateUniqueSlug(slugify(input.name), async (candidate) =>
+    Boolean(await categoriesRepository.findCategoryBySlugAnyCase(candidate)),
+  );
 
   return categoriesRepository.createCategory({
     name: input.name,

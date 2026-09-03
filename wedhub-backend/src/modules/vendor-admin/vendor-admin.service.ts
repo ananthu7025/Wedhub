@@ -2,7 +2,7 @@ import { prisma } from "../../config/database";
 import { ConflictError, NotFoundError } from "../../common/errors";
 import { generateOpaqueToken, hashToken } from "../../common/utils/token.util";
 import { logger } from "../../config/logger";
-import { slugify } from "../../common/utils/slug.util";
+import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
 import { omitUndefined } from "../../common/utils/object.util";
 import { sendEmail } from "../../integrations/email/resend.client";
 import { renderEmailHtml } from "../notifications/notification.templates";
@@ -12,21 +12,10 @@ import * as vendorRepository from "../vendors/vendor.repository";
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-async function generateUniqueSlug(name: string): Promise<string> {
-  const base = slugify(name);
-  let candidate = base;
-  let suffix = 1;
-
-  while (await vendorRepository.findVendorBySlugAnyCase(candidate)) {
-    suffix += 1;
-    candidate = `${base}-${suffix}`;
-  }
-
-  return candidate;
-}
-
 export async function createAdminVendor(input: { businessName: string }) {
-  const slug = await generateUniqueSlug(input.businessName);
+  const slug = await generateUniqueSlug(slugify(input.businessName), async (candidate) =>
+    Boolean(await vendorRepository.findVendorBySlugAnyCase(candidate)),
+  );
   const vendor = await vendorRepository.createVendor({
     businessName: input.businessName,
     slug,

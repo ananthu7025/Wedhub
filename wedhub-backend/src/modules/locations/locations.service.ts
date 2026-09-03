@@ -1,5 +1,5 @@
 import { NotFoundError, ValidationError } from "../../common/errors";
-import { slugify } from "../../common/utils/slug.util";
+import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
 import * as locationsRepository from "./locations.repository";
 import {
   LOCATION_HIERARCHY,
@@ -14,19 +14,6 @@ export function listLocations(filter: ListLocationsFilter) {
 
 export function listAllLocationsForAdmin(filter: ListLocationsFilter) {
   return locationsRepository.findAllLocationsForAdmin(filter);
-}
-
-async function generateUniqueSlug(name: string, parentId: string | undefined): Promise<string> {
-  const base = slugify(name);
-  let candidate = base;
-  let suffix = 1;
-
-  while (await locationsRepository.findLocationBySlugAndParent(candidate, parentId)) {
-    suffix += 1;
-    candidate = `${base}-${suffix}`;
-  }
-
-  return candidate;
 }
 
 export async function createLocation(input: CreateLocationInput) {
@@ -51,7 +38,9 @@ export async function createLocation(input: CreateLocationInput) {
     }
   }
 
-  const slug = await generateUniqueSlug(input.name, input.parentId);
+  const slug = await generateUniqueSlug(slugify(input.name), async (candidate) =>
+    Boolean(await locationsRepository.findLocationBySlugAndParent(candidate, input.parentId)),
+  );
 
   return locationsRepository.createLocation({
     type: input.type,
