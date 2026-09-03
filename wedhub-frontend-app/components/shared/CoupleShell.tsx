@@ -18,6 +18,7 @@ const navLinks = [
   { href: "/search", label: "Find Vendors" },
   { href: "/shortlist", label: "Shortlist" },
   { href: "/enquiries", label: "My Enquiries" },
+  { href: "/wedding-website", label: "Wedding Website" },
 ];
 
 const bottomNavLinks = [

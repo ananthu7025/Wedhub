@@ -52,7 +52,7 @@ export default async function WeddingWebsitePreviewPage({ params }: PreviewPageP
         <p className="max-w-sm text-sm text-text-grey">
           Publish your wedding website for just ₹49 and get your permanent shareable link.
         </p>
-        <Button href="/vendor/wedding-website">Publish My Website – ₹49</Button>
+        <Button href="/wedding-website">Publish My Website – ₹49</Button>
       </div>
     );
   }
