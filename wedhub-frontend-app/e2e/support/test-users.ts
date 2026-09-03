@@ -26,6 +26,33 @@ export async function registerTestUser(email: string, password: string, role: "E
   }
 }
 
+function runPsql(sql: string): void {
+  execFileSync(
+    "psql",
+    ["-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev", "-c", sql],
+    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
+  );
+}
+
+/**
+ * Registers a normal user, flips it to ADMIN (registerSchema only allows
+ * END_USER/VENDOR — there is no self-service admin signup), and links it
+ * to the seeded "admin" Role via a real AdminUser row. authorize() now
+ * requires that link with at least one permission in addition to
+ * User.role === ADMIN (docs/bugs.md #2, 2026-09-04) — an admin missing it
+ * 403s on every real admin page via app/(admin)/error.tsx instead of
+ * showing data. Was previously duplicated (minus the AdminUser insert,
+ * which is why they broke) across phase-08/09/10's own spec files;
+ * consolidated here 2026-09-04 after fixing all three the same way once.
+ */
+export async function createAdminUser(email: string, password: string): Promise<void> {
+  await registerTestUser(email, password, "END_USER");
+  runPsql(`UPDATE users SET role = 'ADMIN' WHERE email = '${email}';`);
+  runPsql(
+    `INSERT INTO admin_users (user_id, role_id, updated_at) SELECT id, (SELECT id FROM roles WHERE name = 'admin'), now() FROM users WHERE email = '${email}';`,
+  );
+}
+
 /**
  * Deletes a test user directly via psql — mirrors the manual cleanup already
  * used during Frontend Arch Phase 0/1 verification. Requires PGPASSWORD/psql
@@ -55,6 +82,59 @@ export function approveVendor(vendorId: string): void {
       "-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev",
       "-c", `UPDATE vendors SET status = 'APPROVED', approved_at = now() WHERE id = '${vendorId}';`,
     ],
+    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
+  );
+}
+
+/**
+ * Deletes a vendor row by exact business name, and everything that
+ * cascades from it (status history, invitations — vendor_invitations.
+ * vendor_id is ON DELETE CASCADE). Needed by any spec that creates a
+ * vendor without ever capturing its id (e.g. admin-create-vendor flows
+ * that only navigate via a "View vendor" button) — deleteTestUser() alone
+ * can't clean these up, and in the invitation case, deleting the inviting
+ * admin BEFORE the vendor fails outright: vendor_invitations.
+ * invited_by_admin_id is ON DELETE RESTRICT, so this must run first.
+ */
+export function deleteVendorByBusinessName(businessName: string): void {
+  execFileSync(
+    "psql",
+    ["-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev", "-c", `DELETE FROM vendors WHERE business_name = '${businessName}';`],
+    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
+  );
+}
+
+/**
+ * Deletes a vendor row by id. Needed anywhere a spec calls
+ * deleteTestUser(ownerEmail) on a vendor's owner and expects that to also
+ * remove the vendor: it doesn't. vendors.owner_user_id is ON DELETE SET
+ * NULL, not CASCADE, so deleting the owner just orphans the vendor row
+ * forever instead of removing it — confirmed live (docs/bugs.md-adjacent
+ * finding, 2026-09-04) after phase-08's own dashboard/approval tests left
+ * orphaned "Phase8 Dashboard/Approval Test Vendor" rows behind across
+ * multiple runs despite deleteTestUser(ownerEmail) running successfully
+ * every time. Call this BEFORE deleting the owner.
+ */
+export function deleteVendorById(vendorId: string): void {
+  execFileSync(
+    "psql",
+    ["-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev", "-c", `DELETE FROM vendors WHERE id = '${vendorId}';`],
+    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
+  );
+}
+
+/**
+ * Deletes a category row by exact name (category_attributes.category_id
+ * is ON DELETE CASCADE, so its attributes go with it automatically).
+ * Needed by specs that create a category purely through the admin UI form
+ * (no API response captured, so there's no id to clean up by) — same
+ * "unique per run via Date.now() in the name" pattern as
+ * deleteVendorByBusinessName.
+ */
+export function deleteCategoryByName(name: string): void {
+  execFileSync(
+    "psql",
+    ["-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev", "-c", `DELETE FROM categories WHERE name = '${name}';`],
     { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
   );
 }

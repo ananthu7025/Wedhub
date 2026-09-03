@@ -262,7 +262,10 @@ function CategoryRow({
   const [priceDraft, setPriceDraft] = useState(category.startingPriceLabel ?? "");
 
   return (
-    <div className={`border-b border-neutral-grey-20 last:border-b-0 ${indented ? "pl-12" : ""} ${!category.isActive ? "opacity-60" : ""}`}>
+    <div
+      data-testid={`category-row-${category.id}`}
+      className={`border-b border-neutral-grey-20 last:border-b-0 ${indented ? "pl-12" : ""} ${!category.isActive ? "opacity-60" : ""}`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
         <div>
           <div className="flex items-center gap-2 text-sm font-bold">

@@ -181,6 +181,7 @@ export function SubscriptionBoard({
           return (
             <div
               key={plan.id}
+              data-testid={`plan-card-${plan.tier}`}
               className={`relative flex flex-col rounded-xl border bg-white p-6 ${isCurrent ? "border-2 border-brand-primary" : "border-border"}`}
             >
               {isCurrent && (

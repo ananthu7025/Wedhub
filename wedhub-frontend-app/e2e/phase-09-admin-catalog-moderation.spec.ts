@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
 import { assertBackendIsRunning } from "./support/preflight";
-import { uniqueTestEmail, registerTestUser, deleteTestUser, approveVendor } from "./support/test-users";
+import { uniqueTestEmail, registerTestUser, createAdminUser, deleteTestUser, approveVendor, deleteCategoryByName, deleteVendorByBusinessName } from "./support/test-users";
 
 const API_URL = process.env.API_URL ?? "http://localhost:4000";
 
@@ -26,11 +26,6 @@ function runPsql(sql: string): void {
   );
 }
 
-async function createAdminUser(email: string, password: string): Promise<void> {
-  await registerTestUser(email, password, "END_USER");
-  runPsql(`UPDATE users SET role = 'ADMIN' WHERE email = '${email}';`);
-}
-
 async function login(page: import("@playwright/test").Page, email: string, password: string) {
   await page.goto("/login");
   await page.getByPlaceholder("Email or phone").fill(email);
@@ -42,19 +37,23 @@ async function login(page: import("@playwright/test").Page, email: string, passw
 test.describe("Admin categories & locations", () => {
   const password = "Phase9Test!2026";
   let adminEmail: string;
-  let categoryId: string | null = null;
+  let createdCategoryName: string | undefined;
 
   test.beforeEach(async () => {
     adminEmail = uniqueTestEmail("phase9-catalog-admin");
+    createdCategoryName = undefined;
     await createAdminUser(adminEmail, password);
   });
 
   test.afterEach(async () => {
+    // Was previously dead code: this test creates the category purely
+    // through the UI form (no API response captured), so the old
+    // categoryId variable it was meant to populate was declared and
+    // checked but never actually assigned anywhere — every run silently
+    // leaked a "Phase9 Category <timestamp>" row. Cleaned up by name
+    // instead (Date.now() in the name already makes it unique per run).
+    if (createdCategoryName) deleteCategoryByName(createdCategoryName);
     deleteTestUser(adminEmail);
-    if (categoryId) {
-      runPsql(`DELETE FROM category_attributes WHERE category_id = '${categoryId}'; DELETE FROM categories WHERE id = '${categoryId}';`);
-      categoryId = null;
-    }
   });
 
   test("a category can be created, disabled, and re-enabled (via the new includeInactive admin list)", async ({ page }) => {
@@ -64,6 +63,7 @@ test.describe("Admin categories & locations", () => {
     await expect(page.getByRole("heading", { name: "Categories & locations" })).toBeVisible();
 
     const categoryName = `Phase9 Category ${Date.now()}`;
+    createdCategoryName = categoryName;
     await page.getByPlaceholder("New category name…").fill(categoryName);
     await page.getByRole("button", { name: "+ Add category" }).click();
     await expect(page.getByText(categoryName)).toBeVisible({ timeout: 10000 });
@@ -71,18 +71,30 @@ test.describe("Admin categories & locations", () => {
     // Disable it — real PATCH isActive:false, then confirm it's still
     // visible (marked disabled) thanks to the new admin includeInactive
     // list, rather than vanishing (the pre-fix trap this phase resolved).
-    const row = page.locator("div", { hasText: categoryName }).last();
-    await row.getByRole("checkbox").click();
-    await expect(page.getByText(/disabled/)).toBeVisible({ timeout: 10000 });
+    //
+    // Three real issues found and fixed getting this far: (1) scoped via
+    // data-testid, not a plain div+hasText match — the latter matched
+    // every ancestor div containing the text too, and .last() didn't
+    // reliably land on the one row-container div with the checkbox as a
+    // real descendant. (2) the real checkbox is visually sr-only (a styled
+    // span provides the toggle look) — clicking the checkbox element
+    // directly hits its decorative sibling span instead; click the
+    // "Active" label text, same as a real user would, which toggles it
+    // via native label association. (3) "disabled" is asserted scoped to
+    // this test's own row throughout, not page-wide — there are real,
+    // pre-existing disabled categories in the dev seed data.
+    const row = page.locator('[data-testid^="category-row-"]', { hasText: categoryName });
+    await row.getByText("Active").click();
+    await expect(row.getByText(/disabled/)).toBeVisible({ timeout: 10000 });
 
     await page.reload();
-    await expect(page.getByText(categoryName)).toBeVisible();
-    await expect(page.getByText(/disabled/)).toBeVisible();
+    const rowAfterFirstReload = page.locator('[data-testid^="category-row-"]', { hasText: categoryName });
+    await expect(rowAfterFirstReload).toBeVisible();
+    await expect(rowAfterFirstReload.getByText(/disabled/)).toBeVisible();
 
     // Re-enable.
-    const rowAfterReload = page.locator("div", { hasText: categoryName }).last();
-    await rowAfterReload.getByRole("checkbox").click();
-    await expect(page.getByText(/disabled/)).not.toBeVisible({ timeout: 10000 });
+    await rowAfterFirstReload.getByText("Active").click();
+    await expect(rowAfterFirstReload.getByText(/disabled/)).not.toBeVisible({ timeout: 10000 });
   });
 
   test("a country/state/city location tree can be expanded and a new city added", async ({ page }) => {
@@ -91,7 +103,11 @@ test.describe("Admin categories & locations", () => {
     await page.getByRole("button", { name: "Locations" }).click();
 
     await expect(page.getByText("India")).toBeVisible();
-    await page.getByText("India").click();
+    // The row's expand arrow is a separate <button> from the name <span>
+    // (LocationTree.tsx) — clicking the plain text does nothing, since
+    // onToggleExpand is only wired to the arrow button. India is the only
+    // seeded country, so its expand button is the tree's first button.
+    await page.getByRole("button", { name: "▸" }).first().click();
     await expect(page.getByText("Karnataka")).toBeVisible({ timeout: 10000 });
   });
 });
@@ -100,15 +116,27 @@ test.describe("Admin leads oversight", () => {
   const password = "Phase9Test!2026";
   let adminEmail: string;
   let ownerEmail: string;
+  let coupleEmail: string | undefined;
 
   test.beforeEach(async () => {
     adminEmail = uniqueTestEmail("phase9-leads-admin");
+    coupleEmail = undefined;
     await createAdminUser(adminEmail, password);
   });
 
   test.afterEach(async () => {
+    // Vendor deleted by fixed business name first — cascades its leads
+    // (leads.vendor_id is ON DELETE CASCADE) but NOT the enquiry itself
+    // (enquiries.user_id is ON DELETE SET NULL, not CASCADE, from either
+    // direction), so the enquiry needs its own explicit delete or it
+    // leaks "Phase9 Test Contact" rows across every run — confirmed live:
+    // 2 leftover enquiries with that exact contactName were found after
+    // this test failed on an earlier (pre-RBAC-fix) run.
+    runPsql(`DELETE FROM vendors WHERE business_name = 'Phase9 Lead Test Vendor';`);
+    runPsql(`DELETE FROM enquiries WHERE contact_name = 'Phase9 Test Contact';`);
     deleteTestUser(adminEmail);
     if (ownerEmail) deleteTestUser(ownerEmail);
+    if (coupleEmail) deleteTestUser(coupleEmail);
   });
 
   test("admin can view a real lead and override its status past a WON terminal state", async ({ page }) => {
@@ -128,7 +156,7 @@ test.describe("Admin leads oversight", () => {
     const { data: vendor } = (await createResponse.json()) as { data: { id: string } };
     approveVendor(vendor.id);
 
-    const coupleEmail = uniqueTestEmail("phase9-lead-couple");
+    coupleEmail = uniqueTestEmail("phase9-lead-couple");
     await registerTestUser(coupleEmail, password, "END_USER");
     const coupleLogin = await fetch(`${API_URL}/api/v1/auth/login`, {
       method: "POST",
@@ -152,16 +180,20 @@ test.describe("Admin leads oversight", () => {
     await page.goto("/admin/leads?status=WON");
     await expect(page.getByText("Phase9 Test Contact")).toBeVisible();
 
-    await page.getByRole("link", { name: "View" }).click();
+    // There are real, unrelated pre-existing WON leads in the dev seed
+    // data (11 at last count) — .first() on a bare "View" link previously
+    // opened one of those instead of this test's own lead. Scoped to the
+    // real <tr> containing this test's contact name.
+    await page.locator("tr", { hasText: "Phase9 Test Contact" }).getByRole("link", { name: "View" }).click();
     await expect(page.getByRole("heading", { name: /Phase9 Test Contact/ })).toBeVisible();
 
     // Real admin override past a terminal status (WON -> CONTACTED) — the
     // vendor-facing board would disable this; the admin one does not.
     await page.getByRole("combobox").selectOption("CONTACTED");
     await page.getByRole("button", { name: "Update status" }).click();
-    await expect(page.getByText("Contacted", { exact: true })).toBeVisible({ timeout: 10000 });
-
-    deleteTestUser(coupleEmail);
+    // Also matches the <select>'s own (non-rendered-visible) <option> text
+    // — .first() picks the real on-page status badge instead.
+    await expect(page.getByText("Contacted", { exact: true }).first()).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -177,6 +209,12 @@ test.describe("Admin review moderation", () => {
   });
 
   test.afterEach(async () => {
+    // The vendor this test creates was never cleaned up (only the two
+    // users were) — confirmed live: 3 leftover "Phase9 Review Test
+    // Vendor" rows found after earlier runs failed on the unrelated
+    // review.photos backend bug this phase also caught. Fixed the same
+    // way as the leads-oversight block above.
+    deleteVendorByBusinessName("Phase9 Review Test Vendor");
     deleteTestUser(adminEmail);
     if (vendorOwnerEmail) deleteTestUser(vendorOwnerEmail);
     if (reviewerEmail) deleteTestUser(reviewerEmail);

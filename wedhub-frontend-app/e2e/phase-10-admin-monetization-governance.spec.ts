@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { test, expect } from "@playwright/test";
 import { assertBackendIsRunning } from "./support/preflight";
-import { uniqueTestEmail, registerTestUser, deleteTestUser } from "./support/test-users";
+import { uniqueTestEmail, createAdminUser, deleteTestUser } from "./support/test-users";
 
 /**
  * Frontend Arch Phase 10 verification — see
@@ -24,11 +24,6 @@ function runPsql(sql: string): void {
   );
 }
 
-async function createAdminUser(email: string, password: string): Promise<void> {
-  await registerTestUser(email, password, "END_USER");
-  runPsql(`UPDATE users SET role = 'ADMIN' WHERE email = '${email}';`);
-}
-
 async function login(page: import("@playwright/test").Page, email: string, password: string) {
   await page.goto("/login");
   await page.getByPlaceholder("Email or phone").fill(email);
@@ -44,19 +39,22 @@ test.beforeAll(async () => {
 test.describe("Admin subscriptions & payments", () => {
   const password = "Phase10Test!2026";
   let adminEmail: string;
-  let createdPlanId: string | null = null;
+  let createdPlanName: string | undefined;
 
   test.beforeEach(async () => {
     adminEmail = uniqueTestEmail("phase10-subs-admin");
+    createdPlanName = undefined;
     await createAdminUser(adminEmail, password);
   });
 
   test.afterEach(async () => {
+    // Was previously dead code the same way phase-09's categoryId was:
+    // createdPlanId was declared and checked but never assigned (the plan
+    // is created purely through the UI form, no API response captured),
+    // so every run permanently occupied the FREE/YEARLY slot instead of
+    // freeing it back up. Cleaned up by name instead.
+    if (createdPlanName) runPsql(`DELETE FROM subscription_plans WHERE name = '${createdPlanName}';`);
     deleteTestUser(adminEmail);
-    if (createdPlanId) {
-      runPsql(`DELETE FROM subscription_plans WHERE id = '${createdPlanId}';`);
-      createdPlanId = null;
-    }
   });
 
   test("a plan can be created, edited, and deactivated; unavailable panels render for subscriptions/transactions/webhooks", async ({ page }) => {
@@ -64,9 +62,16 @@ test.describe("Admin subscriptions & payments", () => {
     await page.goto("/admin/subscriptions");
     await expect(page.getByRole("heading", { name: "Subscriptions & payments" })).toBeVisible();
 
-    // Real plan create.
+    // Real plan create. Every real tier x interval combination except
+    // FREE/YEARLY is already occupied by seeded plans (subscription_plans
+    // has a real uniqueness constraint on tier+billingInterval) — the
+    // form defaults to PRO/MONTHLY, which always 409s. FREE/YEARLY is the
+    // one genuinely free slot.
     await page.getByRole("button", { name: "+ Create plan" }).click();
+    await page.getByLabel("Tier").selectOption("FREE");
+    await page.getByLabel("Billing interval").selectOption("YEARLY");
     const planName = `Phase10 Plan ${Date.now()}`;
+    createdPlanName = planName;
     await page.getByLabel("Plan name").fill(planName);
     await page.getByLabel("Price (₹)").fill("999");
     await page.getByRole("button", { name: "Save changes" }).click();

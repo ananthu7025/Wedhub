@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { assertBackendIsRunning } from "./support/preflight";
-import { uniqueTestEmail, registerTestUser, deleteTestUser, approveVendor } from "./support/test-users";
+import { uniqueTestEmail, registerTestUser, deleteTestUser, approveVendor, deleteVendorByBusinessName } from "./support/test-users";
 
 const API_URL = process.env.API_URL ?? "http://localhost:4000";
 
@@ -66,6 +66,10 @@ test.describe("Vendor subscription page", () => {
   });
 
   test.afterEach(async () => {
+    // vendors.owner_user_id is ON DELETE SET NULL, not CASCADE — delete the
+    // vendor by its fixed business name explicitly, or deleteTestUser alone
+    // orphans the vendor row forever instead of removing it.
+    deleteVendorByBusinessName("Phase7 Subscription Studio");
     deleteTestUser(email);
   });
 
@@ -83,9 +87,13 @@ test.describe("Vendor subscription page", () => {
 
     // Real trial upgrade: POST /subscriptions/me/upgrade returns
     // { subscription, checkout: null } since Pro has trialDays > 0 — no
-    // payment/Checkout.js involved, activates immediately.
-    await expect(page.getByText("14-day free trial")).toBeVisible();
-    await page.getByRole("button", { name: "Upgrade to Pro" }).click();
+    // payment/Checkout.js involved, activates immediately. Pro AND Premium
+    // both carry a 14-day trial (real seed data), so "14-day free trial"
+    // legitimately appears twice on the page — scope to the Pro card via
+    // its data-testid (added specifically for this).
+    const proCard = page.getByTestId("plan-card-PRO");
+    await expect(proCard.getByText("14-day free trial")).toBeVisible();
+    await proCard.getByRole("button", { name: "Upgrade to Pro" }).click();
 
     await expect(page.getByText("TRIALING")).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(/Pro — ₹5,999\/month/)).toBeVisible();
@@ -111,6 +119,7 @@ test.describe("Vendor analytics page", () => {
   });
 
   test.afterEach(async () => {
+    deleteVendorByBusinessName("Phase7 Analytics Studio");
     deleteTestUser(email);
   });
 
@@ -139,6 +148,9 @@ test.describe("Vendor settings page", () => {
   });
 
   test.afterEach(async () => {
+    // The test below renames the vendor mid-run — clean up by the final
+    // name, since that's what's actually persisted afterward.
+    deleteVendorByBusinessName("Phase7 Settings Studio (Updated)");
     deleteTestUser(email);
   });
 
