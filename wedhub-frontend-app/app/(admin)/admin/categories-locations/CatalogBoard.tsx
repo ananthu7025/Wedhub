@@ -189,6 +189,7 @@ export function CatalogBoard({
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
               placeholder="New category name…"
+              maxLength={150}
               className="w-full max-w-[320px] rounded-md border border-border px-3 py-2 text-sm"
             />
             <button
@@ -323,6 +324,7 @@ function CategoryRow({
               value={priceDraft}
               onChange={(e) => setPriceDraft(e.target.value)}
               placeholder="₹ 50,000"
+              maxLength={60}
               className="w-40 rounded-md border border-border px-3 py-1.5 text-xs"
             />
           </label>

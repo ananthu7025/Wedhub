@@ -88,6 +88,10 @@ const TEMPLATES: Record<NotificationEventType, (data: TemplateData) => Notificat
     title: "Featured campaign ending",
     body: `Your featured placement${data.placement ? ` (${data.placement})` : ""} ends soon.`,
   }),
+  LEAD_STATUS_UPDATED: (data) => ({
+    title: "Your enquiry was updated",
+    body: `${data.businessName ?? "A vendor"} moved your enquiry to "${data.status ?? "a new status"}". Check your enquiries for details.`,
+  }),
 };
 
 export function renderNotification(eventType: NotificationEventType, data: TemplateData): NotificationContent {

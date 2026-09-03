@@ -78,9 +78,9 @@ function EnquiryModalContent({
 
     const result = await createSingleVendorEnquiry({
       vendorId,
-      contactName,
+      contactName: contactName.trim(),
       contactEmail,
-      contactPhone: contactPhone || undefined,
+      contactPhone: contactPhone.trim() || undefined,
       weddingDate: weddingDate || undefined,
       budget: budget ? Number(budget) : undefined,
       guestCount: guestCount ? Number(guestCount) : undefined,
@@ -136,6 +136,7 @@ function EnquiryModalContent({
               <span className="mb-1.5 block font-semibold">Your name</span>
               <input
                 required
+                maxLength={200}
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
                 className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
@@ -158,6 +159,8 @@ function EnquiryModalContent({
               <input
                 type="tel"
                 placeholder="+91 98765 43210"
+                minLength={6}
+                maxLength={20}
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
                 className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
@@ -203,6 +206,7 @@ function EnquiryModalContent({
               <textarea
                 rows={3}
                 placeholder="Tell them a bit about what you're looking for..."
+                maxLength={2000}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 className="w-full rounded-md border border-border px-3 py-2.5 text-sm"

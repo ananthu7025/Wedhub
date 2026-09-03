@@ -112,6 +112,22 @@ export function ProfileEditor({
       setCategoryChangeWarningAcked(true);
     }
 
+    // Backend caps tags/languages at max(20) items, max(50) chars each
+    // (vendor.schema.ts) — checked here so a too-long list fails before the
+    // multi-request save sequence below starts, not partway through it.
+    const tagList = tags ? toStringList(tags) : [];
+    const languageList = languages ? toStringList(languages) : [];
+    if (tagList.length > 20 || tagList.some((t) => t.length > 50)) {
+      setStatus("error");
+      setError("Tags: up to 20 tags, 50 characters each.");
+      return;
+    }
+    if (languageList.length > 20 || languageList.some((l) => l.length > 50)) {
+      setStatus("error");
+      setError("Languages: up to 20 languages, 50 characters each.");
+      return;
+    }
+
     setStatus("saving");
     setError("");
 
@@ -119,7 +135,7 @@ export function ProfileEditor({
       shortDescription: shortDescription || undefined,
       description: description || undefined,
       vendorType: vendorType || undefined,
-      tags: tags ? toStringList(tags) : undefined,
+      tags: tags ? tagList : undefined,
       address: address || undefined,
       startingPrice: startingPrice ? Number(startingPrice) : undefined,
       priceRangeMin: priceRangeMin ? Number(priceRangeMin) : undefined,
@@ -127,7 +143,7 @@ export function ProfileEditor({
       customQuoteAvailable,
       yearsExperience: yearsExperience ? Number(yearsExperience) : undefined,
       teamSize: teamSize ? Number(teamSize) : undefined,
-      languages: languages ? toStringList(languages) : undefined,
+      languages: languages ? languageList : undefined,
       travelPolicy: travelPolicy || undefined,
       website: website || undefined,
       phone: phone || undefined,
@@ -346,7 +362,7 @@ export function ProfileEditor({
             </label>
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Address</span>
-              <textarea value={address} onChange={(e) => setAddress(e.target.value)} className="min-h-[70px] w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+              <textarea value={address} onChange={(e) => setAddress(e.target.value)} maxLength={300} className="min-h-[70px] w-full rounded-md border border-border px-3 py-2.5 text-sm" />
             </label>
             <div className="text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Service areas</span>
@@ -466,7 +482,7 @@ export function ProfileEditor({
             </label>
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Travel policy</span>
-              <textarea value={travelPolicy} onChange={(e) => setTravelPolicy(e.target.value)} className="min-h-[70px] w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+              <textarea value={travelPolicy} onChange={(e) => setTravelPolicy(e.target.value)} maxLength={500} className="min-h-[70px] w-full rounded-md border border-border px-3 py-2.5 text-sm" />
             </label>
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Languages spoken</span>
@@ -474,7 +490,7 @@ export function ProfileEditor({
             </label>
             <label className="block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Team size</span>
-              <input type="number" min="0" value={teamSize} onChange={(e) => setTeamSize(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+              <input type="number" min="0" max="10000" value={teamSize} onChange={(e) => setTeamSize(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
             </label>
           </section>
 

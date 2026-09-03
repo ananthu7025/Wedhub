@@ -40,6 +40,10 @@ export function UserDetailBoard({ initialUser }: { initialUser: AdminUserDetail 
   async function handleSuspend() {
     const reason = prompt("Reason for suspension:");
     if (!reason) return;
+    if (reason.length > 500) {
+      setError("Suspension reason must be 500 characters or fewer.");
+      return;
+    }
     setPending(true);
     setError(null);
     const result = await suspendAdminUser(user.id, { reason });

@@ -67,6 +67,7 @@ export async function listAllLeadsAdmin(req: Request, res: Response): Promise<vo
   const query = req.validatedQuery as ListLeadsQuery;
   const [leads, total] = await leadService.listAllLeadsAdmin({
     status: query.status as LeadStatus | undefined,
+    search: query.search,
     page: query.page,
     limit: query.limit,
   });

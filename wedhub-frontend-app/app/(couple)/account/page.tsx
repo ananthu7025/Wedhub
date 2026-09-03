@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CoupleShell } from "@/components/shared/CoupleShell";
 import { getMe } from "@/lib/api/account";
+import { listMyNotificationPreferences } from "@/lib/api/notification-preferences";
 import { AccountActions, AccountDetailsForm, NotificationPreferencesForm, WeddingDetailsForm } from "./AccountForms";
 
 export const metadata: Metadata = {
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AccountPage() {
-  const { data: me } = await getMe();
+  const [{ data: me }, { data: preferences }] = await Promise.all([getMe(), listMyNotificationPreferences()]);
   const displayName = [me.profile?.firstName, me.profile?.lastName].filter(Boolean).join(" ") || me.email;
   const initials = displayName.slice(0, 2).toUpperCase();
 
@@ -37,7 +38,7 @@ export default async function AccountPage() {
 
         <section className="mb-5 rounded-xl border border-border bg-white p-6">
           <h3 className="mb-1 text-base font-bold">Notification preferences</h3>
-          <NotificationPreferencesForm me={me} />
+          <NotificationPreferencesForm initialPreferences={preferences} />
         </section>
 
         <section className="rounded-xl border border-border bg-white p-6">

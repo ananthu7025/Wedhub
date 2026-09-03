@@ -67,6 +67,7 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [filterStatus, setFilterStatus] = useState<LeadStatus | "ALL">("ALL");
   const [statusDraft, setStatusDraft] = useState<LeadStatus | null>(null);
+  const [statusReason, setStatusReason] = useState("");
   const [noteDraft, setNoteDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
     if (result.success) {
       setDetail(result.data);
       setStatusDraft(result.data.status);
+      setStatusReason("");
     }
   }
 
@@ -88,7 +90,7 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
     if (!detail || !statusDraft || statusDraft === detail.status) return;
     setSaving(true);
     setError(null);
-    const result = await updateMyLeadStatus(detail.id, { status: statusDraft });
+    const result = await updateMyLeadStatus(detail.id, { status: statusDraft, reason: statusReason.trim() || undefined });
     setSaving(false);
     if (!result.success) {
       setError(result.error.message);
@@ -96,6 +98,7 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
     }
     setDetail({ ...detail, ...result.data, notes: detail.notes, statusHistory: detail.statusHistory });
     setLeads((prev) => prev.map((l) => (l.id === detail.id ? { ...l, status: result.data.status } : l)));
+    setStatusReason("");
   }
 
   async function handleAddNote() {
@@ -269,7 +272,11 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
                   <div className="flex flex-wrap items-center gap-2">
                     <select
                       value={statusDraft ?? detail.status}
-                      onChange={(e) => setStatusDraft(e.target.value as LeadStatus)}
+                      onChange={(e) => {
+                        const next = e.target.value as LeadStatus;
+                        setStatusDraft(next);
+                        if (next !== "LOST" && next !== "SPAM") setStatusReason("");
+                      }}
                       disabled={isTerminal}
                       className="max-w-[220px] rounded-md border border-border px-3 py-2 text-[13px] disabled:opacity-50"
                     >
@@ -287,6 +294,15 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
                       Update status
                     </button>
                   </div>
+                  {(statusDraft === "LOST" || statusDraft === "SPAM") && statusDraft !== detail.status && (
+                    <textarea
+                      value={statusReason}
+                      onChange={(e) => setStatusReason(e.target.value)}
+                      placeholder={`Reason for marking as ${formatStatusLabel(statusDraft)} (optional)`}
+                      maxLength={500}
+                      className="mt-2.5 min-h-[60px] w-full rounded-md border border-border p-3 text-[13px]"
+                    />
+                  )}
                 </div>
 
                 <div className="rounded-xl border border-border bg-white p-6">

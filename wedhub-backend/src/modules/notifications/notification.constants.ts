@@ -32,6 +32,11 @@ export const DEFAULT_CHANNELS: Record<NotificationEventType, NotificationChannel
   LEAD_FOLLOW_UP: ["IN_APP"],
   HIGH_INTENT_LEAD: ["IN_APP"],
   NEW_MESSAGE: ["IN_APP"],
+  // Couple-facing: email so they see it even if they don't have the app
+  // open (docs/bugs.md #4) — mirrors VENDOR_APPROVED/REJECTED's channel
+  // choice for the equivalent "your thing moved forward" event on the
+  // vendor side.
+  LEAD_STATUS_UPDATED: ["EMAIL", "IN_APP"],
 };
 
 export const MAX_DELIVERY_ATTEMPTS = 3;

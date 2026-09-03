@@ -91,9 +91,9 @@ export function listAdminLocations(type?: LocationType, parentId?: string, inclu
   return apiFetch<Location[]>("/locations", { query: { type, parentId, includeInactive } });
 }
 
-export function listAdminLeads(params: { status?: LeadStatus; page?: number; limit?: number } = {}) {
+export function listAdminLeads(params: { status?: LeadStatus; search?: string; page?: number; limit?: number } = {}) {
   return apiFetch<AdminLeadListItem[], PaginationMeta>("/admin/leads", {
-    query: { status: params.status, page: params.page ?? 1, limit: params.limit ?? 20 },
+    query: { status: params.status, search: params.search, page: params.page ?? 1, limit: params.limit ?? 20 },
   });
 }
 

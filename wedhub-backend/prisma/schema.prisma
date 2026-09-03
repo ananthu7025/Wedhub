@@ -1209,6 +1209,11 @@ enum NotificationEventType {
   SUBSCRIPTION_EXPIRING
   FEATURED_CAMPAIGN_STARTED
   FEATURED_CAMPAIGN_ENDING
+  // Added 2026-09-03 (docs/bugs.md #4) — none of the 17 events above are
+  // couple-facing "your enquiry moved forward" updates (USER_REPLIED/
+  // NEW_MESSAGE are written from the vendor's inbox perspective). Fires on
+  // every lead status transition, vendor- or admin-driven, per user decision.
+  LEAD_STATUS_UPDATED
 }
 
 // SMS/WhatsApp are explicitly "later" per product.md §22 — not modeled yet.

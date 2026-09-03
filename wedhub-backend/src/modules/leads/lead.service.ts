@@ -1,6 +1,7 @@
 import type { LeadStatus } from "@prisma/client";
 import { NotFoundError, ValidationError } from "../../common/errors";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
+import * as notificationService from "../notifications/notification.service";
 import * as leadRepository from "./lead.repository";
 
 const TERMINAL_STATUSES: LeadStatus[] = ["WON", "LOST", "SPAM", "CLOSED"];
@@ -74,8 +75,29 @@ export async function updateStatus(
     vendorId,
     metadata: { leadId, fromStatus: lead.status, toStatus: nextStatus },
   });
+  await notifyCoupleOfStatusChange(lead, nextStatus);
 
   return updated;
+}
+
+// docs/bugs.md #4 — previously no lead status transition ever notified the
+// couple who submitted the enquiry; they had to manually refresh /enquiries.
+// Enquiry.userId is nullable (guest enquiries have no account), so there's
+// nobody to notify in that case — skip silently rather than erroring.
+async function notifyCoupleOfStatusChange(
+  lead: Awaited<ReturnType<typeof leadRepository.findLeadById>>,
+  nextStatus: LeadStatus,
+): Promise<void> {
+  if (!lead?.enquiry.userId) {
+    return;
+  }
+  await notificationService.notify({
+    userId: lead.enquiry.userId,
+    eventType: "LEAD_STATUS_UPDATED",
+    data: { businessName: lead.vendor.businessName, status: nextStatus },
+    relatedEntityType: "lead",
+    relatedEntityId: lead.id,
+  });
 }
 
 export async function addNote(vendorId: string, authorId: string, leadId: string, body: string) {
@@ -89,7 +111,7 @@ export function getAnalytics(vendorId: string) {
 
 // Admin oversight — no ownership check, but every transition is still
 // audited the same way (product.md §20: "Admin can view and intervene").
-export function listAllLeadsAdmin(filter: { status: LeadStatus | undefined; page: number; limit: number }) {
+export function listAllLeadsAdmin(filter: leadRepository.AdminLeadListFilter) {
   return Promise.all([leadRepository.findAllLeadsAdmin(filter), leadRepository.countAllLeadsAdmin(filter)]);
 }
 
@@ -120,5 +142,6 @@ export async function updateStatusAdmin(
     changedByUserId: adminUserId,
     reason,
   });
+  await notifyCoupleOfStatusChange(lead, nextStatus);
   return updated;
 }

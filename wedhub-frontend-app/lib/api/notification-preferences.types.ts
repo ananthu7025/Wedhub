@@ -33,7 +33,10 @@ export type NotificationEventType =
   | "PAYMENT_FAILED"
   | "SUBSCRIPTION_EXPIRING"
   | "FEATURED_CAMPAIGN_STARTED"
-  | "FEATURED_CAMPAIGN_ENDING";
+  | "FEATURED_CAMPAIGN_ENDING"
+  // Added 2026-09-03 (docs/bugs.md #4) — fires on every lead status change,
+  // notifying the couple who submitted the enquiry.
+  | "LEAD_STATUS_UPDATED";
 
 export type NotificationChannel = "IN_APP" | "EMAIL" | "TELEGRAM";
 

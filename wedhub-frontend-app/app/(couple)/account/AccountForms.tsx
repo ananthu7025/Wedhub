@@ -5,7 +5,9 @@ import { useState } from "react";
 import { deactivateAccount, deleteAccount, updateWeddingProfile } from "@/lib/api/account-client";
 import { updateMyProfile } from "@/lib/api/users-client";
 import { logout } from "@/lib/api/auth-client";
+import { setNotificationPreference } from "@/lib/api/notification-preferences-client";
 import type { MeResponse } from "@/lib/api/account.types";
+import type { NotificationChannel, NotificationEventType, NotificationPreference } from "@/lib/api/notification-preferences.types";
 
 function toDateInputValue(iso: string | null): string {
   if (!iso) return "";
@@ -53,6 +55,7 @@ export function WeddingDetailsForm({ me }: { me: MeResponse }) {
           <input
             value={partnerName}
             onChange={(e) => setPartnerName(e.target.value)}
+            maxLength={200}
             className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
           />
         </label>
@@ -61,6 +64,7 @@ export function WeddingDetailsForm({ me }: { me: MeResponse }) {
           <input
             type="number"
             min="0"
+            max="100000"
             value={guestCount}
             onChange={(e) => setGuestCount(e.target.value)}
             className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
@@ -142,68 +146,53 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (che
   );
 }
 
-export function NotificationPreferencesForm({ me }: { me: MeResponse }) {
-  const router = useRouter();
-  const defaults = me.profile?.preferences?.notifications ?? {
-    emailMarketing: true,
-    emailTransactional: true,
-    smsEnabled: false,
-  };
-  const [emailTransactional, setEmailTransactional] = useState(defaults.emailTransactional);
-  const [smsEnabled, setSmsEnabled] = useState(defaults.smsEnabled);
-  const [emailMarketing, setEmailMarketing] = useState(defaults.emailMarketing);
+// docs/bugs.md #3 — this used to call updateMyProfile() to write a JSON blob
+// on UserProfile.preferences that notification.service.ts never reads (it
+// reads the dedicated notification_preferences table via
+// PUT /notifications/me/preferences, same endpoint the vendor settings page
+// already uses). Toggling used to persist and show "saved" while silently
+// having zero effect on what actually gets sent.
+//
+// The previous SMS and marketing-email toggles are removed rather than
+// rewired: SMS isn't a modeled NotificationChannel at all (only
+// IN_APP/EMAIL/TELEGRAM exist), and there's no marketing-email event type —
+// both were fake switches with nothing real to attach to (user decision,
+// 2026-09-03).
+function isEnabled(preferences: NotificationPreference[], eventType: NotificationEventType, channel: NotificationChannel): boolean {
+  const row = preferences.find((p) => p.eventType === eventType && p.channel === channel);
+  // Opt-out model: no row means enabled (see notification-preferences.types.ts).
+  return row ? row.isEnabled : true;
+}
 
-  async function persist(next: { emailTransactional: boolean; smsEnabled: boolean; emailMarketing: boolean }) {
-    await updateMyProfile({
-      preferences: {
-        notifications: next,
-        preferredCategories: me.profile?.preferences?.preferredCategories ?? [],
-      },
-    });
-    router.refresh();
+export function NotificationPreferencesForm({ initialPreferences }: { initialPreferences: NotificationPreference[] }) {
+  const [preferences, setPreferences] = useState(initialPreferences);
+  const [saving, setSaving] = useState(false);
+
+  async function handleToggle(checked: boolean) {
+    setSaving(true);
+    const result = await setNotificationPreference({ eventType: "LEAD_STATUS_UPDATED", channel: "EMAIL", isEnabled: checked });
+    setSaving(false);
+    if (result.success) {
+      setPreferences((prev) => {
+        const existing = prev.find((p) => p.eventType === "LEAD_STATUS_UPDATED" && p.channel === "EMAIL");
+        if (existing) return prev.map((p) => (p === existing ? result.data : p));
+        return [...prev, result.data];
+      });
+    }
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between border-b border-neutral-grey-20 py-3.5">
-        <div>
-          <div className="text-sm font-semibold">Email notifications</div>
-          <div className="text-xs text-text-grey">Vendor responses, recommendations</div>
-        </div>
-        <Toggle
-          checked={emailTransactional}
-          label="Email notifications"
-          onChange={(checked) => {
-            setEmailTransactional(checked);
-            void persist({ emailTransactional: checked, smsEnabled, emailMarketing });
-          }}
-        />
-      </div>
-      <div className="flex items-center justify-between border-b border-neutral-grey-20 py-3.5">
-        <div>
-          <div className="text-sm font-semibold">SMS notifications</div>
-          <div className="text-xs text-text-grey">Get updates via SMS</div>
-        </div>
-        <Toggle
-          checked={smsEnabled}
-          label="SMS notifications"
-          onChange={(checked) => {
-            setSmsEnabled(checked);
-            void persist({ emailTransactional, smsEnabled: checked, emailMarketing });
-          }}
-        />
-      </div>
       <div className="flex items-center justify-between py-3.5">
         <div>
-          <div className="text-sm font-semibold">Marketing emails</div>
-          <div className="text-xs text-text-grey">Tips, offers and featured vendors</div>
+          <div className="text-sm font-semibold">Email notifications</div>
+          <div className="text-xs text-text-grey">Get emailed when a vendor updates your enquiry</div>
         </div>
         <Toggle
-          checked={emailMarketing}
-          label="Marketing emails"
+          checked={isEnabled(preferences, "LEAD_STATUS_UPDATED", "EMAIL")}
+          label="Email notifications"
           onChange={(checked) => {
-            setEmailMarketing(checked);
-            void persist({ emailTransactional, smsEnabled, emailMarketing: checked });
+            if (!saving) void handleToggle(checked);
           }}
         />
       </div>

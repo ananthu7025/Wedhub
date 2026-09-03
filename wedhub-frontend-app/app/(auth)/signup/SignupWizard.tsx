@@ -112,6 +112,7 @@ export function SignupWizard() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={8}
+            maxLength={128}
             required
           />
           <p className="mt-1.5 text-xs text-text-grey">Min. 8 characters.</p>

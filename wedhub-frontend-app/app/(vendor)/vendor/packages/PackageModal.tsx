@@ -20,9 +20,13 @@ export function PackageModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  // Backend caps inclusions at max(50) items, max(200) chars each
+  // (package.schema.ts) — enforced here, one item at a time, rather than
+  // letting the list grow past what a save will actually accept.
   function addInclusion() {
-    if (!newInclusion.trim()) return;
-    setInclusions((prev) => [...prev, newInclusion.trim()]);
+    const trimmed = newInclusion.trim();
+    if (!trimmed || trimmed.length > 200 || inclusions.length >= 50) return;
+    setInclusions((prev) => [...prev, trimmed]);
     setNewInclusion("");
   }
 
@@ -87,6 +91,7 @@ export function PackageModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. 2 day coverage · 2 photographers + drone"
+              maxLength={2000}
               className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
             />
           </label>
@@ -117,16 +122,20 @@ export function PackageModal({
                   }
                 }}
                 placeholder="e.g. Drone coverage"
-                className="flex-1 rounded-md border border-border px-3 py-2.5 text-sm"
+                maxLength={200}
+                disabled={inclusions.length >= 50}
+                className="flex-1 rounded-md border border-border px-3 py-2.5 text-sm disabled:bg-surface-input"
               />
               <button
                 type="button"
                 onClick={addInclusion}
-                className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px] font-bold hover:bg-surface-input"
+                disabled={inclusions.length >= 50}
+                className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px] font-bold hover:bg-surface-input disabled:opacity-60"
               >
                 + Add item
               </button>
             </div>
+            {inclusions.length >= 50 && <p className="mt-1.5 text-[11px] text-text-grey">Maximum of 50 inclusions.</p>}
           </div>
 
           {error && <p className="mb-3.5 text-[13px] text-red">{error}</p>}

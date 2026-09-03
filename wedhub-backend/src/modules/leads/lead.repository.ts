@@ -3,6 +3,7 @@ import { prisma } from "../../config/database";
 
 const LEAD_DETAIL_INCLUDE = {
   enquiry: true,
+  vendor: { select: { businessName: true } },
   notes: { orderBy: { createdAt: "desc" as const }, include: { author: { select: { id: true, email: true } } } },
   statusHistory: { orderBy: { createdAt: "desc" as const } },
 } satisfies Prisma.LeadInclude;
@@ -84,8 +85,31 @@ export function createNote(leadId: string, authorId: string, body: string) {
   return prisma.leadNote.create({ data: { leadId, authorId, body } });
 }
 
-export function findAllLeadsAdmin(filter: { status: LeadStatus | undefined; page: number; limit: number }) {
-  const where: Prisma.LeadWhereInput = filter.status ? { status: filter.status } : {};
+export interface AdminLeadListFilter {
+  status: LeadStatus | undefined;
+  search: string | undefined;
+  page: number;
+  limit: number;
+}
+
+function buildAdminWhere(filter: Pick<AdminLeadListFilter, "status" | "search">): Prisma.LeadWhereInput {
+  const where: Prisma.LeadWhereInput = {};
+  if (filter.status) {
+    where.status = filter.status;
+  }
+  if (filter.search) {
+    where.OR = [
+      { enquiry: { contactName: { contains: filter.search, mode: "insensitive" } } },
+      { enquiry: { contactEmail: { contains: filter.search, mode: "insensitive" } } },
+      { enquiry: { message: { contains: filter.search, mode: "insensitive" } } },
+      { vendor: { businessName: { contains: filter.search, mode: "insensitive" } } },
+    ];
+  }
+  return where;
+}
+
+export function findAllLeadsAdmin(filter: AdminLeadListFilter) {
+  const where = buildAdminWhere(filter);
   return prisma.lead.findMany({
     where,
     include: { enquiry: true, vendor: { select: { id: true, businessName: true, slug: true } } },
@@ -95,9 +119,8 @@ export function findAllLeadsAdmin(filter: { status: LeadStatus | undefined; page
   });
 }
 
-export function countAllLeadsAdmin(filter: { status: LeadStatus | undefined }) {
-  const where: Prisma.LeadWhereInput = filter.status ? { status: filter.status } : {};
-  return prisma.lead.count({ where });
+export function countAllLeadsAdmin(filter: Pick<AdminLeadListFilter, "status" | "search">) {
+  return prisma.lead.count({ where: buildAdminWhere(filter) });
 }
 
 // Vendor lead dashboard analytics (product.md §23): received/contacted/

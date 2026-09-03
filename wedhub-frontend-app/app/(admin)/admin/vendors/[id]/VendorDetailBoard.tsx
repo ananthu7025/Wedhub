@@ -336,6 +336,7 @@ export function VendorDetailBoard({
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="e.g. Business documents incomplete, portfolio does not match category…"
+                    maxLength={1000}
                     className="min-h-[70px] w-full rounded-md border border-border p-3 text-sm"
                   />
                 </label>

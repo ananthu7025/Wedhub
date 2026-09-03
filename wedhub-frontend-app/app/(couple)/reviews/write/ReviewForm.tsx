@@ -117,6 +117,7 @@ export function ReviewForm({
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Tell other couples about your experience — quality, punctuality, communication..."
+          maxLength={3000}
           className="min-h-[140px] w-full rounded-md border border-border px-3 py-2.5 text-sm"
         />
       </label>

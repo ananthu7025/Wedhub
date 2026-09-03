@@ -139,6 +139,7 @@ export function AdminLeadDetailBoard({ initialLead }: { initialLead: AdminLeadDe
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="e.g. Confirmed spam pattern with 3 other vendors"
+                maxLength={500}
                 className="w-full rounded-md border border-border px-3 py-2 text-[13px]"
               />
             </label>

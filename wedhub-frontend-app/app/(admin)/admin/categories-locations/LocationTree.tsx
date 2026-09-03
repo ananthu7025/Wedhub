@@ -97,6 +97,7 @@ export function LocationTree({ initialCountries }: { initialCountries: Location[
               onChange={(e) => setNewName(e.target.value)}
               placeholder="New country name…"
               autoFocus
+              maxLength={150}
               className="w-full max-w-[280px] rounded-md border border-border px-3 py-2 text-sm"
             />
             <button
@@ -222,6 +223,7 @@ function LocationNodeRow({
             onChange={(e) => onNameChange(e.target.value)}
             placeholder={`New ${childType.toLowerCase()} name…`}
             autoFocus
+            maxLength={150}
             className="w-full max-w-[240px] rounded-md border border-border px-2.5 py-1.5 text-[13px]"
           />
           <button

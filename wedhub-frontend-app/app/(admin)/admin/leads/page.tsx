@@ -14,19 +14,24 @@ const VALID_STATUSES: LeadStatus[] = [
 ];
 
 interface LeadsPageProps {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; search?: string }>;
 }
 
 export default async function AdminLeadsPage({ searchParams }: LeadsPageProps) {
   await requireAdmin();
-  const { status: statusParam } = await searchParams;
+  const { status: statusParam, search } = await searchParams;
   const status = VALID_STATUSES.includes(statusParam as LeadStatus) ? (statusParam as LeadStatus) : undefined;
 
-  const { data: leads, meta } = await listAdminLeads({ status, limit: 50 });
+  const { data: leads, meta } = await listAdminLeads({ status, search, limit: 50 });
 
   return (
     <AdminShell activeHref="/admin/leads">
-      <AdminLeadsTable initialLeads={leads} total={meta?.total ?? leads.length} activeStatus={status} />
+      <AdminLeadsTable
+        initialLeads={leads}
+        total={meta?.total ?? leads.length}
+        activeStatus={status}
+        activeSearch={search ?? ""}
+      />
     </AdminShell>
   );
 }
