@@ -7,9 +7,64 @@ import { getPublicMediaUrl } from "@/lib/media/url";
 
 // Backs the public homepage's "Gallery Inspiration" section — real,
 // admin-curated selections of real vendor portfolio media (Arch Phase 17,
-// 2026-09-04), replacing what was previously a hardcoded GALLERY_ITEMS
-// array. Category comes from each media item's vendor's real primary
-// category (VendorCategory) — no separate category field on this model.
+// 2026-09-04). Below a fixed number of real items, sample content fills
+// the remaining slots (see fillGallerySlots) so the section always shows
+// a full grid even on a fresh platform with few/no vendor photos yet —
+// each real item added removes one sample; once GALLERY_SLOTS real items
+// exist, zero samples render.
+
+const GALLERY_SLOTS = 6;
+
+// Normalized shape the grid renders — both a real FeaturedMediaItem and a
+// sample map into this, so the card itself never branches on "real or
+// placeholder."
+interface DisplayGalleryItem {
+  key: string;
+  category: string;
+  title: string;
+  imageUrl: string;
+}
+
+// Sample content only, not sourced from any vendor — fills empty slots
+// until enough real, admin-curated gallery items exist.
+const SAMPLE_GALLERY_ITEMS: DisplayGalleryItem[] = [
+  {
+    key: "sample-1",
+    category: "Bridal Wear",
+    title: "Handcrafted Crimson Velvet Bridal Lehenga",
+    imageUrl: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=600&q=80",
+  },
+  {
+    key: "sample-2",
+    category: "Mandap & Decor",
+    title: "Floral Royal Canopy & Golden Fairy Lights Mandap",
+    imageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80",
+  },
+  {
+    key: "sample-3",
+    category: "Mehndi",
+    title: "Intricate Rajasthani Bridal Henna Art",
+    imageUrl: "https://images.unsplash.com/photo-1584282479904-4c4f9f6d6332?w=600&q=80",
+  },
+  {
+    key: "sample-4",
+    category: "Pre-Wedding",
+    title: "Sunset Golden Hour Silhouette Couple Shoot",
+    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80",
+  },
+  {
+    key: "sample-5",
+    category: "Jewellery",
+    title: "Traditional Polki & Kundan Wedding Choker Set",
+    imageUrl: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80",
+  },
+  {
+    key: "sample-6",
+    category: "Mandap & Decor",
+    title: "Pastel Marigold & Lotus Haldi Ceremony Decor",
+    imageUrl: "https://images.unsplash.com/photo-1478146059778-26028b07395a?w=600&q=80",
+  },
+];
 
 function itemCategory(item: FeaturedMediaItem): string {
   return item.media.vendor.categories.find((c) => c.isPrimary)?.category.name ?? item.media.vendor.businessName;
@@ -19,13 +74,25 @@ function itemTitle(item: FeaturedMediaItem): string {
   return item.titleOverride ?? item.media.altText ?? item.media.vendor.businessName;
 }
 
+// Real items fill first, samples fill any remaining slots up to
+// GALLERY_SLOTS — see the "fixed display count" decision this implements.
+function fillGallerySlots(realItems: FeaturedMediaItem[]): DisplayGalleryItem[] {
+  const real: DisplayGalleryItem[] = realItems.slice(0, GALLERY_SLOTS).map((item) => ({
+    key: item.id,
+    category: itemCategory(item),
+    title: itemTitle(item),
+    imageUrl: getPublicMediaUrl(item.media.optimizedObjectKey ?? item.media.originalObjectKey),
+  }));
+  const remaining = GALLERY_SLOTS - real.length;
+  return remaining > 0 ? [...real, ...SAMPLE_GALLERY_ITEMS.slice(0, remaining)] : real;
+}
+
 export function GalleryInspiration({ items }: { items: FeaturedMediaItem[] }) {
-  const categories = ["All", ...Array.from(new Set(items.map(itemCategory)))];
+  const displayItems = fillGallerySlots(items);
+  const categories = ["All", ...Array.from(new Set(displayItems.map((item) => item.category)))];
   const [activeCategory, setActiveCategory] = useState("All");
 
-  if (items.length === 0) return null;
-
-  const filteredItems = activeCategory === "All" ? items : items.filter((item) => itemCategory(item) === activeCategory);
+  const filteredItems = activeCategory === "All" ? displayItems : displayItems.filter((item) => item.category === activeCategory);
 
   return (
     <section id="gallery-inspiration" className="px-6 py-10 max-[900px]:px-4">
@@ -60,32 +127,28 @@ export function GalleryInspiration({ items }: { items: FeaturedMediaItem[] }) {
 
       {/* Grid */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        {filteredItems.map((item) => {
-          const imageKey = item.media.optimizedObjectKey ?? item.media.originalObjectKey;
-          const title = itemTitle(item);
-          return (
-            <div
-              key={item.id}
-              className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-surface-input shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-            >
-              <Image
-                src={getPublicMediaUrl(imageKey)}
-                alt={title}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
-              />
-              {/* Subtle Gradient Overlay on hover */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity group-hover:opacity-95" />
-              <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-                <span className="inline-block rounded-full bg-white/25 px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm mb-1">
-                  {itemCategory(item)}
-                </span>
-                <p className="text-xs font-bold leading-snug line-clamp-2">{title}</p>
-              </div>
+        {filteredItems.map((item) => (
+          <div
+            key={item.key}
+            className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-surface-input shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+          >
+            <Image
+              src={item.imageUrl}
+              alt={item.title}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+            />
+            {/* Subtle Gradient Overlay on hover */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity group-hover:opacity-95" />
+            <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+              <span className="inline-block rounded-full bg-white/25 px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm mb-1">
+                {item.category}
+              </span>
+              <p className="text-xs font-bold leading-snug line-clamp-2">{item.title}</p>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </section>
   );

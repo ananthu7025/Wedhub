@@ -17,12 +17,107 @@ import { getOptionalSession } from "@/lib/auth/dal";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import type { WeddingStory as RealWeddingStory } from "@/lib/api/vendors.types";
 
+const WEDDING_STORIES_SLOTS = 6;
+
 export const metadata: Metadata = {
   title: "WedHub — Your Wedding, Your Way | Find Trusted Vendors",
   description: "Discover and connect with trusted wedding vendors near you — photographers, venues, makeup artists and more.",
 };
 
 const TELEGRAM_BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "VendorMatefinderBot";
+
+// Normalized shape WeddingStoryCard renders — both a real WeddingStory and
+// a static sample map into this, so the card itself never has to branch on
+// "is this real or a placeholder."
+interface DisplayWeddingStory {
+  key: string;
+  href: string;
+  coupleName: string;
+  location: string;
+  tag: string;
+  snippet: string;
+  imageUrl: string;
+}
+
+// Sample content only — shown to fill empty slots in the "Real Wedding
+// Stories" grid until enough real, admin-curated stories exist (see
+// fillWeddingStorySlots below). Each slot a real story fills removes one
+// of these; once 6+ real stories exist, none of these render at all. Not
+// linked to any real vendor — hrefs go to /search, same as the section's
+// own "View All" link, since there's no real vendor to link to.
+const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
+  {
+    key: "sample-1",
+    href: "/search",
+    coupleName: "Ananya & Rohan",
+    location: "Palace Grounds, Bengaluru",
+    tag: "South Indian Traditional · 120 Photos",
+    imageUrl: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&q=80",
+    snippet: "A grand floral celebration featuring traditional kanjeevaram silk and majestic temple-style decor.",
+  },
+  {
+    key: "sample-2",
+    href: "/search",
+    coupleName: "Pooja & Kabir",
+    location: "City Palace, Jaipur",
+    tag: "Royal Heritage Wedding · 85 Photos",
+    imageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&q=80",
+    snippet: "An opulent royal Rajasthani celebration with folk performances, royal processions, and palace courtyards.",
+  },
+  {
+    key: "sample-3",
+    href: "/search",
+    coupleName: "Meera & Siddharth",
+    location: "Heritage Village, Goa",
+    tag: "Beachside Destination · 95 Photos",
+    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80",
+    snippet: "A serene sunset beach ceremony filled with fairy-lit coconut groves, bohemian decor, and endless joy.",
+  },
+  {
+    key: "sample-4",
+    href: "/search",
+    coupleName: "Kavya & Arjun",
+    location: "Backwater Resort, Alleppey",
+    tag: "Kerala Christian Wedding · 140 Photos",
+    imageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80",
+    snippet: "A tranquil backwater ceremony with houseboat processions and traditional sadhya feast.",
+  },
+  {
+    key: "sample-5",
+    href: "/search",
+    coupleName: "Ishaan & Diya",
+    location: "The Leela, Udaipur",
+    tag: "Lakeside Luxury Wedding · 200 Photos",
+    imageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80",
+    snippet: "A three-day lakeside celebration with rooftop sangeet and a sunset lake-view mandap.",
+  },
+  {
+    key: "sample-6",
+    href: "/search",
+    coupleName: "Nikhil & Sara",
+    location: "Heritage Haveli, Jodhpur",
+    tag: "Rajasthani Fusion · 110 Photos",
+    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80",
+    snippet: "A blue-city haveli wedding blending Rajasthani rituals with a modern fusion reception.",
+  },
+];
+
+// Real stories fill first, samples fill any remaining slots up to
+// WEDDING_STORIES_SLOTS — see the "fixed display count" decision this
+// implements. Once real.length >= WEDDING_STORIES_SLOTS, zero samples show.
+function fillWeddingStorySlots(realStories: RealWeddingStory[]): DisplayWeddingStory[] {
+  const real: DisplayWeddingStory[] = realStories.slice(0, WEDDING_STORIES_SLOTS).map((story) => ({
+    key: story.id,
+    href: `/vendors/${story.album.vendor.slug}`,
+    coupleName: story.coupleName,
+    location: story.location,
+    tag: story.tag,
+    snippet: story.snippet,
+    imageUrl: getPublicMediaUrl(story.album.coverMedia.optimizedObjectKey ?? story.album.coverMedia.originalObjectKey),
+  }));
+  const remaining = WEDDING_STORIES_SLOTS - real.length;
+  return remaining > 0 ? [...real, ...SAMPLE_WEDDING_STORIES.slice(0, remaining)] : real;
+}
 
 async function getFeaturedVendorCards() {
   try {
@@ -238,29 +333,27 @@ export default async function HomePage() {
           previously static placeholder content per a since-superseded
           2026-09-03 decision (see frontenddocs/10-risks-and-open-
           questions.md Open Question 21). */}
-      {weddingStories.length > 0 && (
-        <section id="wedding-stories" className="px-6 py-14 sm:py-16 max-[900px]:px-4">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-extrabold tracking-tight text-jet-black sm:text-2xl">
-                Real Wedding Stories
-              </h2>
-              <p className="mt-0.5 text-xs text-text-grey">
-                Get inspired by real couples, stunning celebrations, and dream wedding vendors
-              </p>
-            </div>
-            <Link href="/search" className="text-xs font-bold text-brand-primary hover:underline">
-              View All Weddings →
-            </Link>
+      <section id="wedding-stories" className="px-6 py-14 sm:py-16 max-[900px]:px-4">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-extrabold tracking-tight text-jet-black sm:text-2xl">
+              Real Wedding Stories
+            </h2>
+            <p className="mt-0.5 text-xs text-text-grey">
+              Get inspired by real couples, stunning celebrations, and dream wedding vendors
+            </p>
           </div>
+          <Link href="/search" className="text-xs font-bold text-brand-primary hover:underline">
+            View All Weddings →
+          </Link>
+        </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
-            {weddingStories.slice(0, 6).map((story) => (
-              <WeddingStoryCard key={story.id} story={story} className="h-[195px] sm:h-[210px]" />
-            ))}
-          </div>
-        </section>
-      )}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+          {fillWeddingStorySlots(weddingStories).map((story) => (
+            <WeddingStoryCard key={story.key} story={story} className="h-[195px] sm:h-[210px]" />
+          ))}
+        </div>
+      </section>
 
       {/* Latest Blogs & Planning Ideas */}
       <section id="wedding-blogs" className="px-6 py-8 max-[900px]:px-4 bg-white/70 border-y border-border/60">
@@ -395,15 +488,14 @@ export default async function HomePage() {
 
 /** One bento-style Real Wedding Stories card — same visual language (image, dark gradient overlay, hover scale, white "View More" pill) as the asymmetric grid this section's layout was ported from. */
 /** Text/badge/button reveal only on hover, matching CategoryCapsuleCarousel.tsx's reveal pattern — the image is always visible, everything else fades + slides in on hover. */
-function WeddingStoryCard({ story, className }: { story: RealWeddingStory; className: string }) {
-  const coverKey = story.album.coverMedia.optimizedObjectKey ?? story.album.coverMedia.originalObjectKey;
+function WeddingStoryCard({ story, className }: { story: DisplayWeddingStory; className: string }) {
   return (
     <Link
-      href={`/vendors/${story.album.vendor.slug}`}
+      href={story.href}
       className={`group relative overflow-hidden rounded-[18px] shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 flex flex-col justify-between p-3.5 sm:p-4 text-white no-underline ${className}`}
     >
       <Image
-        src={getPublicMediaUrl(coverKey)}
+        src={story.imageUrl}
         alt={story.coupleName}
         fill
         className="object-cover transition-transform duration-500 group-hover:scale-110"
