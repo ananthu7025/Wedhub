@@ -21,6 +21,7 @@ import {
 export const weddingWebsiteRouter = Router();
 
 weddingWebsiteRouter.get("/templates", asyncHandler(weddingWebsiteController.listTemplates));
+weddingWebsiteRouter.get("/published", asyncHandler(weddingWebsiteController.listPublishedSlugs));
 
 // Public preview/published reads — must precede /me/:id-style routes only
 // if they could collide; these live under distinct static prefixes so

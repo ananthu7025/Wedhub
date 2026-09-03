@@ -32,6 +32,17 @@ export function findBySlugAnyCase(slug: string) {
   return prisma.weddingWebsite.findFirst({ where: { slug } });
 }
 
+// Public, minimal — backs the frontend's sitemap.ts, same pattern as the
+// seo module's GET /seo/combinations. Only slug + updatedAt, nothing else
+// (no owner/payment info, matching this module's other public reads).
+export function listPublishedSlugs() {
+  return prisma.weddingWebsite.findMany({
+    where: { status: "PUBLISHED" },
+    select: { slug: true, updatedAt: true },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
 // Ownership is exactly-one-of ownerUserId / ownerTelegramUserId — this
 // finds the caller's own draft(s) regardless of which owner column
 // applies, so the same repository function serves both the web API

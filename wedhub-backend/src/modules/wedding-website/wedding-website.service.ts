@@ -150,6 +150,10 @@ export async function getPublishedBySlug(slug: string) {
   return toPublicRenderView(website);
 }
 
+export function listPublishedSlugs() {
+  return weddingWebsiteRepository.listPublishedSlugs();
+}
+
 // Events
 
 export async function listEvents(weddingWebsiteId: string, ownerUserId: string) {

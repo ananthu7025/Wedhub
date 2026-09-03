@@ -80,6 +80,12 @@ export async function getPublished(req: Request, res: Response): Promise<void> {
   res.json(successResponse(website));
 }
 
+// Backs the frontend's sitemap.ts — every published slug, nothing else.
+export async function listPublishedSlugs(_req: Request, res: Response): Promise<void> {
+  const websites = await weddingWebsiteService.listPublishedSlugs();
+  res.json(successResponse(websites));
+}
+
 export async function createPublishOrder(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
   const result = await weddingWebsiteService.createPublishOrder(req.params.id as string, userId);
