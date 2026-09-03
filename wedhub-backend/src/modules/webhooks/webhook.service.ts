@@ -5,6 +5,7 @@ import * as entitlementService from "../entitlements/entitlement.service";
 import * as notificationService from "../notifications/notification.service";
 import { periodEndFor } from "../subscriptions/billing-period.util";
 import * as subscriptionRepository from "../subscriptions/subscription.repository";
+import * as weddingWebsiteService from "../wedding-website/wedding-website.service";
 import type { RazorpayWebhookPayload } from "./webhook.types";
 
 // Razorpay does not send a single top-level event id — the convention is to
@@ -110,6 +111,22 @@ async function handlePaymentCaptured(payload: RazorpayWebhookPayload): Promise<v
   // the invoice table's unique payment_id constraint.
   if (payment.status === "CAPTURED") {
     logger.info({ paymentId: payment.id, orderId: paymentEntity.order_id }, "Payment already captured — ignoring");
+    return;
+  }
+
+  // Arch Phase 26 — a ₹49 wedding-website publish charge has no
+  // subscription/pendingPlan concept at all; dispatch it to its own
+  // publish flow before falling into the subscription-shaped logic below.
+  // publishWeddingWebsite() is itself idempotent (no-ops if already
+  // PUBLISHED — Business Rule 10), matching this handler's own duplicate-
+  // capture defense above.
+  if (payment.purpose === "WEDDING_WEBSITE") {
+    if (!payment.weddingWebsiteId) {
+      logger.warn({ paymentId: payment.id }, "WEDDING_WEBSITE payment with no weddingWebsiteId — ignoring");
+      return;
+    }
+    await subscriptionRepository.markPaymentCaptured(payment.id, paymentEntity.id);
+    await weddingWebsiteService.publishWeddingWebsite(payment.weddingWebsiteId);
     return;
   }
 

@@ -27,6 +27,12 @@ const envSchema = z.object({
   MEDIA_MAX_IMAGE_SIZE_MB: z.coerce.number().positive().default(10),
   MEDIA_MAX_VIDEO_SIZE_MB: z.coerce.number().positive().default(100),
 
+  // ₹49 Instant Wedding Website (Arch Phase 26) — single source of truth
+  // for the publish price and the one-time preview's expiry window. See
+  // docs/12-stage-wedding-website.md.
+  WEDDING_WEBSITE_PRICE_INR: z.coerce.number().positive().default(49),
+  WEDDING_WEBSITE_PREVIEW_EXPIRY_MINUTES: z.coerce.number().int().positive().default(60),
+
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),

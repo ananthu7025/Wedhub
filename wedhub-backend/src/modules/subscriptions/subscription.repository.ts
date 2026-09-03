@@ -82,10 +82,15 @@ export function createPendingCheckoutPayment(data: {
   });
 }
 
+// Generic "look up any Payment by its Razorpay order id" — the webhook
+// dispatch that consumes this branches on payment.purpose (SUBSCRIPTION
+// vs. WEDDING_WEBSITE, Arch Phase 26), so this include covers both
+// purposes' needs rather than living in two separate purpose-specific
+// lookups.
 export function findPaymentByOrderId(razorpayOrderId: string) {
   return prisma.payment.findUnique({
     where: { razorpayOrderId },
-    include: { subscription: { include: { plan: true } }, pendingPlan: true },
+    include: { subscription: { include: { plan: true } }, pendingPlan: true, weddingWebsite: true },
   });
 }
 
