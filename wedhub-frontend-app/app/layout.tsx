@@ -11,8 +11,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: {
-    default: "WedHub",
-    template: "%s | WedHub",
+    default: "itsmyKalyanam",
+    template: "%s | itsmyKalyanam",
   },
   description: "Discover and connect with trusted wedding vendors near you.",
 };

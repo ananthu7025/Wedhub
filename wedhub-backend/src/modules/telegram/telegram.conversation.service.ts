@@ -62,7 +62,7 @@ function parseGuestCount(input: string): number | undefined {
 export async function startConversation(telegramUserRowId: string): Promise<StepResult> {
   await telegramRepository.resetOrCreateConversation(telegramUserRowId);
   return {
-    text: "Welcome to WedHub! What are you planning?",
+    text: "Welcome to itsmyKalyanam! What are you planning?",
     buttons: [
       [{ text: "Find a vendor", callbackData: "start:find_vendor" }],
       [{ text: "💍 Create Your Wedding Website – ₹49", callbackData: "start:create_website" }],

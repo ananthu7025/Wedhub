@@ -20,7 +20,11 @@ import type { WeddingStory as RealWeddingStory } from "@/lib/api/vendors.types";
 const WEDDING_STORIES_SLOTS = 6;
 
 export const metadata: Metadata = {
-  title: "WedHub — Your Wedding, Your Way | Find Trusted Vendors",
+  // No brand suffix here — the root layout's title template
+  // ("%s | itsmyKalyanam") already appends it to every page's <title>,
+  // including this one (a real bug caught live: this used to duplicate
+  // the brand name at both ends of the rendered title).
+  title: "Your Wedding, Your Way | Find Trusted Vendors",
   description: "Discover and connect with trusted wedding vendors near you — photographers, venues, makeup artists and more.",
 };
 
@@ -480,7 +484,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Comprehensive WedHub Footer */}
+      {/* Comprehensive itsmyKalyanam Footer */}
       <PublicFooter />
     </div>
   );

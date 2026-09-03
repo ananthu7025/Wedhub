@@ -24,9 +24,10 @@ export interface SeoPageData {
   city: { id: string; name: string; slug: string } | null;
 }
 
-// No "| WedHub" suffix here — the frontend root layout's title template
-// ("%s | WedHub") already appends it to every page's <title>, so including
-// it here would double it up (e.g. "Best Photography | WedHub | WedHub").
+// No "| itsmyKalyanam" suffix here — the frontend root layout's title
+// template ("%s | itsmyKalyanam") already appends it to every page's
+// <title>, so including it here would double it up (e.g.
+// "Best Photography | itsmyKalyanam | itsmyKalyanam").
 function templateTitle(categoryName: string | null, cityName: string | null): string {
   if (categoryName && cityName) return `Best ${categoryName} in ${cityName}`;
   if (categoryName) return `Best ${categoryName}`;
@@ -41,7 +42,7 @@ function templateH1(categoryName: string | null, cityName: string | null): strin
 
 function templateDescription(categoryName: string | null, cityName: string | null, vendorCount: number): string {
   const subject = categoryName && cityName ? `${categoryName.toLowerCase()} in ${cityName}` : categoryName ? categoryName.toLowerCase() : `wedding vendors in ${cityName}`;
-  return `Browse ${vendorCount} verified ${subject} on WedHub. Compare portfolios, pricing, and reviews to find the right fit for your wedding.`;
+  return `Browse ${vendorCount} verified ${subject} on itsmyKalyanam. Compare portfolios, pricing, and reviews to find the right fit for your wedding.`;
 }
 
 // Not literally /vendors/<category>/<city> per the architecture.md Phase 17
@@ -90,7 +91,7 @@ export async function getSeoPage(categoryId: string | undefined, cityId: string 
     canonicalPath: canonicalPath(category?.slug ?? null, city?.slug ?? null),
     // OG tags aren't run through the frontend's title template (that only
     // applies to <title>), so the brand suffix is added explicitly here.
-    ogTitle: `${title} | WedHub`,
+    ogTitle: `${title} | itsmyKalyanam`,
     ogDescription: description,
     ogImageUrl: override?.ogImageUrl ?? category?.imageUrl ?? null,
     vendorCount,

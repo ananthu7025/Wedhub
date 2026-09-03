@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminLogoutButton } from "./AdminLogoutButton";
+import { BrandLogo } from "./BrandLogo";
 
 /**
  * Sidebar shell for all (admin) routes, matching wedhub-frontend/admin/*.html's
@@ -146,10 +147,10 @@ export function AdminShell({ children, activeHref }: { children: React.ReactNode
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-[220px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
-        <Link href="/admin/dashboard" className="mb-5 flex items-center gap-1.5 px-2 text-[20px] font-semibold text-brand-ink-soft no-underline">
-          Wed<span className="font-bold text-brand-primary">Hub</span>
+        <div className="mb-5 flex items-center gap-1.5 px-2">
+          <BrandLogo variant="dark" href="/admin/dashboard" />
           <span className="text-[11px] font-bold uppercase tracking-wide text-text-grey">Admin</span>
-        </Link>
+        </div>
 
         {sections.map((section) => (
           <div key={section.label ?? "root"}>

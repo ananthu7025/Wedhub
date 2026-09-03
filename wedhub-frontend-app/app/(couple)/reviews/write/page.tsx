@@ -62,7 +62,7 @@ export default async function WriteReviewPage({ searchParams }: WriteReviewPageP
             </div>
             <div>
               <strong className="block text-sm">{vendor.businessName}</strong>
-              <div className="text-xs text-text-grey">Reviewing on WedHub</div>
+              <div className="text-xs text-text-grey">Reviewing on itsmyKalyanam</div>
             </div>
           </div>
 

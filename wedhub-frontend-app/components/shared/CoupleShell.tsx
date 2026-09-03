@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getMyUnreadNotificationCount } from "@/lib/api/account";
+import { BrandLogo } from "./BrandLogo";
 
 /**
  * Shared shell for all (couple) routes — desktop topbar + mobile bottom nav,
@@ -49,9 +50,7 @@ export async function CoupleShell({ children, activeHref }: { children: React.Re
   return (
     <>
       <header className="sticky top-0 z-100 flex h-[70px] items-center justify-between border-b border-border bg-white px-10 max-[900px]:px-4">
-        <Link href="/" className="flex items-center text-[22px] font-semibold text-brand-ink-soft no-underline">
-          Wed<span className="font-bold text-brand-primary">Hub</span>
-        </Link>
+        <BrandLogo variant="dark" />
         <nav className="flex gap-1 max-[900px]:hidden">
           {navLinks.map((link) => (
             <Link

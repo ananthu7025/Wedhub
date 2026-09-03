@@ -3,6 +3,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getOptionalSession } from "@/lib/auth/dal";
+import { BrandLogo } from "@/components/shared/BrandLogo";
 import { LoginForm } from "./LoginForm";
 
 export const metadata: Metadata = {
@@ -43,12 +44,12 @@ export default async function LoginPage() {
 
       <div className="flex flex-1 flex-col items-center justify-center bg-white px-6 py-10">
         <div className="w-full max-w-sm">
-          <div className="mb-7 flex justify-center text-2xl font-semibold text-brand-ink-soft">
-            Wed<span className="font-bold text-brand-primary">Hub</span>
+          <div className="mb-7 flex justify-center">
+            <BrandLogo variant="dark" />
           </div>
           <h1 className="mb-2 text-center text-[30px] font-bold text-brand-ink-soft">Welcome back</h1>
           <p className="mb-7 text-center text-sm text-text-grey">
-            New to WedHub?
+            New to itsmyKalyanam?
             <Link href="/signup" className="ml-1 font-bold text-brand-primary no-underline">
               Create an account
             </Link>

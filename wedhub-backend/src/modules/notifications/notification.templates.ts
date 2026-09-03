@@ -21,11 +21,11 @@ const TEMPLATES: Record<NotificationEventType, (data: TemplateData) => Notificat
   // link a brand-new user needs. Confirmed with the user: sending both at
   // once would just be two emails in the same second, one with no action.
   REGISTRATION: () => ({
-    title: "Welcome to WedHub",
+    title: "Welcome to itsmyKalyanam",
     body: "Your account has been created.",
   }),
   VERIFICATION: (data) => ({
-    title: "Welcome to WedHub — verify your email",
+    title: "Welcome to itsmyKalyanam — verify your email",
     body: `Your account has been created. Confirm your email address to activate it: ${env.FRONTEND_URL}/verify-email?token=${data.token ?? ""}`,
   }),
   PASSWORD_RESET: (data) => ({
@@ -34,7 +34,7 @@ const TEMPLATES: Record<NotificationEventType, (data: TemplateData) => Notificat
   }),
   VENDOR_APPROVED: (data) => ({
     title: "Your vendor profile is approved",
-    body: `${data.businessName ?? "Your business"} is now live on WedHub and visible to couples searching your category and city.`,
+    body: `${data.businessName ?? "Your business"} is now live on itsmyKalyanam and visible to couples searching your category and city.`,
   }),
   VENDOR_REJECTED: (data) => ({
     title: "Your vendor profile needs changes",
@@ -103,6 +103,6 @@ export function renderEmailHtml(content: NotificationContent): string {
     <h2>${content.title}</h2>
     <p>${content.body}</p>
     <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-    <p style="color: #888; font-size: 12px;">WedHub</p>
+    <p style="color: #888; font-size: 12px;">itsmyKalyanam</p>
   </div>`;
 }

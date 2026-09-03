@@ -46,7 +46,11 @@ const envSchema = z.object({
   API_PUBLIC_URL: z.string().url().optional(),
 
   RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM_ADDRESS: z.string().default("WedHub <notifications@wedhub.dev>"),
+  // The domain here must be verified with the email provider (Resend) before
+  // sending will actually work — this default is a display placeholder, not
+  // a guarantee the domain is set up. Update EMAIL_FROM_ADDRESS in the real
+  // environment once itsmykalyanam.com (or a subdomain) is verified there.
+  EMAIL_FROM_ADDRESS: z.string().default("itsmyKalyanam <notifications@wedhub.dev>"),
 
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
   ADMIN_URL: z.string().url().default("http://localhost:3001"),

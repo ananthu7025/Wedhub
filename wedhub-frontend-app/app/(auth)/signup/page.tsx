@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getOptionalSession } from "@/lib/auth/dal";
+import { BrandLogo } from "@/components/shared/BrandLogo";
 import { SignupWizard } from "./SignupWizard";
 
 export const metadata: Metadata = {
@@ -30,9 +31,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border px-10 py-4.5">
-        <Link href="/login" className="text-[22px] font-semibold text-brand-ink-soft no-underline">
-          Wed<span className="font-bold text-brand-primary">Hub</span>
-        </Link>
+        <BrandLogo variant="dark" />
       </header>
 
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">

@@ -19,7 +19,7 @@ async function upsertTelegramUserFromApiUser(apiUser: TelegramApiUser, chatId: n
 }
 
 function contactNameFor(apiUser: TelegramApiUser): string {
-  return [apiUser.first_name, apiUser.last_name].filter(Boolean).join(" ") || apiUser.username || "WedHub user";
+  return [apiUser.first_name, apiUser.last_name].filter(Boolean).join(" ") || apiUser.username || "itsmyKalyanam user";
 }
 
 async function getOrCreateOpenConversation(telegramUserRowId: string) {

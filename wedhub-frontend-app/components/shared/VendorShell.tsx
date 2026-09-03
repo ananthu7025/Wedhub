@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getMyUnreadNotificationCount } from "@/lib/api/account";
+import { BrandLogo } from "./BrandLogo";
 import { VendorLogoutButton } from "./VendorLogoutButton";
 
 /**
@@ -82,9 +83,7 @@ export async function VendorShell({
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-[220px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
-        <Link href="/vendor/dashboard" className="mb-5 flex items-center px-2 text-[20px] font-semibold text-brand-ink-soft no-underline">
-          Wed<span className="font-bold text-brand-primary">Hub</span>
-        </Link>
+        <BrandLogo variant="dark" href="/vendor/dashboard" className="mb-5 px-2" />
 
         {navLinks.map((link) => (
           <Link

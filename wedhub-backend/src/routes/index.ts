@@ -36,7 +36,7 @@ import { weddingWebsiteMediaRouter } from "../modules/wedding-website-media";
 export const apiV1Router = Router();
 
 apiV1Router.get("/", (_req, res) => {
-  res.json(successResponse({ name: "WedHub API", version: "v1" }));
+  res.json(successResponse({ name: "itsmyKalyanam API", version: "v1" }));
 });
 
 apiV1Router.use("/auth", authRouter);

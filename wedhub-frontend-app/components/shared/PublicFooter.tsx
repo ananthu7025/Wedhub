@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { BrandLogo } from "@/components/shared/BrandLogo";
 
 export function PublicFooter() {
   const [subscribed, setSubscribed] = useState(false);
@@ -12,23 +13,17 @@ export function PublicFooter() {
       {/* Top Narrative & App Promo section */}
       <div className="mx-auto max-w-7xl px-6 py-12 lg:px-10">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
-          {/* About WedHub */}
+          {/* About itsmyKalyanam */}
           <div className="lg:col-span-7">
-            <Link href="/" className="mb-4 inline-flex items-center text-2xl font-bold tracking-tight text-jet-black">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary text-white mr-2 shadow-sm">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="9" cy="12" r="5" />
-                  <circle cx="15" cy="12" r="5" />
-                </svg>
-              </span>
-              Wed<span className="text-brand-primary">Hub</span>
-            </Link>
+            <div className="mb-4">
+              <BrandLogo variant="dark" />
+            </div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-jet-black-70 mb-2">
-              WedHub — Your Personal Wedding Planner
+              itsmyKalyanam — Everything For Your Kalyanam
             </h3>
             <p className="text-xs leading-relaxed text-text-grey">
-              WedHub is India&apos;s trusted wedding planning platform, helping millions of couples plan their dream wedding.
-              From finding top-rated venues and photographers to bridal makeup, decor, and e-invites, WedHub connects you with verified vendors, transparent pricing, authentic reviews, and endless wedding inspiration.
+              itsmyKalyanam is India&apos;s trusted wedding planning platform, helping millions of couples plan their dream wedding.
+              From finding top-rated venues and photographers to bridal makeup, decor, and e-invites, itsmyKalyanam connects you with verified vendors, transparent pricing, authentic reviews, and endless wedding inspiration.
             </p>
 
             <div className="mt-6">
@@ -67,7 +62,7 @@ export function PublicFooter() {
             </p>
             {subscribed ? (
               <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-800">
-                ✓ Thank you for subscribing to WedHub updates!
+                ✓ Thank you for subscribing to itsmyKalyanam updates!
               </div>
             ) : (
               <form
@@ -156,7 +151,7 @@ export function PublicFooter() {
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-jet-black mb-3">Company &amp; Legal</h4>
             <ul className="space-y-2 text-xs text-text-grey list-none p-0 m-0">
-              <li><Link href="/" className="hover:text-brand-primary hover:underline">About WedHub</Link></li>
+              <li><Link href="/" className="hover:text-brand-primary hover:underline">About itsmyKalyanam</Link></li>
               <li><Link href="/" className="hover:text-brand-primary hover:underline">Careers &amp; Press</Link></li>
               <li><Link href="/reviews/write" className="hover:text-brand-primary hover:underline">Write a Review</Link></li>
               <li><Link href="/" className="hover:text-brand-primary hover:underline">Terms of Service</Link></li>
@@ -169,7 +164,7 @@ export function PublicFooter() {
         {/* Bottom Copyright Strip */}
         <div className="mt-10 flex flex-col items-center justify-between border-t border-border pt-6 text-xs text-text-grey sm:flex-row">
           <div>
-            &copy; {new Date().getFullYear()} WedHub Technologies Pvt. Ltd. All rights reserved.
+            &copy; {new Date().getFullYear()} itsmyKalyanam Technologies Pvt. Ltd. All rights reserved.
           </div>
           <div className="mt-3 flex items-center gap-4 sm:mt-0">
             <Link href="/" className="hover:text-brand-primary hover:underline">Privacy Policy</Link>

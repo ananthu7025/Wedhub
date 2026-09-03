@@ -87,7 +87,7 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
     return (
       <form onSubmit={handleCredentialsSubmit} className="w-full max-w-md">
         <h1 className="mb-1.5 text-xl font-bold">
-          {accountType === "VENDOR" ? "List your business on WedHub" : "Create your account"}
+          {accountType === "VENDOR" ? "List your business on itsmyKalyanam" : "Create your account"}
         </h1>
         <p className="mb-5 text-[13px] text-text-grey">
           {accountType === "VENDOR"
@@ -123,7 +123,7 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
           <p className="mt-1.5 text-xs text-text-grey">Min. 8 characters.</p>
         </div>
         <p className="mb-4.5 text-xs leading-relaxed text-text-grey">
-          By continuing, you agree to WedHub&apos;s Terms of Service and Privacy Policy.
+          By continuing, you agree to itsmyKalyanam&apos;s Terms of Service and Privacy Policy.
         </p>
         <Button type="submit" variant="primary" block disabled={pending}>
           {pending ? "Creating your account…" : "Continue"}

@@ -49,7 +49,7 @@ export function CheckoutButton({
       order_id: orderId,
       amount: Math.round(Number(amount) * 100),
       currency,
-      name: "WedHub",
+      name: "itsmyKalyanam",
       description: `Upgrade to ${planName}`,
       handler: () => {
         setOpening(false);

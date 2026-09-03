@@ -44,7 +44,7 @@ export function PublishCheckoutButton({
       order_id: orderId,
       amount: Math.round(amount * 100),
       currency,
-      name: "WedHub",
+      name: "itsmyKalyanam",
       description: `Publish ${coupleNames}'s Wedding Website`,
       handler: () => {
         setOpening(false);

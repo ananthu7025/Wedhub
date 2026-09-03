@@ -179,9 +179,9 @@ test.describe("Notifications", () => {
     await page.goto("/notifications");
 
     await expect(page.getByText("1 unread")).toBeVisible();
-    await expect(page.getByText(/Welcome to WedHub/)).toBeVisible();
+    await expect(page.getByText(/Welcome to itsmyKalyanam/)).toBeVisible();
 
-    await page.getByText(/Welcome to WedHub/).click();
+    await page.getByText(/Welcome to itsmyKalyanam/).click();
     await expect(page.getByText("0 unread")).toBeVisible();
   });
 });

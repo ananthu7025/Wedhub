@@ -68,10 +68,10 @@ export async function createInvitation(
     try {
       await sendEmail({
         to: invitedEmail,
-        subject: "You're invited to claim your WedHub vendor profile",
+        subject: "You're invited to claim your itsmyKalyanam vendor profile",
         html: renderEmailHtml({
           title: "Claim your vendor profile",
-          body: `You've been invited to claim "${vendor.businessName}" on WedHub. Use this link to set up your account: ${env.FRONTEND_URL}/vendor-claim?token=${token}`,
+          body: `You've been invited to claim "${vendor.businessName}" on itsmyKalyanam. Use this link to set up your account: ${env.FRONTEND_URL}/vendor-claim?token=${token}`,
         }),
       });
     } catch (err) {

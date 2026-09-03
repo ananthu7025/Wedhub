@@ -153,7 +153,7 @@ export function SubscriptionBoard({
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Subscription</h1>
-        <p className="text-sm text-text-grey">Manage your WedHub plan and billing.</p>
+        <p className="text-sm text-text-grey">Manage your itsmyKalyanam plan and billing.</p>
       </div>
 
       {error && <div className="mb-4 rounded-md bg-red-10 p-3 text-[13px] text-red-70">{error}</div>}

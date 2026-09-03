@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getOptionalSession } from "@/lib/auth/dal";
 import { listCategories } from "@/lib/api/catalog";
+import { BrandLogo } from "@/components/shared/BrandLogo";
 
 interface PublicTopbarProps {
   variant?: "brand" | "white";
@@ -46,17 +47,7 @@ export async function PublicTopbar({ variant = "brand" }: PublicTopbarProps) {
       >
         {/* Brand Logo */}
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-white no-underline">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#e00b41] shadow-md ring-2 ring-white/30">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="9" cy="12" r="5" />
-                <circle cx="15" cy="12" r="5" />
-              </svg>
-            </span>
-            <span className="font-extrabold tracking-tight">
-              Wed<span className="text-white/90">Hub</span>
-            </span>
-          </Link>
+          <BrandLogo variant={isBrand ? "white" : "dark"} />
 
           {/* Desktop Nav Links */}
           <nav className="hidden items-center gap-1 lg:flex">
