@@ -1,6 +1,6 @@
 import { logger } from "../../config/logger";
 import { AuthenticationError, ValidationError } from "../../common/errors";
-import { telegramProvider, answerCallbackQuery } from "../../integrations/telegram/telegram.client";
+import { telegramProvider, answerCallbackQuery, sendTypingIndicator } from "../../integrations/telegram/telegram.client";
 import { verifyWebhookSecret } from "../../integrations/telegram/telegram.client";
 import type { InlineButton } from "../../integrations/telegram/messaging-provider";
 import * as telegramRepository from "./telegram.repository";
@@ -51,6 +51,10 @@ async function handleTextMessage(message: TelegramMessage): Promise<void> {
   // bail out on "!message.text" the way the ENQUIRY-only version did.
   if (!apiUser || (!message.text && !message.photo)) return;
 
+  // Fire first, before any DB work — see sendTypingIndicator's own comment
+  // for why this matters on this deployment specifically.
+  void sendTypingIndicator(String(message.chat.id));
+
   const telegramUser = await upsertTelegramUserFromApiUser(apiUser, message.chat.id);
   await telegramRepository.recordMessage({
     telegramUserRowId: telegramUser.id,
@@ -91,6 +95,8 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery): Promis
   const apiUser = callbackQuery.from;
   const chatId = callbackQuery.message?.chat.id;
   if (!chatId || !callbackQuery.data) return;
+
+  void sendTypingIndicator(String(chatId));
 
   // Ack first, before any DB/business logic — Telegram's callback-query
   // TTL is short, and this handler can be slow behind a queued photo

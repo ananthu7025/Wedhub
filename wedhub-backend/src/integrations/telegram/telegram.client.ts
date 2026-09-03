@@ -66,6 +66,25 @@ export async function answerCallbackQuery(callbackQueryId: string, text?: string
   await getClient().answerCallbackQuery(callbackQueryId, text !== undefined ? { text } : {});
 }
 
+// Shows Telegram's native "Bot is typing..." indicator above the chat —
+// fired immediately, before any slow work, so the user sees something
+// happening instead of silence. Needed here specifically because this
+// server's network path to api.telegram.org itself has a consistent
+// ~5-6s TLS handshake delay (confirmed via raw openssl s_client, not a
+// Node/undici issue — see the investigation that added this), on top of
+// which every webhook update also does its own DB/business-logic work.
+// Telegram auto-clears the indicator after ~5s or the bot's next message,
+// whichever comes first, so no separate "stop typing" call exists/is
+// needed. Fire-and-forget: this is pure UX, never worth failing the
+// caller's real work over.
+export async function sendTypingIndicator(chatId: string): Promise<void> {
+  try {
+    await getClient().sendChatAction(chatId, "typing");
+  } catch {
+    // Best-effort only — see comment above.
+  }
+}
+
 // Arch Phase 26's WW_COLLECTING_PHOTOS state — resolves an inbound
 // photo's file_id to Telegram's real download URL, then fetches the
 // bytes ourselves (the bot server, not a browser, is the one pushing to
