@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getMyUnreadNotificationCount } from "@/lib/api/account";
 
 /**
  * Shared shell for all (couple) routes — desktop topbar + mobile bottom nav,
@@ -6,6 +7,10 @@ import Link from "next/link";
  * Built once as a layout per frontenddocs/04-stage-couple-experience.md
  * Frontend Arch Phase 4's note, introduced early since Phase 3 already needs
  * a couple-scoped shell for /shortlist and /compare.
+ *
+ * Async Server Component (added 2026-09-03) — fetches its own unread count
+ * for the bell badge rather than threading it through every one of the 6
+ * pages that render this shell.
  */
 
 const navLinks = [
@@ -35,7 +40,11 @@ const bottomNavLinks = [
   },
 ];
 
-export function CoupleShell({ children, activeHref }: { children: React.ReactNode; activeHref: string }) {
+export async function CoupleShell({ children, activeHref }: { children: React.ReactNode; activeHref: string }) {
+  const unreadCount = await getMyUnreadNotificationCount()
+    .then((r) => r.data.count)
+    .catch(() => 0);
+
   return (
     <>
       <header className="sticky top-0 z-100 flex h-[70px] items-center justify-between border-b border-border bg-white px-10 max-[900px]:px-4">
@@ -60,8 +69,8 @@ export function CoupleShell({ children, activeHref }: { children: React.ReactNod
         <div className="flex items-center gap-3 max-[900px]:hidden">
           <Link
             href="/notifications"
-            aria-label="Notifications"
-            className={`flex h-10 w-10 items-center justify-center rounded-full ${
+            aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
+            className={`relative flex h-10 w-10 items-center justify-center rounded-full ${
               activeHref === "/notifications" ? "bg-brand-primary-soft text-brand-primary" : "text-text-grey hover:bg-surface-input"
             }`}
           >
@@ -69,6 +78,9 @@ export function CoupleShell({ children, activeHref }: { children: React.ReactNod
               <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 01-3.46 0" />
             </svg>
+            {unreadCount > 0 && (
+              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red ring-2 ring-white" />
+            )}
           </Link>
           <Link
             href="/account"

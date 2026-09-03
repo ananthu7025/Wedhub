@@ -4,6 +4,15 @@ import { useState } from "react";
 import { markAllNotificationsRead, markNotificationRead } from "@/lib/api/account-client";
 import type { NotificationItem } from "@/lib/api/account.types";
 
+/**
+ * Generic notification list, shared between the couple (/notifications)
+ * and vendor (/vendor/notifications) routes — notifications are a
+ * role-agnostic system (see lib/api/notification-preferences.types.ts's
+ * header comment), so this component has no role-specific logic. Moved
+ * here from app/(couple)/notifications/ 2026-09-03 when the vendor
+ * shell's notification bell/page was added.
+ */
+
 function formatRelativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diffMs / 60000);

@@ -24,3 +24,10 @@ export function listMyNotifications(unreadOnly = false, page = 1, limit = 20) {
     query: { unreadOnly, page, limit },
   });
 }
+
+// Notifications are a generic, role-agnostic system (see
+// lib/api/notification-preferences.types.ts's header comment) — used by
+// both the couple and vendor shells for the header bell's unread badge.
+export function getMyUnreadNotificationCount() {
+  return apiFetch<{ count: number }>("/notifications/me/unread-count");
+}

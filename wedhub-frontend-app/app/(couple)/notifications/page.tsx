@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { CoupleShell } from "@/components/shared/CoupleShell";
 import { listMyNotifications } from "@/lib/api/account";
-import { NotificationsList } from "./NotificationsList";
+import { NotificationsList } from "@/components/shared/NotificationsList";
 
 export const metadata: Metadata = {
   title: "Notifications",

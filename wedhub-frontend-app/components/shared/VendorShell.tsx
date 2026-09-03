@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getMyUnreadNotificationCount } from "@/lib/api/account";
 import { VendorLogoutButton } from "./VendorLogoutButton";
 
 /**
@@ -8,6 +9,11 @@ import { VendorLogoutButton } from "./VendorLogoutButton";
  * (Dashboard/Profile/Portfolio/Packages from Phase 5, Leads/Reviews from
  * Phase 6, Subscription/Analytics/Settings from Phase 7) — Stage 3 is
  * fully built out, no more "coming soon" placeholders.
+ *
+ * Header notification bell added 2026-09-03 — previously this shell had no
+ * notification entry point at all, despite NEW_LEAD being a real
+ * notification event every vendor receives. Async Server Component now,
+ * fetching its own unread count for the same reason as CoupleShell.
  */
 
 const navLinks = [
@@ -59,7 +65,7 @@ const navLinks = [
   },
 ];
 
-export function VendorShell({
+export async function VendorShell({
   children,
   activeHref,
   vendorName,
@@ -69,6 +75,9 @@ export function VendorShell({
   vendorName: string;
 }) {
   const initials = vendorName.slice(0, 2).toUpperCase();
+  const unreadCount = await getMyUnreadNotificationCount()
+    .then((r) => r.data.count)
+    .catch(() => 0);
 
   return (
     <div className="flex min-h-screen">
@@ -98,7 +107,22 @@ export function VendorShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-end gap-4 border-b border-border bg-white px-6">
+        <header className="flex h-16 items-center justify-end gap-3 border-b border-border bg-white px-6">
+          <Link
+            href="/vendor/notifications"
+            aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
+            className={`relative flex h-9 w-9 items-center justify-center rounded-full ${
+              activeHref === "/vendor/notifications" ? "bg-brand-primary-soft text-brand-primary" : "text-text-grey hover:bg-surface-input"
+            }`}
+          >
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 01-3.46 0" />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red ring-2 ring-white" />
+            )}
+          </Link>
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-ink-soft text-xs font-bold text-white">
             {initials}
           </div>
