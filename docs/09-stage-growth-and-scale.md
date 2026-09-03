@@ -38,6 +38,8 @@ The following are captured in product.md but have **zero corresponding architect
 - Pay-per-lead billing (product.md §31–32) — **when prioritized, this requires defining new Arch Phase(s) beyond the current 26; do not invent one speculatively now.**
 - Booking/commission, vendor CRM, native mobile apps (product.md §67, §72)
 
+**This actually happened once already**: the ₹49 Instant Wedding Website is a new, standalone monetized feature that arrived outside both `product.md` and `wedhub_backend_architecture.md` (from a separate feature spec, 2026-09-03) — exactly the scenario this subsection anticipated for pay-per-lead/WhatsApp/AI-assistant. It got its own new Stage 8 file ([`12-stage-wedding-website.md`](12-stage-wedding-website.md)) defining Arch Phase 26, rather than being folded into this file or invented speculatively here. Use that file as the template if/when pay-per-lead or another post-MVP item above is actually prioritized.
+
 ## Task Checklist
 
 *(Longest checklist of any stage by nature of covering 9 architecture phases — kept in one file per the "not one-file-per-phase" structural decision, since none of these 9 phases has enough independent content to justify its own file.)*
