@@ -27,7 +27,7 @@
 | 14 | Notifications | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
 | 15 | Telegram Bot MVP | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
 | 16 | Admin Platform Backend | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
-| 17 | CMS & SEO Backend | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
+| 17 | CMS & SEO Backend | [Stage 7](09-stage-growth-and-scale.md) | 🟡 In Progress | started 2026-09-04 |
 | 18 | Analytics & Marketplace Metrics | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 19 | Security Hardening | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 20 | Testing | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
@@ -37,9 +37,9 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 
-**Overall: 17 / 26 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), and Stage 6 (Telegram & Admin) are all fully done. Stage 7 (Growth & Scale) is next.**
+**Overall: 17 / 26 Arch Phases complete, Arch Phase 17 in progress. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), and Stage 6 (Telegram & Admin) are all fully done.**
 
-**Paused here, 2026-09-02, by user decision:** the backend build-out is deliberately pausing before Arch Phase 17 to wire up the frontend against everything shipped so far (Arch Phases 0–16 cover the full couple/vendor-facing product surface — auth, vendors, media, search, shortlists, leads, reviews, subscriptions, entitlements, featured listings, notifications, Telegram, and admin). Arch Phase 17 (CMS & SEO Backend) is still full MVP scope per `02-mvp-cut-line.md` and remains the next Arch Phase to resume with — this is a sequencing choice to get real frontend-integration signal before adding more backend surface, not a scope change. Arch Phases 18–25 stay post-MVP except for the baseline security/testing carve-out already noted in `02-mvp-cut-line.md`.
+**Paused 2026-09-02, resumed 2026-09-04, by user decision:** the backend build-out deliberately paused before Arch Phase 17 to wire up the frontend against everything shipped so far (Arch Phases 0–16 cover the full couple/vendor-facing product surface — auth, vendors, media, search, shortlists, leads, reviews, subscriptions, entitlements, featured listings, notifications, Telegram, and admin). That frontend integration work happened (Frontend Arch Phases 1–10 all shipped and Playwright-verified — see `frontenddocs/11-progress-log.md`), and Arch Phase 17 (CMS & SEO Backend) resumed 2026-09-04. Its first slice is done: Real Wedding Stories and Gallery Inspiration, both resolved as curation layers over already-real vendor Album/Media data rather than independent CMS content (see `09-stage-growth-and-scale.md`'s Arch Phase 17 checklist for the exact resolution). Popular Searches, Blog/article content, and the full SEO page-generation infrastructure (city/category/category+city pages, meta tags, sitemap) remain — Arch Phase 17 is not fully done yet. Arch Phases 18–25 stay post-MVP except for the baseline security/testing carve-out already noted in `02-mvp-cut-line.md`.
 
 ### Addendum, 2026-09-02 — 3 small endpoints added during Frontend Arch Phase 4 integration (not a new Arch Phase)
 
