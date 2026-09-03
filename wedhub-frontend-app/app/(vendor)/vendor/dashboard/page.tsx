@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { VendorShell } from "@/components/shared/VendorShell";
 import { requireVendorOwnership } from "@/lib/auth/require-vendor";
 import { getMyAnalytics } from "@/lib/api/vendor-self";
+import { getMe } from "@/lib/api/account";
 import { COMPLETENESS_CHECKS } from "@/lib/api/vendor-self.types";
 
 export const metadata: Metadata = {
@@ -40,9 +41,13 @@ function isChecklistItemMet(label: string, vendor: Awaited<ReturnType<typeof req
 
 export default async function VendorDashboardPage() {
   const vendor = await requireVendorOwnership();
-  const analytics = await getMyAnalytics()
-    .then((r) => r.data)
-    .catch(() => null);
+  const [analytics, me] = await Promise.all([
+    getMyAnalytics()
+      .then((r) => r.data)
+      .catch(() => null),
+    getMe().then((r) => r.data),
+  ]);
+  const emailUnverified = !me.emailVerifiedAt;
 
   return (
     <VendorShell activeHref="/vendor/dashboard" vendorName={vendor.businessName}>
@@ -50,6 +55,23 @@ export default async function VendorDashboardPage() {
         <h1 className="text-2xl font-bold">Welcome back, {vendor.businessName.split(" ")[0]}</h1>
         <p className="text-sm text-text-grey">Here&apos;s how your profile is performing.</p>
       </div>
+
+      {emailUnverified && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-30 bg-amber-10 p-4">
+          <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-amber-70 text-xs font-bold text-white">
+            !
+          </span>
+          <div>
+            <p className="text-[13px] font-bold text-jet-black">Verify your email to get reviewed</p>
+            <p className="mt-0.5 text-[13px] text-text-grey">
+              We sent a verification link to <strong>{me.email}</strong>.
+              {vendor.status === "PENDING_VERIFICATION"
+                ? " Your listing is submitted but won't be reviewed by our team until you verify — check your inbox and click the link."
+                : " Verify it so your listing can be reviewed once you submit."}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="mb-5 grid grid-cols-3 gap-4 max-[900px]:grid-cols-1">
         <div className="rounded-xl border border-border bg-white p-5">
