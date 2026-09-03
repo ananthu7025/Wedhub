@@ -67,7 +67,7 @@ export function SubscriptionBoard({
   const [polling, setPolling] = useState(false);
 
   const monthlyPlans = initialPlans.filter((p) => p.billingInterval === "MONTHLY").sort((a, b) => Number(a.price) - Number(b.price));
-  const currentTier = subscription?.plan.tier ?? "FREE";
+  const currentTier = subscription?.plan?.tier ?? "FREE";
 
   async function handleSelectPlan(plan: SubscriptionPlan) {
     if (plan.tier === currentTier) return;
@@ -124,7 +124,8 @@ export function SubscriptionBoard({
 
   async function handleCancel() {
     if (!subscription) return;
-    if (!confirm(`Cancel your ${subscription.plan.name} subscription? You will lose ${subscription.plan.name} benefits at the end of the current billing cycle.`)) return;
+    const planName = subscription.plan?.name ?? "current plan";
+    if (!confirm(`Cancel your ${planName} subscription? You will lose ${planName} benefits at the end of the current billing cycle.`)) return;
     setPending("cancel");
     setError(null);
     const result = await cancelMySubscription({ immediate: false });
@@ -238,8 +239,14 @@ export function SubscriptionBoard({
             <div>
               <div className="mb-1 text-xs text-text-grey">Plan</div>
               <div className="font-semibold">
-                {subscription.plan.name} — ₹{Number(subscription.plan.price).toLocaleString("en-IN")}
-                {billingLabel(subscription.plan.billingInterval)}
+                {subscription.plan ? (
+                  <>
+                    {subscription.plan.name} — ₹{Number(subscription.plan.price).toLocaleString("en-IN")}
+                    {billingLabel(subscription.plan.billingInterval)}
+                  </>
+                ) : (
+                  "—"
+                )}
               </div>
             </div>
             <div>
@@ -269,7 +276,7 @@ export function SubscriptionBoard({
               </button>
             </div>
           ) : (
-            subscription.plan.tier !== "FREE" && (
+            subscription.plan?.tier !== "FREE" && (
               <button
                 onClick={handleCancel}
                 disabled={pending === "cancel"}

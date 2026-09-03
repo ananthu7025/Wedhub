@@ -47,6 +47,13 @@ export function createSubscription(data: {
       trialEndsAt: data.trialEndsAt ?? null,
       couponId: data.couponId ?? null,
     },
+    // Every other subscription-returning query in this file includes `plan`
+    // (see findCurrentSubscription) except this one previously didn't — the
+    // frontend's immediate-trial-activation path (SubscriptionBoard.tsx)
+    // assigns this response straight into state assuming `.plan` exists,
+    // same as GET /subscriptions/me, and crashed with "Cannot read
+    // properties of undefined (reading 'tier')" without this include.
+    include: { plan: true },
   });
 }
 
