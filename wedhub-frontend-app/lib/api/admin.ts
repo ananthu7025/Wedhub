@@ -14,6 +14,7 @@ import type {
   AdminReviewDetail,
   AdminReviewListItem,
   AdminRole,
+  AdminSeoOverride,
   AdminUserDetail,
   AdminUserListItem,
   AdminUserRoleAssignment,
@@ -22,6 +23,7 @@ import type {
   AdminVendorStatusHistoryEntry,
   AdminWeddingStory,
   ReviewModerationStatus,
+  SeoOverridePageType,
   UserRole,
   UserStatus,
 } from "./admin.types";
@@ -165,4 +167,8 @@ export function listAdminWeddingStories() {
 
 export function listAdminFeaturedMedia() {
   return apiFetch<AdminFeaturedMedia[]>("/admin/featured-media");
+}
+
+export function listAdminSeoOverrides(pageType?: SeoOverridePageType) {
+  return apiFetch<AdminSeoOverride[]>("/admin/seo-overrides", { query: { pageType } });
 }

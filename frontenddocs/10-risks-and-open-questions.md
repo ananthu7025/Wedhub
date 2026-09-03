@@ -8,13 +8,14 @@
 
 ---
 
-## 1. Frontend Arch Phase 11 partially blocked on backend Arch Phase 17
+## 1. Frontend Arch Phase 11 partially blocked on backend Arch Phase 17 (resolved for page generation)
 
-- **Citations:** `../docs/11-progress-log.md` ("Paused here, 2026-09-02" note — backend deliberately paused before Arch Phase 17 for frontend-integration signal), `00-index.md` (Frontend Arch Phase → Backend Arch Phase dependency map)
-- **Description:** Frontend Arch Phase 11 bundles two independent halves: Telegram surfacing (trivial, backend Arch Phase 15 is done) and SEO page generation (category pages, city pages, structured data, sitemap — needs backend Arch Phase 17, CMS & SEO Backend, which has not started).
+- **Citations:** `../docs/11-progress-log.md`, `00-index.md` (Frontend Arch Phase → Backend Arch Phase dependency map)
+- **Description:** Frontend Arch Phase 11 bundles two independent halves: Telegram surfacing (trivial, backend Arch Phase 15 is done) and SEO page generation (category pages, city pages, structured data, sitemap — needed backend Arch Phase 17, CMS & SEO Backend).
 - **Impact:** If Frontend Arch Phase 11 is scheduled as a single unit, it will stall waiting on backend work outside this plan's control.
 - **Recommendation:** Treat Frontend Arch Phase 11 as two independently schedulable sub-efforts in `07-stage-growth-and-hardening.md`: ship Telegram surfacing whenever Stage 5 is reached; hold SEO page work until backend Arch Phase 17 ships, and re-read that backend phase's actual API surface before starting (do not guess its shape now).
-- **Status:** Open — blocked on backend, not a frontend decision to resolve alone.
+- **Resolution (2026-09-03):** The page-generation slice of backend Arch Phase 17 shipped — `GET /seo/page`, `GET /seo/combinations`, admin `SeoOverride` CRUD. Frontend Arch Phase 11b built against the real shipped shape: `/category/[categorySlug]`, `/category/[categorySlug]/[citySlug]`, `/city/[citySlug]`, `app/sitemap.ts`, `app/robots.ts`, `/admin/seo`. Structured data (schema.org) and Twitter card metadata were **not** part of this pass — still open, no user decision yet on priority. Blog/FAQ/static-page content models (the other half of backend Arch Phase 17) remain unbuilt, so Frontend Arch Phase 11b's blog/guides item is still blocked.
+- **Status:** Partially resolved — page generation unblocked and done; structured data and blog/guides content remain open.
 - **Related stage files:** [07-stage-growth-and-hardening.md](07-stage-growth-and-hardening.md)
 
 ## 2. Admin Subscriptions screen has no backing list endpoint (resolved)

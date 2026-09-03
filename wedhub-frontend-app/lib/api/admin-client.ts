@@ -11,6 +11,7 @@ import type {
   AdminCreateInvitationBody,
   AdminCreateLocationBody,
   AdminCreatePlanBody,
+  AdminCreateSeoOverrideBody,
   AdminCreateVendorBody,
   AdminCreateWeddingStoryBody,
   AdminFeaturedMedia,
@@ -21,6 +22,7 @@ import type {
   AdminPlan,
   AdminReasonBody,
   AdminReviewStatusUpdateResult,
+  AdminSeoOverride,
   AdminSetVerificationBody,
   AdminSuspendUserResult,
   AdminUpdateAttributeBody,
@@ -29,6 +31,7 @@ import type {
   AdminUpdateLeadStatusBody,
   AdminUpdateLocationBody,
   AdminUpdatePlanBody,
+  AdminUpdateSeoOverrideBody,
   AdminUpdateVendorBody,
   AdminUpdateWeddingStoryBody,
   AdminVendorInvitation,
@@ -189,4 +192,16 @@ export function updateAdminFeaturedMedia(id: string, body: AdminUpdateFeaturedMe
 
 export function deleteAdminFeaturedMedia(id: string) {
   return call<{ deleted: true }>(`/admin/featured-media/${id}`, "DELETE");
+}
+
+export function createAdminSeoOverride(body: AdminCreateSeoOverrideBody) {
+  return call<AdminSeoOverride>("/admin/seo-overrides", "POST", body);
+}
+
+export function updateAdminSeoOverride(id: string, body: AdminUpdateSeoOverrideBody) {
+  return call<AdminSeoOverride>(`/admin/seo-overrides/${id}`, "PATCH", body);
+}
+
+export function deleteAdminSeoOverride(id: string) {
+  return call<{ deleted: true }>(`/admin/seo-overrides/${id}`, "DELETE");
 }

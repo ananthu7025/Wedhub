@@ -119,6 +119,11 @@ const sections: NavSection[] = [
         icon: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18" /></>,
       },
       {
+        href: "/admin/seo",
+        label: "SEO",
+        icon: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></>,
+      },
+      {
         href: "/admin/settings",
         label: "Settings",
         icon: (

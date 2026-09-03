@@ -8,6 +8,8 @@ import type {
   Location,
   LocationType,
   SearchVendorsParams,
+  SeoCombination,
+  SeoPageData,
   VendorAlbum,
   VendorDetail,
   VendorReview,
@@ -97,4 +99,17 @@ export function listFeaturedListings(placementType: FeaturedListing["placementTy
     query: { placementType, limit },
     skipAuth: true,
   });
+}
+
+// Real, generated Category/City/Category+City SEO landing-page data (Arch
+// Phase 17) — backs /vendors/[category], /vendors/[category]/[city], and
+// /vendors/city/[city]'s generateMetadata + on-page copy.
+export function getSeoPage(categoryId: string | undefined, cityId: string | undefined) {
+  return apiFetch<SeoPageData>("/seo/page", { query: { categoryId, cityId }, skipAuth: true });
+}
+
+// Every indexable Category/City/Category+City combination — backs
+// app/sitemap.ts.
+export function listSeoCombinations() {
+  return apiFetch<SeoCombination[]>("/seo/combinations", { skipAuth: true });
 }

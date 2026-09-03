@@ -256,6 +256,7 @@ model Category {
   vendorCategories VendorCategory[]
   enquiries        Enquiry[]
   featuredListings FeaturedListing[]
+  seoOverrides     SeoOverride[]
 
   @@index([parentId])
   @@index([isActive])
@@ -306,6 +307,7 @@ model Location {
   vendorServiceAreas     VendorServiceArea[]
   enquiries              Enquiry[]
   featuredListings       FeaturedListing[]
+  seoOverrides           SeoOverride[]
 
   @@unique([parentId, slug])
   @@index([type])
@@ -705,6 +707,41 @@ model FeaturedMedia {
   media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 
   @@map("featured_media")
+}
+
+enum SeoPageType {
+  CATEGORY
+  CITY
+  CATEGORY_CITY
+}
+
+// Arch Phase 17 — SEO page-generation infrastructure. Category/City/
+// Category+City landing pages (product.md §44) are generated from a
+// template at request time (name interpolation + real vendor count from
+// the existing /search/vendors query path), NOT hand-authored per
+// combination — there can be hundreds of real combinations. This table
+// only holds an optional admin override of the computed title/description/
+// OG image for one specific combination, mirroring the existing
+// VendorProfile.seoTitle/seoDescription override-over-a-default pattern.
+// A row is looked up by (pageType, categoryId, locationId) — categoryId
+// and/or locationId are null depending on pageType.
+model SeoOverride {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageType    SeoPageType @map("page_type")
+  categoryId  String?     @map("category_id") @db.Uuid
+  locationId  String?     @map("location_id") @db.Uuid
+  title       String?
+  description String?
+  ogImageUrl  String?     @map("og_image_url")
+  noIndex     Boolean     @default(false) @map("no_index")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([pageType, categoryId, locationId])
+  @@map("seo_overrides")
 }
 
 model SearchLog {

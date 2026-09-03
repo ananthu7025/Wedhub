@@ -15,7 +15,7 @@ Maps to product.md §3.5 ("SEO is a first-class acquisition channel") and Produc
 ## Backend Dependency
 
 - Telegram surfacing: Arch Phase 15 (Telegram Bot MVP) ✅ Done — no blocker.
-- SEO page generation: Arch Phase 17 (CMS & SEO Backend) ⬜ Not Started per `../docs/11-progress-log.md` — **hard blocker**, see [Open Question 1](10-risks-and-open-questions.md#1-frontend-arch-phase-11-partially-blocked-on-backend-arch-phase-17).
+- SEO page generation: Arch Phase 17 (CMS & SEO Backend) 🟡 In Progress per `../docs/11-progress-log.md` — the category/city/category+city page-generation slice shipped 2026-09-03 (unblocks 11b below); blog/FAQs/static-pages content models remain unbuilt, see [Open Question 1](10-risks-and-open-questions.md#1-frontend-arch-phase-11-partially-blocked-on-backend-arch-phase-17).
 
 ## Included Mockup Screens
 
@@ -28,14 +28,14 @@ None new for Telegram surfacing (the "Chat on Telegram" CTA already exists in `c
 - [ ] Verify the deep-link format (`https://t.me/<bot_username>`) actually opens the bot and that the bot's `/start` flow works end-to-end from a fresh Telegram account (manual verification, not just "the link is well-formed")
 - [ ] Confirm whether any deep-link parameters should be passed (e.g. `?start=<vendor_id>` to pre-seed the bot's conversation with a specific vendor context, if `wedhub-backend/src/modules/telegram/` supports start-parameter handling) — check the backend source, don't assume
 
-### Frontend Arch Phase 11b — SEO Page Generation (blocked until backend Arch Phase 17 ships)
-- [ ] **Do not start any task in this section until `../docs/11-progress-log.md` shows Arch Phase 17 as done.** Re-read that phase's actual shipped API surface first — do not build against an assumed shape.
-- [ ] Category landing pages (`/[categorySlug]` or `/categories/[slug]`) — server-rendered, real structured data (schema.org `Service`/`LocalBusiness` markup per category)
-- [ ] Location landing pages (`/[citySlug]` or combined `/[category]/[city]`) — server-rendered
-- [ ] Blog/guides pages, if backend Arch Phase 17 actually ships a CMS content model for them (product.md §39 lists "Blog, Guides, FAQs, Banners, Homepage" under CMS — confirm which of these the backend actually implements before committing to building all of them)
-- [ ] Sitemap generation (`app/sitemap.ts`, Next.js's built-in support) sourced from real vendor/category/location data
-- [ ] `robots.txt`, canonical URLs, Open Graph/Twitter card metadata on all public pages (not just the new CMS pages — retrofit onto Stage 2's public pages too if they only got title/description basics in Frontend Arch Phase 2)
-- [ ] Replace `(admin)/cms.html`'s placeholder (Stage 4) with real CMS content-management UI, once the backend content model is known
+### Frontend Arch Phase 11b — SEO Page Generation
+- [x] **Category landing pages** — ✅ Done 2026-09-03. `/category/[categorySlug]`, server-rendered, real `generateMetadata` (title, description, canonical, OG, robots) from the backend's `GET /seo/page`.
+- [x] **Location + category+city landing pages** — ✅ Done 2026-09-03. `/city/[citySlug]` and `/category/[categorySlug]/[citySlug]`, same pattern. Not literally `/[category]/[city]` under `/vendors` — that collides with the already-shipped `/vendors/[slug]` vendor-detail route (two differently-named dynamic segments can't share a route level in Next.js, and 14+ files already link to `/vendors/[slug]`); `/category`/`/city` are the equivalent non-colliding routes actually implemented. See `../docs/09-stage-growth-and-scale.md` Arch Phase 17 for the full write-up.
+- [ ] Structured data (schema.org `Service`/`LocalBusiness` markup) on the landing pages — not yet added, deferred (no user decision yet on scope/priority for this on top of the base metadata work).
+- [ ] Blog/guides pages — still blocked; backend Arch Phase 17's blog/article content model remains unbuilt (product.md §39's "Blog, Guides, FAQs, Banners" CMS content, distinct from the page-generation slice that shipped).
+- [x] **Sitemap generation** — ✅ Done 2026-09-03. `app/sitemap.ts`, sourced from the backend's `GET /seo/combinations` (every indexable category/city/category+city combination — thin combinations, below `MIN_VENDORS_FOR_INDEXABLE_PAGE = 3`, are excluded).
+- [x] **`robots.txt`, canonical URLs, OG metadata** — ✅ Done 2026-09-03 on the three new landing page types (`app/robots.ts`, `alternates.canonical`, `openGraph`, `robots` meta via `metadataBase` added to the root layout). Not yet retrofitted onto Stage 2's existing public pages (home, search, vendor profile) beyond `/vendors/[slug]`'s pre-existing title/description — Twitter card metadata also not added anywhere yet. Both remain open follow-ups, not done in this pass.
+- [x] Admin SEO override UI — ✅ Done 2026-09-03. `/admin/seo`, lets an admin override one specific combination's title/description/OG image/indexability; separate from `/admin/cms` (homepage content curation) since these are generated pages, not curated content. `(admin)/cms.html`'s Pages/Blog/Guides/FAQs/Banners placeholders are unchanged — those are still blocked on the blog/FAQ/static-page content models above, not on this SEO work.
 
 ### Frontend Arch Phase 11c — Production Hardening
 - [ ] Accessibility pass across all four stages' shipped screens: keyboard navigation, focus management in modals, form label associations, color-contrast check against the crimson/jet-black palette (verify AA contrast, especially crimson-on-white body text and badge text)

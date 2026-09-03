@@ -654,3 +654,36 @@ export interface AdminUpdateFeaturedMediaBody {
   titleOverride?: string | null;
   sortOrder?: number;
 }
+
+// ---- /admin/seo-overrides ----
+export type SeoOverridePageType = "CATEGORY" | "CITY" | "CATEGORY_CITY";
+
+export interface AdminSeoOverride {
+  id: string;
+  pageType: SeoOverridePageType;
+  categoryId: string | null;
+  locationId: string | null;
+  title: string | null;
+  description: string | null;
+  ogImageUrl: string | null;
+  noIndex: boolean;
+  category: { id: string; name: string; slug: string } | null;
+  location: { id: string; name: string; slug: string; type: string } | null;
+}
+
+export interface AdminCreateSeoOverrideBody {
+  pageType: SeoOverridePageType;
+  categoryId?: string;
+  cityId?: string;
+  title?: string;
+  description?: string;
+  ogImageUrl?: string;
+  noIndex?: boolean;
+}
+
+export interface AdminUpdateSeoOverrideBody {
+  title?: string | null;
+  description?: string | null;
+  ogImageUrl?: string | null;
+  noIndex?: boolean;
+}

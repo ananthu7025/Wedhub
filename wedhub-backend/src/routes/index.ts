@@ -29,6 +29,7 @@ import { adminDashboardRouter } from "../modules/admin-dashboard";
 import { adminMediaRouter } from "../modules/admin-media";
 import { weddingStoriesAdminRouter, weddingStoriesRouter } from "../modules/wedding-stories";
 import { featuredMediaAdminRouter, featuredMediaRouter } from "../modules/featured-media";
+import { seoAdminRouter, seoRouter } from "../modules/seo";
 
 export const apiV1Router = Router();
 
@@ -71,6 +72,8 @@ apiV1Router.use("/admin/wedding-stories", weddingStoriesAdminRouter);
 apiV1Router.use("/gallery", featuredMediaRouter);
 apiV1Router.use("/admin/featured-media", featuredMediaAdminRouter);
 apiV1Router.use("/admin/albums", albumAdminRouter);
+apiV1Router.use("/seo", seoRouter);
+apiV1Router.use("/admin/seo-overrides", seoAdminRouter);
 
 // Mounted BEFORE /vendors: vendorRouter's public GET /:slug would otherwise
 // greedily match /vendors/claim/:token, /vendors/me/albums, /vendors/:slug/albums,

@@ -280,3 +280,29 @@ export interface FeaturedListing {
   category: { id: string; name: string; slug: string } | null;
   city: { id: string; name: string; slug: string } | null;
 }
+
+// ---- GET /seo/page ----
+export type SeoPageType = "CATEGORY" | "CITY" | "CATEGORY_CITY";
+
+export interface SeoPageData {
+  pageType: SeoPageType;
+  title: string;
+  h1: string;
+  description: string;
+  canonicalPath: string;
+  ogTitle: string;
+  ogDescription: string;
+  ogImageUrl: string | null;
+  vendorCount: number;
+  indexable: boolean;
+  category: { id: string; name: string; slug: string } | null;
+  city: { id: string; name: string; slug: string } | null;
+}
+
+// ---- GET /seo/combinations ----
+export interface SeoCombination {
+  pageType: SeoPageType;
+  canonicalPath: string;
+  categorySlug: string | null;
+  citySlug: string | null;
+}
