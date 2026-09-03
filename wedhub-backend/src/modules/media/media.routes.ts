@@ -1,11 +1,16 @@
 import { Router } from "express";
 import { asyncHandler } from "../../common/utils/async-handler.util";
-import { validateBody } from "../../common/middleware/validate.middleware";
+import { validateBody, validateQuery } from "../../common/middleware/validate.middleware";
 import { authenticateMiddleware } from "../../common/middleware/authenticate.middleware";
 import { authorize } from "../../common/middleware/authorize.middleware";
 import { Role } from "../../common/enums/roles.enum";
 import * as mediaController from "./media.controller";
-import { createUploadRequestSchema, moderateMediaSchema, updateMediaSchema } from "./media.schema";
+import {
+  createUploadRequestSchema,
+  listApprovedMediaAdminQuerySchema,
+  moderateMediaSchema,
+  updateMediaSchema,
+} from "./media.schema";
 
 export const mediaRouter = Router();
 
@@ -28,6 +33,13 @@ mediaRouter.delete("/:id", asyncHandler(mediaController.deleteMedia));
 export const mediaAdminRouter = Router();
 
 mediaAdminRouter.use(authenticateMiddleware, authorize(Role.ADMIN));
+
+// Must precede /:id — otherwise "approved" would be parsed as an id.
+mediaAdminRouter.get(
+  "/approved",
+  validateQuery(listApprovedMediaAdminQuerySchema),
+  asyncHandler(mediaController.listApprovedMediaAdmin),
+);
 
 mediaAdminRouter.get("/:id", asyncHandler(mediaController.adminGetMedia));
 

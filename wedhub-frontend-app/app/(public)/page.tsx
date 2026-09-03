@@ -6,8 +6,16 @@ import { PublicFooter } from "@/components/shared/PublicFooter";
 import { CategoryCapsuleCarousel } from "@/components/shared/CategoryCapsuleCarousel";
 import { GalleryInspiration } from "@/components/shared/GalleryInspiration";
 import { VendorCard } from "@/components/shared/VendorCard";
-import { listFeaturedCategories, listFeaturedListings, searchVendors } from "@/lib/api/catalog";
+import {
+  listFeaturedCategories,
+  listFeaturedGalleryMedia,
+  listFeaturedListings,
+  listFeaturedWeddingStories,
+  searchVendors,
+} from "@/lib/api/catalog";
 import { getOptionalSession } from "@/lib/auth/dal";
+import { getPublicMediaUrl } from "@/lib/media/url";
+import type { WeddingStory as RealWeddingStory } from "@/lib/api/vendors.types";
 
 export const metadata: Metadata = {
   title: "WedHub — Your Wedding, Your Way | Find Trusted Vendors",
@@ -78,62 +86,6 @@ const POPULAR_SEARCH_CARDS = [
 
 
 
-// TODO(backend): no "real wedding story"/case-study model exists in the
-// backend (no Prisma model, no endpoint) — static placeholder content.
-// This is CMS content-model scope (backend Arch Phase 17); replace once
-// that ships rather than continuing to hand-maintain this array. Per
-// explicit user decision (2026-09-03), this stays static rather than
-// being backed by real vendor media — restyled with the bento grid's
-// card visual language (image, dark gradient overlay, hover scale,
-// "View More" pill) previously used for Popular Categories, which is now
-// its own fully real, category-driven section above
-// (CategoryCapsuleCarousel) — see Open Question 21. Rendered as a simple
-// 2-row, 3-per-row grid.
-const REAL_WEDDING_STORIES = [
-  {
-    couple: "Ananya & Rohan",
-    location: "Palace Grounds, Bengaluru",
-    tag: "South Indian Traditional · 120 Photos",
-    imageUrl: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&q=80",
-    snippet: "A grand floral celebration featuring traditional kanjeevaram silk and majestic temple-style decor.",
-  },
-  {
-    couple: "Pooja & Kabir",
-    location: "City Palace, Jaipur",
-    tag: "Royal Heritage Wedding · 85 Photos",
-    imageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&q=80",
-    snippet: "An opulent royal Rajasthani celebration with folk performances, royal processions, and palace courtyards.",
-  },
-  {
-    couple: "Meera & Siddharth",
-    location: "Heritage Village, Goa",
-    tag: "Beachside Destination · 95 Photos",
-    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80",
-    snippet: "A serene sunset beach ceremony filled with fairy-lit coconut groves, bohemian decor, and endless joy.",
-  },
-  {
-    couple: "Kavya & Arjun",
-    location: "Backwater Resort, Alleppey",
-    tag: "Kerala Christian Wedding · 140 Photos",
-    imageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80",
-    snippet: "A tranquil backwater ceremony with houseboat processions and traditional sadhya feast.",
-  },
-  {
-    couple: "Ishaan & Diya",
-    location: "The Leela, Udaipur",
-    tag: "Lakeside Luxury Wedding · 200 Photos",
-    imageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80",
-    snippet: "A three-day lakeside celebration with rooftop sangeet and a sunset lake-view mandap.",
-  },
-  {
-    couple: "Nikhil & Sara",
-    location: "Heritage Haveli, Jodhpur",
-    tag: "Rajasthani Fusion · 110 Photos",
-    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80",
-    snippet: "A blue-city haveli wedding blending Rajasthani rituals with a modern fusion reception.",
-  },
-];
-
 // TODO(backend): blog/article content is explicitly backend Arch Phase 17
 // scope (CMS & SEO Backend, see docs/09-stage-growth-and-scale.md and
 // frontenddocs/07-stage-growth-and-hardening.md's Frontend Arch Phase
@@ -163,11 +115,14 @@ const LATEST_BLOGS = [
 ];
 
 export default async function HomePage() {
-  const [{ data: featuredCategories }, featuredVendors, session] = await Promise.all([
-    listFeaturedCategories(),
-    getFeaturedVendorCards(),
-    getOptionalSession(),
-  ]);
+  const [{ data: featuredCategories }, featuredVendors, session, { data: weddingStories }, { data: galleryMedia }] =
+    await Promise.all([
+      listFeaturedCategories(),
+      getFeaturedVendorCards(),
+      getOptionalSession(),
+      listFeaturedWeddingStories(),
+      listFeaturedGalleryMedia(),
+    ]);
 
   return (
     <div className="min-h-screen bg-surface-page">
@@ -278,31 +233,34 @@ export default async function HomePage() {
 
       {/* Real Wedding Stories — bento-style cards (image, dark gradient
           overlay, hover scale, "View More" pill) in a simple 2-row,
-          3-per-row grid, per explicit user decision, 2026-09-03 (reduced
-          from the original 8-card asymmetric layout to 6 entries, 2 rows
-          of 3). Still static placeholder content — see
-          REAL_WEDDING_STORIES's own TODO(backend) comment. */}
-      <section id="wedding-stories" className="px-6 py-14 sm:py-16 max-[900px]:px-4">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-extrabold tracking-tight text-jet-black sm:text-2xl">
-              Real Wedding Stories
-            </h2>
-            <p className="mt-0.5 text-xs text-text-grey">
-              Get inspired by real couples, stunning celebrations, and dream wedding vendors
-            </p>
+          3-per-row grid. Backed by real, admin-curated WeddingStory rows
+          over real vendor Album/Media (Arch Phase 17, 2026-09-04) —
+          previously static placeholder content per a since-superseded
+          2026-09-03 decision (see frontenddocs/10-risks-and-open-
+          questions.md Open Question 21). */}
+      {weddingStories.length > 0 && (
+        <section id="wedding-stories" className="px-6 py-14 sm:py-16 max-[900px]:px-4">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-extrabold tracking-tight text-jet-black sm:text-2xl">
+                Real Wedding Stories
+              </h2>
+              <p className="mt-0.5 text-xs text-text-grey">
+                Get inspired by real couples, stunning celebrations, and dream wedding vendors
+              </p>
+            </div>
+            <Link href="/search" className="text-xs font-bold text-brand-primary hover:underline">
+              View All Weddings →
+            </Link>
           </div>
-          <Link href="/search" className="text-xs font-bold text-brand-primary hover:underline">
-            View All Weddings →
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
-          {REAL_WEDDING_STORIES.map((story) => (
-            <WeddingStoryCard key={story.couple} story={story} className="h-[195px] sm:h-[210px]" />
-          ))}
-        </div>
-      </section>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+            {weddingStories.slice(0, 6).map((story) => (
+              <WeddingStoryCard key={story.id} story={story} className="h-[195px] sm:h-[210px]" />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Latest Blogs & Planning Ideas */}
       <section id="wedding-blogs" className="px-6 py-8 max-[900px]:px-4 bg-white/70 border-y border-border/60">
@@ -360,7 +318,7 @@ export default async function HomePage() {
       </section>
 
       {/* Gallery Inspiration Component */}
-      <GalleryInspiration />
+      <GalleryInspiration items={galleryMedia} />
 
       {/* Featured Vendors — real data only (featuredVendors comes from a
           real GET /featured-listings + search cross-reference, see
@@ -435,25 +393,18 @@ export default async function HomePage() {
   );
 }
 
-interface WeddingStory {
-  couple: string;
-  location: string;
-  tag: string;
-  imageUrl: string;
-  snippet: string;
-}
-
 /** One bento-style Real Wedding Stories card — same visual language (image, dark gradient overlay, hover scale, white "View More" pill) as the asymmetric grid this section's layout was ported from. */
 /** Text/badge/button reveal only on hover, matching CategoryCapsuleCarousel.tsx's reveal pattern — the image is always visible, everything else fades + slides in on hover. */
-function WeddingStoryCard({ story, className }: { story: WeddingStory; className: string }) {
+function WeddingStoryCard({ story, className }: { story: RealWeddingStory; className: string }) {
+  const coverKey = story.album.coverMedia.optimizedObjectKey ?? story.album.coverMedia.originalObjectKey;
   return (
     <Link
-      href="/search"
+      href={`/vendors/${story.album.vendor.slug}`}
       className={`group relative overflow-hidden rounded-[18px] shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 flex flex-col justify-between p-3.5 sm:p-4 text-white no-underline ${className}`}
     >
       <Image
-        src={story.imageUrl}
-        alt={story.couple}
+        src={getPublicMediaUrl(coverKey)}
+        alt={story.coupleName}
         fill
         className="object-cover transition-transform duration-500 group-hover:scale-110"
         sizes="(max-width: 768px) 100vw, 33vw"
@@ -472,7 +423,7 @@ function WeddingStoryCard({ story, className }: { story: WeddingStory; className
 
       <div className="relative z-10 flex flex-col gap-2">
         <div className="opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-          <h3 className="text-xs sm:text-sm font-extrabold text-white leading-tight drop-shadow">{story.couple}</h3>
+          <h3 className="text-xs sm:text-sm font-extrabold text-white leading-tight drop-shadow">{story.coupleName}</h3>
           <p className="text-[10px] sm:text-[11px] text-white/90 mt-0.5 drop-shadow-xs line-clamp-1">{story.location}</p>
           <p className="text-[10px] sm:text-[11px] text-white/90 mt-0.5 drop-shadow-xs line-clamp-2">{story.snippet}</p>
         </div>

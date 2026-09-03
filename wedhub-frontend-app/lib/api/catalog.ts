@@ -4,6 +4,7 @@ import type {
   Category,
   FeaturedCategory,
   FeaturedListing,
+  FeaturedMediaItem,
   Location,
   LocationType,
   SearchVendorsParams,
@@ -11,6 +12,7 @@ import type {
   VendorDetail,
   VendorReview,
   VendorSearchResult,
+  WeddingStory,
 } from "./vendors.types";
 
 /**
@@ -66,6 +68,20 @@ export function listCategories() {
 // open-questions.md Open Question 21).
 export function listFeaturedCategories() {
   return apiFetch<FeaturedCategory[]>("/categories/featured/homepage", { skipAuth: true });
+}
+
+// Real, admin-curated wedding stories for the public homepage's "Real
+// Wedding Stories" section (Arch Phase 17, added 2026-09-04) — replaces
+// the previously-hardcoded REAL_WEDDING_STORIES array.
+export function listFeaturedWeddingStories() {
+  return apiFetch<WeddingStory[]>("/wedding-stories/featured/homepage", { skipAuth: true });
+}
+
+// Real, admin-curated gallery media for the public homepage's "Gallery
+// Inspiration" section (Arch Phase 17, added 2026-09-04) — replaces the
+// previously-hardcoded GALLERY_ITEMS array.
+export function listFeaturedGalleryMedia() {
+  return apiFetch<FeaturedMediaItem[]>("/gallery/featured/homepage", { skipAuth: true });
 }
 
 export function getCategoryBySlug(slug: string) {

@@ -19,6 +19,21 @@ export function findAlbumById(id: string) {
   return prisma.album.findUnique({ where: { id }, include: { media: true } });
 }
 
+// Arch Phase 17 — lets an admin browse real, public vendor albums to pick
+// from when curating the homepage's "Real Wedding Stories" section
+// (wedding-stories module). No cross-vendor album list existed before;
+// albums were only ever listable per-vendor (own or by slug).
+export function listAllPublicAlbumsAdmin() {
+  return prisma.album.findMany({
+    where: { visibility: "PUBLIC" },
+    orderBy: { createdAt: "desc" },
+    include: {
+      vendor: { select: { id: true, businessName: true, slug: true } },
+      coverMedia: true,
+    },
+  });
+}
+
 export function listVendorAlbums(vendorId: string) {
   return prisma.album.findMany({
     where: { vendorId },

@@ -244,10 +244,10 @@ model Category {
   // (not used by search/matching logic). Added to back the public
   // homepage's category carousel/bento grid with real, admin-editable
   // data instead of a hardcoded frontend array.
-  imageUrl             String?  @map("image_url")
-  isFeaturedOnHomepage  Boolean @default(false) @map("is_featured_on_homepage")
-  homepageSortOrder     Int     @default(0) @map("homepage_sort_order")
-  startingPriceLabel    String? @map("starting_price_label")
+  imageUrl             String? @map("image_url")
+  isFeaturedOnHomepage Boolean @default(false) @map("is_featured_on_homepage")
+  homepageSortOrder    Int     @default(0) @map("homepage_sort_order")
+  startingPriceLabel   String? @map("starting_price_label")
 
   parent           Category?           @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children         Category[]          @relation("CategoryHierarchy")
@@ -635,6 +635,7 @@ model Media {
   vendorProfileLogos  VendorProfile[] @relation("VendorProfileLogo")
   vendorProfileCovers VendorProfile[] @relation("VendorProfileCover")
   albumCoverFor       Album[]         @relation("AlbumCover")
+  featuredMedia       FeaturedMedia?
 
   @@index([vendorId])
   @@index([userId])
@@ -655,12 +656,55 @@ model Album {
   createdAt    DateTime        @default(now()) @map("created_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
-  vendor     Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  coverMedia Media?  @relation("AlbumCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
-  media      Media[] @relation("AlbumMedia")
+  vendor         Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  coverMedia     Media?         @relation("AlbumCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  media          Media[]        @relation("AlbumMedia")
+  weddingStories WeddingStory[]
 
   @@index([vendorId])
   @@map("albums")
+}
+
+// Arch Phase 17 (CMS & SEO Backend) — backs the public homepage's "Real
+// Wedding Stories" section, previously a hardcoded static array
+// (wedhub-frontend-app/app/(public)/page.tsx's REAL_WEDDING_STORIES).
+// Deliberately thin: references a real Album (already belongs to a real
+// Vendor, already has real photos) rather than duplicating an image
+// upload path — this model only carries the narrative fields an Album
+// doesn't have. No fabricated couples/photos; an admin picks a real,
+// already-public wedding photo album and adds the story copy around it.
+model WeddingStory {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  albumId    String   @map("album_id") @db.Uuid
+  coupleName String   @map("couple_name")
+  location   String
+  tag        String
+  snippet    String
+  isFeatured Boolean  @default(false) @map("is_featured")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  album Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@index([isFeatured])
+  @@map("wedding_stories")
+}
+
+// Arch Phase 17 — backs the public homepage's "Gallery Inspiration"
+// section (GalleryInspiration.tsx's hardcoded GALLERY_ITEMS). An admin
+// curates specific, already-real, already-public vendor Media rows for
+// homepage display — no new image upload path, no fabricated photos.
+model FeaturedMedia {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mediaId       String   @unique @map("media_id") @db.Uuid
+  titleOverride String?  @map("title_override")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@map("featured_media")
 }
 
 model SearchLog {

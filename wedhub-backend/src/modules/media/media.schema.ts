@@ -21,8 +21,14 @@ export const moderateMediaSchema = z.object({
   moderationStatus: z.enum(["PENDING", "APPROVED", "REJECTED", "HIDDEN"]),
 });
 
+export const listApprovedMediaAdminQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 export type CreateUploadRequestBody = z.infer<typeof createUploadRequestSchema>;
 export type UpdateMediaBody = z.infer<typeof updateMediaSchema>;
 export type ModerateMediaBody = z.infer<typeof moderateMediaSchema>;
+export type ListApprovedMediaAdminQuery = z.infer<typeof listApprovedMediaAdminQuerySchema>;
 
 export { IMAGE_MIME_TYPES, VIDEO_MIME_TYPES };

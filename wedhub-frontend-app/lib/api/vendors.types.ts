@@ -197,6 +197,47 @@ export interface VendorAlbum {
   media: AlbumMedia[];
 }
 
+// ---- GET /wedding-stories/featured/homepage ----
+// Backs the public homepage's "Real Wedding Stories" section — real,
+// admin-curated stories over a real vendor's public Album, replacing the
+// previously-hardcoded REAL_WEDDING_STORIES array (see frontenddocs/
+// 10-risks-and-open-questions.md Open Question 21).
+export interface WeddingStory {
+  id: string;
+  albumId: string;
+  coupleName: string;
+  location: string;
+  tag: string;
+  snippet: string;
+  isFeatured: boolean;
+  sortOrder: number;
+  album: {
+    id: string;
+    name: string;
+    vendor: { id: string; businessName: string; slug: string };
+    coverMedia: VendorProfileMedia;
+  };
+}
+
+// ---- GET /gallery/featured/homepage ----
+// Backs the public homepage's "Gallery Inspiration" section — real,
+// admin-curated selections of real vendor portfolio media, replacing the
+// previously-hardcoded GALLERY_ITEMS array in GalleryInspiration.tsx.
+export interface FeaturedMediaItem {
+  id: string;
+  mediaId: string;
+  titleOverride: string | null;
+  sortOrder: number;
+  media: VendorProfileMedia & {
+    altText: string | null;
+    vendor: {
+      id: string;
+      businessName: string;
+      categories: Array<{ isPrimary: boolean; category: { id: string; name: string } }>;
+    };
+  };
+}
+
 // ---- GET /vendors/:vendorId/reviews ----
 export interface VendorReviewPhoto {
   id: string;

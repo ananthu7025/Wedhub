@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
-import { successResponse } from "../../common/utils/api-response.util";
+import { paginatedResponse, successResponse } from "../../common/utils/api-response.util";
 import { AuthenticationError, NotFoundError } from "../../common/errors";
 import { getOwnedVendorOrThrow } from "../vendors/vendor.policy";
 import * as mediaRepository from "./media.repository";
 import * as mediaService from "./media.service";
-import type { CreateUploadRequestBody, ModerateMediaBody, UpdateMediaBody } from "./media.schema";
+import type { CreateUploadRequestBody, ListApprovedMediaAdminQuery, ModerateMediaBody, UpdateMediaBody } from "./media.schema";
 
 function requireUserId(req: Request): string {
   if (!req.user) {
@@ -58,6 +58,25 @@ export async function deleteMedia(req: Request, res: Response): Promise<void> {
   const vendor = await getOwnedVendorOrThrow(userId);
   await mediaService.deleteMedia(vendor.id, req.params.id as string);
   res.json(successResponse({ deleted: true }));
+}
+
+// Arch Phase 17 — lets an admin browse real, already-approved vendor
+// portfolio media to pick from when curating the Gallery Inspiration
+// section (featured-media module).
+export async function listApprovedMediaAdmin(req: Request, res: Response): Promise<void> {
+  const query = req.validatedQuery as ListApprovedMediaAdminQuery;
+  const [media, total] = await Promise.all([
+    mediaRepository.listApprovedMediaAdmin(query.page, query.limit),
+    mediaRepository.countApprovedMediaAdmin(),
+  ]);
+  res.json(
+    paginatedResponse(media, {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.ceil(total / query.limit),
+    }),
+  );
 }
 
 export async function adminGetMedia(req: Request, res: Response): Promise<void> {

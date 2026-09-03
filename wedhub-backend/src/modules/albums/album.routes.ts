@@ -2,6 +2,8 @@ import { Router } from "express";
 import { asyncHandler } from "../../common/utils/async-handler.util";
 import { validateBody } from "../../common/middleware/validate.middleware";
 import { authenticateMiddleware } from "../../common/middleware/authenticate.middleware";
+import { authorize } from "../../common/middleware/authorize.middleware";
+import { Role } from "../../common/enums/roles.enum";
 import * as albumController from "./album.controller";
 import { createAlbumSchema, updateAlbumSchema } from "./album.schema";
 
@@ -19,3 +21,8 @@ albumSelfRouter.delete("/:id", asyncHandler(albumController.deleteAlbum));
 export const albumPublicRouter = Router({ mergeParams: true });
 
 albumPublicRouter.get("/", asyncHandler(albumController.listPublicAlbums));
+
+// Mounted at /api/v1/admin/albums
+export const albumAdminRouter = Router();
+albumAdminRouter.use(authenticateMiddleware, authorize(Role.ADMIN));
+albumAdminRouter.get("/", asyncHandler(albumController.listAllPublicAlbumsAdmin));

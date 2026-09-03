@@ -559,3 +559,98 @@ export interface AdminAuditLogFilters {
   page?: number;
   limit?: number;
 }
+
+// Arch Phase 17 — CMS & SEO Backend (added 2026-09-04). Backs the admin
+// curation screens for the homepage's "Real Wedding Stories" and "Gallery
+// Inspiration" sections.
+
+// ---- GET /admin/albums ----
+export interface AdminAlbum {
+  id: string;
+  vendorId: string;
+  name: string;
+  description: string | null;
+  coverMediaId: string | null;
+  visibility: string;
+  vendor: { id: string; businessName: string; slug: string };
+  coverMedia: { id: string; optimizedObjectKey: string | null; thumbnailObjectKey: string | null; originalObjectKey: string } | null;
+}
+
+// ---- GET /admin/media/approved ----
+export interface AdminApprovedMedia {
+  id: string;
+  vendorId: string;
+  optimizedObjectKey: string | null;
+  thumbnailObjectKey: string | null;
+  originalObjectKey: string;
+  altText: string | null;
+  vendor: { id: string; businessName: string };
+}
+
+// ---- /admin/wedding-stories ----
+export interface AdminWeddingStory {
+  id: string;
+  albumId: string;
+  coupleName: string;
+  location: string;
+  tag: string;
+  snippet: string;
+  isFeatured: boolean;
+  sortOrder: number;
+  album: {
+    id: string;
+    name: string;
+    vendor: { id: string; businessName: string; slug: string };
+    coverMedia: { id: string; optimizedObjectKey: string | null; thumbnailObjectKey: string | null; originalObjectKey: string };
+  };
+}
+
+export interface AdminCreateWeddingStoryBody {
+  albumId: string;
+  coupleName: string;
+  location: string;
+  tag: string;
+  snippet: string;
+  isFeatured?: boolean;
+  sortOrder?: number;
+}
+
+export interface AdminUpdateWeddingStoryBody {
+  coupleName?: string;
+  location?: string;
+  tag?: string;
+  snippet?: string;
+  isFeatured?: boolean;
+  sortOrder?: number;
+}
+
+// ---- /admin/featured-media ----
+export interface AdminFeaturedMedia {
+  id: string;
+  mediaId: string;
+  titleOverride: string | null;
+  sortOrder: number;
+  media: {
+    id: string;
+    optimizedObjectKey: string | null;
+    thumbnailObjectKey: string | null;
+    originalObjectKey: string;
+    altText: string | null;
+    vendor: {
+      id: string;
+      businessName: string;
+      categories: Array<{ isPrimary: boolean; category: { id: string; name: string } }>;
+    };
+  };
+}
+
+export interface AdminCreateFeaturedMediaBody {
+  mediaId: string;
+  titleOverride?: string;
+  sortOrder?: number;
+}
+
+export interface AdminUpdateFeaturedMediaBody {
+  titleOverride?: string | null;
+  sortOrder?: number;
+}

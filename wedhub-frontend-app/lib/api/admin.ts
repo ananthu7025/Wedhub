@@ -1,9 +1,12 @@
 import { apiFetch } from "./client";
 import type { PaginationMeta } from "./types";
 import type {
+  AdminAlbum,
+  AdminApprovedMedia,
   AdminAuditLogEntry,
   AdminAuditLogFilters,
   AdminDashboardMetrics,
+  AdminFeaturedMedia,
   AdminLeadDetail,
   AdminLeadListItem,
   AdminPermission,
@@ -17,6 +20,7 @@ import type {
   AdminVendorDetail,
   AdminVendorListItem,
   AdminVendorStatusHistoryEntry,
+  AdminWeddingStory,
   ReviewModerationStatus,
   UserRole,
   UserStatus,
@@ -143,4 +147,22 @@ export function listAdminAuditLogs(params: AdminAuditLogFilters = {}) {
       limit: params.limit ?? 20,
     },
   });
+}
+
+/** Frontend Arch Phase 17 — CMS & SEO Backend (added 2026-09-04). */
+
+export function listAdminPublicAlbums() {
+  return apiFetch<AdminAlbum[]>("/admin/albums");
+}
+
+export function listAdminApprovedMedia(page = 1, limit = 50) {
+  return apiFetch<AdminApprovedMedia[], PaginationMeta>("/admin/media/approved", { query: { page, limit } });
+}
+
+export function listAdminWeddingStories() {
+  return apiFetch<AdminWeddingStory[]>("/admin/wedding-stories");
+}
+
+export function listAdminFeaturedMedia() {
+  return apiFetch<AdminFeaturedMedia[]>("/admin/featured-media");
 }

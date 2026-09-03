@@ -3,6 +3,7 @@ import { successResponse } from "../../common/utils/api-response.util";
 import { AuthenticationError, NotFoundError } from "../../common/errors";
 import { getOwnedVendorOrThrow } from "../vendors/vendor.policy";
 import * as vendorRepository from "../vendors/vendor.repository";
+import * as albumRepository from "./album.repository";
 import * as albumService from "./album.service";
 import type { CreateAlbumBody, UpdateAlbumBody } from "./album.schema";
 
@@ -51,6 +52,13 @@ export async function deleteAlbum(req: Request, res: Response): Promise<void> {
   const vendor = await getOwnedVendorOrThrow(userId);
   await albumService.deleteAlbum(vendor.id, req.params.id as string);
   res.json(successResponse({ deleted: true }));
+}
+
+// Arch Phase 17 — lets an admin browse real, public vendor albums to pick
+// from when curating the "Real Wedding Stories" section.
+export async function listAllPublicAlbumsAdmin(_req: Request, res: Response): Promise<void> {
+  const albums = await albumRepository.listAllPublicAlbumsAdmin();
+  res.json(successResponse(albums));
 }
 
 export async function listPublicAlbums(req: Request, res: Response): Promise<void> {

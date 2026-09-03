@@ -1,1 +1,1 @@
-export { albumSelfRouter, albumPublicRouter } from "./album.routes";
+export { albumSelfRouter, albumPublicRouter, albumAdminRouter } from "./album.routes";

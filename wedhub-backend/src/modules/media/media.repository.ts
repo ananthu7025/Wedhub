@@ -34,6 +34,24 @@ export function listVendorMedia(vendorId: string) {
   });
 }
 
+// Arch Phase 17 — lets an admin browse real, already-approved vendor
+// portfolio media to pick from when curating the homepage Gallery
+// Inspiration section (featured-media module). No such cross-vendor list
+// existed before; media was only ever listable per-vendor.
+export function listApprovedMediaAdmin(page: number, limit: number) {
+  return prisma.media.findMany({
+    where: { status: "READY", moderationStatus: "APPROVED", vendorId: { not: null } },
+    orderBy: { createdAt: "desc" },
+    include: { vendor: { select: { id: true, businessName: true } } },
+    skip: (page - 1) * limit,
+    take: limit,
+  });
+}
+
+export function countApprovedMediaAdmin() {
+  return prisma.media.count({ where: { status: "READY", moderationStatus: "APPROVED", vendorId: { not: null } } });
+}
+
 export function updateMediaStatus(id: string, status: string) {
   return prisma.media.update({
     where: { id },

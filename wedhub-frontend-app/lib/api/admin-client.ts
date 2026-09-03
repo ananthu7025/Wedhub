@@ -6,11 +6,14 @@ import type {
   AdminCreateAttributeBody,
   AdminCreateCategoryBody,
   AdminCreateCouponBody,
+  AdminCreateFeaturedMediaBody,
   AdminCreateImageUploadRequestBody,
   AdminCreateInvitationBody,
   AdminCreateLocationBody,
   AdminCreatePlanBody,
   AdminCreateVendorBody,
+  AdminCreateWeddingStoryBody,
+  AdminFeaturedMedia,
   AdminImageConfirmResult,
   AdminImageUploadRequestResult,
   AdminLeadStatusUpdateResult,
@@ -22,12 +25,15 @@ import type {
   AdminSuspendUserResult,
   AdminUpdateAttributeBody,
   AdminUpdateCategoryBody,
+  AdminUpdateFeaturedMediaBody,
   AdminUpdateLeadStatusBody,
   AdminUpdateLocationBody,
   AdminUpdatePlanBody,
   AdminUpdateVendorBody,
+  AdminUpdateWeddingStoryBody,
   AdminVendorInvitation,
   AdminVendorScalarOnly,
+  AdminWeddingStory,
 } from "./admin.types";
 import type { Category, CategoryAttribute, Location, LocationType } from "./vendors.types";
 
@@ -157,4 +163,30 @@ export function createAdminImageUploadRequest(body: AdminCreateImageUploadReques
 
 export function confirmAdminImageUpload(mediaId: string) {
   return call<AdminImageConfirmResult>(`/admin/media-uploads/${mediaId}/confirm`, "POST");
+}
+
+/** Frontend Arch Phase 17 — CMS & SEO Backend (added 2026-09-04). */
+
+export function createAdminWeddingStory(body: AdminCreateWeddingStoryBody) {
+  return call<AdminWeddingStory>("/admin/wedding-stories", "POST", body);
+}
+
+export function updateAdminWeddingStory(id: string, body: AdminUpdateWeddingStoryBody) {
+  return call<AdminWeddingStory>(`/admin/wedding-stories/${id}`, "PATCH", body);
+}
+
+export function deleteAdminWeddingStory(id: string) {
+  return call<{ deleted: true }>(`/admin/wedding-stories/${id}`, "DELETE");
+}
+
+export function createAdminFeaturedMedia(body: AdminCreateFeaturedMediaBody) {
+  return call<AdminFeaturedMedia>("/admin/featured-media", "POST", body);
+}
+
+export function updateAdminFeaturedMedia(id: string, body: AdminUpdateFeaturedMediaBody) {
+  return call<AdminFeaturedMedia>(`/admin/featured-media/${id}`, "PATCH", body);
+}
+
+export function deleteAdminFeaturedMedia(id: string) {
+  return call<{ deleted: true }>(`/admin/featured-media/${id}`, "DELETE");
 }

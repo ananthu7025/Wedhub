@@ -9,7 +9,7 @@ import { vendorAdminRouter } from "../modules/vendor-admin";
 import { vendorClaimRouter } from "../modules/vendor-claim";
 import { mediaAdminRouter, mediaRouter } from "../modules/media";
 import { reviewMediaRouter } from "../modules/review-media";
-import { albumPublicRouter, albumSelfRouter } from "../modules/albums";
+import { albumAdminRouter, albumPublicRouter, albumSelfRouter } from "../modules/albums";
 import { searchRouter } from "../modules/search";
 import { shortlistRouter } from "../modules/shortlists";
 import { comparisonRouter } from "../modules/comparison";
@@ -27,6 +27,8 @@ import { adminAuditLogsRouter } from "../modules/admin-audit-logs";
 import { adminRolesRouter } from "../modules/admin-roles";
 import { adminDashboardRouter } from "../modules/admin-dashboard";
 import { adminMediaRouter } from "../modules/admin-media";
+import { weddingStoriesAdminRouter, weddingStoriesRouter } from "../modules/wedding-stories";
+import { featuredMediaAdminRouter, featuredMediaRouter } from "../modules/featured-media";
 
 export const apiV1Router = Router();
 
@@ -64,6 +66,11 @@ apiV1Router.use("/admin/audit-logs", adminAuditLogsRouter);
 apiV1Router.use("/admin", adminRolesRouter);
 apiV1Router.use("/admin/dashboard", adminDashboardRouter);
 apiV1Router.use("/admin/media-uploads", adminMediaRouter);
+apiV1Router.use("/wedding-stories", weddingStoriesRouter);
+apiV1Router.use("/admin/wedding-stories", weddingStoriesAdminRouter);
+apiV1Router.use("/gallery", featuredMediaRouter);
+apiV1Router.use("/admin/featured-media", featuredMediaAdminRouter);
+apiV1Router.use("/admin/albums", albumAdminRouter);
 
 // Mounted BEFORE /vendors: vendorRouter's public GET /:slug would otherwise
 // greedily match /vendors/claim/:token, /vendors/me/albums, /vendors/:slug/albums,
