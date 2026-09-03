@@ -31,9 +31,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   const [{ data: vendors, meta }, { data: categories }, { data: cities }, session] = await Promise.all([
     searchVendors({
-      keyword: params.keyword,
-      categoryId: params.categoryId,
-      cityId: params.cityId,
+      keyword: params.keyword || undefined,
+      categoryId: params.categoryId || undefined,
+      cityId: params.cityId || undefined,
       priceMin: params.priceMin ? Number(params.priceMin) : undefined,
       priceMax: params.priceMax ? Number(params.priceMax) : undefined,
       verified: params.verified === "true" ? true : undefined,
