@@ -92,7 +92,23 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery): Promis
   const chatId = callbackQuery.message?.chat.id;
   if (!chatId || !callbackQuery.data) return;
 
-  await answerCallbackQuery(callbackQuery.id);
+  // Ack first, before any DB/business logic — Telegram's callback-query
+  // TTL is short, and this handler can be slow behind a queued photo
+  // upload (WW_COLLECTING_PHOTOS downloads from Telegram then pushes to
+  // R2, fully synchronously, on the same single-instance process). A real
+  // bug caught live: acking only after upserting the user/recording the
+  // message let the query go stale under that kind of load, and since the
+  // stale ack threw unguarded, the whole handler aborted — the
+  // conversation never advanced and the user never got a reply, then
+  // Telegram retried the same doomed update repeatedly. The ack failing
+  // is expected/recoverable (the user only loses the loading-spinner
+  // clear, not the actual conversation step), so it must never abort
+  // everything after it.
+  try {
+    await answerCallbackQuery(callbackQuery.id);
+  } catch (err) {
+    logger.warn({ err, callbackQueryId: callbackQuery.id }, "Failed to acknowledge Telegram callback query (continuing anyway)");
+  }
 
   const telegramUser = await upsertTelegramUserFromApiUser(apiUser, chatId);
   await telegramRepository.recordMessage({
