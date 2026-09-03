@@ -733,3 +733,30 @@ export interface AdminUpdateSeoOverrideBody {
   ogImageUrl?: string | null;
   noIndex?: boolean;
 }
+
+// ---- GET /admin/wedding-websites ----
+// Read-only visibility only, per the feature spec's explicit "do not
+// build a large admin system for this" instruction — no admin CRUD.
+// Verified against wedding-website.repository.ts's ADMIN_LIST_INCLUDE.
+export interface AdminWeddingWebsite {
+  id: string;
+  ownerUserId: string | null;
+  ownerTelegramUserId: string | null;
+  template: "ROYAL_WEDDING" | "MINIMAL_ELEGANT" | "TRADITIONAL_INDIAN";
+  status: "DRAFT" | "PUBLISHED";
+  slug: string | null;
+  brideName: string;
+  groomName: string;
+  createdAt: string;
+  publishedAt: string | null;
+  ownerUser: { id: string; email: string } | null;
+  ownerTelegramUser: { id: string; username: string | null; firstName: string | null; lastName: string | null } | null;
+  // Most recent payment only (take: 1) — empty array if no publish attempt yet.
+  payments: Array<{
+    id: string;
+    status: "CREATED" | "AUTHORIZED" | "CAPTURED" | "FAILED" | "REFUNDED";
+    amount: string;
+    currency: string;
+    createdAt: string;
+  }>;
+}

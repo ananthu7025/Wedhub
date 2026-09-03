@@ -22,6 +22,7 @@ import type {
   AdminVendorListItem,
   AdminVendorStatusHistoryEntry,
   AdminWeddingStory,
+  AdminWeddingWebsite,
   ReviewModerationStatus,
   SeoOverridePageType,
   UserRole,
@@ -171,4 +172,8 @@ export function listAdminFeaturedMedia() {
 
 export function listAdminSeoOverrides(pageType?: SeoOverridePageType) {
   return apiFetch<AdminSeoOverride[]>("/admin/seo-overrides", { query: { pageType } });
+}
+
+export function listAdminWeddingWebsites(page = 1, limit = 20) {
+  return apiFetch<AdminWeddingWebsite[], PaginationMeta>("/admin/wedding-websites", { query: { page, limit } });
 }
