@@ -7,7 +7,10 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/vendor", "/api"],
+      // /preview — Arch Phase 26 temporary wedding-website previews; each
+      // page also sets its own noindex/nofollow meta, this is defense in
+      // depth at the crawl-directive level too.
+      disallow: ["/admin", "/vendor", "/api", "/preview"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };

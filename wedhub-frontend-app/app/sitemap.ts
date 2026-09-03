@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { listSeoCombinations } from "@/lib/api/catalog";
+import { listPublishedWeddingWebsiteSlugs } from "@/lib/api/wedding-website";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -8,7 +9,10 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 // generateSitemaps() (see product.md §44 "segmented if necessary") once
 // combinations grow large enough to need it.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { data: combinations } = await listSeoCombinations();
+  const [{ data: combinations }, { data: weddingWebsites }] = await Promise.all([
+    listSeoCombinations(),
+    listPublishedWeddingWebsiteSlugs(),
+  ]);
 
   const staticEntries: MetadataRoute.Sitemap = [
     { url: SITE_URL, changeFrequency: "daily", priority: 1 },
@@ -21,5 +25,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: combo.pageType === "CATEGORY_CITY" ? 0.9 : 0.7,
   }));
 
-  return [...staticEntries, ...combinationEntries];
+  // Preview URLs (/preview/:token) are deliberately never included — only
+  // PUBLISHED websites are indexable (Business Rule 7).
+  const weddingWebsiteEntries: MetadataRoute.Sitemap = weddingWebsites.map((site) => ({
+    url: `${SITE_URL}/wedding/${site.slug}`,
+    lastModified: site.updatedAt,
+    changeFrequency: "monthly",
+    priority: 0.5,
+  }));
+
+  return [...staticEntries, ...combinationEntries, ...weddingWebsiteEntries];
 }
