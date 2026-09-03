@@ -43,6 +43,12 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           </Link>
         </p>
         <SignupWizard accountType={accountType} />
+
+        <p className="mt-6 text-center text-[13px] text-text-grey">
+          <Link href="/" className="font-semibold text-brand-primary no-underline hover:underline">
+            ← Go to home
+          </Link>
+        </p>
       </div>
     </div>
   );

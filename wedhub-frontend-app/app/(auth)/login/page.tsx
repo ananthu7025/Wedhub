@@ -56,9 +56,14 @@ export default async function LoginPage() {
 
           <LoginForm />
 
-          <p className="text-center text-[13px] text-text-grey">
+          <p className="mb-3 text-center text-[13px] text-text-grey">
             <Link href="/forgot-password" className="font-semibold text-text-grey hover:underline">
               Forgot password?
+            </Link>
+          </p>
+          <p className="text-center text-[13px] text-text-grey">
+            <Link href="/" className="font-semibold text-brand-primary no-underline hover:underline">
+              ← Go to home
             </Link>
           </p>
         </div>
