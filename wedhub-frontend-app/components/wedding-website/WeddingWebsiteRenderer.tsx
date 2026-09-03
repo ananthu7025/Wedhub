@@ -82,6 +82,30 @@ export function WeddingWebsiteRenderer({
       </section>
 
       <div className="mx-auto max-w-3xl px-6 py-14 sm:px-10">
+        {/* Blessings — traditional Indian wedding invitation convention:
+            "With the blessings of" followed by each side's parents. Only
+            rendered once at least one side is filled in; a side with no
+            parents text simply doesn't get its own block. */}
+        {(website.brideParents || website.groomParents) && (
+          <section className="mb-14 text-center">
+            <p className={`mb-6 text-xs font-bold tracking-[0.3em] uppercase ${theme.accentTextClass}`}>With the blessings of</p>
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+              {website.brideParents && (
+                <div>
+                  <p className="mb-2 text-sm font-bold text-text-dark">{website.brideName}&apos;s Parents</p>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-text-grey">{website.brideParents}</p>
+                </div>
+              )}
+              {website.groomParents && (
+                <div>
+                  <p className="mb-2 text-sm font-bold text-text-dark">{website.groomName}&apos;s Parents</p>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-text-grey">{website.groomParents}</p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {website.shortDescription && (
           <p className={`mb-14 text-center text-base leading-relaxed ${theme.accentTextClass}`}>{website.shortDescription}</p>
         )}

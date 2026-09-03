@@ -303,10 +303,24 @@ function DetailsStep({
       </div>
       <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Bride's parents (optional)">
-          <input value={fields.brideParents} onChange={(e) => set("brideParents", e.target.value)} maxLength={200} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+          <textarea
+            value={fields.brideParents}
+            onChange={(e) => set("brideParents", e.target.value)}
+            rows={3}
+            maxLength={200}
+            placeholder={"Mr T.R John & Mrs Santha John\nThayyalakkal House"}
+            className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+          />
         </Field>
         <Field label="Groom's parents (optional)">
-          <input value={fields.groomParents} onChange={(e) => set("groomParents", e.target.value)} maxLength={200} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+          <textarea
+            value={fields.groomParents}
+            onChange={(e) => set("groomParents", e.target.value)}
+            rows={3}
+            maxLength={200}
+            placeholder={"Mr Jose Syriac & Mrs Shyla Jose\nKanakkancherry House"}
+            className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+          />
         </Field>
       </div>
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -44,6 +44,18 @@ export interface WeddingWebsiteCollectedData {
   // known (createDraftForTelegramUser requires both), so the bride's
   // name has nowhere durable to live for that one round-trip.
   brideNameDraft?: string;
+  // WW_COLLECTING_VENUE's 3-part sequence (name -> address -> Google
+  // Maps link), mirroring the web wizard's Venue fields — held here only
+  // until the full venue is known, then written to the draft in one
+  // updateDraft call (matches the web wizard's single-form-submit shape
+  // rather than writing partial venue data 3 times).
+  pendingVenueName?: string;
+  pendingVenueAddress?: string;
+  // WW_COLLECTING_BLESSINGS's 2-part sequence (bride's parents -> groom's
+  // parents) — "With the blessings of" section, mirrors brideParents/
+  // groomParents on WeddingWebsite (each a free-text block: names, then
+  // house/family name on its own line).
+  pendingBrideParents?: string;
   // In-progress event, collected across 2 short prompts
   // (name -> venue) before being saved as a real WeddingWebsiteEvent —
   // mirrors the web wizard's EventsStep form fields, just spread across

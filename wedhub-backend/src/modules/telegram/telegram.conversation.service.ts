@@ -356,8 +356,33 @@ function promptWeddingDateWW(): StepResult {
   return { text: "When's the big day? (e.g. 2027-06-20, or Skip)", buttons: skipRow() };
 }
 
-function promptVenue(): StepResult {
-  return { text: "Where's the venue? (or Skip)", buttons: skipRow() };
+function promptVenueName(): StepResult {
+  return { text: "Where's the venue? (venue name, or Skip)", buttons: skipRow() };
+}
+
+function promptVenueAddress(): StepResult {
+  return { text: "What's the venue address? (or Skip)", buttons: skipRow() };
+}
+
+function promptVenueMapsLink(): StepResult {
+  return {
+    text: "Got a Google Maps link for the venue? Open the location in Google Maps, tap Share, and paste the link here — or Skip.",
+    buttons: skipRow(),
+  };
+}
+
+function promptBrideParents(): StepResult {
+  return {
+    text: "With the blessings of — who are the bride's parents? (e.g. \"Mr T.R John & Mrs Santha John\\nThayyalakkal House\", or Skip)",
+    buttons: skipRow(),
+  };
+}
+
+function promptGroomParents(): StepResult {
+  return {
+    text: "And the groom's parents? (or Skip)",
+    buttons: skipRow(),
+  };
 }
 
 function promptAddEvent(): StepResult {
@@ -454,15 +479,63 @@ async function advanceWeddingWebsiteConversation(
         await weddingWebsiteService.updateDraft(conversation.weddingWebsiteId as string, owner, { weddingDate: parsed });
       }
       await telegramRepository.updateConversation(conversation.id, { state: "WW_COLLECTING_VENUE" });
-      return promptVenue();
+      return promptVenueName();
     }
 
     case "WW_COLLECTING_VENUE": {
-      if (input.callbackData !== "skip" && input.text) {
-        await weddingWebsiteService.updateDraft(conversation.weddingWebsiteId as string, owner, { venueName: input.text.trim() });
+      // 3-part sequence (name -> address -> Google Maps link), mirroring
+      // the web wizard's Venue fields — tracked by which pending* fields
+      // are already recorded, same pattern WW_COLLECTING_COUPLE_NAMES uses.
+      if (data.pendingVenueAddress !== undefined) {
+        // Third reply: the Google Maps link (or skip).
+        const googleMapsUrl = input.callbackData === "skip" ? undefined : input.text?.trim();
+        await weddingWebsiteService.updateDraft(conversation.weddingWebsiteId as string, owner, {
+          venueName: data.pendingVenueName || undefined,
+          venueAddress: data.pendingVenueAddress || undefined,
+          googleMapsUrl,
+        });
+        await telegramRepository.updateConversation(conversation.id, {
+          state: "WW_COLLECTING_BLESSINGS",
+          collectedData: { ...data, pendingVenueName: undefined, pendingVenueAddress: undefined },
+        });
+        return promptBrideParents();
       }
-      await telegramRepository.updateConversation(conversation.id, { state: "WW_COLLECTING_EVENTS" });
-      return promptAddEvent();
+      if (data.pendingVenueName !== undefined) {
+        // Second reply: the address (or skip).
+        const venueAddress = input.callbackData === "skip" ? "" : (input.text?.trim() ?? "");
+        await telegramRepository.updateConversation(conversation.id, {
+          collectedData: { ...data, pendingVenueAddress: venueAddress },
+        });
+        return promptVenueMapsLink();
+      }
+      // First reply: the venue name (or skip).
+      const venueName = input.callbackData === "skip" ? "" : (input.text?.trim() ?? "");
+      await telegramRepository.updateConversation(conversation.id, {
+        collectedData: { ...data, pendingVenueName: venueName },
+      });
+      return promptVenueAddress();
+    }
+
+    case "WW_COLLECTING_BLESSINGS": {
+      // 2-part sequence (bride's parents -> groom's parents), same
+      // tracked-by-pending-field pattern as the venue sequence above.
+      if (data.pendingBrideParents !== undefined) {
+        const groomParents = input.callbackData === "skip" ? undefined : input.text?.trim();
+        await weddingWebsiteService.updateDraft(conversation.weddingWebsiteId as string, owner, {
+          brideParents: data.pendingBrideParents || undefined,
+          groomParents,
+        });
+        await telegramRepository.updateConversation(conversation.id, {
+          state: "WW_COLLECTING_EVENTS",
+          collectedData: { ...data, pendingBrideParents: undefined },
+        });
+        return promptAddEvent();
+      }
+      const brideParents = input.callbackData === "skip" ? "" : (input.text?.trim() ?? "");
+      await telegramRepository.updateConversation(conversation.id, {
+        collectedData: { ...data, pendingBrideParents: brideParents },
+      });
+      return promptGroomParents();
     }
 
     case "WW_COLLECTING_EVENTS": {
