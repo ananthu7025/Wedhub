@@ -7,6 +7,30 @@ import * as telegramRepository from "./telegram.repository";
 import { advanceConversation, startConversation } from "./telegram.conversation.service";
 import type { TelegramApiUser, TelegramMessage, TelegramCallbackQuery, TelegramUpdate } from "./telegram.api-types";
 
+// Serializes processing per chat so a burst of messages from the same
+// user is handled one at a time, in order, instead of racing each other
+// against the same TelegramConversation row (concurrent requests would
+// otherwise all read the same conversation.state and stomp on each
+// other's updateConversation call — a real bug caught live: a user
+// double/triple-tapping sent several webhook deliveries concurrently,
+// which corrupted the conversation state and, since the queue didn't
+// exist yet, occasionally threw out of an unawaited handler and crashed
+// the process). Chats not currently processing anything are absent from
+// the map — this stays small and self-cleans, never growing unbounded.
+const chatQueues = new Map<number, Promise<void>>();
+
+function runSerializedForChat(chatId: number, task: () => Promise<void>): Promise<void> {
+  const previous = chatQueues.get(chatId) ?? Promise.resolve();
+  const next = previous.then(task, task);
+  chatQueues.set(chatId, next);
+  next.finally(() => {
+    if (chatQueues.get(chatId) === next) {
+      chatQueues.delete(chatId);
+    }
+  });
+  return next;
+}
+
 async function upsertTelegramUserFromApiUser(apiUser: TelegramApiUser, chatId: number) {
   return telegramRepository.upsertTelegramUser({
     telegramUserId: BigInt(apiUser.id),
@@ -156,6 +180,36 @@ export async function notifyWeddingWebsitePublished(weddingWebsiteId: string, pu
   });
 }
 
+async function processUpdate(update: TelegramUpdate): Promise<void> {
+  try {
+    if (update.message) {
+      await handleTextMessage(update.message);
+      return;
+    }
+    if (update.callback_query) {
+      await handleCallbackQuery(update.callback_query);
+      return;
+    }
+    logger.info({ updateId: update.update_id }, "Unhandled Telegram update type (logged, no action)");
+  } catch (err) {
+    // A real bug caught live: without this delete, a genuine Telegram retry
+    // of this exact update_id would otherwise be wrongly deduped by the row
+    // recorded in handleWebhook — silently losing a message that was never
+    // actually delivered, rather than the intended "never reprocess a TRUE
+    // duplicate." (Processing here is async/backgrounded — see
+    // handleWebhook — so this can no longer rely on a non-2xx response to
+    // make Telegram itself retry; the dedupe row is still cleaned up so a
+    // future genuine redelivery, or a user simply resending, is treated as
+    // a fresh attempt rather than silently dropped.)
+    await telegramRepository.deleteProcessedUpdate(BigInt(update.update_id));
+    logger.error({ err, updateId: update.update_id }, "Failed to process Telegram update");
+  }
+}
+
+function chatIdForUpdate(update: TelegramUpdate): number | undefined {
+  return update.message?.chat.id ?? update.callback_query?.message?.chat.id;
+}
+
 export async function handleWebhook(body: unknown, secretTokenHeader: string | undefined): Promise<void> {
   // Coding Rule 6: verified before anything else happens — an unverified
   // request is rejected outright, never parsed or acted on.
@@ -179,24 +233,26 @@ export async function handleWebhook(body: unknown, secretTokenHeader: string | u
     return;
   }
 
-  try {
-    if (update.message) {
-      await handleTextMessage(update.message);
-      return;
-    }
-    if (update.callback_query) {
-      await handleCallbackQuery(update.callback_query);
-      return;
-    }
-    logger.info({ updateId: update.update_id }, "Unhandled Telegram update type (logged, no action)");
-  } catch (err) {
-    // A real bug caught live: without this delete, a genuine Telegram retry
-    // of this exact update_id (triggered by the non-2xx response this
-    // throw produces) would be wrongly deduped by the row recorded above —
-    // silently losing a message that was never actually delivered, rather
-    // than the intended "never reprocess a TRUE duplicate."
-    await telegramRepository.deleteProcessedUpdate(BigInt(update.update_id));
-    logger.error({ err, updateId: update.update_id }, "Failed to process Telegram update");
-    throw err;
+  // Everything past this point (DB writes, conversation logic, outbound
+  // Telegram sends) is intentionally NOT awaited before returning to the
+  // controller. A real bug caught live: this server's path to
+  // api.telegram.org has a consistent multi-second handshake delay (see
+  // telegram.client.ts), so awaiting a reply here before responding 200
+  // routinely blew past Telegram's own webhook timeout — Telegram then
+  // re-delivered the same update while the first attempt was still
+  // in flight, and with no per-chat serialization (see
+  // runSerializedForChat below) those concurrent deliveries raced each
+  // other against the same conversation row and could throw out of an
+  // unawaited handler, crashing the process. Acking immediately here
+  // means Telegram never sees a slow/failed response for a genuine
+  // duplicate update, and processing is still serialized per chat so a
+  // user firing off several messages before the first reply lands gets
+  // them handled one at a time, in order, instead of concurrently.
+  const chatId = chatIdForUpdate(update);
+  const task = () => processUpdate(update);
+  if (chatId === undefined) {
+    void processUpdate(update);
+  } else {
+    void runSerializedForChat(chatId, task);
   }
 }

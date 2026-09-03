@@ -27,18 +27,18 @@ function getClient(): TelegramBot {
   return client;
 }
 
-// This server's network path to api.telegram.org is both slow (~5-6s per
-// TLS handshake, confirmed at the network level — see sendTypingIndicator's
-// comment) and intermittently flaky: outbound calls occasionally fail
-// outright with a low-level "fetch failed" (undici/TCP-level, not an HTTP
-// error status) rather than just being slow. Without a retry, one such
-// blip on sendMessage means the user's reply is silently dropped and the
-// whole webhook update 500s — Telegram then marks the update failed and
-// retries it later, but the user is left staring at nothing in the
-// meantime. 3 attempts with a short fixed backoff is enough to ride out a
-// single transient failure without piling on top of the already-slow
-// happy path.
-async function withRetry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 500): Promise<T> {
+// This server's network path to api.telegram.org is genuinely unstable,
+// not just uniformly slow — back-to-back manual connection attempts
+// measured 0.8s, 0.9s, then 5.9s, 5.8s, 5.7s, in that order, on the same
+// host with nothing else changing. A 500ms/3-attempt retry (the first
+// version of this function) was confirmed live to NOT be enough: 54
+// EFATAL failures still happened over about an hour with that retry in
+// place, spread throughout rather than clustered, meaning individual
+// bad windows can outlast a ~1.5s total retry budget. 5 attempts with a
+// 2s backoff gives ~10s of retry coverage — long enough in practice to
+// land on one of the fast (sub-1s) windows instead of only ever hitting
+// this path during a slow/failing one.
+async function withRetry<T>(fn: () => Promise<T>, attempts = 5, delayMs = 2000): Promise<T> {
   let lastErr: unknown;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
