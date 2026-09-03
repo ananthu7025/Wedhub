@@ -5,8 +5,8 @@ import { disconnectDatabase } from "./config/database";
 
 const app = createApp();
 
-const server = app.listen(env.PORT, () => {
-  logger.info(`WedHub backend listening on port ${env.PORT} (${env.NODE_ENV})`);
+const server = app.listen(env.PORT, env.HOST, () => {
+  logger.info(`WedHub backend listening on ${env.HOST}:${env.PORT} (${env.NODE_ENV})`);
 });
 
 function shutdown(signal: string): void {

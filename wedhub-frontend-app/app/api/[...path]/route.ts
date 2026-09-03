@@ -34,6 +34,14 @@ async function proxyRequest(request: NextRequest, path: string[]): Promise<NextR
   const contentType = request.headers.get("content-type");
   if (contentType) headers["Content-Type"] = contentType;
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  // This call is server-to-server (Next.js -> backend on 127.0.0.1), so the
+  // backend's IP-based rate limiters would otherwise key every visitor off
+  // the same loopback address. Relay the real visitor IP Nginx already put
+  // in X-Forwarded-For so the backend can rate-limit per actual client —
+  // see wedhub-backend's app.ts trust-proxy config, which only trusts this
+  // header coming from its own loopback caller.
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) headers["X-Forwarded-For"] = forwardedFor;
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
 

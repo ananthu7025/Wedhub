@@ -3,6 +3,11 @@ import { z } from "zod";
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production", "test"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
+  // Loopback-only by default — this server is only ever meant to be reached
+  // through Nginx (public API domain) or the Next.js frontend's
+  // server-to-server calls, both on the same host. Binding to all
+  // interfaces would rely solely on the firewall to keep it private.
+  HOST: z.string().default("127.0.0.1"),
 
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 

@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { ApiRequestError, type ApiResponse } from "./types";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 
@@ -38,18 +38,25 @@ export async function apiFetch<T, M = Record<string, unknown>>(
 ): Promise<{ data: T; meta?: M }> {
   const { method = "GET", body, query, skipAuth = false, cache, next } = options;
 
-  const headers: Record<string, string> = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const requestHeaders: Record<string, string> = {};
+  if (body !== undefined) requestHeaders["Content-Type"] = "application/json";
 
   if (!skipAuth) {
     const cookieStore = await cookies();
     const session = cookieStore.get(SESSION_COOKIE_NAME);
-    if (session) headers["Authorization"] = `Bearer ${session.value}`;
+    if (session) requestHeaders["Authorization"] = `Bearer ${session.value}`;
   }
+
+  // Server Component -> backend calls are server-to-server (127.0.0.1), so
+  // without this every visitor would share one IP-keyed rate-limit budget
+  // on the backend. Relay the real visitor IP Nginx put in X-Forwarded-For
+  // (same fix as the Client Component proxy at app/api/[...path]/route.ts).
+  const incomingForwardedFor = (await headers()).get("x-forwarded-for");
+  if (incomingForwardedFor) requestHeaders["X-Forwarded-For"] = incomingForwardedFor;
 
   const response = await fetch(buildUrl(path, query), {
     method,
-    headers,
+    headers: requestHeaders,
     body: body !== undefined ? JSON.stringify(body) : undefined,
     cache,
     next,

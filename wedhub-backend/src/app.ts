@@ -14,6 +14,15 @@ export function createApp(): Express {
   const app = express();
 
   app.disable("x-powered-by");
+  // This process is only ever reached via Nginx (public API domain) or the
+  // Next.js frontend's server-to-server fetches — both always originate
+  // from loopback on this same host (see HOST in config/env.ts). "loopback"
+  // tells Express to trust X-Forwarded-For only when the direct connection
+  // is from 127.0.0.1/::1, so req.ip resolves to the real visitor IP
+  // instead of every request collapsing to the same loopback address —
+  // which otherwise makes every IP-keyed rate limiter (rate-limit.middleware.ts)
+  // share one budget across all visitors.
+  app.set("trust proxy", "loopback");
   // Captures the exact raw request body onto req.rawBody before JSON parsing
   // consumes it — Razorpay's webhook signature (Coding Rule 6: all external
   // webhooks are verified) is computed over the raw bytes, not the
