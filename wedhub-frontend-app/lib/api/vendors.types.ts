@@ -66,6 +66,7 @@ export interface Category {
   parentId: string | null;
   sortOrder: number;
   isActive: boolean;
+  hasStoreEnabled?: boolean;
   imageUrl: string | null;
   isFeaturedOnHomepage: boolean;
   homepageSortOrder: number;

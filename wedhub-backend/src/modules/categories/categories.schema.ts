@@ -4,6 +4,7 @@ export const createCategorySchema = z.object({
   name: z.string().min(1).max(150),
   description: z.string().max(2000).optional(),
   parentId: z.string().uuid().optional(),
+  hasStoreEnabled: z.boolean().optional(),
 });
 
 export const updateCategorySchema = z.object({
@@ -11,6 +12,7 @@ export const updateCategorySchema = z.object({
   description: z.string().max(2000).optional(),
   sortOrder: z.coerce.number().int().optional(),
   isActive: z.boolean().optional(),
+  hasStoreEnabled: z.boolean().optional(),
   // Homepage presentation fields — admin-controlled, presentation-only.
   // imageUrl/startingPriceLabel are nullable (not just optional) so an
   // admin can explicitly clear a previously-set value, not just leave it

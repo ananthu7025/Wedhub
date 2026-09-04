@@ -111,6 +111,18 @@ export function CatalogBoard({
     setCategories((prev) => prev.map((c) => (c.id === category.id ? { ...c, isFeaturedOnHomepage: result.data.isFeaturedOnHomepage } : c)));
   }
 
+  async function handleToggleStore(category: Category) {
+    setPendingId(category.id);
+    setError(null);
+    const result = await updateAdminCategory(category.id, { hasStoreEnabled: !category.hasStoreEnabled });
+    setPendingId(null);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    setCategories((prev) => prev.map((c) => (c.id === category.id ? { ...c, hasStoreEnabled: result.data.hasStoreEnabled } : c)));
+  }
+
   async function handleSaveHomepageFields(category: Category, imageUrl: string | null, startingPriceLabel: string) {
     setPendingId(category.id);
     setError(null);
@@ -213,6 +225,7 @@ export function CatalogBoard({
                     pending={pendingId === parent.id}
                     onToggle={() => handleToggleCategory(parent)}
                     onToggleFeatured={() => handleToggleFeatured(parent)}
+                    onToggleStore={() => handleToggleStore(parent)}
                     onSaveHomepageFields={(imageUrl, priceLabel) => handleSaveHomepageFields(parent, imageUrl, priceLabel)}
                     onAttributesChange={(attributes) => handleAttributesChange(parent.id, attributes)}
                   />
@@ -224,6 +237,7 @@ export function CatalogBoard({
                       pending={pendingId === child.id}
                       onToggle={() => handleToggleCategory(child)}
                       onToggleFeatured={() => handleToggleFeatured(child)}
+                      onToggleStore={() => handleToggleStore(child)}
                       onSaveHomepageFields={(imageUrl, priceLabel) => handleSaveHomepageFields(child, imageUrl, priceLabel)}
                       onAttributesChange={(attributes) => handleAttributesChange(child.id, attributes)}
                     />
@@ -246,6 +260,7 @@ function CategoryRow({
   pending,
   onToggle,
   onToggleFeatured,
+  onToggleStore,
   onSaveHomepageFields,
   onAttributesChange,
 }: {
@@ -254,6 +269,7 @@ function CategoryRow({
   pending: boolean;
   onToggle: () => void;
   onToggleFeatured: () => void;
+  onToggleStore: () => void;
   onSaveHomepageFields: (imageUrl: string | null, startingPriceLabel: string) => void;
   onAttributesChange: (attributes: Category["attributes"]) => void;
 }) {
@@ -272,6 +288,11 @@ function CategoryRow({
           <div className="flex items-center gap-2 text-sm font-bold">
             {category.name}
             {category.isFeaturedOnHomepage && <Badge variant="green">Featured on homepage</Badge>}
+            {category.hasStoreEnabled && (
+              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
+                Store Enabled
+              </span>
+            )}
           </div>
           <div className="text-xs text-text-grey">
             {category.attributes.length} attribute{category.attributes.length === 1 ? "" : "s"}
@@ -305,6 +326,20 @@ function CategoryRow({
           >
             {category.isFeaturedOnHomepage ? "Remove from homepage" : "Feature on homepage"}
           </button>
+          <label className="flex items-center gap-1.5 text-xs text-text-grey cursor-pointer" title="Enable/Disable Vendor Store feature for vendors in this category">
+            Store
+            <span className="relative inline-flex h-[22px] w-10 flex-shrink-0 cursor-pointer items-center">
+              <input
+                type="checkbox"
+                checked={Boolean(category.hasStoreEnabled)}
+                disabled={pending}
+                onChange={onToggleStore}
+                className="peer sr-only"
+              />
+              <span className="absolute inset-0 rounded-full bg-border transition-colors peer-checked:bg-emerald-600" />
+              <span className="absolute left-[3px] h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-[18px]" />
+            </span>
+          </label>
           <label className="flex items-center gap-2 text-xs text-text-grey">
             Active
             <span className="relative inline-flex h-[22px] w-10 flex-shrink-0 cursor-pointer items-center">

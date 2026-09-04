@@ -24,8 +24,10 @@
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | 🟡 In Progress (11b done 2026-09-03; 11a, 11c not started) | — |
 | 12 | ₹49 Instant Wedding Website | [Stage 6](08-stage-wedding-website.md) | ⬜ Not Started (blocked on backend Arch Phase 26) | — |
 | 13 | Vendor GST Invoicing & Billing | [Stage 7](09-stage-vendor-invoices.md) | ✅ Done | 2026-09-04 |
+| 14 | Standalone Vendor-First Digital Portfolio & WhatsApp Share | [Stage 8](10-stage-vendor-portfolio.md) | ✅ Done | 2026-09-04 |
+| 15 | Category-Gated Vendor Mini-Store & Direct Commerce Engine | [Stage 12](12-stage-vendor-store.md) | ✅ Done | 2026-09-04 |
 
-**Overall: 12 / 13 Frontend Arch Phases fully verified complete, Phase 11 in progress.** The combined Playwright pass for Phases 7–10 (deferred since 2026-09-02) ran 2026-09-04 — all 15 tests pass, stable across repeated runs — see the "Combined Playwright verification — Phases 7–10" entry below for what it found and fixed (2 real production bugs, plus test-infrastructure gaps: a duplicated, incomplete admin-test-user helper that predated 2026-09-04's real RBAC enforcement, and several dead test-cleanup variables that never freed the unique slots/rows they created). Frontend Arch Phase 11b (SEO Page Generation) shipped 2026-09-03 once backend Arch Phase 17's page-generation slice unblocked it — see `07-stage-growth-and-hardening.md`'s checklist for the full item-by-item write-up. Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (17/26 Arch Phases, Stages 1–6 done, Arch Phase 17 in progress) is ahead of the frontend on this phase's remaining CMS-content half (blog/FAQs/static pages).
+**Overall: 14 / 15 Frontend Arch Phases complete, Phase 11 in progress.** The combined Playwright pass for Phases 7–10 (deferred since 2026-09-02) ran 2026-09-04 — all 15 tests pass, stable across repeated runs — see the "Combined Playwright verification — Phases 7–10" entry below for what it found and fixed (2 real production bugs, plus test-infrastructure gaps: a duplicated, incomplete admin-test-user helper that predated 2026-09-04's real RBAC enforcement, and several dead test-cleanup variables that never freed the unique slots/rows they created). Frontend Arch Phase 11b (SEO Page Generation) shipped 2026-09-03 once backend Arch Phase 17's page-generation slice unblocked it — see `07-stage-growth-and-hardening.md`'s checklist for the full item-by-item write-up. Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (17/26 Arch Phases, Stages 1–6 done, Arch Phase 17 in progress) is ahead of the frontend on this phase's remaining CMS-content half (blog/FAQs/static pages).
 
 ---
 
@@ -1045,7 +1047,53 @@ Vendors get a full-featured GST billing interface inside the vendor portal:
   - Integrated into `getVendorAnalytics` in `vendor-analytics.service.ts` so `whatsappClicks` and `portfolioViews` are computed and returned in the unified vendor analytics response.
 - **Vendor Dashboard & Analytics Displays**:
   - `/vendor/dashboard`: Added dedicated **WhatsApp Inquiries** stat card with WhatsApp brand green styling, direct chat badge, and total count.
-  - `/vendor/analytics`: Added WhatsApp Inquiries stat card alongside Profile & Portfolio views, Leads received, Response rate, and Conversion rate.
 - **Verification**: `wedhub-backend` passes `npm run typecheck` (0 errors); `wedhub-frontend-app` passes `npx tsc --noEmit` (0 errors) and `npm run build` (54/54 routes compiled with Turbopack).
+
+---
+
+## Frontend Arch Phase 15 — Category-Gated Vendor Mini-Store & Direct Commerce Engine
+
+**Status:** ✅ Done — 2026-09-04  
+**Stage:** [Stage 12 — Category-Gated Vendor Mini-Store & Direct Commerce Engine](12-stage-vendor-store.md)
+
+### What this unlocks
+
+- **Admin Category Controls (`CatalogBoard.tsx`)**:
+  - Direct toggle switch and "Store Enabled" badge for each category in `/admin/categories-locations`.
+  - Enables granular activation for product/rental/favor/invitation categories while keeping heavy services consultation-only.
+- **Vendor Store Management Suite (`/vendor/store`)**:
+  - `VendorShell.tsx` navigation updated with store shopping bag icon and link.
+  - Hub dashboard (`/vendor/store`): Branded preview, 1-click copy link, WhatsApp broadcast share button, and offline PNG QR code generator via `qrcode`.
+  - Catalog manager (`/vendor/store/items`): Multi-image product upload with canonical R2 pipeline (`STORE_ITEM_PHOTO`), GST tax rate selector (`0%, 5%, 12%, 18%, 28%`), compare-at pricing, stock quantities, and availability switches.
+  - Orders manager (`/vendor/store/orders`): Status management pipeline with quick "Chat on WhatsApp" customer deep links and 1-click "Create GST Invoice" action that seamlessly creates a draft GST invoice with all line items and customer location details pre-populated.
+- **Public Branded Storefront (`/store/[slug]`) & Portfolio Integration**:
+  - Dedicated public storefront with vendor cover banner, logo, verified status, store policies dropdown, and search/category filters.
+  - Direct "Online Store" tab integrated into the standalone `/portfolio/[slug]` view for maximum cross-channel visibility.
+  - Slide-over WhatsApp Mini-Cart Drawer (`CartDrawer.tsx`) supporting quantities, price breakdown with GST, customer delivery address, wedding date, customization notes, and instant order placement.
+
+### Routes Implemented
+
+- `/vendor/store` (Vendor Store Hub & settings)
+- `/vendor/store/items` (Vendor Store product catalog manager)
+- `/vendor/store/orders` (Vendor Store customer orders & invoicing handoff)
+- `/store/[slug]` (Public branded storefront with Mini-Cart Drawer)
+
+### Components Added
+
+- `components/vendor-store/StoreNavTabs.tsx`
+- `app/(vendor)/vendor/store/ShareStoreCard.tsx`
+- `app/(vendor)/vendor/store/StoreProfileForm.tsx`
+- `app/(vendor)/vendor/store/items/StoreItemModal.tsx`
+- `app/(vendor)/vendor/store/items/StoreItemsManager.tsx`
+- `app/(vendor)/vendor/store/orders/StoreOrdersTable.tsx`
+- `components/vendor-store/CartDrawer.tsx`
+- `app/(public)/store/[slug]/PublicItemCard.tsx`
+- `app/(public)/store/[slug]/PublicStorefrontView.tsx`
+
+### Verification
+
+- `npx tsc --noEmit`: Passed with 0 errors across all frontend files.
+- `npm run build`: Compiled cleanly with Turbopack across all 57 routes, including all new vendor store and public store routes (`/store/[slug]`, `/vendor/store`, `/vendor/store/items`, `/vendor/store/orders`).
+
 
 

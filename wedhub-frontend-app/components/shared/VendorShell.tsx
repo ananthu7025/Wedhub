@@ -40,6 +40,17 @@ const navLinks = [
     icon: <><path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z" /><circle cx="6.5" cy="6.5" r="1.5" /></>,
   },
   {
+    href: "/vendor/store",
+    label: "Store",
+    icon: (
+      <>
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <path d="M16 10a4 4 0 01-8 0" />
+      </>
+    ),
+  },
+  {
     href: "/vendor/invoices",
     label: "Invoices",
     icon: (

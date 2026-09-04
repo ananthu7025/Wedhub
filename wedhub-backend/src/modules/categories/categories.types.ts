@@ -4,6 +4,7 @@ export interface CreateCategoryInput {
   name: string;
   description: string | undefined;
   parentId: string | undefined;
+  hasStoreEnabled?: boolean | undefined;
 }
 
 export interface UpdateCategoryInput {
@@ -11,6 +12,7 @@ export interface UpdateCategoryInput {
   description: string | undefined;
   sortOrder: number | undefined;
   isActive: boolean | undefined;
+  hasStoreEnabled?: boolean | undefined;
   imageUrl: string | null | undefined;
   isFeaturedOnHomepage: boolean | undefined;
   homepageSortOrder: number | undefined;

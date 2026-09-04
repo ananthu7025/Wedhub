@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import type { VendorDetail, VendorAlbum, VendorReview } from "@/lib/api/vendors.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { formatWhatsAppUrl, formatTelUrl } from "@/lib/utils/whatsapp";
@@ -299,6 +300,16 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
                 </span>
               )}
             </button>
+
+            <Link
+              href={`/store/${vendor.slug}`}
+              className="flex items-center gap-1.5 border-b-2 border-transparent py-4 px-2 text-xs sm:text-sm font-bold text-brand-primary hover:text-brand-primary-hover whitespace-nowrap transition-colors ml-auto sm:ml-0"
+            >
+              <span>🛍️ Online Store</span>
+              <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-[10px] font-bold text-brand-primary">
+                Direct Order
+              </span>
+            </Link>
           </nav>
         </div>
 

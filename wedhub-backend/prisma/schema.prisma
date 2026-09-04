@@ -249,6 +249,7 @@ model Category {
   isFeaturedOnHomepage Boolean @default(false) @map("is_featured_on_homepage")
   homepageSortOrder    Int     @default(0) @map("homepage_sort_order")
   startingPriceLabel   String? @map("starting_price_label")
+  hasStoreEnabled      Boolean @default(false) @map("has_store_enabled")
 
   parent           Category?           @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children         Category[]          @relation("CategoryHierarchy")
@@ -262,6 +263,7 @@ model Category {
   @@index([parentId])
   @@index([isActive])
   @@index([isFeaturedOnHomepage])
+  @@index([hasStoreEnabled])
   @@map("categories")
 }
 
@@ -378,6 +380,7 @@ model Vendor {
   featuredListings FeaturedListing[]
   billingProfile   VendorBillingProfile?
   vendorInvoices   VendorInvoice[]
+  store            VendorStore?
 
   @@index([status])
   @@index([cityId])
@@ -597,6 +600,8 @@ enum MediaType {
   // owns the upload. Added 2026-09-04, closing out Arch Phase 17 (CMS &
   // SEO Backend)'s last remaining item.
   BLOG_COVER_IMAGE
+  // Arch Phase 29 — Product & rental item photos subject to moderation and worker WebP variants
+  STORE_ITEM_PHOTO
 }
 
 enum MediaStatus {
@@ -661,8 +666,9 @@ model Media {
   vendorProfileCovers          VendorProfile[] @relation("VendorProfileCover")
   albumCoverFor                Album[]         @relation("AlbumCover")
   featuredMedia                FeaturedMedia?
-  weddingWebsiteCoverFor       WeddingWebsite? @relation("WeddingWebsiteCover")
-  weddingWebsiteCouplePhotoFor WeddingWebsite? @relation("WeddingWebsiteCouplePhoto")
+  weddingWebsiteCoverFor       WeddingWebsite?         @relation("WeddingWebsiteCover")
+  weddingWebsiteCouplePhotoFor WeddingWebsite?         @relation("WeddingWebsiteCouplePhoto")
+  storeItemMedia               VendorStoreItemMedia[]
 
   @@index([vendorId])
   @@index([userId])
@@ -1857,6 +1863,7 @@ model VendorInvoice {
   items      VendorInvoiceItem[]
   payments   VendorInvoicePayment[]
   activities VendorInvoiceActivity[]
+  storeOrder VendorStoreOrder?
 
   @@unique([vendorId, invoiceNumber])
   @@index([vendorId, status])
@@ -1920,5 +1927,139 @@ model VendorInvoiceActivity {
 
   @@index([invoiceId])
   @@map("vendor_invoice_activities")
+}
+
+// ---------------------------------------------------------------------------
+// Stage 11 / Arch Phase 29 — Vendor Mini-Store & Direct Commerce Engine
+// ---------------------------------------------------------------------------
+
+enum StoreItemType {
+  PHYSICAL_PRODUCT
+  RENTAL_ITEM
+  DIGITAL_DOWNLOAD
+  SERVICE_TOKEN
+}
+
+enum StoreOrderStatus {
+  PENDING_CONFIRMATION
+  CONFIRMED
+  PROCESSING
+  SHIPPED_OR_READY
+  COMPLETED
+  CANCELLED
+}
+
+model VendorStore {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId           String             @unique @map("vendor_id") @db.Uuid
+  storeName          String             @map("store_name")
+  slug               String             @unique @map("slug")
+  tagline            String?            @map("tagline")
+  aboutStore         String?            @map("about_store") @db.Text
+  isEnabled          Boolean            @default(true) @map("is_enabled")
+  currency           String             @default("INR") @map("currency")
+  whatsappOrderPhone String?            @map("whatsapp_order_phone")
+  shippingPolicy     String?            @map("shipping_policy") @db.Text
+  returnPolicy       String?            @map("return_policy") @db.Text
+  minOrderValue      Decimal?           @map("min_order_value") @db.Decimal(10, 2)
+  nextOrderNumber    Int                @default(1) @map("next_order_number")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  vendor             Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  items              VendorStoreItem[]
+  orders             VendorStoreOrder[]
+
+  @@map("vendor_stores")
+}
+
+model VendorStoreItem {
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId          String                 @map("store_id") @db.Uuid
+  title            String                 @map("title")
+  slug             String                 @map("slug")
+  description      String?                @map("description") @db.Text
+  itemType         StoreItemType          @default(PHYSICAL_PRODUCT) @map("item_type")
+  price            Decimal                @map("price") @db.Decimal(10, 2)
+  compareAtPrice   Decimal?               @map("compare_at_price") @db.Decimal(10, 2)
+  gstRate          Int                    @default(18) @map("gst_rate")
+  minOrderQuantity Int                    @default(1) @map("min_order_quantity")
+  stockQuantity    Int?                   @map("stock_quantity")
+  isAvailable      Boolean                @default(true) @map("is_available")
+  tags             String[]               @default([]) @map("tags")
+  sortOrder        Int                    @default(0) @map("sort_order")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  store            VendorStore            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  media            VendorStoreItemMedia[]
+  orderItems       VendorStoreOrderItem[]
+
+  @@unique([storeId, slug])
+  @@index([storeId, isAvailable])
+  @@map("vendor_store_items")
+}
+
+model VendorStoreItemMedia {
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId    String          @map("item_id") @db.Uuid
+  mediaId   String          @map("media_id") @db.Uuid
+  sortOrder Int             @default(0) @map("sort_order")
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  item      VendorStoreItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  media     Media           @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, mediaId])
+  @@index([itemId, sortOrder])
+  @@map("vendor_store_item_media")
+}
+
+model VendorStoreOrder {
+  id              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderNumber     String                 @unique @map("order_number")
+  storeId         String                 @map("store_id") @db.Uuid
+  userId          String?                @map("user_id") @db.Uuid
+  customerName    String                 @map("customer_name")
+  customerPhone   String                 @map("customer_phone")
+  customerEmail   String?                @map("customer_email")
+  shippingAddress String?                @map("shipping_address") @db.Text
+  city            String?                @map("city")
+  customerState   String?                @map("customer_state")
+  pincode         String?                @map("pincode")
+  eventDate       DateTime?              @map("event_date")
+  totalAmount     Decimal                @map("total_amount") @db.Decimal(10, 2)
+  status          StoreOrderStatus       @default(PENDING_CONFIRMATION) @map("status")
+  orderChannel    String                 @default("WHATSAPP") @map("order_channel")
+  paymentStatus   String                 @default("PENDING") @map("payment_status")
+  notes           String?                @map("notes") @db.Text
+  invoiceId       String?                @unique @map("invoice_id") @db.Uuid
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+
+  store           VendorStore            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  invoice         VendorInvoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  items           VendorStoreOrderItem[]
+
+  @@index([storeId, status])
+  @@index([customerPhone])
+  @@map("vendor_store_orders")
+}
+
+model VendorStoreOrderItem {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId            String           @map("order_id") @db.Uuid
+  itemId             String?          @map("item_id") @db.Uuid
+  itemTitle          String           @map("item_title")
+  unitPrice          Decimal          @map("unit_price") @db.Decimal(10, 2)
+  gstRate            Int              @default(18) @map("gst_rate")
+  quantity           Int              @map("quantity")
+  totalPrice         Decimal          @map("total_price") @db.Decimal(10, 2)
+  customizationNotes String?          @map("customization_notes")
+
+  order              VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item               VendorStoreItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@map("vendor_store_order_items")
 }
 

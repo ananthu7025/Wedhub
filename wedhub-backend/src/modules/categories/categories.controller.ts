@@ -29,6 +29,7 @@ export async function createCategory(req: Request, res: Response): Promise<void>
     name: body.name,
     description: body.description,
     parentId: body.parentId,
+    hasStoreEnabled: body.hasStoreEnabled,
   });
   res.status(201).json(successResponse(category));
 }
@@ -40,6 +41,7 @@ export async function updateCategory(req: Request, res: Response): Promise<void>
     description: body.description,
     sortOrder: body.sortOrder,
     isActive: body.isActive,
+    hasStoreEnabled: body.hasStoreEnabled,
     imageUrl: body.imageUrl,
     isFeaturedOnHomepage: body.isFeaturedOnHomepage,
     homepageSortOrder: body.homepageSortOrder,

@@ -38,8 +38,10 @@
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 26 | ₹49 Instant Wedding Website Backend | [Stage 8](12-stage-wedding-website.md) | 🟡 In Progress | started 2026-09-03 |
 | 27 | Vendor GST Invoices & Payment Engine | [Stage 9](13-stage-vendor-invoices.md) | ✅ Done | 2026-09-04 |
+| 28 | Standalone Vendor Digital Portfolio & WhatsApp Connect | [Stage 10](14-stage-vendor-portfolio.md) | ✅ Done | 2026-09-04 |
+| 29 | Category-Gated Vendor Mini-Store & Direct Commerce Engine | [Stage 11](15-stage-vendor-store.md) | ✅ Done | 2026-09-04 |
 
-**Overall: 20 / 27 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), Stage 6 (Telegram & Admin), Stage 7 (CMS & SEO, Analytics), and now Stage 9 (Vendor GST Invoices & Payment Engine) are all fully shipped.**
+**Overall: 22 / 29 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), Stage 6 (Telegram & Admin), Stage 7 (CMS & SEO, Analytics), Stage 9 (Vendor GST Invoices), Stage 10 (Standalone Vendor Portfolio), and Stage 11 (Vendor Mini-Store & Direct Commerce Engine) are all fully shipped.**
 
 **Paused 2026-09-02, resumed 2026-09-04, by user decision:** the backend build-out deliberately paused before Arch Phase 17 to wire up the frontend against everything shipped so far (Arch Phases 0–16 cover the full couple/vendor-facing product surface — auth, vendors, media, search, shortlists, leads, reviews, subscriptions, entitlements, featured listings, notifications, Telegram, and admin). That frontend integration work happened (Frontend Arch Phases 1–10 all shipped and Playwright-verified — see `frontenddocs/11-progress-log.md`), and Arch Phase 17 (CMS & SEO Backend) resumed 2026-09-04. Its first slice is done: Real Wedding Stories and Gallery Inspiration, both resolved as curation layers over already-real vendor Album/Media data rather than independent CMS content (see `09-stage-growth-and-scale.md`'s Arch Phase 17 checklist for the exact resolution). Its second slice, done 2026-09-03: SEO page-generation infrastructure — templated (not hand-authored) Category/City/Category+City landing pages backed by real vendor counts, thin-page avoidance (`MIN_VENDORS_FOR_INDEXABLE_PAGE = 3`), admin override CRUD, sitemap/robots data, and the corresponding frontend routes/`generateMetadata`/admin UI — this also unblocks Frontend Arch Phase 11b, previously hard-blocked on this phase (see `frontenddocs/10-risks-and-open-questions.md` Open Question 1). Its third slice, done 2026-09-04: Popular Searches — a new standalone `PopularSearchCard` model (no existing real entity to curate over, unlike wedding stories/gallery above), editorial/admin-curated per explicit decision (not analytics-driven — Arch Phase 18 doesn't exist yet). Full admin CRUD (`/admin/popular-searches`) + public `GET /popular-searches/featured/homepage`, wired into the homepage replacing the hardcoded `POPULAR_SEARCH_CARDS` array; its image field follows the `Category.imageUrl` precedent (plain url, resolved through a new small `MediaType.POPULAR_SEARCH_IMAGE` admin upload pipeline — migration `20260904085052_add_popular_search_cards`) rather than a `Media`-relation, since there's no owning vendor. Ships with zero rows, verified live: `POST` → appears in the public featured list → `PATCH` → `DELETE` → list empty again, via `wedhub-backend/src/modules/popular-search-cards/`. Its fourth and last content-model slice, done 2026-09-04: Blog — same standalone-editorial shape as Popular Searches (new `BlogPost` model, `MediaType.BLOG_COVER_IMAGE` upload pipeline, migration `20260904090914_add_blog_post`), plus a Markdown `bodyMarkdown` column rendered via the new `react-markdown` dependency (v10.1.0). Public `GET /blog/featured/homepage` + `GET /blog` (paginated) + `GET /blog/:slug`; full admin CRUD at `/admin/blog`, with publishing being a plain `PATCH publishedAt` (no separate publish endpoint). Real `/blog` list page and `/blog/[slug]` detail page with `generateMetadata`/`notFound()`, homepage teaser now hides itself when empty, sitemap includes every published post. Verified live end-to-end the same draft→public-absent→publish→public-present→delete→public-absent round trip as Popular Searches — see this file's own Arch Phase 17 section further down for the full trace.
 
@@ -1750,5 +1752,66 @@ Vendors can generate statutory Indian GST tax invoices for clients (couples) wit
   - `/vendor/dashboard`: Added dedicated **WhatsApp Inquiries** stat card with WhatsApp brand green styling, direct chat badge, and total count.
   - `/vendor/analytics`: Added WhatsApp Inquiries stat card alongside Profile & Portfolio views, Leads received, Response rate, and Conversion rate.
 - **Verification**: `wedhub-backend` passes `npm run typecheck` (0 errors); `wedhub-frontend-app` passes `npx tsc --noEmit` (0 errors) and `npm run build` (54/54 routes compiled with Turbopack).
+
+---
+
+## Arch Phase 29 — Category-Gated Vendor Mini-Store & Direct Commerce Engine
+
+**Status:** ✅ Done — 2026-09-04  
+**Stage:** [Stage 11 — Category-Gated Vendor Mini-Store & Direct Commerce Engine](15-stage-vendor-store.md)
+
+### What this unlocks
+
+- **Category-Gated Vendor Storefronts**:
+  - Admin categories dashboard allows toggling `hasStoreEnabled` on/off per category.
+  - Vendors belonging to store-enabled categories can activate their branded mini-store (`/vendor/store`).
+  - Strict multi-tenant isolation via `getOwnedVendorOrThrow(req.user.id)` and request-time category evaluation.
+- **Canonical Media Product Catalog**:
+  - Full product/offering CRUD supporting Physical Products, Rental Items, Service Tokens, and Digital Downloads.
+  - Image uploads backed by canonical `Media` pipeline (`STORE_ITEM_PHOTO`) with R2 presigned URLs, MIME/size validation, and WebP optimization.
+  - Pricing, compare-at MRP discount, statutory Indian GST rates (0%, 5%, 12%, 18%, 28%), stock quantities, and search tags.
+- **WhatsApp-First Ordering & Collision-Safe Orders**:
+  - Public branded storefronts at `/store/:slug` and embedded in the vendor's standalone portfolio.
+  - Slide-over mini-cart drawer with quantity selectors and instant price breakdown with GST.
+  - Atomic sequential order numbers (`ORD-YYYY-XXXX`) generated safely within database transactions.
+  - Direct WhatsApp order generation with prefilled deep links (`https://wa.me/...`).
+  - Rate limiting on public order submission via `storeOrderRateLimiter` (5 orders / 15 min per IP).
+- **1-Click GST Invoicing Bridge**:
+  - Confirmed store orders convert directly into Stage 9 draft GST Invoices with 1 click.
+  - Carries forward line items, unit prices, quantities, GST rates, and client `placeOfSupply` based on delivery state.
+
+### APIs Completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/vendor-store/me` | Fetch vendor store profile & eligibility | Bearer (VENDOR) |
+| PUT | `/api/v1/vendor-store/me` | Update vendor store profile & policies | Bearer (VENDOR) |
+| GET | `/api/v1/vendor-store/me/items` | List vendor store items | Bearer (VENDOR) |
+| POST | `/api/v1/vendor-store/me/items` | Create new store item | Bearer (VENDOR) |
+| PATCH | `/api/v1/vendor-store/me/items/:id` | Update store item | Bearer (VENDOR) |
+| DELETE | `/api/v1/vendor-store/me/items/:id` | Delete store item | Bearer (VENDOR) |
+| GET | `/api/v1/vendor-store/me/orders` | List store customer orders | Bearer (VENDOR) |
+| PATCH | `/api/v1/vendor-store/me/orders/:id/status` | Update store order status | Bearer (VENDOR) |
+| POST | `/api/v1/vendor-store/me/orders/:id/invoice` | Generate 1-click GST invoice from order | Bearer (VENDOR) |
+| GET | `/api/v1/stores/:slug` | Get public store details & active items | Public |
+| GET | `/api/v1/stores/:slug/items` | List public store items | Public |
+| POST | `/api/v1/stores/:slug/orders` | Create public order & generate WhatsApp link | Public (Rate Limited) |
+
+### Database Tables Created
+
+- `vendor_stores`: Store profile, policies, and atomic `nextOrderNumber` counter.
+- `vendor_store_items`: Store items, offerings, pricing, GST rates, and inventory.
+- `vendor_store_item_media`: Join table linking store items to canonical `Media` records.
+- `vendor_store_orders`: Customer orders, delivery addresses, and invoice link.
+- `vendor_store_order_items`: Order line items with snapshotted pricing and GST.
+- Migration applied: `20260904163939_add_vendor_store`.
+
+### Verification
+
+- `wedhub-backend`: `npm run typecheck` passed with 0 errors.
+- `wedhub-backend`: Vitest test suite (`npm test`) passed 100% across all 13 unit tests (`vendor-store.spec.ts` & `vendor-invoice.spec.ts`).
+- `wedhub-frontend-app`: `npx tsc --noEmit` passed with 0 errors.
+- `wedhub-frontend-app`: `npm run build` compiled all 57 routes successfully via Turbopack.
+
 
 

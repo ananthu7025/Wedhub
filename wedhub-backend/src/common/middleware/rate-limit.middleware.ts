@@ -64,3 +64,10 @@ export const analyticsEventRateLimiter = createRateLimiter({
   max: process.env.ANALYTICS_EVENT_RATE_LIMIT_MAX ? Number(process.env.ANALYTICS_EVENT_RATE_LIMIT_MAX) : 120,
   message: "Too many analytics events. Please slow down.",
 });
+
+// Stage 11 / Arch Phase 29 — public, unauthenticated store order submission
+export const storeOrderRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.STORE_ORDER_RATE_LIMIT_MAX ? Number(process.env.STORE_ORDER_RATE_LIMIT_MAX) : 10,
+  message: "Too many store order attempts. Please try again later.",
+});

@@ -20,7 +20,7 @@ export type VendorStatus =
 export type VerificationLevel = "UNVERIFIED" | "IDENTITY_VERIFIED" | "BUSINESS_VERIFIED" | "PLATFORM_VERIFIED";
 export type MediaStatus = "PENDING" | "UPLOADING" | "PROCESSING" | "READY" | "INACTIVE" | "FAILED" | "DELETED";
 export type MediaModerationStatus = "PENDING" | "APPROVED" | "REJECTED" | "HIDDEN";
-export type MediaType = "LOGO" | "COVER" | "PORTFOLIO" | "VIDEO";
+export type MediaType = "LOGO" | "COVER" | "PORTFOLIO" | "VIDEO" | "STORE_ITEM_PHOTO";
 
 export interface MediaItem {
   id: string;
