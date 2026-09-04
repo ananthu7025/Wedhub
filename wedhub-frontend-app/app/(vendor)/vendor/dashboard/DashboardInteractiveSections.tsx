@@ -120,14 +120,14 @@ export function DashboardInteractiveSections({
         <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
           {/* Card Header with Tabs & View All */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setLeadsTab("leads")}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all",
+                  "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all whitespace-nowrap shrink-0",
                   leadsTab === "leads"
-                    ? "bg-byzantine-blue text-white shadow-sm"
+                    ? "bg-brand-primary text-white shadow-sm"
                     : "text-text-grey hover:bg-surface-input hover:text-text-dark",
                 )}
               >
@@ -140,9 +140,9 @@ export function DashboardInteractiveSections({
                 type="button"
                 onClick={() => setLeadsTab("inquiries")}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all",
+                  "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all whitespace-nowrap shrink-0",
                   leadsTab === "inquiries"
-                    ? "bg-byzantine-blue text-white shadow-sm"
+                    ? "bg-brand-primary text-white shadow-sm"
                     : "text-text-grey hover:bg-surface-input hover:text-text-dark",
                 )}
               >
@@ -155,7 +155,7 @@ export function DashboardInteractiveSections({
 
             <Link
               href="/vendor/leads"
-              className="group flex items-center gap-1 text-xs font-bold text-text-grey transition-colors hover:text-byzantine-blue"
+              className="group flex items-center gap-1 text-xs font-bold text-text-grey transition-colors hover:text-brand-primary whitespace-nowrap shrink-0"
             >
               <span>View all</span>
               <span className="transition-transform group-hover:translate-x-0.5">→</span>
@@ -238,7 +238,7 @@ export function DashboardInteractiveSections({
             </div>
             <Link
               href="/vendor/leads"
-              className="group flex items-center gap-1 text-xs font-bold text-text-grey transition-colors hover:text-byzantine-blue"
+              className="group flex items-center gap-1 text-xs font-bold text-text-grey transition-colors hover:text-brand-primary"
             >
               <span>View all</span>
               <span className="transition-transform group-hover:translate-x-0.5">→</span>
@@ -280,7 +280,7 @@ export function DashboardInteractiveSections({
                 <Link
                   href={`/vendors/${vendor.slug}`}
                   target="_blank"
-                  className="rounded-md bg-byzantine-blue px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:opacity-90"
+                  className="rounded-md bg-brand-primary px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-brand-primary-hover"
                 >
                   View Public Profile ↗
                 </Link>
@@ -354,15 +354,15 @@ export function DashboardInteractiveSections({
         {/* Recent Activity Card */}
         <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
           {/* Tabs */}
-          <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
-            <div className="flex items-center gap-2">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => setActivityTab("activity")}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all",
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap shrink-0",
                   activityTab === "activity"
-                    ? "bg-byzantine-blue text-white shadow-sm"
+                    ? "bg-brand-primary text-white shadow-sm"
                     : "text-text-grey hover:bg-surface-input hover:text-text-dark",
                 )}
               >
@@ -376,9 +376,9 @@ export function DashboardInteractiveSections({
                 type="button"
                 onClick={() => setActivityTab("feedbacks")}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all",
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all whitespace-nowrap shrink-0",
                   activityTab === "feedbacks"
-                    ? "bg-byzantine-blue text-white shadow-sm"
+                    ? "bg-brand-primary text-white shadow-sm"
                     : "text-text-grey hover:bg-surface-input hover:text-text-dark",
                 )}
               >
@@ -391,7 +391,7 @@ export function DashboardInteractiveSections({
 
             <Link
               href={activityTab === "feedbacks" ? "/vendor/reviews" : "/vendor/leads"}
-              className="group flex items-center gap-1 text-xs font-bold text-text-grey transition-colors hover:text-byzantine-blue"
+              className="group flex items-center gap-1 text-xs font-bold text-text-grey transition-colors hover:text-brand-primary whitespace-nowrap shrink-0"
             >
               <span>View all</span>
               <span className="transition-transform group-hover:translate-x-0.5">→</span>
@@ -405,7 +405,7 @@ export function DashboardInteractiveSections({
                 notifications.slice(0, 6).map((item) => (
                   <div key={item.id} className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-byzantine-blue-10 text-byzantine-blue-70">
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary-soft text-brand-primary">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>

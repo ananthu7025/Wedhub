@@ -306,14 +306,14 @@ export default async function VendorDashboardPage() {
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-xl font-extrabold text-byzantine-blue">{vendor.profileCompleteness}%</span>
+                <span className="text-xl font-extrabold text-brand-primary">{vendor.profileCompleteness}%</span>
                 <span className="text-xs font-semibold text-text-muted"> complete</span>
               </div>
             </div>
 
             <div className="mt-4 mb-6 h-2 w-full overflow-hidden rounded-full bg-surface-input">
               <div
-                className="h-full rounded-full bg-byzantine-blue transition-all duration-500"
+                className="h-full rounded-full bg-brand-primary transition-all duration-500"
                 style={{ width: `${vendor.profileCompleteness}%` }}
               />
             </div>
@@ -345,7 +345,7 @@ export default async function VendorDashboardPage() {
             <div className="mt-5 flex justify-end">
               <Link
                 href="/vendor/profile"
-                className="rounded-md bg-byzantine-blue px-6 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:opacity-90"
+                className="rounded-md bg-brand-primary px-6 py-2.5 text-xs font-bold text-white shadow-[0_4px_12px_rgba(224,11,65,0.18)] transition-all hover:bg-brand-primary-hover"
               >
                 Complete your profile →
               </Link>
