@@ -23,8 +23,9 @@
 | 10 | Admin Monetization, Governance & Audit | [Stage 4](06-stage-admin-platform.md) | ✅ Done | 2026-09-04 |
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | 🟡 In Progress (11b done 2026-09-03; 11a, 11c not started) | — |
 | 12 | ₹49 Instant Wedding Website | [Stage 6](08-stage-wedding-website.md) | ⬜ Not Started (blocked on backend Arch Phase 26) | — |
+| 13 | Vendor GST Invoicing & Billing | [Stage 7](09-stage-vendor-invoices.md) | ✅ Done | 2026-09-04 |
 
-**Overall: 11 / 12 original Frontend Arch Phases fully verified complete, Phase 11 in progress. Stage 4 (Admin Platform) is fully done. Frontend Arch Phase 12 (Stage 6, ₹49 Instant Wedding Website) is new, standalone scope outside the original 12 — planning docs only as of 2026-09-03, hard-blocked on backend Arch Phase 26.** The combined Playwright pass for Phases 7–10 (deferred since 2026-09-02) ran 2026-09-04 — all 15 tests pass, stable across repeated runs — see the "Combined Playwright verification — Phases 7–10" entry below for what it found and fixed (2 real production bugs, plus test-infrastructure gaps: a duplicated, incomplete admin-test-user helper that predated 2026-09-04's real RBAC enforcement, and several dead test-cleanup variables that never freed the unique slots/rows they created). Frontend Arch Phase 11b (SEO Page Generation) shipped 2026-09-03 once backend Arch Phase 17's page-generation slice unblocked it — see `07-stage-growth-and-hardening.md`'s checklist for the full item-by-item write-up. Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (17/26 Arch Phases, Stages 1–6 done, Arch Phase 17 in progress) is ahead of the frontend on this phase's remaining CMS-content half (blog/FAQs/static pages).
+**Overall: 12 / 13 Frontend Arch Phases fully verified complete, Phase 11 in progress.** The combined Playwright pass for Phases 7–10 (deferred since 2026-09-02) ran 2026-09-04 — all 15 tests pass, stable across repeated runs — see the "Combined Playwright verification — Phases 7–10" entry below for what it found and fixed (2 real production bugs, plus test-infrastructure gaps: a duplicated, incomplete admin-test-user helper that predated 2026-09-04's real RBAC enforcement, and several dead test-cleanup variables that never freed the unique slots/rows they created). Frontend Arch Phase 11b (SEO Page Generation) shipped 2026-09-03 once backend Arch Phase 17's page-generation slice unblocked it — see `07-stage-growth-and-hardening.md`'s checklist for the full item-by-item write-up. Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (17/26 Arch Phases, Stages 1–6 done, Arch Phase 17 in progress) is ahead of the frontend on this phase's remaining CMS-content half (blog/FAQs/static pages).
 
 ---
 
@@ -925,3 +926,41 @@ All 15 tests across `phase-07-vendor-monetization.spec.ts`, `phase-08-admin-core
 - Phase 9's location-tree test clicked the "India" label text expecting the tree to expand; the real expand handler (`LocationTree.tsx`) is wired only to a separate arrow `<button>` next to the label, not the label itself — clicking the text does nothing at all. Fixed by clicking the arrow button.
 - Phase 9's admin-leads test picked the very first "View" link on the `/admin/leads?status=WON` page with no scoping; 11 real, unrelated, pre-existing WON leads already exist in the dev seed data (from earlier phases' own fixture creation), so the unscoped click opened one of those instead of this test's own lead nearly every time. Fixed by scoping to the real `<tr>` containing this test's own contact name, the same pattern Phase 8's user-management test already used correctly.
 - Phase 10's plan-creation test never selected a tier/billing-interval combination before submitting, so it always inherited the create-plan form's default (`PRO`/`MONTHLY`) — already occupied by a real seeded plan, and `subscription_plans` has a genuine database-level uniqueness constraint on `(tier, billingInterval)`, so every attempt 409'd identically regardless of how many times it was retried. `FREE`/`YEARLY` is the one tier×interval combination nothing seeds; fixed by selecting it explicitly.
+
+## Frontend Arch Phase 13 — Vendor GST Invoice Management
+
+**Status:** ✅ Done — 2026-09-04
+**Stage:** [Stage 7 — Vendor GST Invoicing & Billing](09-stage-vendor-invoices.md)
+
+### What this unlocks
+
+Vendors get a full-featured GST billing interface inside the vendor portal:
+- Invoices dashboard (`/vendor/invoices`) with summary metrics (Invoiced, Received, Outstanding, Overdue), status tabs, date-range filters, and client search.
+- Interactive invoice creator (`/vendor/invoices/new`) with live GST calculations (Intra-State CGST+SGST vs Inter-State IGST), SAC code presets, and optional lead prefill (`?leadId=`).
+- Comprehensive invoice detail view (`/vendor/invoices/[id]`) with payment history tracking (`VendorInvoicePayment`), status transitions, and audit activity trail.
+- Dedicated A4 printable tax invoice (`/vendor/invoices/[id]/print`) with dynamic logo rendering (clean omission if logo not uploaded).
+- Billing settings (`/vendor/invoices/settings`) for vendor GSTIN, PAN, tax address, and bank/UPI payment instructions.
+- Integration with `VendorShell.tsx` navigation and `LeadsBoard.tsx` "Create Invoice" action.
+
+### Routes Implemented
+
+- `app/(vendor)/vendor/invoices/page.tsx`: Server Component displaying invoice list & KPI metrics.
+- `app/(vendor)/vendor/invoices/new/page.tsx`: Server Component with prefill support.
+- `app/(vendor)/vendor/invoices/[id]/page.tsx`: Server Component for invoice inspection & payment logging.
+- `app/(vendor)/vendor/invoices/[id]/edit/page.tsx`: Server Component for modifying draft invoices.
+- `app/(vendor)/vendor/invoices/[id]/print/page.tsx`: Dedicated A4 print layout.
+- `app/(vendor)/vendor/invoices/settings/page.tsx`: Billing settings and tax profile manager.
+
+### Components Added
+
+- `InvoicesBoard.tsx`: Dashboard with KPI stat cards, status tabs, search filter, and action menus.
+- `InvoiceEditor.tsx`: Real-time GST calculation engine, SAC preset dropdowns, dynamic line items.
+- `InvoiceDetailView.tsx`: Invoice viewer, payment history table with reversal, payment modal, cancel modal.
+- `PrintableInvoice.tsx`: High-resolution `@media print` A4 statutory tax invoice template.
+- `BillingSettingsForm.tsx`: Settings form for tax IDs, legal address, state codes, and bank/UPI details.
+
+### Verification
+
+- `npm run build` in `wedhub-frontend-app` passed with 0 errors across all 54 routes.
+- Fully typechecked and compiled with Turbopack.
+

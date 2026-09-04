@@ -37,8 +37,9 @@
 | 24 | Performance Optimization | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 26 | ₹49 Instant Wedding Website Backend | [Stage 8](12-stage-wedding-website.md) | 🟡 In Progress | started 2026-09-03 |
+| 27 | Vendor GST Invoices & Payment Engine | [Stage 9](13-stage-vendor-invoices.md) | ✅ Done | 2026-09-04 |
 
-**Overall: 19 / 26 original Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), Stage 6 (Telegram & Admin), and now Stage 7's Arch Phase 17 (CMS & SEO Backend) and Arch Phase 18 (Analytics & Marketplace Metrics) are all fully done. Arch Phase 18 shipped across three stages, all 2026-09-04: Stage A (event taxonomy + full-funnel instrumentation across all 18 product.md §46 event types), Stage B (vendor analytics — impressions/enquiries computation and a single unified `GET /vendors/me/analytics` response), and Stage C (admin/platform analytics — vendor acquisition, ARR, search demand, and churn added to the pre-existing `GET /admin/dashboard`, closing product.md §46's "Platform analytics" list). Featured-listing performance (part of this phase's "subscription conversion, revenue tracking, featured-listing performance" checklist bullet) is explicitly descoped, not silently dropped — see the Arch Phase 18 note below. Arch Phase 26 (Stage 8, ₹49 Instant Wedding Website) is a new, standalone Arch Phase outside the original 26 — the full web API surface (draft CRUD, templates, media upload, one-time preview, Razorpay order creation, webhook-driven publish, RSVP, admin visibility) shipped and was verified live end-to-end 2026-09-03; only the Telegram conversation-flow wiring remains (schema support exists, the actual bot flow does not yet).**
+**Overall: 20 / 27 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), Stage 6 (Telegram & Admin), Stage 7 (CMS & SEO, Analytics), and now Stage 9 (Vendor GST Invoices & Payment Engine) are all fully shipped.**
 
 **Paused 2026-09-02, resumed 2026-09-04, by user decision:** the backend build-out deliberately paused before Arch Phase 17 to wire up the frontend against everything shipped so far (Arch Phases 0–16 cover the full couple/vendor-facing product surface — auth, vendors, media, search, shortlists, leads, reviews, subscriptions, entitlements, featured listings, notifications, Telegram, and admin). That frontend integration work happened (Frontend Arch Phases 1–10 all shipped and Playwright-verified — see `frontenddocs/11-progress-log.md`), and Arch Phase 17 (CMS & SEO Backend) resumed 2026-09-04. Its first slice is done: Real Wedding Stories and Gallery Inspiration, both resolved as curation layers over already-real vendor Album/Media data rather than independent CMS content (see `09-stage-growth-and-scale.md`'s Arch Phase 17 checklist for the exact resolution). Its second slice, done 2026-09-03: SEO page-generation infrastructure — templated (not hand-authored) Category/City/Category+City landing pages backed by real vendor counts, thin-page avoidance (`MIN_VENDORS_FOR_INDEXABLE_PAGE = 3`), admin override CRUD, sitemap/robots data, and the corresponding frontend routes/`generateMetadata`/admin UI — this also unblocks Frontend Arch Phase 11b, previously hard-blocked on this phase (see `frontenddocs/10-risks-and-open-questions.md` Open Question 1). Its third slice, done 2026-09-04: Popular Searches — a new standalone `PopularSearchCard` model (no existing real entity to curate over, unlike wedding stories/gallery above), editorial/admin-curated per explicit decision (not analytics-driven — Arch Phase 18 doesn't exist yet). Full admin CRUD (`/admin/popular-searches`) + public `GET /popular-searches/featured/homepage`, wired into the homepage replacing the hardcoded `POPULAR_SEARCH_CARDS` array; its image field follows the `Category.imageUrl` precedent (plain url, resolved through a new small `MediaType.POPULAR_SEARCH_IMAGE` admin upload pipeline — migration `20260904085052_add_popular_search_cards`) rather than a `Media`-relation, since there's no owning vendor. Ships with zero rows, verified live: `POST` → appears in the public featured list → `PATCH` → `DELETE` → list empty again, via `wedhub-backend/src/modules/popular-search-cards/`. Its fourth and last content-model slice, done 2026-09-04: Blog — same standalone-editorial shape as Popular Searches (new `BlogPost` model, `MediaType.BLOG_COVER_IMAGE` upload pipeline, migration `20260904090914_add_blog_post`), plus a Markdown `bodyMarkdown` column rendered via the new `react-markdown` dependency (v10.1.0). Public `GET /blog/featured/homepage` + `GET /blog` (paginated) + `GET /blog/:slug`; full admin CRUD at `/admin/blog`, with publishing being a plain `PATCH publishedAt` (no separate publish endpoint). Real `/blog` list page and `/blog/[slug]` detail page with `generateMetadata`/`notFound()`, homepage teaser now hides itself when empty, sitemap includes every published post. Verified live end-to-end the same draft→public-absent→publish→public-present→delete→public-absent round trip as Popular Searches — see this file's own Arch Phase 17 section further down for the full trace.
 
@@ -1645,3 +1646,41 @@ One unified response — same single endpoint, no new route
 - **The finer-grained multi-step funnel-rate breakdown (search→profile, profile→enquiry, enquiry→contact, lead response/conversion) was also left unchecked** — this is a distinct ambition from product.md §46's actual named metric lists (Vendor analytics' 7 items, Platform analytics' 9 items, both now fully covered), not a silently-dropped requirement; product.md itself never names these specific step-rates, so building them wasn't treated as blocking this phase's closure.
 - **No new admin analytics endpoint was created** — Stage C's 4 additions all landed in the existing single `GET /admin/dashboard` response, continuing Stage B's "unify into one response" precedent rather than fragmenting the admin analytics surface across multiple endpoints.
 - Verified live end-to-end against the real dev DB across all three stages (see each stage's own paragraph earlier in this file for full detail): Stage A confirmed real events land for search/enquiry/checkout/cancellation flows; Stage B confirmed exact hand-calculated numbers for a seeded disposable vendor's impressions/profile-views/enquiries/response-rate/conversion-rate/response-time; Stage C confirmed `churnRate: 1` from a constructed disposable subscription scenario (1 active-at-window-start, 1 cancelled-in-window), `arr` exactly `mrr * 12`, and `searchDemand.count`/`topKeywords` byte-for-byte matching a manual `SearchLog` query against real pre-existing search data (143 searches, top keyword `photography` at 39). `npx tsc --noEmit` clean in both `wedhub-backend/` and `wedhub-frontend-app/` after every stage; `next build` succeeds with every new field wired into `/admin/dashboard` and `/vendor/dashboard`. No migrations anywhere in this phase. All disposable test accounts/vendors/subscriptions created for verification were deleted afterward across all three stages.
+
+## Arch Phase 27 — Vendor GST Invoicing & Billing Engine
+
+**Status:** ✅ Done — 2026-09-04
+**Stage:** [Stage 9 — Vendor GST Invoicing & Billing](13-stage-vendor-invoices.md)
+
+### What this unlocks
+
+Vendors can generate statutory Indian GST tax invoices for clients (couples) with dynamic logo rendering, deterministic GST calculations (intra-state CGST+SGST vs inter-state IGST), strict invoice immutability (`DRAFT -> ISSUED -> PAID` or `CANCELLED`), dedicated payment history tracking (`VendorInvoicePayment`), transaction-safe atomic sequential invoice numbering (`INV-YYYY-XXXX`), and comprehensive audit trails.
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/vendor-invoices/billing-profile` | Get vendor billing profile & default invoice settings | VENDOR |
+| PUT | `/api/v1/vendor-invoices/billing-profile` | Upsert vendor billing profile & default invoice settings | VENDOR |
+| GET | `/api/v1/vendor-invoices` | List vendor invoices with filters (status, date range, search) | VENDOR |
+| GET | `/api/v1/vendor-invoices/metrics` | Invoiced, received, balance, and overdue metrics | VENDOR |
+| POST | `/api/v1/vendor-invoices` | Create new draft invoice | VENDOR |
+| GET | `/api/v1/vendor-invoices/:id` | Get single invoice details with line items, payments, activities | VENDOR |
+| PATCH | `/api/v1/vendor-invoices/:id` | Update draft invoice (rejects if issued or paid) | VENDOR |
+| DELETE | `/api/v1/vendor-invoices/:id` | Delete draft invoice (rejects if issued or paid) | VENDOR |
+| POST | `/api/v1/vendor-invoices/:id/issue` | Transition invoice from DRAFT to ISSUED (freezes all fields) | VENDOR |
+| POST | `/api/v1/vendor-invoices/:id/cancel` | Cancel an invoice with audit reason | VENDOR |
+| POST | `/api/v1/vendor-invoices/:id/duplicate` | Duplicate invoice into fresh draft with new sequential number | VENDOR |
+| POST | `/api/v1/vendor-invoices/:id/payments` | Record payment against invoice with overpayment protection | VENDOR |
+| DELETE | `/api/v1/vendor-invoices/:id/payments/:paymentId` | Revert payment and recompute balance | VENDOR |
+| GET | `/api/v1/vendor-invoices/prefill/lead/:leadId` | Prefill draft invoice from lead details | VENDOR |
+
+### Tables created
+
+`vendor_billing_profiles`, `vendor_invoices`, `vendor_invoice_items`, `vendor_invoice_payments`, `vendor_invoice_activities`. Migration `20260904133428_add_vendor_invoices` applied cleanly to dev PostgreSQL.
+
+### Verification
+
+- 8/8 unit tests passing in `tests/unit/vendor-invoice.spec.ts` covering tax engine, intra vs. inter-state supply, discounts, round-off, amount in words, and payment recording.
+- Backend TypeScript check (`npm run typecheck`) passing with 0 errors.
+

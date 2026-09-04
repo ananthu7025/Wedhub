@@ -60,6 +60,7 @@ Never write a bare "Phase 5" anywhere in this docs set — it's ambiguous. The s
 | 6 — Telegram & Admin | [`08-stage-telegram-and-admin.md`](08-stage-telegram-and-admin.md) | 14, 15, 16 | 6 (+ cross-cutting) | Fully MVP |
 | 7 — Growth & Scale | [`09-stage-growth-and-scale.md`](09-stage-growth-and-scale.md) | 17–25 | 7, 8 (+ 9 placeholder) | Mostly post-MVP (17 partially MVP via SEO) |
 | 8 — ₹49 Instant Wedding Website | [`12-stage-wedding-website.md`](12-stage-wedding-website.md) | 26 | *(none — new, standalone)* | Post-MVP, parallel scope — not sourced from `product.md`/`wedhub_backend_architecture.md`, see the stage file's own "Origin and Numbering" section |
+| 9 — Vendor GST Invoicing & Billing | [`13-stage-vendor-invoices.md`](13-stage-vendor-invoices.md) | 27 | 5 — Monetization / Operations | Post-MVP, vendor self-service billing engine |
 
 ## Full file list
 
@@ -78,6 +79,7 @@ Never write a bare "Phase 5" anywhere in this docs set — it's ambiguous. The s
 | `10-risks-and-open-questions.md` | Canonical log of every cross-doc conflict or ambiguity found |
 | `11-progress-log.md` | What has actually shipped — status table + per-phase APIs/tables/flow diagram, filled in as each Arch Phase completes |
 | `12-stage-wedding-website.md` | ₹49 Instant Wedding Website — new, standalone monetized feature outside the original 26 Arch Phases (Arch Phase 26) |
+| `13-stage-vendor-invoices.md` | Vendor GST Invoicing & Billing Engine — statutory GST billing, payment history, and logo integration (Arch Phase 27) |
 
 ## Recommended build order
 

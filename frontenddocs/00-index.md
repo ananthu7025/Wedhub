@@ -70,6 +70,7 @@ Every backend module Frontend Arch Phase 0–10 needs already exists and is live
 | 4 — Admin Platform | [`06-stage-admin-platform.md`](06-stage-admin-platform.md) | 8, 9, 10 | `admin/*` (13 screens) |
 | 5 — Growth & Hardening | [`07-stage-growth-and-hardening.md`](07-stage-growth-and-hardening.md) | 11 | (new: SEO pages, Telegram deep links) |
 | 6 — ₹49 Instant Wedding Website | [`08-stage-wedding-website.md`](08-stage-wedding-website.md) | 12 | *(none — no mockup exists for this feature)* |
+| 7 — Vendor GST Invoicing & Billing | [`09-stage-vendor-invoices.md`](09-stage-vendor-invoices.md) | 13 | `vendor/invoices/*` (new vendor billing engine) |
 
 ## Full file list
 
@@ -84,6 +85,7 @@ Every backend module Frontend Arch Phase 0–10 needs already exists and is live
 | `06-stage-admin-platform.md` | Admin dashboard, vendor/user management, catalog, moderation, monetization ops, RBAC visibility, audit log |
 | `07-stage-growth-and-hardening.md` | SEO pages (blocked on backend Arch Phase 17), Telegram surfacing, performance/accessibility hardening |
 | `08-stage-wedding-website.md` | ₹49 Instant Wedding Website — new, standalone feature outside the original 12 Frontend Arch Phases (Frontend Arch Phase 12), blocked on backend Arch Phase 26 |
+| `09-stage-vendor-invoices.md` | Vendor GST Invoicing & Billing — dashboard, live GST creator, A4 print, settings (Frontend Arch Phase 13) |
 | `10-risks-and-open-questions.md` | Canonical log of frontend-specific ambiguities and cross-doc/cross-mockup conflicts |
 | `11-progress-log.md` | What has actually shipped — status table + per-phase routes/components/flow, filled in as each Frontend Arch Phase completes |
 
