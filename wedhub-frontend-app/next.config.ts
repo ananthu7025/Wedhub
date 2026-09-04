@@ -36,9 +36,13 @@ import type { NextConfig } from "next";
 // docs/11-progress-log.md for what was and wasn't verified live in a
 // real browser (no headless-browser console-error check was available in
 // this environment).
+const isDev = process.env.NODE_ENV !== "production";
+
 const cspDirectives = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
+  isDev
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com"
+    : "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data: https://images.unsplash.com https://pub-7116e74b9a3d44a1ab03594911f56ad8.r2.dev",
   "font-src 'self' data:",

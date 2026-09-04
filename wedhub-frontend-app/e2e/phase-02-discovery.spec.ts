@@ -41,18 +41,31 @@ test.describe("Home page", () => {
   });
 });
 
+test.describe("Vendors directory page", () => {
+  test("renders categories and approved vendors", async ({ page }) => {
+    await page.goto("/vendors");
+    await expect(page.getByRole("heading", { name: "Wedding Categories" })).toBeVisible();
+    await expect(page.getByText("Frame & Co. Photography")).toBeVisible();
+  });
+
+  test("navigating to /search without filters redirects to /vendors", async ({ page }) => {
+    await page.goto("/search");
+    await expect(page).toHaveURL(/\/vendors/);
+  });
+});
+
 test.describe("Search page", () => {
   test("shows the real approved vendor and its price", async ({ page }) => {
-    await page.goto("/search");
+    await page.goto("/search?keyword=photography");
     await expect(page.getByText("Frame & Co. Photography")).toBeVisible();
     await expect(page.getByText(/₹75,000/)).toBeVisible();
   });
 
   test("keyword search narrows results, and a nonsense keyword shows the empty state", async ({ page }) => {
-    await page.goto("/search");
+    await page.goto("/search?keyword=photography");
     const searchBox = page.locator('input[name="keyword"]').last();
     await searchBox.fill("zzzznonexistentvendorzzz");
-    await page.getByRole("button", { name: "Search" }).click();
+    await searchBox.press("Enter");
 
     await expect(page.getByText("No vendors found")).toBeVisible();
   });

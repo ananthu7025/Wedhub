@@ -58,7 +58,7 @@ export async function PublicTopbar({ variant = "brand" }: PublicTopbarProps) {
               Venues
             </Link>
             <Link
-              href="/search"
+              href="/vendors"
               className="rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 transition-all hover:bg-white/15 hover:text-white"
             >
               Vendors
@@ -154,7 +154,7 @@ export async function PublicTopbar({ variant = "brand" }: PublicTopbarProps) {
       <div className="flex overflow-x-auto border-t border-white/15 bg-[#c2185b] px-3 py-1.5 text-xs font-medium text-white/90 whitespace-nowrap lg:hidden">
         <Link href={venuesLink} className="px-2.5 py-1 hover:text-white">Venues</Link>
         <span className="opacity-30">•</span>
-        <Link href="/search" className="px-2.5 py-1 hover:text-white">Vendors</Link>
+        <Link href="/vendors" className="px-2.5 py-1 hover:text-white">Vendors</Link>
         <span className="opacity-30">•</span>
         <a href="#gallery-inspiration" className="px-2.5 py-1 hover:text-white">Photos</a>
         <span className="opacity-30">•</span>

@@ -37,7 +37,7 @@ export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCa
           </p>
         </div>
         <Link
-          href="/search"
+          href="/vendors"
           className="text-xs font-bold text-brand-primary hover:underline"
         >
           View all categories →
@@ -63,7 +63,7 @@ export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCa
           type="button"
           onClick={() => scroll("right")}
           aria-label="Scroll right"
-          className="absolute -right-2 top-1/2 z-30 hidden -translate-y-1/2 sm:flex h-9 w-9 items-center justify-center rounded-full bg-[#1e55e2] text-white shadow-md transition-all hover:bg-[#1542b8] hover:scale-105 active:scale-95"
+          className="absolute -right-2 top-1/2 z-30 hidden -translate-y-1/2 sm:flex h-9 w-9 items-center justify-center rounded-full bg-crimson text-white shadow-md transition-all hover:bg-crimson-60 hover:scale-105 active:scale-95"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <polyline points="9 18 15 12 9 6" />
@@ -108,7 +108,7 @@ export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCa
               {/* Bottom Dark Gradient — Appears on HOVER */}
               <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/90 via-black/60 to-transparent z-5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-              {/* Bottom Details (Price + Yellow Arrow) — Revealed on HOVER */}
+              {/* Bottom Details (Price + Action Arrow) — Revealed on HOVER */}
               <div className="relative z-10 text-center pb-1 flex flex-col items-center opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                 {category.startingPriceLabel && (
                   <>
@@ -121,8 +121,8 @@ export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCa
                   </>
                 )}
 
-                {/* Yellow Action Circle */}
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fde047] text-jet-black font-extrabold shadow-md transition-transform duration-200 group-hover:scale-105 active:scale-95">
+                {/* Action Circle */}
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-crimson font-extrabold shadow-md transition-transform duration-200 group-hover:scale-105 active:scale-95">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                     <line x1="7" y1="17" x2="17" y2="7" />
                     <polyline points="7 7 17 7 17 17" />
@@ -137,8 +137,8 @@ export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCa
       {/* Bottom Center "Explore Now ↗" Button */}
       <div className="mt-6 flex justify-center">
         <Link
-          href="/search"
-          className="inline-flex items-center gap-1.5 rounded-full bg-[#1e55e2] px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md transition-all duration-200 hover:bg-[#1542b8] hover:shadow-lg hover:scale-105 active:scale-95 no-underline"
+          href="/vendors"
+          className="inline-flex items-center gap-1.5 rounded-full bg-crimson px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md transition-all duration-200 hover:bg-crimson-60 hover:shadow-lg hover:scale-105 active:scale-95 no-underline"
         >
           <span>Explore Now</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

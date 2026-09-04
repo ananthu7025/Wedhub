@@ -16,6 +16,14 @@ export const metadata: Metadata = {
     template: "%s | itsmyKalyanam",
   },
   description: "Discover and connect with trusted wedding vendors near you.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
