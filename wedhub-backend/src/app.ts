@@ -1,7 +1,10 @@
 import express, { type Express } from "express";
 import cookieParser from "cookie-parser";
+import cors from "cors";
+import helmet from "helmet";
 import pinoHttp from "pino-http";
 import { logger } from "./config/logger";
+import { env } from "./config/env";
 import { checkDatabaseConnection } from "./config/database";
 import { requestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { notFoundMiddleware } from "./common/middleware/not-found.middleware";
@@ -10,10 +13,33 @@ import { successResponse } from "./common/utils/api-response.util";
 import { apiV1Router } from "./routes";
 import "./modules/webhooks/webhook.types";
 
+// Arch Phase 19 Stage A — the only two real, first-party browser origins
+// this API is ever meant to be called from cross-origin: the public
+// couple/vendor Next.js app (FRONTEND_URL) and the separate admin Next.js
+// app (ADMIN_URL). Deliberately NOT a wildcard/`origin: true` — CORS only
+// gates browser-initiated requests, so server-to-server callers (Razorpay
+// webhooks, Telegram webhooks, the frontend's own Route Handlers proxying
+// requests) are entirely unaffected by this and need no exemption.
+const allowedOrigins = [env.FRONTEND_URL, env.ADMIN_URL];
+
 export function createApp(): Express {
   const app = express();
 
   app.disable("x-powered-by");
+  // Arch Phase 19 Stage A — sensible defaults only. This server is
+  // API-only (every route is under /api/v1, plus a bare JSON /health) and
+  // never renders HTML to a browser, so helmet's default CSP has no real
+  // XSS-mitigation value here — it's cheap defense-in-depth on this
+  // server's own JSON/error responses, not a hand-tuned policy. The
+  // security-relevant CSP lives in wedhub-frontend-app/next.config.ts,
+  // which actually serves HTML.
+  app.use(helmet());
+  app.use(
+    cors({
+      origin: allowedOrigins,
+      credentials: true,
+    }),
+  );
   // This process is only ever reached via Nginx (public API domain) or the
   // Next.js frontend's server-to-server fetches — both always originate
   // from loopback on this same host (see HOST in config/env.ts). "loopback"
