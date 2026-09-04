@@ -9,7 +9,6 @@ import { getVendorReviews } from "@/lib/api/catalog";
 import { COMPLETENESS_CHECKS } from "@/lib/api/vendor-self.types";
 import { DashboardSparkline } from "./DashboardSparkline";
 import { DashboardInteractiveSections } from "./DashboardInteractiveSections";
-import { SharePortfolioButton } from "@/components/vendor/SharePortfolioButton";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -117,47 +116,13 @@ export default async function VendorDashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <SharePortfolioButton slug={vendor.slug} businessName={vendor.businessName} variant="header" />
-            <Link
-              href="/vendor/portfolio"
-              className="flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-bold text-text-dark shadow-sm transition-all hover:bg-surface-input"
-            >
-              <span>Add New Album</span>
-              <span className="text-base font-normal leading-none text-text-grey">+</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Live Digital Portfolio Highlight Card */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-neutral-200/90 bg-gradient-to-r from-white via-white to-neutral-50 p-5 shadow-xs">
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white shadow-xs">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="18" cy="5" r="3" />
-                <circle cx="6" cy="12" r="3" />
-                <circle cx="18" cy="19" r="3" />
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-              </svg>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm sm:text-base font-bold text-neutral-900">Your Live Digital Portfolio Link</h2>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Live & Shareable
-                </span>
-              </div>
-              <p className="text-xs text-neutral-500 mt-0.5 max-w-2xl">
-                A dedicated, vendor-branded portfolio page with 1-click WhatsApp messaging. Perfect for your Instagram bio or sending directly to inquiring couples.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-shrink-0 pt-2 sm:pt-0">
-            <SharePortfolioButton slug={vendor.slug} businessName={vendor.businessName} variant="card" />
-          </div>
+          <Link
+            href="/vendor/portfolio"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-bold text-text-dark shadow-sm transition-all hover:bg-surface-input"
+          >
+            <span>Add New Album</span>
+            <span className="text-base font-normal leading-none text-text-grey">+</span>
+          </Link>
         </div>
 
         {/* Email Verification Alert */}

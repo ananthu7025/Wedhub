@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import QRCode from "qrcode";
 
 interface SharePortfolioButtonProps {
   slug: string;
@@ -16,6 +17,8 @@ export function SharePortfolioButton({
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [qrLoading, setQrLoading] = useState(true);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -24,7 +27,39 @@ export function SharePortfolioButton({
   }, []);
 
   const portfolioUrl = origin ? `${origin}/portfolio/${slug}` : `/portfolio/${slug}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(portfolioUrl)}`;
+
+  // Generate QR code locally via Canvas/DataURL without external API dependency
+  useEffect(() => {
+    let isMounted = true;
+    const targetUrl = origin ? `${origin}/portfolio/${slug}` : `http://localhost:3000/portfolio/${slug}`;
+
+    setQrLoading(true);
+    QRCode.toDataURL(targetUrl, {
+      width: 320,
+      margin: 1.5,
+      errorCorrectionLevel: "M",
+      color: {
+        dark: "#171717",
+        light: "#ffffff",
+      },
+    })
+      .then((dataUrl) => {
+        if (isMounted) {
+          setQrDataUrl(dataUrl);
+          setQrLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to generate QR code locally:", err);
+        if (isMounted) {
+          setQrLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [origin, slug]);
 
   const handleCopy = async () => {
     try {
@@ -240,28 +275,42 @@ export function SharePortfolioButton({
             {/* QR Code Section */}
             <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
               <div className="flex items-center gap-4">
-                <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-neutral-200 bg-white p-1">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={qrCodeUrl}
-                    alt="Portfolio QR Code"
-                    className="h-full w-full object-contain"
-                  />
+                <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl border border-neutral-200 bg-white p-1.5 flex items-center justify-center shadow-xs">
+                  {qrLoading ? (
+                    <div className="flex flex-col items-center justify-center text-[10px] text-neutral-400 gap-1">
+                      <span className="h-4 w-4 border-2 border-neutral-300 border-t-neutral-800 rounded-full animate-spin" />
+                      <span>Generating...</span>
+                    </div>
+                  ) : qrDataUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={qrDataUrl}
+                      alt={`${businessName} Portfolio QR Code`}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-[10px] text-neutral-400">QR unavailable</span>
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <h4 className="text-xs font-bold text-neutral-900">QR Code for Consultations</h4>
                   <p className="mt-0.5 text-[11px] text-neutral-500 leading-relaxed">
                     Print on wedding brochures, business cards, or display at your studio counter.
                   </p>
-                  <a
-                    href={qrCodeUrl}
-                    download={`${slug}-portfolio-qr.png`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-neutral-700 hover:text-neutral-900 underline"
-                  >
-                    Download QR Code
-                  </a>
+                  {qrDataUrl && (
+                    <a
+                      href={qrDataUrl}
+                      download={`${slug}-portfolio-qr.png`}
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-neutral-900 hover:text-neutral-700 underline cursor-pointer"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Download QR Code (PNG)
+                    </a>
+                  )}
                 </div>
               </div>
             </div>

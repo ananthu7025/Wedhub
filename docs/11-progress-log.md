@@ -1730,4 +1730,10 @@ Vendors can generate statutory Indian GST tax invoices for clients (couples) wit
 - `wedhub-frontend-app`: `npx tsc --noEmit` passed with 0 errors.
 - `wedhub-frontend-app`: `next build` compiled cleanly with Turbopack across all 54 routes, including `├ ƒ /portfolio/[slug]`.
 
+### Addendum, 2026-09-04 — QR Code Generation & UI Deduplication Bug Fixes
+
+- **Local Zero-Dependency QR Code Generation**: Replaced external API (`api.qrserver.com`) with local offline base64 PNG data URL generation via `qrcode` package. Completely resolves broken image errors caused by network/ad-block restrictions and enables instant, reliable PNG downloads directly in the browser.
+- **Deduplication of Share Button**: Removed duplicate instances from `/vendor/dashboard` (inline action bar and banner card) so that "Share Portfolio" cleanly renders **only once** in the top navigation header bar (`VendorShell.tsx`).
+- **Verification**: `npx tsc --noEmit` passed with 0 errors; Next.js production build (`npm run build`) succeeded with all 54 routes compiled cleanly.
+
 
