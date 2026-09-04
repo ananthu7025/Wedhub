@@ -15,4 +15,14 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          # appleboy/ssh-action's command_timeout defaults to 10m. A real
+          # failure caught live: deploy.sh was still legitimately running
+          # on the server (npm ci + two full builds on a 2 vCPU box,
+          # sometimes contending with another in-flight deploy the
+          # flock in deploy.sh was correctly making it wait for) when the
+          # Action gave up and reported the whole run as "failed" — the
+          # server-side deploy actually finished fine afterward. 20m
+          # gives real headroom without masking a truly hung script
+          # forever.
+          command_timeout: 20m
           script: /opt/wedhub/scripts/deploy.sh
