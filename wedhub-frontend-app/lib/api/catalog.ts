@@ -16,6 +16,7 @@ import type {
   VendorDetail,
   VendorReview,
   VendorSearchResult,
+  WeddingStoriesListResponse,
   WeddingStory,
 } from "./vendors.types";
 
@@ -79,6 +80,30 @@ export function listFeaturedCategories() {
 // the previously-hardcoded REAL_WEDDING_STORIES array.
 export function listFeaturedWeddingStories() {
   return apiFetch<WeddingStory[]>("/wedding-stories/featured/homepage", { skipAuth: true });
+}
+
+export function listAllWeddingStories(params?: {
+  page?: number;
+  limit?: number;
+  location?: string;
+  tag?: string;
+  search?: string;
+  sort?: string;
+}) {
+  const query = new URLSearchParams();
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.limit) query.set("limit", String(params.limit));
+  if (params?.location) query.set("location", params.location);
+  if (params?.tag) query.set("tag", params.tag);
+  if (params?.search) query.set("search", params.search);
+  if (params?.sort) query.set("sort", params.sort);
+
+  const qs = query.toString();
+  return apiFetch<WeddingStoriesListResponse>(`/wedding-stories${qs ? `?${qs}` : ""}`, { skipAuth: true });
+}
+
+export function getPublicWeddingStory(id: string) {
+  return apiFetch<WeddingStory>(`/wedding-stories/${id}`, { skipAuth: true });
 }
 
 // Real, admin-curated gallery media for the public homepage's "Gallery

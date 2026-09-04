@@ -69,12 +69,12 @@ export async function PublicTopbar({ variant = "brand" }: PublicTopbarProps) {
             >
               Photos
             </a>
-            <a
-              href="#wedding-stories"
+            <Link
+              href="/real-weddings"
               className="rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 transition-all hover:bg-white/15 hover:text-white"
             >
               Real Weddings
-            </a>
+            </Link>
             <a
               href="#wedding-blogs"
               className="rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 transition-all hover:bg-white/15 hover:text-white"
@@ -158,7 +158,7 @@ export async function PublicTopbar({ variant = "brand" }: PublicTopbarProps) {
         <span className="opacity-30">•</span>
         <a href="#gallery-inspiration" className="px-2.5 py-1 hover:text-white">Photos</a>
         <span className="opacity-30">•</span>
-        <a href="#wedding-stories" className="px-2.5 py-1 hover:text-white">Real Weddings</a>
+        <Link href="/real-weddings" className="px-2.5 py-1 hover:text-white">Real Weddings</Link>
         <span className="opacity-30">•</span>
         <a href="#wedding-blogs" className="px-2.5 py-1 hover:text-white">Blog</a>
         <span className="opacity-30">•</span>

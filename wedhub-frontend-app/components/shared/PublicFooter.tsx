@@ -115,7 +115,7 @@ export function PublicFooter() {
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-jet-black mb-3">Wedding Ideas</h4>
             <ul className="space-y-2 text-xs text-text-grey list-none p-0 m-0">
-              <li><a href="#wedding-stories" className="hover:text-brand-primary hover:underline">Real Wedding Stories</a></li>
+              <li><Link href="/real-weddings" className="hover:text-brand-primary hover:underline">Real Wedding Stories</Link></li>
               <li><a href="#wedding-blogs" className="hover:text-brand-primary hover:underline">Latest Wedding Blog</a></li>
               <li><a href="#gallery-inspiration" className="hover:text-brand-primary hover:underline">Bridal Lehenga Trends</a></li>
               <li><a href="#gallery-inspiration" className="hover:text-brand-primary hover:underline">Mandap &amp; Decor Ideas</a></li>

@@ -9,7 +9,9 @@ import { createWeddingStorySchema, updateWeddingStorySchema } from "./wedding-st
 
 export const weddingStoriesRouter = Router();
 
+weddingStoriesRouter.get("/", asyncHandler(weddingStoriesController.listPublicStories));
 weddingStoriesRouter.get("/featured/homepage", asyncHandler(weddingStoriesController.listFeaturedStories));
+weddingStoriesRouter.get("/:id", asyncHandler(weddingStoriesController.getPublicStory));
 
 export const weddingStoriesAdminRouter = Router();
 weddingStoriesAdminRouter.use(authenticateMiddleware, authorize(Role.ADMIN));

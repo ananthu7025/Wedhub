@@ -10,6 +10,23 @@ export async function listFeaturedStories(_req: Request, res: Response): Promise
   res.json(successResponse(stories));
 }
 
+export async function listPublicStories(req: Request, res: Response): Promise<void> {
+  const result = await weddingStoriesService.listPublicStories({
+    page: req.query.page ? Number(req.query.page) : undefined,
+    limit: req.query.limit ? Number(req.query.limit) : undefined,
+    location: req.query.location as string | undefined,
+    tag: req.query.tag as string | undefined,
+    search: req.query.search as string | undefined,
+    sort: req.query.sort as string | undefined,
+  });
+  res.json(successResponse(result));
+}
+
+export async function getPublicStory(req: Request, res: Response): Promise<void> {
+  const story = await weddingStoriesService.getPublicStoryById(req.params.id as string);
+  res.json(successResponse(story));
+}
+
 export async function listAllStories(_req: Request, res: Response): Promise<void> {
   const stories = await weddingStoriesService.listAllStoriesForAdmin();
   res.json(successResponse(stories));

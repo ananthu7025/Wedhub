@@ -198,11 +198,17 @@ export interface VendorAlbum {
   media: AlbumMedia[];
 }
 
-// ---- GET /wedding-stories/featured/homepage ----
-// Backs the public homepage's "Real Wedding Stories" section — real,
-// admin-curated stories over a real vendor's public Album, replacing the
-// previously-hardcoded REAL_WEDDING_STORIES array (see frontenddocs/
-// 10-risks-and-open-questions.md Open Question 21).
+export interface WeddingStoryAlbumMedia {
+  id: string;
+  originalObjectKey: string;
+  optimizedObjectKey: string | null;
+  thumbnailObjectKey: string | null;
+  altText?: string | null;
+}
+
+// ---- GET /wedding-stories/featured/homepage & GET /wedding-stories ----
+// Backs the public homepage's "Real Wedding Stories" section and the
+// dedicated /real-weddings directory page.
 export interface WeddingStory {
   id: string;
   albumId: string;
@@ -215,8 +221,23 @@ export interface WeddingStory {
   album: {
     id: string;
     name: string;
-    vendor: { id: string; businessName: string; slug: string };
+    vendor: { id: string; businessName: string; slug: string; city?: string | null };
     coverMedia: VendorProfileMedia;
+    media?: WeddingStoryAlbumMedia[];
+  };
+}
+
+export interface WeddingStoriesListResponse {
+  stories: WeddingStory[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  filterOptions: {
+    locations: string[];
+    tags: string[];
   };
 }
 

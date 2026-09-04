@@ -54,7 +54,7 @@ interface DisplayWeddingStory {
 const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   {
     key: "sample-1",
-    href: "/search",
+    href: "/real-weddings/sample-1",
     coupleName: "Ananya & Rohan",
     location: "Palace Grounds, Bengaluru",
     tag: "South Indian Traditional · 120 Photos",
@@ -63,7 +63,7 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   },
   {
     key: "sample-2",
-    href: "/search",
+    href: "/real-weddings/sample-2",
     coupleName: "Pooja & Kabir",
     location: "City Palace, Jaipur",
     tag: "Royal Heritage Wedding · 85 Photos",
@@ -72,7 +72,7 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   },
   {
     key: "sample-3",
-    href: "/search",
+    href: "/real-weddings/sample-3",
     coupleName: "Meera & Siddharth",
     location: "Heritage Village, Goa",
     tag: "Beachside Destination · 95 Photos",
@@ -81,7 +81,7 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   },
   {
     key: "sample-4",
-    href: "/search",
+    href: "/real-weddings/sample-4",
     coupleName: "Kavya & Arjun",
     location: "Backwater Resort, Alleppey",
     tag: "Kerala Christian Wedding · 140 Photos",
@@ -90,7 +90,7 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   },
   {
     key: "sample-5",
-    href: "/search",
+    href: "/real-weddings/sample-5",
     coupleName: "Ishaan & Diya",
     location: "The Leela, Udaipur",
     tag: "Lakeside Luxury Wedding · 200 Photos",
@@ -99,7 +99,7 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   },
   {
     key: "sample-6",
-    href: "/search",
+    href: "/real-weddings/sample-6",
     coupleName: "Nikhil & Sara",
     location: "Heritage Haveli, Jodhpur",
     tag: "Rajasthani Fusion · 110 Photos",
@@ -114,7 +114,7 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
 function fillWeddingStorySlots(realStories: RealWeddingStory[]): DisplayWeddingStory[] {
   const real: DisplayWeddingStory[] = realStories.slice(0, WEDDING_STORIES_SLOTS).map((story) => ({
     key: story.id,
-    href: `/vendors/${story.album.vendor.slug}`,
+    href: `/real-weddings/${story.id}`,
     coupleName: story.coupleName,
     location: story.location,
     tag: story.tag,
@@ -303,7 +303,7 @@ export default async function HomePage() {
               Get inspired by real couples, stunning celebrations, and dream wedding vendors
             </p>
           </div>
-          <Link href="/search" className="text-xs font-bold text-brand-primary hover:underline">
+          <Link href="/real-weddings" className="text-xs font-bold text-brand-primary hover:underline">
             View All Weddings →
           </Link>
         </div>

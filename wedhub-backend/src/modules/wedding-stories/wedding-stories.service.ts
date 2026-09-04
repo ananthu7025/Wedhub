@@ -9,6 +9,26 @@ export function listFeaturedStories() {
   return weddingStoriesRepository.findFeaturedStories();
 }
 
+export async function listPublicStories(params: weddingStoriesRepository.FindPublicStoriesParams) {
+  const [result, filterOptions] = await Promise.all([
+    weddingStoriesRepository.findPublicStories(params),
+    weddingStoriesRepository.findDistinctFilterOptions(),
+  ]);
+
+  return {
+    ...result,
+    filterOptions,
+  };
+}
+
+export async function getPublicStoryById(id: string) {
+  const story = await weddingStoriesRepository.findPublicStoryById(id);
+  if (!story) {
+    throw new NotFoundError("Wedding story not found");
+  }
+  return story;
+}
+
 export function listAllStoriesForAdmin() {
   return weddingStoriesRepository.findAllStoriesAdmin();
 }
