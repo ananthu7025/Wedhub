@@ -232,12 +232,29 @@ export interface UpdatePackageBody {
 }
 
 // ---- GET /vendors/me/analytics ----
+// Arch Phase 18 Stage B: unified vendor analytics — the full product.md §46
+// "Vendor analytics" list (Impressions, Profile views, Enquiries, Leads,
+// Response rate, Response time, Conversion) in one response. The
+// lead-funnel fields (responseRate/averageResponseTimeMs/conversionRate/
+// qualifiedLeads/wonLeads/lostLeads) mirror LeadAnalytics (leads.types.ts)
+// but are scoped to this endpoint's own tier-based windowDays rather than
+// GET /leads/analytics's separate all-time window — the two endpoints
+// intentionally answer different questions (this window vs. lifetime) and
+// are not meant to return identical numbers for the same-named fields.
 export interface VendorAnalytics {
   level: "basic" | "advanced";
   windowDays: 30 | 90;
   profileViews: number;
+  impressions: number;
   leads: number;
+  enquiries: number;
   reviews: number;
+  responseRate: number;
+  averageResponseTimeMs: number | null;
+  conversionRate: number;
+  qualifiedLeads: number;
+  wonLeads: number;
+  lostLeads: number;
   profileViewsByDay?: Array<{ day: string; count: number }>;
 }
 

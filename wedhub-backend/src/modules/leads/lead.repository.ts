@@ -125,15 +125,24 @@ export function countAllLeadsAdmin(filter: Pick<AdminLeadListFilter, "status" | 
 
 // Vendor lead dashboard analytics (product.md §23): received/contacted/
 // response-rate/avg-response-time/qualified/won/lost/conversion-rate.
-export async function getVendorLeadAnalytics(vendorId: string) {
+//
+// `since` is optional and defaults to all-time — GET /leads/analytics (this
+// function's original, still-live caller, leads.controller's getAnalytics)
+// keeps its existing all-time contract unchanged. Arch Phase 18 Stage B
+// added the parameter so getVendorAnalytics() (GET /vendors/me/analytics)
+// can call this with its own tier-based window and merge the result into
+// one unified response, without giving the standalone /leads/analytics
+// endpoint a breaking behavior change or a new required param.
+export async function getVendorLeadAnalytics(vendorId: string, since?: Date) {
+  const createdAtFilter = since ? { createdAt: { gte: since } } : {};
   const [received, contacted, qualified, won, lost, respondedLeads] = await Promise.all([
-    prisma.lead.count({ where: { vendorId } }),
-    prisma.lead.count({ where: { vendorId, contactedAt: { not: null } } }),
-    prisma.lead.count({ where: { vendorId, status: "QUALIFIED" } }),
-    prisma.lead.count({ where: { vendorId, status: "WON" } }),
-    prisma.lead.count({ where: { vendorId, status: "LOST" } }),
+    prisma.lead.count({ where: { vendorId, ...createdAtFilter } }),
+    prisma.lead.count({ where: { vendorId, contactedAt: { not: null }, ...createdAtFilter } }),
+    prisma.lead.count({ where: { vendorId, status: "QUALIFIED", ...createdAtFilter } }),
+    prisma.lead.count({ where: { vendorId, status: "WON", ...createdAtFilter } }),
+    prisma.lead.count({ where: { vendorId, status: "LOST", ...createdAtFilter } }),
     prisma.lead.findMany({
-      where: { vendorId, respondedAt: { not: null } },
+      where: { vendorId, respondedAt: { not: null }, ...createdAtFilter },
       select: { createdAt: true, respondedAt: true },
     }),
   ]);

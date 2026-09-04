@@ -10,6 +10,24 @@ export const metadata: Metadata = {
   title: "Dashboard",
 };
 
+// Same formatting rules as the standalone /vendor/analytics page's
+// AnalyticsBoard (app/(vendor)/vendor/analytics/AnalyticsBoard.tsx) — kept
+// duplicated rather than shared, since that component's formatDuration
+// isn't exported and the two pages otherwise have independent layouts.
+function formatResponseTime(ms: number | null): string {
+  if (ms === null) return "No data yet";
+  const minutes = ms / 60_000;
+  const hours = ms / 3_600_000;
+  const days = ms / 86_400_000;
+  if (hours < 1) return `${Math.max(1, Math.round(minutes))} min`;
+  if (days < 1) return `${hours.toFixed(1)} hours`;
+  return `${days.toFixed(1)} days`;
+}
+
+function formatPercent(ratio: number): string {
+  return `${Math.round(ratio * 100)}%`;
+}
+
 function isChecklistItemMet(label: string, vendor: Awaited<ReturnType<typeof requireVendorOwnership>>): boolean {
   switch (label) {
     case "Business name":
@@ -73,7 +91,13 @@ export default async function VendorDashboardPage() {
         </div>
       )}
 
-      <div className="mb-5 grid grid-cols-3 gap-4 max-[900px]:grid-cols-1">
+      <div className="mb-5 grid grid-cols-4 gap-4 max-[900px]:grid-cols-2 max-[500px]:grid-cols-1">
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">
+            Impressions ({analytics?.windowDays ?? "…"} days)
+          </p>
+          <p className="text-2xl font-bold">{analytics?.impressions ?? "—"}</p>
+        </div>
         <div className="rounded-xl border border-border bg-white p-5">
           <p className="mb-1 text-xs font-semibold text-text-grey">
             Profile views ({analytics?.windowDays ?? "…"} days)
@@ -81,8 +105,28 @@ export default async function VendorDashboardPage() {
           <p className="text-2xl font-bold">{analytics?.profileViews ?? "—"}</p>
         </div>
         <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">
+            Enquiries ({analytics?.windowDays ?? "…"} days)
+          </p>
+          <p className="text-2xl font-bold">{analytics?.enquiries ?? "—"}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-white p-5">
           <p className="mb-1 text-xs font-semibold text-text-grey">Leads ({analytics?.windowDays ?? "…"} days)</p>
           <p className="text-2xl font-bold">{analytics?.leads ?? "—"}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">Response rate</p>
+          <p className="text-2xl font-bold">{analytics ? formatPercent(analytics.responseRate) : "—"}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">Avg. response time</p>
+          <p className="text-2xl font-bold">
+            {analytics ? formatResponseTime(analytics.averageResponseTimeMs) : "—"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">Conversion rate</p>
+          <p className="text-2xl font-bold">{analytics ? formatPercent(analytics.conversionRate) : "—"}</p>
         </div>
         <div className="rounded-xl border border-border bg-white p-5">
           <p className="mb-1 text-xs font-semibold text-text-grey">
@@ -91,6 +135,16 @@ export default async function VendorDashboardPage() {
           <p className="text-2xl font-bold">{analytics?.reviews ?? "—"}</p>
         </div>
       </div>
+
+      {analytics?.level !== "advanced" && (
+        <div className="mb-5 rounded-xl border border-border bg-white p-4 text-[13px] text-text-grey">
+          Daily view breakdown and a 90-day window are available on Pro and Premium plans.{" "}
+          <Link href="/vendor/subscription" className="font-semibold text-brand-primary">
+            Upgrade to unlock
+          </Link>
+          .
+        </div>
+      )}
 
       <div className="grid grid-cols-[2fr_1fr] gap-5 max-[1100px]:grid-cols-1">
         <div className="rounded-xl border border-border bg-white p-6">
