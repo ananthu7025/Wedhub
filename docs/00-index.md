@@ -80,6 +80,7 @@ Never write a bare "Phase 5" anywhere in this docs set — it's ambiguous. The s
 | `11-progress-log.md` | What has actually shipped — status table + per-phase APIs/tables/flow diagram, filled in as each Arch Phase completes |
 | `12-stage-wedding-website.md` | ₹49 Instant Wedding Website — new, standalone monetized feature outside the original 26 Arch Phases (Arch Phase 26) |
 | `13-stage-vendor-invoices.md` | Vendor GST Invoicing & Billing Engine — statutory GST billing, payment history, and logo integration (Arch Phase 27) |
+| `17-review-feedback-tasklist-backend.md` | Backend task list from a full codebase audit of `../review-feedback.md` — confirmed-true findings only (attribute N+1, non-transactional profile save, search blocking on analytics writes, uncacheable public data, near-zero test coverage, and more), split from the frontend half at `../frontenddocs/13-review-feedback-tasklist-frontend.md` |
 
 ## Recommended build order
 
