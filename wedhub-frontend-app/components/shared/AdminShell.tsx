@@ -146,10 +146,12 @@ const sections: NavSection[] = [
 export function AdminShell({ children, activeHref }: { children: React.ReactNode; activeHref: string }) {
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-[220px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
-        <div className="mb-5 flex items-center gap-1.5 px-2">
+      <aside className="flex w-[250px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
+        <div className="mb-5 flex items-center justify-between px-1">
           <BrandLogo variant="dark" href="/admin/dashboard" />
-          <span className="text-[11px] font-bold uppercase tracking-wide text-text-grey">Admin</span>
+          <span className="rounded bg-neutral-grey-20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-text-grey">
+            Admin
+          </span>
         </div>
 
         {sections.map((section) => (

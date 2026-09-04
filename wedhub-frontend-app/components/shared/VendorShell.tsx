@@ -82,8 +82,8 @@ export async function VendorShell({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-[220px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
-        <BrandLogo variant="dark" href="/vendor/dashboard" className="mb-5 px-2" />
+      <aside className="flex w-[240px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
+        <BrandLogo variant="dark" href="/vendor/dashboard" className="mb-5 px-1" />
 
         {navLinks.map((link) => (
           <Link

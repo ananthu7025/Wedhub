@@ -135,10 +135,10 @@ l23 0 0 -208z m160 -140 c0 -5 13 -24 29 -43 325 -388 351 -416 421 -474 35
 
       {/* itsmyKalyanam Wordmark from SVG */}
       {showWordmark && (
-        <span className={`flex items-center ${textColor}`}>
+        <span className={`flex items-center flex-shrink-0 ${textColor}`}>
           <svg
-            viewBox="40 340 320 55"
-            className="h-6 sm:h-7 w-auto fill-current tracking-tight"
+            viewBox="40 340 328 55"
+            className="h-5 sm:h-6 w-auto fill-current tracking-tight flex-shrink-0"
             xmlns="http://www.w3.org/2000/svg"
             aria-label="itsmyKalyanam"
           >

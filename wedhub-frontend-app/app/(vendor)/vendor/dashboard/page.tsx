@@ -3,17 +3,26 @@ import type { Metadata } from "next";
 import { VendorShell } from "@/components/shared/VendorShell";
 import { requireVendorOwnership } from "@/lib/auth/require-vendor";
 import { getMyAnalytics } from "@/lib/api/vendor-self";
-import { getMe } from "@/lib/api/account";
+import { getMe, listMyNotifications } from "@/lib/api/account";
+import { listMyLeads } from "@/lib/api/leads";
+import { getVendorReviews } from "@/lib/api/catalog";
 import { COMPLETENESS_CHECKS } from "@/lib/api/vendor-self.types";
+import { DashboardSparkline } from "./DashboardSparkline";
+import { DashboardInteractiveSections } from "./DashboardInteractiveSections";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
 
-// Same formatting rules as the standalone /vendor/analytics page's
-// AnalyticsBoard (app/(vendor)/vendor/analytics/AnalyticsBoard.tsx) — kept
-// duplicated rather than shared, since that component's formatDuration
-// isn't exported and the two pages otherwise have independent layouts.
+/**
+ * Vendor Dashboard Page (Frontend Arch Phase 5 / Phase 18 Stage B / UI Redesign).
+ * Uses real backend analytics (GET /vendors/me/analytics), authenticated leads (GET /leads),
+ * notifications (GET /notifications/me), and approved reviews (GET /vendors/:id/reviews).
+ *
+ * Adopts the card-and-sparkline UI layout while adhering to the project's canonical
+ * design tokens (border-border, text-text-grey, text-text-dark, bg-surface-input).
+ */
+
 function formatResponseTime(ms: number | null): string {
   if (ms === null) return "No data yet";
   const minutes = ms / 60_000;
@@ -26,6 +35,13 @@ function formatResponseTime(ms: number | null): string {
 
 function formatPercent(ratio: number): string {
   return `${Math.round(ratio * 100)}%`;
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning!";
+  if (hour < 17) return "Good Afternoon!";
+  return "Good Evening!";
 }
 
 function isChecklistItemMet(label: string, vendor: Awaited<ReturnType<typeof requireVendorOwnership>>): boolean {
@@ -59,149 +75,283 @@ function isChecklistItemMet(label: string, vendor: Awaited<ReturnType<typeof req
 
 export default async function VendorDashboardPage() {
   const vendor = await requireVendorOwnership();
-  const [analytics, me] = await Promise.all([
+  const [analytics, me, leadsResponse, notificationsResponse, reviewsResponse] = await Promise.all([
     getMyAnalytics()
       .then((r) => r.data)
       .catch(() => null),
     getMe().then((r) => r.data),
+    listMyLeads({ limit: 10 })
+      .then((r) => r.data)
+      .catch(() => []),
+    listMyNotifications(false, 1, 10)
+      .then((r) => r.data)
+      .catch(() => []),
+    getVendorReviews(vendor.id, 1, 5)
+      .then((r) => r.data)
+      .catch(() => []),
   ]);
+
   const emailUnverified = !me.emailVerifiedAt;
+  const greeting = getGreeting();
+  const displayName = vendor.businessName;
+  const windowDays = analytics?.windowDays ?? 30;
 
   return (
     <VendorShell activeHref="/vendor/dashboard" vendorName={vendor.businessName}>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Welcome back, {vendor.businessName.split(" ")[0]}</h1>
-        <p className="text-sm text-text-grey">Here&apos;s how your profile is performing.</p>
-      </div>
+      <div className="space-y-6">
+        {/* Top Header Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {/* Vendor Scenic Avatar Icon */}
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-10 text-emerald-70 shadow-sm">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 9l-6 6M10 9l-2 2M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-text-dark">
+                {greeting} <span className="font-semibold text-text-grey">{displayName}</span>
+              </h1>
+            </div>
+          </div>
 
-      {emailUnverified && (
-        <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-30 bg-amber-10 p-4">
-          <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-amber-70 text-xs font-bold text-white">
-            !
-          </span>
-          <div>
-            <p className="text-[13px] font-bold text-jet-black">Verify your email to get reviewed</p>
-            <p className="mt-0.5 text-[13px] text-text-grey">
-              We sent a verification link to <strong>{me.email}</strong>.
-              {vendor.status === "PENDING_VERIFICATION"
-                ? " Your listing is submitted but won't be reviewed by our team until you verify — check your inbox and click the link."
-                : " Verify it so your listing can be reviewed once you submit."}
+          <Link
+            href="/vendor/portfolio"
+            className="flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-bold text-text-dark shadow-sm transition-all hover:bg-surface-input"
+          >
+            <span>Add New Album</span>
+            <span className="text-base font-normal leading-none text-text-grey">+</span>
+          </Link>
+        </div>
+
+        {/* Email Verification Alert */}
+        {emailUnverified && (
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-30 bg-amber-10 p-4 shadow-sm">
+            <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-amber-70 text-xs font-bold text-white">
+              !
+            </span>
+            <div>
+              <p className="text-[13px] font-bold text-text-dark">Verify your email to get reviewed</p>
+              <p className="mt-0.5 text-[13px] text-text-grey">
+                We sent a verification link to <strong>{me.email}</strong>.
+                {vendor.status === "PENDING_VERIFICATION"
+                  ? " Your listing is submitted but won't be reviewed by our team until you verify — check your inbox and click the link."
+                  : " Verify it so your listing can be reviewed once you submit."}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Top 3 Hero Metric Cards with Sparklines */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          {/* Card 1: Total Customer Views */}
+          <div className="flex flex-col justify-between rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-text-grey">Total Customer Views</span>
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-10 px-2 py-0.5 text-[10px] font-bold text-emerald-70">
+                    {analytics?.profileViews && analytics.profileViews > 0 ? "Active ↗" : "0 views"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-semibold text-text-muted">
+                  <span className="rounded bg-emerald-70 px-1.5 py-0.5 text-white">{windowDays}D</span>
+                  <span className="px-1 py-0.5 text-text-grey">window</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-end justify-between">
+              <span className="text-3xl font-extrabold tracking-tight text-emerald-70">
+                {analytics?.profileViews ? analytics.profileViews.toLocaleString("en-IN") : "0"}
+              </span>
+              <DashboardSparkline
+                color="emerald"
+                dataPoints={analytics?.profileViewsByDay?.map((d) => d.count)}
+              />
+            </div>
+          </div>
+
+          {/* Card 2: Inquiries Received */}
+          <div className="flex flex-col justify-between rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-text-grey">Inquiries Received</span>
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-byzantine-blue-10 px-2 py-0.5 text-[10px] font-bold text-byzantine-blue-70">
+                    {analytics?.enquiries && analytics.enquiries > 0 ? "Active ↗" : "0 enquiries"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-semibold text-text-muted">
+                  <span className="rounded bg-byzantine-blue px-1.5 py-0.5 text-white">{windowDays}D</span>
+                  <span className="px-1 py-0.5 text-text-grey">window</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-end justify-between">
+              <span className="text-3xl font-extrabold tracking-tight text-byzantine-blue">
+                {analytics?.enquiries ? analytics.enquiries.toLocaleString("en-IN") : "0"}
+              </span>
+              <DashboardSparkline
+                color="blue"
+                dataPoints={
+                  leadsResponse.length > 1
+                    ? [0, Math.round(leadsResponse.length / 2), leadsResponse.length]
+                    : undefined
+                }
+              />
+            </div>
+          </div>
+
+          {/* Card 3: Conversion Rate */}
+          <div className="flex flex-col justify-between rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-text-grey">Conversion Rate</span>
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-red-10 px-2 py-0.5 text-[10px] font-bold text-red-70">
+                    {analytics?.conversionRate && analytics.conversionRate > 0 ? "Won leads ↗" : "0% won"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-semibold text-text-muted">
+                  <span className="rounded bg-red-70 px-1.5 py-0.5 text-white">Won / Total</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-end justify-between">
+              <span className="text-3xl font-extrabold tracking-tight text-red-70">
+                {analytics ? formatPercent(analytics.conversionRate) : "0%"}
+              </span>
+              <DashboardSparkline color="coral" />
+            </div>
+          </div>
+        </div>
+
+        {/* Secondary KPI Bar (Canonical Design Tokens) */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="rounded-xl border border-border bg-white p-3.5 shadow-sm">
+            <p className="text-[11px] font-semibold text-text-muted">Avg. Response Time</p>
+            <p className="mt-1 text-base font-bold text-text-dark">
+              {analytics ? formatResponseTime(analytics.averageResponseTimeMs) : "No data yet"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-white p-3.5 shadow-sm">
+            <p className="text-[11px] font-semibold text-text-muted">Response Rate</p>
+            <p className="mt-1 text-base font-bold text-text-dark">
+              {analytics ? formatPercent(analytics.responseRate) : "0%"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-white p-3.5 shadow-sm">
+            <p className="text-[11px] font-semibold text-text-muted">Total Leads ({windowDays}d)</p>
+            <p className="mt-1 text-base font-bold text-text-dark">
+              {analytics?.leads ? analytics.leads.toLocaleString("en-IN") : "0"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-white p-3.5 shadow-sm">
+            <p className="text-[11px] font-semibold text-text-muted">Impressions ({windowDays}d)</p>
+            <p className="mt-1 text-base font-bold text-text-dark">
+              {analytics?.impressions ? analytics.impressions.toLocaleString("en-IN") : "0"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-white p-3.5 shadow-sm col-span-2 sm:col-span-1">
+            <p className="text-[11px] font-semibold text-text-muted">Approved Reviews</p>
+            <p className="mt-1 text-base font-bold text-text-dark">
+              {analytics?.reviews ? `${analytics.reviews} verified` : "0 verified"}
             </p>
           </div>
         </div>
-      )}
 
-      <div className="mb-5 grid grid-cols-4 gap-4 max-[900px]:grid-cols-2 max-[500px]:grid-cols-1">
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">
-            Impressions ({analytics?.windowDays ?? "…"} days)
-          </p>
-          <p className="text-2xl font-bold">{analytics?.impressions ?? "—"}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">
-            Profile views ({analytics?.windowDays ?? "…"} days)
-          </p>
-          <p className="text-2xl font-bold">{analytics?.profileViews ?? "—"}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">
-            Enquiries ({analytics?.windowDays ?? "…"} days)
-          </p>
-          <p className="text-2xl font-bold">{analytics?.enquiries ?? "—"}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">Leads ({analytics?.windowDays ?? "…"} days)</p>
-          <p className="text-2xl font-bold">{analytics?.leads ?? "—"}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">Response rate</p>
-          <p className="text-2xl font-bold">{analytics ? formatPercent(analytics.responseRate) : "—"}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">Avg. response time</p>
-          <p className="text-2xl font-bold">
-            {analytics ? formatResponseTime(analytics.averageResponseTimeMs) : "—"}
-          </p>
-        </div>
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">Conversion rate</p>
-          <p className="text-2xl font-bold">{analytics ? formatPercent(analytics.conversionRate) : "—"}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">
-            Approved reviews ({analytics?.windowDays ?? "…"} days)
-          </p>
-          <p className="text-2xl font-bold">{analytics?.reviews ?? "—"}</p>
-        </div>
-      </div>
+        {/* Pro Plan Analytics Banner */}
+        {analytics?.level !== "advanced" && (
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-page px-5 py-3.5 text-xs text-text-grey shadow-sm">
+            <span>
+              Daily view breakdown and an extended 90-day analytics window are available on <strong>Pro and Premium plans</strong>.
+            </span>
+            <Link
+              href="/vendor/subscription"
+              className="flex-shrink-0 rounded-md bg-text-dark px-4 py-1.5 font-bold text-white transition-colors hover:bg-neutral-grey-70"
+            >
+              Upgrade Plan →
+            </Link>
+          </div>
+        )}
 
-      {analytics?.level !== "advanced" && (
-        <div className="mb-5 rounded-xl border border-border bg-white p-4 text-[13px] text-text-grey">
-          Daily view breakdown and a 90-day window are available on Pro and Premium plans.{" "}
-          <Link href="/vendor/subscription" className="font-semibold text-brand-primary">
-            Upgrade to unlock
-          </Link>
-          .
-        </div>
-      )}
+        {/* Main 2-Column Split: Leads Table & Manage Prospects on Left, Activity on Right */}
+        <DashboardInteractiveSections
+          leads={leadsResponse}
+          notifications={notificationsResponse}
+          reviews={reviewsResponse}
+          vendor={{
+            businessName: vendor.businessName,
+            status: vendor.status,
+            verificationLevel: vendor.verificationLevel,
+            profileCompleteness: vendor.profileCompleteness,
+            rejectionReason: vendor.rejectionReason,
+            slug: vendor.slug,
+          }}
+          analytics={analytics}
+        />
 
-      <div className="grid grid-cols-[2fr_1fr] gap-5 max-[1100px]:grid-cols-1">
-        <div className="rounded-xl border border-border bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold">Status</h3>
-              <p className="text-xs text-text-grey">Your listing&apos;s current review state</p>
+        {/* Profile Completeness Checklist Container — only shown when profile is not yet 100% complete */}
+        {vendor.profileCompleteness < 100 && (
+          <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+              <div>
+                <h3 className="text-base font-bold text-text-dark">Profile Completeness</h3>
+                <p className="text-xs text-text-grey">
+                  A complete profile ranks higher in search results and earns up to 3x more couple enquiries.
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-xl font-extrabold text-byzantine-blue">{vendor.profileCompleteness}%</span>
+                <span className="text-xs font-semibold text-text-muted"> complete</span>
+              </div>
+            </div>
+
+            <div className="mt-4 mb-6 h-2 w-full overflow-hidden rounded-full bg-surface-input">
+              <div
+                className="h-full rounded-full bg-byzantine-blue transition-all duration-500"
+                style={{ width: `${vendor.profileCompleteness}%` }}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+              {COMPLETENESS_CHECKS.map((check) => {
+                const met = isChecklistItemMet(check.label, vendor);
+                return (
+                  <div
+                    key={check.label}
+                    className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-page p-2.5 text-xs"
+                  >
+                    <span
+                      className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        met ? "bg-emerald-10 text-emerald-70" : "bg-neutral-grey-20 text-text-grey"
+                      }`}
+                    >
+                      {met ? "✓" : "○"}
+                    </span>
+                    <span className={met ? "font-medium text-text-dark" : "text-text-grey"}>
+                      {check.label}
+                      {check.requiredForSubmission && !met && " *"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <Link
+                href="/vendor/profile"
+                className="rounded-md bg-byzantine-blue px-6 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:opacity-90"
+              >
+                Complete your profile →
+              </Link>
             </div>
           </div>
-          <p className="text-sm">
-            Status: <strong>{vendor.status.replace(/_/g, " ")}</strong>
-            {vendor.verificationLevel !== "UNVERIFIED" && <> · Verification: {vendor.verificationLevel.replace(/_/g, " ")}</>}
-          </p>
-          {vendor.rejectionReason && (
-            <p className="mt-2 rounded-md bg-red-10 p-3 text-[13px] text-red-70">{vendor.rejectionReason}</p>
-          )}
-          {(vendor.status === "DRAFT" || vendor.status === "REJECTED") && (
-            <Link
-              href="/vendor/profile"
-              className="mt-4 inline-block rounded-md bg-brand-primary px-4 py-2.5 text-[13px] font-bold text-white no-underline"
-            >
-              {vendor.status === "REJECTED" ? "Update and resubmit" : "Complete and submit your profile"}
-            </Link>
-          )}
-        </div>
-
-        <div className="rounded-xl border border-border bg-white p-6">
-          <h3 className="mb-1 text-base font-bold">Profile completeness</h3>
-          <p className="mb-3 text-xs text-text-grey">{vendor.profileCompleteness}% complete</p>
-          <div className="mb-4 h-2.5 w-full overflow-hidden rounded-full bg-surface-input">
-            <div className="h-full rounded-full bg-brand-primary" style={{ width: `${vendor.profileCompleteness}%` }} />
-          </div>
-          {COMPLETENESS_CHECKS.map((check) => {
-            const met = isChecklistItemMet(check.label, vendor);
-            return (
-              <div key={check.label} className="flex items-center gap-2.5 border-b border-neutral-grey-20 py-2 text-[13px] last:border-b-0">
-                <span
-                  className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                    met ? "bg-emerald-10 text-emerald-70" : "bg-neutral-grey-20 text-text-grey"
-                  }`}
-                >
-                  {met ? "✓" : "○"}
-                </span>
-                <span className={met ? "text-text-body" : "text-text-grey"}>
-                  {check.label}
-                  {check.requiredForSubmission && !met && " (required)"}
-                </span>
-              </div>
-            );
-          })}
-          <Link
-            href="/vendor/profile"
-            className="mt-4 block rounded-md bg-brand-primary py-2.5 text-center text-[13px] font-bold text-white no-underline"
-          >
-            Complete your profile
-          </Link>
-        </div>
+        )}
       </div>
     </VendorShell>
   );
