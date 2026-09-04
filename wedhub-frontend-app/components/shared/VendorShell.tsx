@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { getMyUnreadNotificationCount } from "@/lib/api/account";
+import { getMyVendor } from "@/lib/api/vendor-self";
 import { BrandLogo } from "./BrandLogo";
 import { VendorLogoutButton } from "./VendorLogoutButton";
+import { SharePortfolioButton } from "@/components/vendor/SharePortfolioButton";
 
 /**
  * Sidebar shell for all (vendor) routes, matching
@@ -15,6 +17,9 @@ import { VendorLogoutButton } from "./VendorLogoutButton";
  * notification entry point at all, despite NEW_LEAD being a real
  * notification event every vendor receives. Async Server Component now,
  * fetching its own unread count for the same reason as CoupleShell.
+ *
+ * Share Portfolio CTA added 2026-09-04 — provides vendors instant 1-click
+ * access to copy, share on WhatsApp, and preview their live digital portfolio.
  */
 
 const navLinks = [
@@ -82,15 +87,24 @@ export async function VendorShell({
   children,
   activeHref,
   vendorName,
+  vendorSlug,
 }: {
   children: React.ReactNode;
   activeHref: string;
   vendorName: string;
+  vendorSlug?: string;
 }) {
   const initials = vendorName.slice(0, 2).toUpperCase();
-  const unreadCount = await getMyUnreadNotificationCount()
-    .then((r) => r.data.count)
-    .catch(() => 0);
+  const [unreadCount, resolvedSlug] = await Promise.all([
+    getMyUnreadNotificationCount()
+      .then((r) => r.data.count)
+      .catch(() => 0),
+    vendorSlug
+      ? Promise.resolve(vendorSlug)
+      : getMyVendor()
+          .then((r) => r.data.slug)
+          .catch(() => undefined),
+  ]);
 
   return (
     <div className="flex min-h-screen">
@@ -119,6 +133,10 @@ export async function VendorShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-end gap-3 border-b border-border bg-white px-6">
+          {resolvedSlug && (
+            <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
+          )}
+
           <Link
             href="/vendor/notifications"
             aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}

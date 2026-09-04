@@ -971,4 +971,60 @@ Vendors get a full-featured GST billing interface inside the vendor portal:
 - **Unpacked Error Feedback**: Standardized `formatApiError()` from `lib/utils/error.ts` across all forms, ensuring nested backend `error.details` maps (`Record<string, string[]>`) are unpacked and surfaced to users instead of generic fallback messages.
 - **Verification**: `wedhub-backend` passes `npm run typecheck` (0 errors) and `tests/unit` (8/8 passed). `wedhub-frontend-app` passes `npx tsc --noEmit` (0 errors) and `next build` (54/54 routes compiled with Turbopack).
 
+---
+
+## Frontend Arch Phase 14 — Standalone Vendor-First Digital Portfolio & 1-Click WhatsApp Direct Connect
+
+**Status:** ✅ Done — 2026-09-04  
+**Stage:** [Stage 8 — Standalone Vendor-First Digital Portfolio](10-stage-vendor-portfolio.md)
+
+### What this unlocks
+
+- **Dedicated Standalone Portfolio Route (`/portfolio/[slug]`)**:
+  - Independent, vendor-branded presentation page that acts as an executive digital portfolio and link-in-bio website for wedding professionals.
+  - **Vendor-First Branding**: The vendor's business name, logo, cover imagery, packages, and gallery take 100% visual dominance. Completely omits the itsmyKalyanam marketplace topbar, category links, search filters, and competitor recommendations.
+  - Subtle and respectful platform attribution (`"Powered by itsmyKalyanam"`) at the very footer.
+  - **Preserves Existing Marketplace Route**: `/vendors/[slug]` remains completely untouched for couples browsing the public directory and comparing vendors.
+- **1-Click WhatsApp Direct Contact**:
+  - Instant click-to-chat CTA buttons in the top header and sticky/floating on mobile viewports.
+  - Indian phone number sanitization and automatic country code (`91`) normalization.
+  - Pre-filled WhatsApp inquiry message customized with the vendor's business name and package interest.
+  - Direct call CTA button and fallback to in-app `EnquiryModal`.
+- **Organized Tabbed Portfolio Showcase**:
+  - **Work & Moments Gallery**: Responsive grid with album filter chips and fullscreen interactive lightbox viewer.
+  - **Packages & Pricing**: Active package cards with currency formatting, inclusion checklists, and direct package-level WhatsApp inquiry buttons.
+  - **About Us & Specifications**: Studio bio, dynamic category attribute values (e.g. Drone, Cinematic Video, Experience), studio address, website, and social media handles.
+  - **Client Reviews & Testimonials**: Client feedback, verified event badges, star ratings, and vendor responses.
+- **Vendor Dashboard "Share Portfolio" Experience**:
+  - Embedded "Share Portfolio" action button in `VendorShell.tsx` header bar across all vendor pages.
+  - Dedicated "Your Live Digital Portfolio Link" highlight card on `/vendor/dashboard`.
+  - Interactive sharing modal with:
+    - 1-Click Copy Link with clipboard feedback.
+    - 1-Click Share on WhatsApp button.
+    - Live Portfolio Preview button.
+    - Auto-generated high-resolution QR code preview and one-click download for studio cards and brochures.
+
+### Files Added / Modified
+
+- `wedhub-frontend-app/lib/utils/whatsapp.ts`: Mobile number cleaner and WhatsApp URL formatter.
+- `wedhub-frontend-app/components/portfolio/VendorPortfolioHeader.tsx`: Vendor topbar with brand identity and quick contact.
+- `wedhub-frontend-app/components/portfolio/VendorPortfolioGallery.tsx`: Album tabs, photo grid, and fullscreen lightbox.
+- `wedhub-frontend-app/components/portfolio/VendorPortfolioPackages.tsx`: Packages showcase with direct WhatsApp package links.
+- `wedhub-frontend-app/components/portfolio/VendorPortfolioAbout.tsx`: About section, dynamic category attributes, and studio details.
+- `wedhub-frontend-app/components/portfolio/VendorPortfolioReviews.tsx`: Testimonials and review ratings.
+- `wedhub-frontend-app/components/portfolio/FloatingWhatsAppButton.tsx`: Sticky mobile WhatsApp contact trigger.
+- `wedhub-frontend-app/components/portfolio/PortfolioAttribution.tsx`: Minimal platform attribution footer.
+- `wedhub-frontend-app/components/portfolio/VendorPortfolioView.tsx`: Main client view assembling all sections and tabs.
+- `wedhub-frontend-app/app/(public)/portfolio/[slug]/page.tsx`: Server Component with SEO metadata and async data fetching.
+- `wedhub-frontend-app/components/vendor/SharePortfolioButton.tsx`: Interactive modal with copy link, WhatsApp share, preview, and QR code download.
+- `wedhub-frontend-app/components/shared/VendorShell.tsx`: Header bar integration for "Share Portfolio" button.
+- `wedhub-frontend-app/app/(vendor)/vendor/dashboard/page.tsx`: Dashboard header action and live portfolio highlight banner.
+- `frontenddocs/10-stage-vendor-portfolio.md`: Architecture specification.
+- `docs/14-stage-vendor-portfolio.md`: Platform stage documentation.
+
+### Verification
+
+- `npx tsc --noEmit` passed with 0 errors.
+- `npm run build` compiled cleanly with Turbopack across all 54 routes, including `├ ƒ /portfolio/[slug]`.
+
 

@@ -1691,4 +1691,43 @@ Vendors can generate statutory Indian GST tax invoices for clients (couples) wit
 - **Unpacked Error Feedback**: Standardized `formatApiError()` from `lib/utils/error.ts` across all forms, ensuring nested backend `error.details` maps (`Record<string, string[]>`) are unpacked and surfaced to users instead of generic fallback messages.
 - **Verification**: `wedhub-backend` passes `npm run typecheck` (0 errors) and `tests/unit` (8/8 passed). `wedhub-frontend-app` passes `npx tsc --noEmit` (0 errors) and `next build` (54/54 routes compiled with Turbopack).
 
+---
+
+## Arch Phase 28 — Standalone Vendor-First Digital Portfolio & 1-Click WhatsApp Direct Connect
+
+**Status:** ✅ Done — 2026-09-04  
+**Stage:** [Stage 10 — Standalone Vendor Digital Portfolio](14-stage-vendor-portfolio.md)
+
+### What this unlocks
+
+- **Dedicated Standalone Portfolio Route (`/portfolio/:slug`)**:
+  - Independent, vendor-first digital portfolio page that serves as an executive digital brochure and link-in-bio website for wedding vendors.
+  - **Vendor-First Branding Hierarchy**: The vendor's business name, logo, cover imagery, packages, and gallery take 100% visual dominance. Completely omits the itsmyKalyanam marketplace topbar, category links, search filters, and competitor recommendations.
+  - Subtle platform attribution (`"Powered by itsmyKalyanam"`) placed only at the very bottom.
+  - **Preserves Existing Marketplace Route**: `/vendors/:slug` remains completely untouched for couple discovery and platform directory comparison.
+- **1-Click WhatsApp Direct Contact**:
+  - Instant click-to-chat deep links in the top header and sticky/floating on mobile viewports.
+  - Indian phone number sanitization and automatic country code (`91`) normalization.
+  - Pre-filled WhatsApp inquiry message customized with the vendor's business name and package interest.
+  - Direct call CTA button and fallback to in-app `EnquiryModal`.
+- **Organized Tabbed Portfolio Showcase**:
+  - **Work & Moments Gallery**: Responsive grid with album filter chips and fullscreen interactive lightbox viewer.
+  - **Packages & Pricing**: Active package cards with currency formatting, inclusion checklists, and direct package-level WhatsApp inquiry buttons.
+  - **About Us & Specifications**: Studio bio, dynamic category attribute values (e.g. Drone, Cinematic Video, Experience), studio address, website, and social media handles.
+  - **Client Reviews & Testimonials**: Client feedback, verified event badges, star ratings, and vendor responses.
+- **Vendor Dashboard "Share Portfolio" Experience**:
+  - Embedded "Share Portfolio" action button in `VendorShell.tsx` header bar across all vendor pages.
+  - Dedicated "Your Live Digital Portfolio Link" highlight card on `/vendor/dashboard`.
+  - Interactive sharing modal with:
+    - 1-Click Copy Link with clipboard feedback.
+    - 1-Click Share on WhatsApp button.
+    - Live Portfolio Preview button.
+    - Auto-generated high-resolution QR code preview and one-click download for studio cards and brochures.
+
+### Verification
+
+- `wedhub-backend`: Clean typecheck (0 errors) and 8/8 unit tests pass.
+- `wedhub-frontend-app`: `npx tsc --noEmit` passed with 0 errors.
+- `wedhub-frontend-app`: `next build` compiled cleanly with Turbopack across all 54 routes, including `├ ƒ /portfolio/[slug]`.
+
 
