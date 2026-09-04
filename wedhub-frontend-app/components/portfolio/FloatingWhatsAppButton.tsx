@@ -1,16 +1,28 @@
 "use client";
 
 import { formatWhatsAppUrl } from "@/lib/utils/whatsapp";
+import { trackEvent } from "@/lib/analytics/track";
 
 interface FloatingWhatsAppButtonProps {
+  vendorId?: string;
   phone?: string | null;
   businessName: string;
 }
 
-export function FloatingWhatsAppButton({ phone, businessName }: FloatingWhatsAppButtonProps) {
+export function FloatingWhatsAppButton({ vendorId, phone, businessName }: FloatingWhatsAppButtonProps) {
   const whatsappUrl = formatWhatsAppUrl(phone, businessName);
 
   if (!whatsappUrl) return null;
+
+  const handleClick = () => {
+    if (vendorId) {
+      trackEvent({
+        eventType: "portfolio_whatsapp_click",
+        vendorId,
+        metadata: { source: "floating", businessName },
+      });
+    }
+  };
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2">
@@ -18,6 +30,7 @@ export function FloatingWhatsAppButton({ phone, businessName }: FloatingWhatsApp
         href={whatsappUrl}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={handleClick}
         className="group relative flex items-center gap-3 rounded-full bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-xl transition-all duration-300 hover:bg-[#20ba5a] hover:scale-105 active:scale-95 focus:outline-hidden"
         aria-label="Direct WhatsApp Enquiry"
       >

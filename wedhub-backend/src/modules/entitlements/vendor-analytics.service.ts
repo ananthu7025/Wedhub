@@ -39,19 +39,32 @@ export async function getVendorAnalytics(vendorId: string) {
   const windowDays = level === "advanced" ? ADVANCED_WINDOW_DAYS : BASIC_WINDOW_DAYS;
   const since = daysAgo(windowDays);
 
-  const [profileViews, impressions, leads, enquiries, reviews, leadAnalytics] = await Promise.all([
+  const [
+    profileViews,
+    impressions,
+    leads,
+    enquiries,
+    reviews,
+    leadAnalytics,
+    whatsappClicks,
+    portfolioViews,
+  ] = await Promise.all([
     vendorAnalyticsRepository.countProfileViews(vendorId, since),
     vendorAnalyticsRepository.countImpressions(vendorId, since),
     vendorAnalyticsRepository.countLeads(vendorId, since),
     vendorAnalyticsRepository.countDistinctEnquiries(vendorId, since),
     vendorAnalyticsRepository.countReviews(vendorId, since),
     leadRepository.getVendorLeadAnalytics(vendorId, since),
+    vendorAnalyticsRepository.countWhatsAppClicks(vendorId, since),
+    vendorAnalyticsRepository.countPortfolioViews(vendorId, since),
   ]);
 
   const summary = {
     level,
     windowDays,
     profileViews,
+    portfolioViews,
+    whatsappClicks,
     impressions,
     leads,
     enquiries,

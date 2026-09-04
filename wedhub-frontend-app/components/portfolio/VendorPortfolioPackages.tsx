@@ -2,8 +2,10 @@
 
 import type { VendorPackage } from "@/lib/api/vendors.types";
 import { formatWhatsAppUrl } from "@/lib/utils/whatsapp";
+import { trackEvent } from "@/lib/analytics/track";
 
 interface VendorPortfolioPackagesProps {
+  vendorId?: string;
   packages: VendorPackage[];
   customQuoteAvailable?: boolean;
   phone?: string | null;
@@ -12,6 +14,7 @@ interface VendorPortfolioPackagesProps {
 }
 
 export function VendorPortfolioPackages({
+  vendorId,
   packages,
   customQuoteAvailable,
   phone,
@@ -33,6 +36,22 @@ export function VendorPortfolioPackages({
                 `Hi ${businessName}, I am interested in your "${pkg.name}" package (₹${Number(pkg.price).toLocaleString("en-IN")}) for my wedding. Is this available on my date?`
               )}`
             : null;
+
+          const handlePackageWhatsAppClick = () => {
+            if (vendorId) {
+              trackEvent({
+                eventType: "portfolio_whatsapp_click",
+                vendorId,
+                metadata: {
+                  source: "package",
+                  packageId: pkg.id,
+                  packageName: pkg.name,
+                  price: pkg.price,
+                  businessName,
+                },
+              });
+            }
+          };
 
           return (
             <div
@@ -76,6 +95,7 @@ export function VendorPortfolioPackages({
                     href={packageWhatsAppUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={handlePackageWhatsAppClick}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-xs sm:text-sm font-bold text-white transition-all hover:bg-[#20ba5a]"
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">

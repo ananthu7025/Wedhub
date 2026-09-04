@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import type { VendorDetail, VendorAlbum, VendorReview } from "@/lib/api/vendors.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { formatWhatsAppUrl, formatTelUrl } from "@/lib/utils/whatsapp";
+import { trackEvent } from "@/lib/analytics/track";
 import { VendorPortfolioHeader } from "./VendorPortfolioHeader";
 import { VendorPortfolioGallery } from "./VendorPortfolioGallery";
 import { VendorPortfolioPackages } from "./VendorPortfolioPackages";
@@ -27,6 +28,18 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
   const profile = vendor.profile;
   const phone = profile?.phone;
   const businessName = vendor.businessName;
+
+  // Track page view on direct portfolio visit
+  useEffect(() => {
+    trackEvent({
+      eventType: "portfolio_view",
+      vendorId: vendor.id,
+      metadata: {
+        slug: vendor.slug,
+        businessName: vendor.businessName,
+      },
+    });
+  }, [vendor.id, vendor.slug, vendor.businessName]);
 
   // Resolve cover image
   const coverMedia = profile?.coverMedia;
@@ -59,16 +72,42 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
     vendor.categories?.[0]?.category?.name ??
     "Wedding Professional";
 
+  const handleHeroWhatsAppClick = () => {
+    trackEvent({
+      eventType: "portfolio_whatsapp_click",
+      vendorId: vendor.id,
+      metadata: { source: "hero", businessName },
+    });
+  };
+
+  const handleHeroTelClick = () => {
+    trackEvent({
+      eventType: "portfolio_call_click",
+      vendorId: vendor.id,
+      metadata: { source: "hero", businessName },
+    });
+  };
+
+  const handleOpenEnquiry = () => {
+    trackEvent({
+      eventType: "enquiry_started",
+      vendorId: vendor.id,
+      metadata: { source: "portfolio", businessName },
+    });
+    setEnquiryModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-neutral-50/60 font-sans text-neutral-900 selection:bg-neutral-900 selection:text-white">
       {/* Sticky Topbar */}
       <VendorPortfolioHeader
+        vendorId={vendor.id}
         businessName={businessName}
         logoUrl={logoUrl}
         phone={phone}
         categoryName={primaryCategory}
         cityName={vendor.city?.name}
-        onEnquireClick={() => setEnquiryModalOpen(true)}
+        onEnquireClick={handleOpenEnquiry}
       />
 
       {/* Hero Banner with Cover Photo */}
@@ -160,6 +199,7 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
                     href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={handleHeroWhatsAppClick}
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-xs transition-all hover:bg-[#20ba5a] hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
@@ -172,6 +212,7 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
                 {telUrl && (
                   <a
                     href={telUrl}
+                    onClick={handleHeroTelClick}
                     className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-4 py-3 text-xs sm:text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
                   >
                     Call
@@ -180,7 +221,7 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
 
                 <button
                   type="button"
-                  onClick={() => setEnquiryModalOpen(true)}
+                  onClick={handleOpenEnquiry}
                   className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-neutral-800 transition-all"
                 >
                   Send Enquiry
@@ -286,11 +327,12 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
                 </p>
               </div>
               <VendorPortfolioPackages
+                vendorId={vendor.id}
                 packages={vendor.packages ?? []}
                 customQuoteAvailable={profile?.customQuoteAvailable}
                 phone={phone}
                 businessName={businessName}
-                onEnquireClick={() => setEnquiryModalOpen(true)}
+                onEnquireClick={handleOpenEnquiry}
               />
             </div>
           )}
@@ -339,7 +381,11 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
       </main>
 
       {/* Floating Sticky WhatsApp Button for mobile */}
-      <FloatingWhatsAppButton phone={phone} businessName={businessName} />
+      <FloatingWhatsAppButton
+        vendorId={vendor.id}
+        phone={phone}
+        businessName={businessName}
+      />
 
       {/* Minimal platform attribution */}
       <PortfolioAttribution />

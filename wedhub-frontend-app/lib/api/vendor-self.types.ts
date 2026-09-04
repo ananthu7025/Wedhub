@@ -245,6 +245,8 @@ export interface VendorAnalytics {
   level: "basic" | "advanced";
   windowDays: 30 | 90;
   profileViews: number;
+  portfolioViews?: number;
+  whatsappClicks?: number;
   impressions: number;
   leads: number;
   enquiries: number;

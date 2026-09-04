@@ -62,10 +62,14 @@ export function AnalyticsBoard({
         </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-4 gap-4 max-[900px]:grid-cols-2 max-[500px]:grid-cols-1">
+      <div className="mb-6 grid grid-cols-5 gap-4 max-[1100px]:grid-cols-3 max-[768px]:grid-cols-2 max-[500px]:grid-cols-1">
         <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">Profile views</p>
+          <p className="mb-1 text-xs font-semibold text-text-grey">Profile & Portfolio views</p>
           <p className="text-2xl font-bold">{profileAnalytics.profileViews}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">WhatsApp Inquiries</p>
+          <p className="text-2xl font-bold text-[#1da851]">{profileAnalytics.whatsappClicks ?? 0}</p>
         </div>
         <div className="rounded-xl border border-border bg-white p-5">
           <p className="mb-1 text-xs font-semibold text-text-grey">Leads received</p>

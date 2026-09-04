@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import { formatWhatsAppUrl, formatTelUrl } from "@/lib/utils/whatsapp";
+import { trackEvent } from "@/lib/analytics/track";
 
 interface VendorPortfolioHeaderProps {
+  vendorId?: string;
   businessName: string;
   logoUrl?: string | null;
   phone?: string | null;
@@ -13,6 +15,7 @@ interface VendorPortfolioHeaderProps {
 }
 
 export function VendorPortfolioHeader({
+  vendorId,
   businessName,
   logoUrl,
   phone,
@@ -22,6 +25,26 @@ export function VendorPortfolioHeader({
 }: VendorPortfolioHeaderProps) {
   const whatsappUrl = formatWhatsAppUrl(phone, businessName);
   const telUrl = formatTelUrl(phone);
+
+  const handleWhatsAppClick = () => {
+    if (vendorId) {
+      trackEvent({
+        eventType: "portfolio_whatsapp_click",
+        vendorId,
+        metadata: { source: "header", businessName },
+      });
+    }
+  };
+
+  const handleTelClick = () => {
+    if (vendorId) {
+      trackEvent({
+        eventType: "portfolio_call_click",
+        vendorId,
+        metadata: { source: "header", businessName },
+      });
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-white/95 backdrop-blur-md shadow-xs transition-all">
@@ -55,6 +78,7 @@ export function VendorPortfolioHeader({
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleWhatsAppClick}
               className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 py-2 text-xs sm:text-sm font-semibold text-white shadow-xs transition-all duration-200 hover:bg-[#20ba5a] hover:scale-[1.02] active:scale-[0.98]"
               aria-label="Chat on WhatsApp"
             >
@@ -68,6 +92,7 @@ export function VendorPortfolioHeader({
           {telUrl && (
             <a
               href={telUrl}
+              onClick={handleTelClick}
               className="hidden md:inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-neutral-800 shadow-xs transition-all duration-200 hover:bg-neutral-50 hover:scale-[1.02] active:scale-[0.98]"
               aria-label="Call vendor"
             >

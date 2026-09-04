@@ -39,6 +39,18 @@ export function countReviews(vendorId: string, since: Date) {
   return prisma.review.count({ where: { vendorId, createdAt: { gte: since }, status: "APPROVED" } });
 }
 
+export function countWhatsAppClicks(vendorId: string, since: Date) {
+  return prisma.analyticsEvent.count({
+    where: { vendorId, eventType: "portfolio_whatsapp_click", createdAt: { gte: since } },
+  });
+}
+
+export function countPortfolioViews(vendorId: string, since: Date) {
+  return prisma.analyticsEvent.count({
+    where: { vendorId, eventType: "portfolio_view", createdAt: { gte: since } },
+  });
+}
+
 // Advanced tier only: same raw events, grouped by calendar day so the
 // vendor can see a trend rather than just a total.
 export async function profileViewsByDay(vendorId: string, since: Date): Promise<Array<{ day: string; count: number }>> {

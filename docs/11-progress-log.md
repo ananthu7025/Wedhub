@@ -1736,4 +1736,19 @@ Vendors can generate statutory Indian GST tax invoices for clients (couples) wit
 - **Deduplication of Share Button**: Removed duplicate instances from `/vendor/dashboard` (inline action bar and banner card) so that "Share Portfolio" cleanly renders **only once** in the top navigation header bar (`VendorShell.tsx`).
 - **Verification**: `npx tsc --noEmit` passed with 0 errors; Next.js production build (`npm run build`) succeeded with all 54 routes compiled cleanly.
 
+### Addendum, 2026-09-04 — Portfolio Direct WhatsApp & Enquiry Analytics Tracking
+
+- **Client-Side Event Emission**:
+  - `portfolio_view`: Triggered on direct visits to `/portfolio/[slug]`.
+  - `portfolio_whatsapp_click`: Triggered when couples click any WhatsApp action button (topbar, hero, mobile floating action button, or individual package cards with package name and price metadata).
+  - `portfolio_call_click`: Triggered when couples click direct telephone call buttons.
+  - `enquiry_started`: Triggered when couples open the enquiry form from the standalone portfolio with `source: "portfolio"`.
+- **Backend Analytics Aggregation**:
+  - Added `countWhatsAppClicks(vendorId, since)` and `countPortfolioViews(vendorId, since)` to `vendor-analytics.repository.ts`.
+  - Integrated into `getVendorAnalytics` in `vendor-analytics.service.ts` so `whatsappClicks` and `portfolioViews` are computed and returned in the unified vendor analytics response.
+- **Vendor Dashboard & Analytics Displays**:
+  - `/vendor/dashboard`: Added dedicated **WhatsApp Inquiries** stat card with WhatsApp brand green styling, direct chat badge, and total count.
+  - `/vendor/analytics`: Added WhatsApp Inquiries stat card alongside Profile & Portfolio views, Leads received, Response rate, and Conversion rate.
+- **Verification**: `wedhub-backend` passes `npm run typecheck` (0 errors); `wedhub-frontend-app` passes `npx tsc --noEmit` (0 errors) and `npm run build` (54/54 routes compiled with Turbopack).
+
 
