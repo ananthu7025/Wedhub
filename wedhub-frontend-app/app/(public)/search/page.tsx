@@ -169,6 +169,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   startingPrice={vendor.startingPrice}
                   currency={vendor.currency}
                   isAuthenticated={session !== null}
+                  listContext="search_results"
                 />
               ))}
             </div>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { initiateUpgrade, cancelMySubscription, undoMyCancellation, getMySubscriptionClient } from "@/lib/api/subscriptions-client";
 import type { Invoice, Subscription, SubscriptionPlan, SubscriptionStatus } from "@/lib/api/subscriptions.types";
+import { trackEvent } from "@/lib/analytics/track";
 import { CheckoutButton } from "./CheckoutButton";
 
 /**
@@ -68,6 +69,16 @@ export function SubscriptionBoard({
 
   const monthlyPlans = initialPlans.filter((p) => p.billingInterval === "MONTHLY").sort((a, b) => Number(a.price) - Number(b.price));
   const currentTier = subscription?.plan?.tier ?? "FREE";
+
+  useEffect(() => {
+    // Arch Phase 18 Stage A — "Subscription view" (product.md §46).
+    // Inherently client-only: viewing the pricing/upgrade page before
+    // deciding has no server-side write to hang an event off, unlike
+    // checkout_started (subscription.service.ts) which only fires once the
+    // vendor actually initiates a real upgrade.
+    trackEvent({ eventType: "subscription_viewed", metadata: { currentTier } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSelectPlan(plan: SubscriptionPlan) {
     if (plan.tier === currentTier) return;

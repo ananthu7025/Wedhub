@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createSingleVendorEnquiry } from "@/lib/api/shortlists-client";
+import { trackEvent } from "@/lib/analytics/track";
 
 interface MeResponse {
   email: string;
@@ -69,6 +70,19 @@ function EnquiryModalContent({
       .catch(() => {
         // Prefill is a convenience, not a requirement — leave fields blank on failure.
       });
+  }, []);
+
+  useEffect(() => {
+    // Arch Phase 18 Stage A — "Enquiry started" (product.md §46). Fired once
+    // when the form actually opens (this component only mounts while
+    // `open` is true — see EnquiryModal above), not on every keystroke.
+    // There's no natural server-side hook for this: nothing is submitted to
+    // the backend until the real POST /enquiries/single-vendor below, which
+    // already fires enquiry_completed server-side (enquiry.service.ts) —
+    // this client event is what makes the "started" half of that funnel
+    // step observable at all.
+    trackEvent({ eventType: "enquiry_started", vendorId, metadata: { vendorName } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSubmit(event: React.FormEvent) {

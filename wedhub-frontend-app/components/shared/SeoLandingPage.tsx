@@ -86,6 +86,7 @@ export async function SeoLandingPage({ seo }: { seo: SeoPageData }) {
                 startingPrice={vendor.startingPrice}
                 currency={vendor.currency}
                 isAuthenticated={session !== null}
+                listContext="seo_landing_page"
               />
             ))}
           </div>

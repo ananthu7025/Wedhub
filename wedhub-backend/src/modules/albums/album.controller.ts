@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { successResponse } from "../../common/utils/api-response.util";
 import { AuthenticationError, NotFoundError } from "../../common/errors";
+import { logAnalyticsEvent } from "../../common/utils/analytics.util";
 import { getOwnedVendorOrThrow } from "../vendors/vendor.policy";
 import * as vendorRepository from "../vendors/vendor.repository";
 import * as albumRepository from "./album.repository";
@@ -92,5 +93,10 @@ export async function listPublicAlbums(req: Request, res: Response): Promise<voi
     throw new NotFoundError("Vendor not found");
   }
   const albums = await albumService.listPublicAlbums(vendor.id);
+  // Arch Phase 18 Stage A — "Portfolio view" (product.md §46). Fires
+  // whenever a visitor loads a vendor's public album list, regardless of
+  // referrer, mirroring vendor_profile_viewed's own posture in
+  // vendor.controller.ts. Best-effort, never blocks the response.
+  void logAnalyticsEvent({ userId: req.user?.id, eventType: "portfolio_viewed", vendorId: vendor.id });
   res.json(successResponse(albums));
 }

@@ -1,5 +1,6 @@
 import { prisma } from "../../config/database";
 import { getPublicUrl } from "../../integrations/storage/r2.client";
+import { logAnalyticsEvent } from "../../common/utils/analytics.util";
 import * as searchRepository from "./search.repository";
 import { rankVendors } from "./vendor-ranking.service";
 import type { SearchVendorsQuery } from "./search.schema";
@@ -76,4 +77,16 @@ async function logSearch(input: {
     // Search analytics must never break a search response — logging failure
     // is swallowed (and would show up in Postgres/Prisma error logs anyway).
   }
+
+  // Arch Phase 18 Stage A: a thin, duplicate event pointer into the unified
+  // AnalyticsEvent stream alongside SearchLog's richer dedicated row above.
+  // SearchLog remains the source of truth for search-specific reporting
+  // (keyword/filters breakdown); this lets a later full-funnel query walk
+  // one table (visitor -> search -> vendor view -> enquiry -> lead) instead
+  // of UNIONing AnalyticsEvent with SearchLog on shape-incompatible columns.
+  await logAnalyticsEvent({
+    userId: loggedInUserId,
+    eventType: "search_performed",
+    metadata: { keyword: query.keyword ?? null, categoryId: query.categoryId ?? null, cityId: query.cityId ?? null, resultCount },
+  });
 }

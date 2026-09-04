@@ -413,6 +413,7 @@ export default async function HomePage() {
                 currency={vendor.currency}
                 featured
                 isAuthenticated={session !== null}
+                listContext="homepage_featured"
               />
             ))}
           </div>

@@ -34,6 +34,7 @@ import { blogAdminRouter, blogRouter } from "../modules/blog";
 import { seoAdminRouter, seoRouter } from "../modules/seo";
 import { weddingWebsiteAdminRouter, weddingWebsiteRouter } from "../modules/wedding-website";
 import { weddingWebsiteMediaRouter } from "../modules/wedding-website-media";
+import { analyticsRouter } from "../modules/analytics";
 
 export const apiV1Router = Router();
 
@@ -85,6 +86,7 @@ apiV1Router.use("/admin/seo-overrides", seoAdminRouter);
 apiV1Router.use("/wedding-websites", weddingWebsiteRouter);
 apiV1Router.use("/admin/wedding-websites", weddingWebsiteAdminRouter);
 apiV1Router.use("/wedding-website-media", weddingWebsiteMediaRouter);
+apiV1Router.use("/analytics", analyticsRouter);
 
 // Mounted BEFORE /vendors: vendorRouter's public GET /:slug would otherwise
 // greedily match /vendors/claim/:token, /vendors/me/albums, /vendors/:slug/albums,

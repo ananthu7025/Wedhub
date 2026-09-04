@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { createOrder, createRefund } from "../../integrations/payment/razorpay.client";
+import { logAnalyticsEvent } from "../../common/utils/analytics.util";
 import * as entitlementService from "../entitlements/entitlement.service";
 import * as planRepository from "../plans/plan.repository";
 import * as subscriptionRepository from "./subscription.repository";
@@ -123,6 +124,21 @@ export async function initiateUpgrade(
     currency: plan.currency,
   });
 
+  // Arch Phase 18 Stage A — "Checkout started" (product.md §46), fired only
+  // on the real-payment path above, not the trial branch (a trial has no
+  // checkout — see this function's own comment). "Upgrade" vs. "new
+  // subscription" isn't distinguished here: `existing` (looked up above)
+  // tells us whether the vendor already had an active subscription, which
+  // is enough to answer that later from this event's metadata without a
+  // second near-duplicate event type (see product.md §46 item 17 / the
+  // Arch Phase 18 progress note for the full reasoning).
+  await logAnalyticsEvent({
+    userId: ownerUserId,
+    eventType: "checkout_started",
+    vendorId,
+    metadata: { planId: plan.id, planTier: plan.tier, amount: finalAmount, currency: plan.currency, isUpgrade: existing !== null },
+  });
+
   return { subscription: null, checkout: { orderId, paymentId: payment.id, amount: finalAmount, currency: plan.currency } };
 }
 
@@ -143,12 +159,25 @@ export async function cancelSubscription(vendorId: string, ownerUserId: string, 
     // Scenario G: immediate cancellation drops the vendor to FREE right now,
     // not at some future period end — sweep excess media in the same beat.
     await entitlementService.sweepMediaToLimits(vendorId, entitlementService.FREE_PLAN_DEFAULT_LIMITS);
+    await logAnalyticsEvent({
+      userId: ownerUserId,
+      eventType: "subscription_cancelled",
+      vendorId,
+      metadata: { subscriptionId: subscription.id, planId: subscription.planId, immediate: true },
+    });
     return cancelled;
   }
   // cancelAtPeriodEnd=true: paid benefits continue until currentPeriodEnd
   // (Scenario F). The Scenario G sweep happens lazily, the first time
   // getEffectivePlan() is called after that date elapses.
-  return subscriptionRepository.setCancelAtPeriodEnd(subscription.id, true);
+  const updated = await subscriptionRepository.setCancelAtPeriodEnd(subscription.id, true);
+  await logAnalyticsEvent({
+    userId: ownerUserId,
+    eventType: "subscription_cancelled",
+    vendorId,
+    metadata: { subscriptionId: subscription.id, planId: subscription.planId, immediate: false },
+  });
+  return updated;
 }
 
 export async function undoCancellation(vendorId: string, ownerUserId: string) {

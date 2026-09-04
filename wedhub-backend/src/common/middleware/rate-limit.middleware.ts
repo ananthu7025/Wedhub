@@ -54,3 +54,13 @@ export const reviewRateLimiter = createRateLimiter({
   max: process.env.REVIEW_RATE_LIMIT_MAX ? Number(process.env.REVIEW_RATE_LIMIT_MAX) : 5,
   message: "Too many reviews submitted. Please try again later.",
 });
+
+// Arch Phase 18 Stage A — public, unauthenticated, high-frequency-by-design
+// (page views, vendor impressions/clicks, filter changes can all fire many
+// times per minute during normal browsing). Generous on purpose: this must
+// not throttle a real user's normal session, only bulk abuse/scripted spam.
+export const analyticsEventRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: process.env.ANALYTICS_EVENT_RATE_LIMIT_MAX ? Number(process.env.ANALYTICS_EVENT_RATE_LIMIT_MAX) : 120,
+  message: "Too many analytics events. Please slow down.",
+});

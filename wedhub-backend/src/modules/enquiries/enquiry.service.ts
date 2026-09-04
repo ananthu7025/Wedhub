@@ -64,6 +64,7 @@ async function assertVendorIsPublic(vendorId: string): Promise<void> {
 }
 
 async function queueNotificationsAndAnalytics(
+  enquiryId: string,
   leads: { id: string; vendorId: string }[],
   userId: string | undefined,
   routingMode: string,
@@ -94,6 +95,16 @@ async function queueNotificationsAndAnalytics(
       logAnalyticsEvent({ userId, eventType: "lead_created", vendorId: lead.vendorId, metadata: { routingMode, leadId: lead.id } }),
     ),
   );
+  // Arch Phase 18 Stage A — "Enquiry completed" (product.md §46), fired
+  // exactly once per enquiry submission regardless of how many leads it
+  // fanned out to (a multi-vendor enquiry creates up to
+  // MULTI_VENDOR_SELECTION_SIZE leads from one enquiry_completed event) —
+  // distinct from lead_created above, which fires once per resulting lead.
+  await logAnalyticsEvent({
+    userId,
+    eventType: "enquiry_completed",
+    metadata: { enquiryId, routingMode, leadCount: leads.length },
+  });
 }
 
 export async function createSingleVendorEnquiry(
@@ -139,7 +150,7 @@ export async function createSingleVendorEnquiry(
     () => dedupeKey,
   );
 
-  await queueNotificationsAndAnalytics(leads, userId, "SINGLE_VENDOR");
+  await queueNotificationsAndAnalytics(enquiry.id, leads, userId, "SINGLE_VENDOR");
 
   return { enquiry, leads };
 }
@@ -220,7 +231,7 @@ export async function createMultiVendorEnquiry(
     (vendorId) => dedupeKeys.get(vendorId) as string,
   );
 
-  await queueNotificationsAndAnalytics(leads, userId, "MULTI_VENDOR");
+  await queueNotificationsAndAnalytics(enquiry.id, leads, userId, "MULTI_VENDOR");
 
   return { enquiry, leads };
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { PageViewTracker } from "@/components/shared/PageViewTracker";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -20,7 +21,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={plusJakartaSans.variable}>
-      <body>{children}</body>
+      <body>
+        <PageViewTracker />
+        {children}
+      </body>
     </html>
   );
 }

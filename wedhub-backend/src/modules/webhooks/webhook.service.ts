@@ -1,6 +1,7 @@
 import { AuthenticationError, ValidationError } from "../../common/errors";
 import { env } from "../../config/env";
 import { logger } from "../../config/logger";
+import { logAnalyticsEvent } from "../../common/utils/analytics.util";
 import { verifyWebhookSignature } from "../../integrations/payment/razorpay.client";
 import * as entitlementService from "../entitlements/entitlement.service";
 import * as notificationService from "../notifications/notification.service";
@@ -165,6 +166,19 @@ async function handlePaymentCaptured(payload: RazorpayWebhookPayload): Promise<v
       payment.subscription.vendorId,
       entitlementService.readLimits(payment.subscription.plan),
     );
+    // Arch Phase 18 Stage A — "Payment completed" (product.md §46). No
+    // separate "Upgrade" event: this branch is a same-plan renewal today
+    // (no caller currently creates a Payment pre-linked to a subscriptionId
+    // for a plan change — see subscription.service.ts's initiateUpgrade,
+    // which always routes a real plan change through the first-time
+    // activation branch below via a fresh pendingPlanId), so isRenewal is
+    // sufficient metadata rather than a near-duplicate event type.
+    await logAnalyticsEvent({
+      userId: undefined,
+      eventType: "payment_completed",
+      vendorId: payment.subscription.vendorId,
+      metadata: { paymentId: payment.id, subscriptionId: renewed.id, planId: payment.subscription.planId, amount: Number(payment.amount), isRenewal: true },
+    });
     return;
   }
 
@@ -183,6 +197,23 @@ async function handlePaymentCaptured(payload: RazorpayWebhookPayload): Promise<v
     currency: payment.currency,
   });
   await entitlementService.restoreInactiveMediaToLimits(subscription.vendorId, entitlementService.readLimits(payment.pendingPlan));
+
+  // Arch Phase 18 Stage A — "Payment completed" (product.md §46). This
+  // branch is reached both for a brand-new subscription AND a plan change
+  // on top of an existing one (initiateUpgrade routes both through the same
+  // pendingPlanId checkout path — see that function's own checkout_started
+  // event, which does carry an isUpgrade flag from the vendor's
+  // subscription state at checkout time). Duplicating that same isUpgrade
+  // determination here would need an extra "did this vendor have a prior
+  // subscription" query on the hot payment-capture path for a distinction
+  // already answered by joining back to the checkout_started event's
+  // metadata — so it's deliberately left out here.
+  await logAnalyticsEvent({
+    userId: undefined,
+    eventType: "payment_completed",
+    vendorId: subscription.vendorId,
+    metadata: { paymentId: payment.id, subscriptionId: subscription.id, planId: payment.pendingPlan.id, amount: Number(payment.amount), isRenewal: false },
+  });
 
   // Scenario B step 9 ("feature entitlements updated") + product.md §45's
   // SUBSCRIPTION_ACTIVATED event — first-time activation only, not renewal
