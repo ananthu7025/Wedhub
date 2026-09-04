@@ -15,6 +15,7 @@ import {
   issueMyInvoice,
   recordMyInvoicePayment,
 } from "@/lib/api/vendor-invoices-client";
+import { formatApiError } from "@/lib/utils/gst";
 
 interface InvoiceDetailViewProps {
   initialInvoice: VendorInvoice;
@@ -98,7 +99,7 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
       setFeedback({ type: "success", message: `Invoice #${res.data.invoiceNumber} has been issued!` });
       router.refresh();
     } else {
-      setFeedback({ type: "error", message: res.error.message || "Failed to issue invoice." });
+      setFeedback({ type: "error", message: formatApiError(res.error) });
     }
   }
 
@@ -110,7 +111,7 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
     if (res.success) {
       router.push(`/vendor/invoices/${res.data.id}/edit`);
     } else {
-      setFeedback({ type: "error", message: res.error.message || "Failed to duplicate invoice." });
+      setFeedback({ type: "error", message: formatApiError(res.error) });
     }
   }
 
@@ -125,7 +126,7 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
     if (res.success) {
       router.push("/vendor/invoices");
     } else {
-      setFeedback({ type: "error", message: res.error.message || "Failed to delete draft." });
+      setFeedback({ type: "error", message: formatApiError(res.error) });
     }
   }
 
@@ -143,6 +144,14 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
       });
       return;
     }
+    if (paymentReference.trim().length > 100) {
+      setFeedback({ type: "error", message: "Transaction reference cannot exceed 100 characters." });
+      return;
+    }
+    if (paymentNotes.trim().length > 500) {
+      setFeedback({ type: "error", message: "Payment notes cannot exceed 500 characters." });
+      return;
+    }
 
     setRecordingPayment(true);
     setFeedback(null);
@@ -151,7 +160,7 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
       amount: amountNum,
       paymentMethod,
       transactionReference: paymentReference.trim() || null,
-      paymentDate: new Date(paymentDate).toISOString(),
+      paymentDate: paymentDate.trim().split("T")[0],
       notes: paymentNotes.trim() || null,
     });
 
@@ -166,7 +175,7 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
       setFeedback({ type: "success", message: `Payment of ${formatINR(amountNum)} recorded successfully!` });
       router.refresh();
     } else {
-      setFeedback({ type: "error", message: res.error.message || "Failed to record payment." });
+      setFeedback({ type: "error", message: formatApiError(res.error) });
     }
   }
 
@@ -184,12 +193,16 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
       setFeedback({ type: "success", message: "Payment reversed and removed from invoice history." });
       router.refresh();
     } else {
-      setFeedback({ type: "error", message: res.error.message || "Failed to delete payment." });
+      setFeedback({ type: "error", message: formatApiError(res.error) });
     }
   }
 
   async function handleCancelInvoice(e: React.FormEvent) {
     e.preventDefault();
+    if (cancelReason.trim().length > 500) {
+      setFeedback({ type: "error", message: "Cancellation reason cannot exceed 500 characters." });
+      return;
+    }
     setCancelling(true);
     setFeedback(null);
 
@@ -202,7 +215,7 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
       setFeedback({ type: "success", message: "Invoice has been marked as CANCELLED." });
       router.refresh();
     } else {
-      setFeedback({ type: "error", message: res.error.message || "Failed to cancel invoice." });
+      setFeedback({ type: "error", message: formatApiError(res.error) });
     }
   }
 

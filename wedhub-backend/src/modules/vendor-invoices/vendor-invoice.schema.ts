@@ -4,6 +4,7 @@ const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 const STATE_CODE_REGEX = /^[0-9]{2}$/;
 const PINCODE_REGEX = /^[0-9]{6}$/;
+const DATE_STRING_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
 
 export const ALLOWED_GST_RATES = [0, 5, 12, 18, 28] as const;
 
@@ -58,7 +59,7 @@ export const upsertBillingProfileSchema = z.object({
 export const invoiceItemSchema = z
   .object({
     description: z.string().trim().min(1, "Item description is required").max(300),
-    sacCode: z.string().trim().max(20).nullable().optional(),
+    sacCode: z.string().trim().max(20).nullable().optional().or(z.literal("")),
     quantity: z.coerce.number().positive("Quantity must be greater than 0"),
     unit: z.string().trim().max(30).default("Session"),
     unitPrice: z.coerce.number().min(0, "Unit price cannot be negative"),
@@ -78,9 +79,14 @@ export const invoiceItemSchema = z
 
 export const createVendorInvoiceSchema = z
   .object({
-    leadId: z.string().uuid("Invalid lead ID").nullable().optional(),
-    issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Issue date must be YYYY-MM-DD"),
-    dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Due date must be YYYY-MM-DD").nullable().optional(),
+    leadId: z.string().uuid("Invalid lead ID").nullable().optional().or(z.literal("")),
+    issueDate: z.string().regex(DATE_STRING_REGEX, "Issue date must be a valid date (e.g. YYYY-MM-DD)"),
+    dueDate: z
+      .string()
+      .regex(DATE_STRING_REGEX, "Due date must be a valid date (e.g. YYYY-MM-DD)")
+      .nullable()
+      .optional()
+      .or(z.literal("")),
     clientName: z.string().trim().min(1, "Client name is required").max(150),
     clientPhone: z.string().trim().max(25).nullable().optional(),
     clientEmail: z.string().trim().email("Invalid client email").nullable().optional().or(z.literal("")),
@@ -124,8 +130,13 @@ export const createVendorInvoiceSchema = z
 
 export const updateVendorInvoiceSchema = z
   .object({
-    issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Issue date must be YYYY-MM-DD").optional(),
-    dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Due date must be YYYY-MM-DD").nullable().optional(),
+    issueDate: z.string().regex(DATE_STRING_REGEX, "Issue date must be a valid date (e.g. YYYY-MM-DD)").optional(),
+    dueDate: z
+      .string()
+      .regex(DATE_STRING_REGEX, "Due date must be a valid date (e.g. YYYY-MM-DD)")
+      .nullable()
+      .optional()
+      .or(z.literal("")),
     clientName: z.string().trim().min(1, "Client name is required").max(150).optional(),
     clientPhone: z.string().trim().max(25).nullable().optional(),
     clientEmail: z.string().trim().email("Invalid client email").nullable().optional().or(z.literal("")),
@@ -171,7 +182,7 @@ export const recordPaymentSchema = z.object({
   amount: z.coerce.number().positive("Payment amount must be greater than 0"),
   paymentMethod: z.enum(["UPI", "BANK_TRANSFER", "CASH", "CARD", "OTHER"]),
   transactionReference: z.string().trim().max(100).nullable().optional(),
-  paymentDate: z.string().optional(), // ISO date or date-time
+  paymentDate: z.string().regex(DATE_STRING_REGEX, "Payment date must be a valid date").optional(),
   notes: z.string().trim().max(500).nullable().optional(),
 });
 
@@ -184,7 +195,7 @@ export const listInvoicesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   status: z.enum(["DRAFT", "ISSUED", "PAID", "CANCELLED"]).optional(),
   search: z.string().trim().optional(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  startDate: z.string().regex(DATE_STRING_REGEX).optional(),
+  endDate: z.string().regex(DATE_STRING_REGEX).optional(),
   leadId: z.string().uuid().optional(),
 });

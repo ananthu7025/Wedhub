@@ -14,7 +14,13 @@ import {
   issueMyInvoice,
   updateMyInvoice,
 } from "@/lib/api/vendor-invoices-client";
-import { INDIAN_STATES, SAC_PRESETS } from "@/lib/utils/gst";
+import {
+  INDIAN_STATES,
+  SAC_PRESETS,
+  formatApiError,
+  validateEmail,
+  validateGstin,
+} from "@/lib/utils/gst";
 
 interface InvoiceEditorProps {
   billingProfile: VendorBillingProfile;
@@ -237,12 +243,29 @@ export function InvoiceEditor({
   }
 
   async function handleSave(issueImmediately: boolean) {
+    setErrorMsg(null);
+
+    // 1. Client Details Validation
     if (!clientName.trim()) {
       setErrorMsg("Client name is required.");
       return;
     }
-    if (items.length === 0 || !items.some((i) => i.description.trim())) {
-      setErrorMsg("Please add at least one line item with a description.");
+    if (clientName.trim().length > 150) {
+      setErrorMsg("Client name cannot exceed 150 characters.");
+      return;
+    }
+    if (clientPhone.trim() && clientPhone.trim().length > 25) {
+      setErrorMsg("Client phone number cannot exceed 25 characters.");
+      return;
+    }
+    const emailErr = validateEmail(clientEmail);
+    if (emailErr) {
+      setErrorMsg(`Client email error: ${emailErr}`);
+      return;
+    }
+    const gstinErr = validateGstin(clientGstin);
+    if (gstinErr) {
+      setErrorMsg(`Client GSTIN error: ${gstinErr}`);
       return;
     }
     if (!placeOfSupply.trim()) {
@@ -250,8 +273,60 @@ export function InvoiceEditor({
       return;
     }
 
+    // 2. Dates Validation
+    const cleanIssueDate = issueDate.trim().split("T")[0];
+    if (!cleanIssueDate) {
+      setErrorMsg("Issue date is required.");
+      return;
+    }
+    const cleanDueDate = dueDate.trim() ? dueDate.trim().split("T")[0] : null;
+    if (cleanDueDate && cleanDueDate < cleanIssueDate) {
+      setErrorMsg(`Due date (${cleanDueDate}) cannot be earlier than issue date (${cleanIssueDate}).`);
+      return;
+    }
+
+    // 3. Line Items Validation
+    if (items.length === 0) {
+      setErrorMsg("Please add at least one line item.");
+      return;
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const lineNum = i + 1;
+      if (!it.description.trim()) {
+        setErrorMsg(`Item #${lineNum}: Description is required.`);
+        return;
+      }
+      if (it.description.trim().length > 300) {
+        setErrorMsg(`Item #${lineNum}: Description cannot exceed 300 characters.`);
+        return;
+      }
+      const qty = Number(it.quantity);
+      if (isNaN(qty) || qty <= 0) {
+        setErrorMsg(`Item #${lineNum}: Quantity must be greater than 0.`);
+        return;
+      }
+      const price = Number(it.unitPrice);
+      if (isNaN(price) || price < 0) {
+        setErrorMsg(`Item #${lineNum}: Unit price cannot be negative.`);
+        return;
+      }
+      const disc = Number(it.discount || 0);
+      if (isNaN(disc) || disc < 0) {
+        setErrorMsg(`Item #${lineNum}: Discount cannot be negative.`);
+        return;
+      }
+      const gross = qty * price;
+      if (disc > gross) {
+        setErrorMsg(
+          `Item #${lineNum} ("${it.description.trim()}"): Discount (₹${disc}) cannot exceed gross amount (₹${gross}).`,
+        );
+        return;
+      }
+    }
+
     setSaving(true);
-    setErrorMsg(null);
 
     const payloadItems: InvoiceItemInput[] = items.map((it) => ({
       description: it.description.trim() || "Service",
@@ -267,8 +342,8 @@ export function InvoiceEditor({
       if (isEditing && initialInvoice) {
         // Update draft
         const updateRes = await updateMyInvoice(initialInvoice.id, {
-          issueDate: new Date(issueDate).toISOString(),
-          dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+          issueDate: cleanIssueDate,
+          dueDate: cleanDueDate,
           clientName: clientName.trim(),
           clientPhone: clientPhone.trim() || null,
           clientEmail: clientEmail.trim() || null,
@@ -289,7 +364,7 @@ export function InvoiceEditor({
         });
 
         if (!updateRes.success) {
-          setErrorMsg(updateRes.error.message || "Failed to update invoice.");
+          setErrorMsg(formatApiError(updateRes.error));
           setSaving(false);
           return;
         }
@@ -297,7 +372,7 @@ export function InvoiceEditor({
         if (issueImmediately) {
           const issueRes = await issueMyInvoice(initialInvoice.id);
           if (!issueRes.success) {
-            setErrorMsg(issueRes.error.message || "Invoice updated, but failed to issue.");
+            setErrorMsg(formatApiError(issueRes.error));
             setSaving(false);
             return;
           }
@@ -309,8 +384,8 @@ export function InvoiceEditor({
         // Create new
         const createRes = await createMyInvoice({
           leadId: leadPrefill?.leadId ?? null,
-          issueDate: new Date(issueDate).toISOString(),
-          dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+          issueDate: cleanIssueDate,
+          dueDate: cleanDueDate,
           clientName: clientName.trim(),
           clientPhone: clientPhone.trim() || null,
           clientEmail: clientEmail.trim() || null,
@@ -331,7 +406,7 @@ export function InvoiceEditor({
         });
 
         if (!createRes.success) {
-          setErrorMsg(createRes.error.message || "Failed to create invoice.");
+          setErrorMsg(formatApiError(createRes.error));
           setSaving(false);
           return;
         }
@@ -341,7 +416,7 @@ export function InvoiceEditor({
         if (issueImmediately) {
           const issueRes = await issueMyInvoice(newId);
           if (!issueRes.success) {
-            setErrorMsg(issueRes.error.message || "Invoice saved as draft, but failed to issue.");
+            setErrorMsg(formatApiError(issueRes.error));
             setSaving(false);
             return;
           }
@@ -351,7 +426,7 @@ export function InvoiceEditor({
         router.refresh();
       }
     } catch {
-      setErrorMsg("An unexpected error occurred while saving the invoice.");
+      setErrorMsg("An unexpected network error occurred while saving the invoice.");
       setSaving(false);
     }
   }

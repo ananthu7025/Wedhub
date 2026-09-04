@@ -58,3 +58,86 @@ export const SAC_PRESETS: SacPreset[] = [
   { code: "998399", name: "Decoration, Lighting & Sound Services", defaultRate: 18 },
   { code: "999900", name: "Other Wedding Services", defaultRate: 18 },
 ];
+
+export const ALLOWED_GST_RATES = [0, 5, 12, 18, 28] as const;
+
+export const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+export const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+export const STATE_CODE_REGEX = /^[0-9]{2}$/;
+export const PINCODE_REGEX = /^[0-9]{6}$/;
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Validates Indian GSTIN. Returns error message if invalid, or null if valid/empty.
+ */
+export function validateGstin(gstin?: string | null): string | null {
+  if (!gstin || !gstin.trim()) return null;
+  const upper = gstin.trim().toUpperCase();
+  if (upper.length !== 15) {
+    return "GSTIN must be exactly 15 characters (e.g. 29ABCDE1234F1Z5)";
+  }
+  if (!GSTIN_REGEX.test(upper)) {
+    return "Invalid GSTIN format (e.g. 2 digits + 5 letters + 4 digits + 1 letter + 1 char + Z + 1 char)";
+  }
+  return null;
+}
+
+/**
+ * Validates Indian PAN. Returns error message if invalid, or null if valid/empty.
+ */
+export function validatePan(pan?: string | null): string | null {
+  if (!pan || !pan.trim()) return null;
+  const upper = pan.trim().toUpperCase();
+  if (upper.length !== 10) {
+    return "PAN must be exactly 10 characters (e.g. ABCDE1234F)";
+  }
+  if (!PAN_REGEX.test(upper)) {
+    return "Invalid PAN format (e.g. 5 letters + 4 digits + 1 letter)";
+  }
+  return null;
+}
+
+/**
+ * Validates 6-digit Indian Pincode. Returns error message if invalid, or null if valid/empty.
+ */
+export function validatePincode(pincode?: string | null): string | null {
+  if (!pincode || !pincode.trim()) return null;
+  const trimmed = pincode.trim();
+  if (!PINCODE_REGEX.test(trimmed)) {
+    return "Pincode must be exactly 6 digits";
+  }
+  return null;
+}
+
+/**
+ * Validates Email. Returns error message if invalid, or null if valid/empty.
+ */
+export function validateEmail(email?: string | null): string | null {
+  if (!email || !email.trim()) return null;
+  const trimmed = email.trim();
+  if (!EMAIL_REGEX.test(trimmed)) {
+    return "Invalid email address format";
+  }
+  return null;
+}
+
+/**
+ * Extracts friendly error message from API response, including field-level validation errors.
+ */
+export function formatApiError(error?: { message?: string; details?: Record<string, unknown> } | null): string {
+  if (!error) return "An unexpected error occurred.";
+  if (error.details && typeof error.details === "object") {
+    const fieldMessages: string[] = [];
+    for (const [field, msgs] of Object.entries(error.details)) {
+      if (Array.isArray(msgs)) {
+        fieldMessages.push(`${field}: ${msgs.join(", ")}`);
+      } else if (typeof msgs === "string") {
+        fieldMessages.push(`${field}: ${msgs}`);
+      }
+    }
+    if (fieldMessages.length > 0) {
+      return `${error.message || "Validation error"}: ${fieldMessages.join("; ")}`;
+    }
+  }
+  return error.message || "An unexpected error occurred.";
+}

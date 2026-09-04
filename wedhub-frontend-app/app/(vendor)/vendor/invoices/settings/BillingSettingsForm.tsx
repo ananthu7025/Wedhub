@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { upsertMyBillingProfile } from "@/lib/api/vendor-invoices-client";
 import type { VendorBillingProfile } from "@/lib/api/vendor-invoices.types";
-import { INDIAN_STATES } from "@/lib/utils/gst";
+import {
+  INDIAN_STATES,
+  formatApiError,
+  validateEmail,
+  validateGstin,
+  validatePan,
+  validatePincode,
+} from "@/lib/utils/gst";
 
 interface BillingSettingsFormProps {
   initialProfile: VendorBillingProfile;
@@ -39,6 +46,7 @@ export function BillingSettingsForm({
   const [defaultNotes, setDefaultNotes] = useState(initialProfile.defaultNotes ?? "");
   const [defaultTerms, setDefaultTerms] = useState(initialProfile.defaultTerms ?? "");
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -47,11 +55,48 @@ export function BillingSettingsForm({
     setStateCode(selectedCode);
   }
 
+  function validateAllFields(): Record<string, string | null> {
+    const errs: Record<string, string | null> = {};
+
+    const gstinErr = validateGstin(gstin);
+    if (gstinErr) errs.gstin = gstinErr;
+
+    const panErr = validatePan(pan);
+    if (panErr) errs.pan = panErr;
+
+    const pincodeErr = validatePincode(pincode);
+    if (pincodeErr) errs.pincode = pincodeErr;
+
+    const emailErr = validateEmail(email);
+    if (emailErr) errs.email = emailErr;
+
+    if (phone.trim() && phone.trim().length > 20) {
+      errs.phone = "Phone number must be at most 20 characters";
+    }
+
+    const prefix = invoicePrefix.trim().toUpperCase();
+    if (!prefix || prefix.length < 1 || prefix.length > 10) {
+      errs.invoicePrefix = "Invoice prefix must be 1 to 10 characters";
+    }
+
+    return errs;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setSuccessMsg(null);
     setErrorMsg(null);
+
+    // Run client-side validation
+    const errs = validateAllFields();
+    setFieldErrors(errs);
+
+    if (Object.keys(errs).length > 0) {
+      setErrorMsg("Please fix the validation errors highlighted below before saving.");
+      return;
+    }
+
+    setSaving(true);
 
     const selectedState = INDIAN_STATES.find((s) => s.code === stateCode);
 
@@ -81,10 +126,11 @@ export function BillingSettingsForm({
 
     if (result.success) {
       setSuccessMsg("Billing settings saved successfully!");
+      setFieldErrors({});
       router.refresh();
       setTimeout(() => setSuccessMsg(null), 3500);
     } else {
-      setErrorMsg(result.error.message || "Failed to save billing settings.");
+      setErrorMsg(formatApiError(result.error));
     }
   }
 
@@ -106,20 +152,20 @@ export function BillingSettingsForm({
       </div>
 
       {successMsg && (
-        <div className="mb-6 rounded-lg bg-emerald-10 p-4 text-sm font-medium text-emerald-70">
+        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-semibold text-emerald-800">
           ✓ {successMsg}
         </div>
       )}
 
       {errorMsg && (
-        <div className="mb-6 rounded-lg bg-red-10 p-4 text-sm font-medium text-red-70">
+        <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800">
           ✕ {errorMsg}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Business & Tax Identification */}
-        <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-base font-bold text-text-dark">1. Business & Tax Identification</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
@@ -127,9 +173,10 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={legalName}
+                maxLength={150}
                 onChange={(e) => setLegalName(e.target.value)}
                 placeholder="e.g. Royal Moments LLP"
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               />
             </div>
             <div>
@@ -137,9 +184,10 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={tradeName}
+                maxLength={150}
                 onChange={(e) => setTradeName(e.target.value)}
                 placeholder="e.g. Royal Moments Photography"
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               />
             </div>
             <div>
@@ -149,12 +197,22 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={gstin}
-                onChange={(e) => setGstin(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase();
+                  setGstin(val);
+                  setFieldErrors((prev) => ({ ...prev, gstin: validateGstin(val) }));
+                }}
                 placeholder="29ABCDE1234F1Z5"
                 maxLength={15}
-                className="w-full uppercase rounded-lg border border-border px-3.5 py-2.5 text-sm font-mono outline-none focus:border-brand-primary"
+                className={`w-full uppercase rounded-lg border px-3.5 py-2.5 text-xs font-mono outline-none focus:border-brand-primary ${
+                  fieldErrors.gstin ? "border-rose-400 bg-rose-50/20" : "border-gray-200"
+                }`}
               />
-              <p className="mt-1 text-[11px] text-text-grey">Leave blank if not GST registered.</p>
+              {fieldErrors.gstin ? (
+                <p className="mt-1 text-[11px] font-medium text-rose-600">{fieldErrors.gstin}</p>
+              ) : (
+                <p className="mt-1 text-[11px] text-text-grey">Leave blank if not GST registered.</p>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">
@@ -163,17 +221,26 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={pan}
-                onChange={(e) => setPan(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase();
+                  setPan(val);
+                  setFieldErrors((prev) => ({ ...prev, pan: validatePan(val) }));
+                }}
                 placeholder="ABCDE1234F"
                 maxLength={10}
-                className="w-full uppercase rounded-lg border border-border px-3.5 py-2.5 text-sm font-mono outline-none focus:border-brand-primary"
+                className={`w-full uppercase rounded-lg border px-3.5 py-2.5 text-xs font-mono outline-none focus:border-brand-primary ${
+                  fieldErrors.pan ? "border-rose-400 bg-rose-50/20" : "border-gray-200"
+                }`}
               />
+              {fieldErrors.pan && (
+                <p className="mt-1 text-[11px] font-medium text-rose-600">{fieldErrors.pan}</p>
+              )}
             </div>
           </div>
         </div>
 
         {/* Registered Tax Address & State */}
-        <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-base font-bold text-text-dark">2. Registered Tax Address & State</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
@@ -181,9 +248,10 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={address}
+                maxLength={300}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Suite 402, Wedding Towers, MG Road"
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               />
             </div>
             <div>
@@ -191,9 +259,10 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={city}
+                maxLength={100}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="Bengaluru"
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               />
             </div>
             <div>
@@ -201,7 +270,7 @@ export function BillingSettingsForm({
               <select
                 value={stateCode}
                 onChange={(e) => handleStateChange(e.target.value)}
-                className="w-full rounded-lg border border-border bg-white px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               >
                 <option value="">Select State</option>
                 {INDIAN_STATES.map((s) => (
@@ -217,37 +286,59 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={pincode}
-                onChange={(e) => setPincode(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPincode(val);
+                  setFieldErrors((prev) => ({ ...prev, pincode: validatePincode(val) }));
+                }}
                 placeholder="560001"
                 maxLength={6}
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm font-mono outline-none focus:border-brand-primary"
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-xs font-mono outline-none focus:border-brand-primary ${
+                  fieldErrors.pincode ? "border-rose-400 bg-rose-50/20" : "border-gray-200"
+                }`}
               />
+              {fieldErrors.pincode && (
+                <p className="mt-1 text-[11px] font-medium text-rose-600">{fieldErrors.pincode}</p>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Billing Phone</label>
               <input
-                type="text"
+                type="tel"
                 value={phone}
+                maxLength={20}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+91 9876543210"
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               />
+              {fieldErrors.phone && (
+                <p className="mt-1 text-[11px] font-medium text-rose-600">{fieldErrors.phone}</p>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Billing Email</label>
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setEmail(val);
+                  setFieldErrors((prev) => ({ ...prev, email: validateEmail(val) }));
+                }}
                 placeholder="billing@royalmoments.com"
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className={`w-full rounded-lg border px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary ${
+                  fieldErrors.email ? "border-rose-400 bg-rose-50/20" : "border-gray-200"
+                }`}
               />
+              {fieldErrors.email && (
+                <p className="mt-1 text-[11px] font-medium text-rose-600">{fieldErrors.email}</p>
+              )}
             </div>
           </div>
         </div>
 
         {/* Bank & UPI Details for Client Payments */}
-        <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-base font-bold text-text-dark">3. Bank & UPI Details for Client Payments</h2>
           <p className="mb-4 text-xs text-text-grey">
             These details will be printed on the invoice so couples know where to transfer payments.
@@ -258,9 +349,10 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={bankName}
+                maxLength={100}
                 onChange={(e) => setBankName(e.target.value)}
                 placeholder="HDFC Bank"
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               />
             </div>
             <div>
@@ -268,9 +360,10 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={accountName}
+                maxLength={150}
                 onChange={(e) => setAccountName(e.target.value)}
                 placeholder="Royal Moments LLP"
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               />
             </div>
             <div>
@@ -278,9 +371,10 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={accountNumber}
+                maxLength={50}
                 onChange={(e) => setAccountNumber(e.target.value)}
                 placeholder="50200012345678"
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm font-mono outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-brand-primary"
               />
             </div>
             <div>
@@ -288,10 +382,10 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={ifscCode}
-                onChange={(e) => setIfscCode(e.target.value)}
+                onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
                 placeholder="HDFC0001234"
-                maxLength={11}
-                className="w-full uppercase rounded-lg border border-border px-3.5 py-2.5 text-sm font-mono outline-none focus:border-brand-primary"
+                maxLength={20}
+                className="w-full uppercase rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-brand-primary"
               />
             </div>
             <div className="md:col-span-2">
@@ -299,16 +393,17 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={upiId}
+                maxLength={100}
                 onChange={(e) => setUpiId(e.target.value)}
                 placeholder="royalmoments@okhdfcbank"
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               />
             </div>
           </div>
         </div>
 
         {/* Invoice Numbering & Default Terms */}
-        <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-base font-bold text-text-dark">4. Numbering Prefix & Default Terms</h2>
           <div className="space-y-4">
             <div>
@@ -316,33 +411,53 @@ export function BillingSettingsForm({
               <input
                 type="text"
                 value={invoicePrefix}
-                onChange={(e) => setInvoicePrefix(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase();
+                  setInvoicePrefix(val);
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    invoicePrefix:
+                      !val || val.length < 1 || val.length > 10
+                        ? "Prefix must be 1 to 10 characters"
+                        : null,
+                  }));
+                }}
                 placeholder="INV"
-                maxLength={8}
-                className="w-32 uppercase rounded-lg border border-border px-3.5 py-2.5 text-sm font-mono font-bold outline-none focus:border-brand-primary"
+                maxLength={10}
+                className={`w-32 uppercase rounded-lg border px-3.5 py-2.5 text-xs font-mono font-bold outline-none focus:border-brand-primary ${
+                  fieldErrors.invoicePrefix ? "border-rose-400 bg-rose-50/20" : "border-gray-200"
+                }`}
               />
-              <p className="mt-1 text-[11px] text-text-grey">
-                Used to format invoice numbers (e.g. {invoicePrefix || "INV"}-2026-0001).
-              </p>
+              {fieldErrors.invoicePrefix ? (
+                <p className="mt-1 text-[11px] font-medium text-rose-600">
+                  {fieldErrors.invoicePrefix}
+                </p>
+              ) : (
+                <p className="mt-1 text-[11px] text-text-grey">
+                  Used to format invoice numbers (e.g. {invoicePrefix || "INV"}-2026-0001).
+                </p>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Default Notes</label>
               <textarea
                 value={defaultNotes}
+                maxLength={1000}
                 onChange={(e) => setDefaultNotes(e.target.value)}
                 rows={2}
                 placeholder="Thank you for trusting us with your celebration!"
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Default Terms & Conditions</label>
               <textarea
                 value={defaultTerms}
+                maxLength={2000}
                 onChange={(e) => setDefaultTerms(e.target.value)}
                 rows={3}
                 placeholder="1. 50% advance to confirm booking.\n2. Balance on event date."
-                className="w-full rounded-lg border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               />
             </div>
           </div>
@@ -351,14 +466,14 @@ export function BillingSettingsForm({
         <div className="flex justify-end gap-3">
           <Link
             href="/vendor/invoices"
-            className="rounded-lg border border-border px-5 py-2.5 text-sm font-semibold text-text-grey hover:bg-neutral-grey-20"
+            className="rounded-xl border border-gray-200 px-5 py-2.5 text-xs font-semibold text-text-dark hover:bg-gray-50"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-brand-primary px-6 py-2.5 text-sm font-bold text-white transition hover:bg-brand-primary/90 disabled:opacity-50"
+            className="rounded-xl bg-brand-primary px-6 py-2.5 text-xs font-bold text-white transition hover:bg-brand-primary/90 disabled:opacity-50"
           >
             {saving ? "Saving Settings…" : "Save Settings"}
           </button>
