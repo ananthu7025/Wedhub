@@ -106,6 +106,29 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
+      <div className="mb-6 grid grid-cols-4 gap-4 max-[900px]:grid-cols-2 max-[500px]:grid-cols-1">
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">ARR</p>
+          <p className="text-2xl font-bold">{formatCurrency(metrics.arr)}</p>
+          <p className="mt-1 text-xs text-text-grey">MRR × 12</p>
+        </div>
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">Churn rate</p>
+          <p className="text-2xl font-bold">{(metrics.churnRate * 100).toFixed(1)}%</p>
+          <p className="mt-1 text-xs text-text-grey">cancelled ÷ active at window start</p>
+        </div>
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">New vendors</p>
+          <p className="text-2xl font-bold">{metrics.newVendors.count.toLocaleString("en-IN")}</p>
+          <p className="mt-1 text-xs text-text-grey">last {metrics.newVendors.windowDays} days</p>
+        </div>
+        <div className="rounded-xl border border-border bg-white p-5">
+          <p className="mb-1 text-xs font-semibold text-text-grey">Search demand</p>
+          <p className="text-2xl font-bold">{metrics.searchDemand.count.toLocaleString("en-IN")}</p>
+          <p className="mt-1 text-xs text-text-grey">searches, last {metrics.searchDemand.windowDays} days</p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-5 max-[900px]:grid-cols-1">
         <div className="rounded-xl border border-border bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
@@ -156,6 +179,30 @@ export default async function AdminDashboardPage() {
             ))
           )}
         </div>
+      </div>
+
+      <div className="mt-5 rounded-xl border border-border bg-white p-6">
+        <div className="mb-4">
+          <h3 className="text-base font-bold">Top searches</h3>
+          <p className="text-xs text-text-grey">Most searched keywords, last {metrics.searchDemand.windowDays} days</p>
+        </div>
+        {metrics.searchDemand.topKeywords.length === 0 ? (
+          <p className="text-sm text-text-grey">No searches with a keyword in this window.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-x-8 max-[700px]:grid-cols-1">
+            {metrics.searchDemand.topKeywords.map((row, index) => (
+              <div
+                key={row.keyword}
+                className="flex items-center justify-between gap-3 border-b border-neutral-grey-20 py-2.5 last:border-b-0"
+              >
+                <p className="truncate text-[13px] font-bold">
+                  <span className="text-text-grey">{index + 1}.</span> {row.keyword}
+                </p>
+                <p className="flex-shrink-0 text-[13px] text-text-grey">{row.count.toLocaleString("en-IN")}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </AdminShell>
   );

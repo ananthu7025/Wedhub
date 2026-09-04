@@ -29,6 +29,7 @@ export interface AdminDashboardMetrics {
   totalUsers: number;
   newRegistrations: { count: number; windowDays: number };
   totalVendors: number;
+  newVendors: { count: number; windowDays: number };
   activeVendors: number;
   paidVendors: number; // ACTIVE or TRIALING subscriptions count as "paid" here
   totalLeads: number;
@@ -36,6 +37,13 @@ export interface AdminDashboardMetrics {
   conversionRate: number; // fraction 0-1, not a percentage
   revenue: { total: number; thisMonth: number };
   mrr: number; // ACTIVE only (not TRIALING), YEARLY normalized /12
+  arr: number; // mrr * 12
+  searchDemand: {
+    count: number;
+    windowDays: number;
+    topKeywords: { keyword: string; count: number }[];
+  };
+  churnRate: number; // fraction 0-1: cancelled-in-window / active-at-window-start
 }
 
 // ---- GET /admin/vendors, GET /admin/vendors/:id ----
