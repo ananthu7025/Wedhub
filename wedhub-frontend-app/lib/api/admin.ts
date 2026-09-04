@@ -5,12 +5,14 @@ import type {
   AdminApprovedMedia,
   AdminAuditLogEntry,
   AdminAuditLogFilters,
+  AdminBlogPost,
   AdminDashboardMetrics,
   AdminFeaturedMedia,
   AdminLeadDetail,
   AdminLeadListItem,
   AdminPermission,
   AdminPlan,
+  AdminPopularSearchCard,
   AdminReviewDetail,
   AdminReviewListItem,
   AdminRole,
@@ -168,6 +170,16 @@ export function listAdminWeddingStories() {
 
 export function listAdminFeaturedMedia() {
   return apiFetch<AdminFeaturedMedia[]>("/admin/featured-media");
+}
+
+export function listAdminPopularSearchCards() {
+  return apiFetch<AdminPopularSearchCard[]>("/admin/popular-searches");
+}
+
+// Returns ALL posts including drafts (publishedAt: null) — unlike the
+// public /blog list which only ever returns published ones.
+export function listAdminBlogPosts() {
+  return apiFetch<AdminBlogPost[]>("/admin/blog");
 }
 
 export function listAdminSeoOverrides(pageType?: SeoOverridePageType) {

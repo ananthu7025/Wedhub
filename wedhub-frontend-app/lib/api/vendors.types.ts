@@ -219,6 +219,24 @@ export interface WeddingStory {
   };
 }
 
+// ---- GET /popular-searches/featured/homepage ----
+// Backs the public homepage's "Popular Searches" section — real,
+// admin-curated cards, replacing the previously-hardcoded
+// POPULAR_SEARCH_CARDS array in app/(public)/page.tsx. Unlike WeddingStory/
+// FeaturedMedia, fully standalone — no real entity (Album/Media) to
+// reference, so imageUrl is a plain resolvable url (same as
+// Category.imageUrl), not a media object to resolve via getPublicMediaUrl.
+export interface PopularSearchCard {
+  id: string;
+  title: string;
+  locationBlurb: string;
+  priceLabel: string;
+  imageUrl: string | null;
+  searchQuery: string;
+  isFeatured: boolean;
+  sortOrder: number;
+}
+
 // ---- GET /gallery/featured/homepage ----
 // Backs the public homepage's "Gallery Inspiration" section — real,
 // admin-curated selections of real vendor portfolio media, replacing the
@@ -305,4 +323,29 @@ export interface SeoCombination {
   canonicalPath: string;
   categorySlug: string | null;
   citySlug: string | null;
+}
+
+// ---- GET /blog/featured/homepage, GET /blog, GET /blog/:slug ----
+// Backs the public homepage's "Latest Blogs & Advice" teaser section plus
+// the real /blog list and /blog/[slug] detail pages (Arch Phase 17,
+// added 2026-09-04) — replaces the previously-hardcoded LATEST_BLOGS
+// array in app/(public)/page.tsx. Public shape deliberately omits
+// publishedAt (draft/published is a backend-only concept — every post
+// returned by these three endpoints is already published, so there's
+// nothing for the client to branch on) and createdAt/updatedAt, unlike
+// AdminBlogPost in admin.types.ts which carries the full row including
+// those admin-only fields.
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  coverImageUrl: string | null;
+  excerpt: string;
+  bodyMarkdown: string;
+  readTimeMinutes: number;
+  isFeatured: boolean;
+  sortOrder: number;
+  seoTitle: string | null;
+  seoDescription: string | null;
 }

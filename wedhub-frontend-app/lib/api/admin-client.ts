@@ -3,9 +3,14 @@
 import type { ApiResponse } from "./types";
 import type {
   AdminAlbumScalarOnly,
+  AdminBlogCoverImageConfirmResult,
+  AdminBlogCoverImageUploadRequestResult,
+  AdminBlogPost,
   AdminCoupon,
   AdminCreateAlbumForVendorBody,
   AdminCreateAttributeBody,
+  AdminCreateBlogCoverImageUploadRequestBody,
+  AdminCreateBlogPostBody,
   AdminCreateCategoryBody,
   AdminCreateCouponBody,
   AdminCreateFeaturedMediaBody,
@@ -13,6 +18,8 @@ import type {
   AdminCreateInvitationBody,
   AdminCreateLocationBody,
   AdminCreatePlanBody,
+  AdminCreatePopularSearchCardBody,
+  AdminCreatePopularSearchImageUploadRequestBody,
   AdminCreateSeoOverrideBody,
   AdminCreateVendorBody,
   AdminCreateWeddingStoryBody,
@@ -22,6 +29,9 @@ import type {
   AdminLeadStatusUpdateResult,
   AdminModerateReviewBody,
   AdminPlan,
+  AdminPopularSearchCard,
+  AdminPopularSearchImageConfirmResult,
+  AdminPopularSearchImageUploadRequestResult,
   AdminReasonBody,
   AdminReviewStatusUpdateResult,
   AdminSeoOverride,
@@ -29,11 +39,13 @@ import type {
   AdminSuspendUserResult,
   AdminUpdateAlbumBody,
   AdminUpdateAttributeBody,
+  AdminUpdateBlogPostBody,
   AdminUpdateCategoryBody,
   AdminUpdateFeaturedMediaBody,
   AdminUpdateLeadStatusBody,
   AdminUpdateLocationBody,
   AdminUpdatePlanBody,
+  AdminUpdatePopularSearchCardBody,
   AdminUpdateSeoOverrideBody,
   AdminUpdateVendorBody,
   AdminUpdateWeddingStoryBody,
@@ -173,6 +185,45 @@ export function confirmAdminImageUpload(mediaId: string) {
   return call<AdminImageConfirmResult>(`/admin/media-uploads/${mediaId}/confirm`, "POST");
 }
 
+// Same real R2 presign -> PUT -> confirm flow as createAdminImageUploadRequest/
+// confirmAdminImageUpload above, for a PopularSearchCard's image instead of
+// a Category's (Arch Phase 17, added 2026-09-04) — POPULAR_SEARCH_IMAGE
+// instead of CATEGORY_IMAGE, see admin.types.ts's header comment.
+export function createAdminPopularSearchImageUploadRequest(body: AdminCreatePopularSearchImageUploadRequestBody) {
+  return call<AdminPopularSearchImageUploadRequestResult>(
+    "/admin/media-uploads/popular-search-image-upload-requests",
+    "POST",
+    body,
+  );
+}
+
+export function confirmAdminPopularSearchImageUpload(mediaId: string) {
+  return call<AdminPopularSearchImageConfirmResult>(
+    `/admin/media-uploads/popular-search-image-upload-requests/${mediaId}/confirm`,
+    "POST",
+  );
+}
+
+// Same real R2 presign -> PUT -> confirm flow as
+// createAdminPopularSearchImageUploadRequest/confirmAdminPopularSearchImageUpload
+// above, for a BlogPost's cover image instead of a PopularSearchCard's
+// (Arch Phase 17, added 2026-09-04) — BLOG_COVER_IMAGE instead of
+// POPULAR_SEARCH_IMAGE, see admin.types.ts's header comment.
+export function createAdminBlogCoverImageUploadRequest(body: AdminCreateBlogCoverImageUploadRequestBody) {
+  return call<AdminBlogCoverImageUploadRequestResult>(
+    "/admin/media-uploads/blog-cover-image-upload-requests",
+    "POST",
+    body,
+  );
+}
+
+export function confirmAdminBlogCoverImageUpload(mediaId: string) {
+  return call<AdminBlogCoverImageConfirmResult>(
+    `/admin/media-uploads/blog-cover-image-upload-requests/${mediaId}/confirm`,
+    "POST",
+  );
+}
+
 // Admin uploading a real PORTFOLIO photo on a vendor's behalf — cold-start
 // seeding for Wedding Stories / Gallery Inspiration curation (Arch Phase
 // 17) when no vendor has uploaded their own approved photos yet.
@@ -222,6 +273,32 @@ export function updateAdminFeaturedMedia(id: string, body: AdminUpdateFeaturedMe
 
 export function deleteAdminFeaturedMedia(id: string) {
   return call<{ deleted: true }>(`/admin/featured-media/${id}`, "DELETE");
+}
+
+export function createAdminPopularSearchCard(body: AdminCreatePopularSearchCardBody) {
+  return call<AdminPopularSearchCard>("/admin/popular-searches", "POST", body);
+}
+
+export function updateAdminPopularSearchCard(id: string, body: AdminUpdatePopularSearchCardBody) {
+  return call<AdminPopularSearchCard>(`/admin/popular-searches/${id}`, "PATCH", body);
+}
+
+export function deleteAdminPopularSearchCard(id: string) {
+  return call<{ deleted: true }>(`/admin/popular-searches/${id}`, "DELETE");
+}
+
+// Publishing is just PATCH-setting publishedAt — no separate publish
+// endpoint, matching how isFeatured toggles work elsewhere.
+export function createAdminBlogPost(body: AdminCreateBlogPostBody) {
+  return call<AdminBlogPost>("/admin/blog", "POST", body);
+}
+
+export function updateAdminBlogPost(id: string, body: AdminUpdateBlogPostBody) {
+  return call<AdminBlogPost>(`/admin/blog/${id}`, "PATCH", body);
+}
+
+export function deleteAdminBlogPost(id: string) {
+  return call<{ deleted: true }>(`/admin/blog/${id}`, "DELETE");
 }
 
 export function createAdminSeoOverride(body: AdminCreateSeoOverrideBody) {

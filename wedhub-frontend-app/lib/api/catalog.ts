@@ -1,12 +1,14 @@
 import { apiFetch } from "./client";
 import type { PaginationMeta } from "./types";
 import type {
+  BlogPost,
   Category,
   FeaturedCategory,
   FeaturedListing,
   FeaturedMediaItem,
   Location,
   LocationType,
+  PopularSearchCard,
   SearchVendorsParams,
   SeoCombination,
   SeoPageData,
@@ -86,6 +88,13 @@ export function listFeaturedGalleryMedia() {
   return apiFetch<FeaturedMediaItem[]>("/gallery/featured/homepage", { skipAuth: true });
 }
 
+// Real, admin-curated popular-search cards for the public homepage's
+// "Popular Searches" section (Arch Phase 17, added 2026-09-04) — replaces
+// the previously-hardcoded POPULAR_SEARCH_CARDS array.
+export function listFeaturedPopularSearchCards() {
+  return apiFetch<PopularSearchCard[]>("/popular-searches/featured/homepage", { skipAuth: true });
+}
+
 export function getCategoryBySlug(slug: string) {
   return apiFetch<Category>(`/categories/${slug}`, { skipAuth: true });
 }
@@ -112,4 +121,27 @@ export function getSeoPage(categoryId: string | undefined, cityId: string | unde
 // app/sitemap.ts.
 export function listSeoCombinations() {
   return apiFetch<SeoCombination[]>("/seo/combinations", { skipAuth: true });
+}
+
+// Real, admin-curated blog posts for the public homepage's "Latest Blogs &
+// Advice" section (Arch Phase 17, added 2026-09-04) — replaces the
+// previously-hardcoded LATEST_BLOGS array.
+export function listFeaturedBlogPosts() {
+  return apiFetch<BlogPost[]>("/blog/featured/homepage", { skipAuth: true });
+}
+
+// Published blog posts, paginated, most-recent-first — backs /blog and
+// app/sitemap.ts (via a full-limit call for slugs).
+export function listBlogPosts(params: { page?: number; limit?: number } = {}) {
+  return apiFetch<BlogPost[], PaginationMeta>("/blog", {
+    query: { page: params.page ?? 1, limit: params.limit ?? 20 },
+    skipAuth: true,
+  });
+}
+
+// Backs /blog/[slug]'s generateMetadata + page body — 404s (via
+// ApiRequestError status 404) for a draft/nonexistent slug, same pattern
+// as getSeoPage's 404 handling in category/[categorySlug]/page.tsx.
+export function getBlogPostBySlug(slug: string) {
+  return apiFetch<BlogPost>(`/blog/${slug}`, { skipAuth: true });
 }

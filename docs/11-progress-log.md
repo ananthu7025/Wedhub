@@ -27,7 +27,7 @@
 | 14 | Notifications | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
 | 15 | Telegram Bot MVP | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
 | 16 | Admin Platform Backend | [Stage 6](08-stage-telegram-and-admin.md) | ✅ Done | 2026-09-02 |
-| 17 | CMS & SEO Backend | [Stage 7](09-stage-growth-and-scale.md) | 🟡 In Progress | started 2026-09-04 |
+| 17 | CMS & SEO Backend | [Stage 7](09-stage-growth-and-scale.md) | ✅ Done | 2026-09-04 (static pages/FAQs descoped, see note below) |
 | 18 | Analytics & Marketplace Metrics | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 19 | Security Hardening | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 20 | Testing | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
@@ -38,9 +38,11 @@
 | 25 | Production Readiness Review | [Stage 7](09-stage-growth-and-scale.md) | ⬜ Not Started | — |
 | 26 | ₹49 Instant Wedding Website Backend | [Stage 8](12-stage-wedding-website.md) | 🟡 In Progress | started 2026-09-03 |
 
-**Overall: 17 / 26 original Arch Phases complete, Arch Phase 17 in progress. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), and Stage 6 (Telegram & Admin) are all fully done. Arch Phase 26 (Stage 8, ₹49 Instant Wedding Website) is a new, standalone Arch Phase outside the original 26 — the full web API surface (draft CRUD, templates, media upload, one-time preview, Razorpay order creation, webhook-driven publish, RSVP, admin visibility) shipped and was verified live end-to-end 2026-09-03; only the Telegram conversation-flow wiring remains (schema support exists, the actual bot flow does not yet).**
+**Overall: 18 / 26 original Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), Stage 6 (Telegram & Admin), and now Stage 7's Arch Phase 17 (CMS & SEO Backend) are all fully done. Arch Phase 26 (Stage 8, ₹49 Instant Wedding Website) is a new, standalone Arch Phase outside the original 26 — the full web API surface (draft CRUD, templates, media upload, one-time preview, Razorpay order creation, webhook-driven publish, RSVP, admin visibility) shipped and was verified live end-to-end 2026-09-03; only the Telegram conversation-flow wiring remains (schema support exists, the actual bot flow does not yet).**
 
-**Paused 2026-09-02, resumed 2026-09-04, by user decision:** the backend build-out deliberately paused before Arch Phase 17 to wire up the frontend against everything shipped so far (Arch Phases 0–16 cover the full couple/vendor-facing product surface — auth, vendors, media, search, shortlists, leads, reviews, subscriptions, entitlements, featured listings, notifications, Telegram, and admin). That frontend integration work happened (Frontend Arch Phases 1–10 all shipped and Playwright-verified — see `frontenddocs/11-progress-log.md`), and Arch Phase 17 (CMS & SEO Backend) resumed 2026-09-04. Its first slice is done: Real Wedding Stories and Gallery Inspiration, both resolved as curation layers over already-real vendor Album/Media data rather than independent CMS content (see `09-stage-growth-and-scale.md`'s Arch Phase 17 checklist for the exact resolution). Its second slice, done 2026-09-03: SEO page-generation infrastructure — templated (not hand-authored) Category/City/Category+City landing pages backed by real vendor counts, thin-page avoidance (`MIN_VENDORS_FOR_INDEXABLE_PAGE = 3`), admin override CRUD, sitemap/robots data, and the corresponding frontend routes/`generateMetadata`/admin UI — this also unblocks Frontend Arch Phase 11b, previously hard-blocked on this phase (see `frontenddocs/10-risks-and-open-questions.md` Open Question 1). Popular Searches and Blog/article content (the CMS-content half of this phase — static pages, blog posts, FAQs) remain — Arch Phase 17 is not fully done yet. Arch Phases 18–25 stay post-MVP except for the baseline security/testing carve-out already noted in `02-mvp-cut-line.md`.
+**Paused 2026-09-02, resumed 2026-09-04, by user decision:** the backend build-out deliberately paused before Arch Phase 17 to wire up the frontend against everything shipped so far (Arch Phases 0–16 cover the full couple/vendor-facing product surface — auth, vendors, media, search, shortlists, leads, reviews, subscriptions, entitlements, featured listings, notifications, Telegram, and admin). That frontend integration work happened (Frontend Arch Phases 1–10 all shipped and Playwright-verified — see `frontenddocs/11-progress-log.md`), and Arch Phase 17 (CMS & SEO Backend) resumed 2026-09-04. Its first slice is done: Real Wedding Stories and Gallery Inspiration, both resolved as curation layers over already-real vendor Album/Media data rather than independent CMS content (see `09-stage-growth-and-scale.md`'s Arch Phase 17 checklist for the exact resolution). Its second slice, done 2026-09-03: SEO page-generation infrastructure — templated (not hand-authored) Category/City/Category+City landing pages backed by real vendor counts, thin-page avoidance (`MIN_VENDORS_FOR_INDEXABLE_PAGE = 3`), admin override CRUD, sitemap/robots data, and the corresponding frontend routes/`generateMetadata`/admin UI — this also unblocks Frontend Arch Phase 11b, previously hard-blocked on this phase (see `frontenddocs/10-risks-and-open-questions.md` Open Question 1). Its third slice, done 2026-09-04: Popular Searches — a new standalone `PopularSearchCard` model (no existing real entity to curate over, unlike wedding stories/gallery above), editorial/admin-curated per explicit decision (not analytics-driven — Arch Phase 18 doesn't exist yet). Full admin CRUD (`/admin/popular-searches`) + public `GET /popular-searches/featured/homepage`, wired into the homepage replacing the hardcoded `POPULAR_SEARCH_CARDS` array; its image field follows the `Category.imageUrl` precedent (plain url, resolved through a new small `MediaType.POPULAR_SEARCH_IMAGE` admin upload pipeline — migration `20260904085052_add_popular_search_cards`) rather than a `Media`-relation, since there's no owning vendor. Ships with zero rows, verified live: `POST` → appears in the public featured list → `PATCH` → `DELETE` → list empty again, via `wedhub-backend/src/modules/popular-search-cards/`. Its fourth and last content-model slice, done 2026-09-04: Blog — same standalone-editorial shape as Popular Searches (new `BlogPost` model, `MediaType.BLOG_COVER_IMAGE` upload pipeline, migration `20260904090914_add_blog_post`), plus a Markdown `bodyMarkdown` column rendered via the new `react-markdown` dependency (v10.1.0). Public `GET /blog/featured/homepage` + `GET /blog` (paginated) + `GET /blog/:slug`; full admin CRUD at `/admin/blog`, with publishing being a plain `PATCH publishedAt` (no separate publish endpoint). Real `/blog` list page and `/blog/[slug]` detail page with `generateMetadata`/`notFound()`, homepage teaser now hides itself when empty, sitemap includes every published post. Verified live end-to-end the same draft→public-absent→publish→public-present→delete→public-absent round trip as Popular Searches — see this file's own Arch Phase 17 section further down for the full trace.
+
+**Arch Phase 17 closed 2026-09-04, by explicit user decision:** static pages and FAQs remain genuinely unbuilt — a distinct requirement from Blog (dated/authored articles, not static About/Terms/Privacy pages or a Q&A structure) — but unlike every other item in this phase, nothing on the live site today renders a hardcoded static-page/FAQ array that closing the phase leaves behind as a known-fake element. Rather than continue gating phase completion on it, it's been descoped to a standalone backlog item (see `09-stage-growth-and-scale.md`'s Arch Phase 17 note) to pick up whenever prioritized, following the same model+module+admin-CRUD+public-page pattern established across this phase's other four content-model slices. Arch Phases 18–25 stay post-MVP except for the baseline security/testing carve-out already noted in `02-mvp-cut-line.md`.
 
 ### Addendum, 2026-09-02 — 3 small endpoints added during Frontend Arch Phase 4 integration (not a new Arch Phase)
 
@@ -1470,3 +1472,77 @@ GET /admin/audit-logs?entityType=user&entityId=...
 - Verified live end-to-end on a real running Postgres/Redis stack: dashboard MRR calculation matched the exact expected sum for a real monthly + real yearly active subscription (5999 + 129990/12 = 16831.5); conversion rate and revenue totals matched exactly for real WON/NEW leads and a real PAID invoice; user suspend correctly 409s on a double-suspend and correctly transitions back via restore; the audit-log endpoint correctly surfaced both suspend and restore actions with accurate before/after state and correctly filtered by `entityType`/`actorId`; roles/permissions/admin-users endpoints correctly returned the real seeded data; all four new route groups correctly 401 unauthenticated and 403 a non-admin (END_USER role). `npm run typecheck` and `npm run lint` both pass with zero errors; no test suite exists yet in this codebase to run (consistent with every prior phase). All test users/vendors/subscriptions/leads/invoices/audit logs created during verification were deleted afterward.
 
 **This completes Stage 6 (Telegram & Admin) — Arch Phases 14–16 all done.**
+
+## Arch Phase 17 — CMS & SEO Backend
+
+**Status:** ✅ Done — started 2026-09-04 (paused after Arch Phase 16 on 2026-09-02, resumed 2026-09-04 per user decision — see the paragraph above the Phase Entries template for the full pause/resume rationale), closed 2026-09-04 with static pages/FAQs explicitly descoped (see below)
+**Stage:** [Stage 7 — Growth & Scale](09-stage-growth-and-scale.md)
+
+### What this unlocks
+
+The public homepage's remaining hardcoded content arrays are now real, admin-curated data, and the site has real, indexable SEO surface area. In order, this phase's slices: (1) Real Wedding Stories and Gallery Inspiration — both curation layers over already-real vendor `Album`/`Media`, not new CMS content; (2) SEO page-generation infrastructure — templated (not hand-authored) Category/City/Category+City landing pages, thin-page avoidance, admin overrides, sitemap/robots; (3) Popular Searches — a genuinely new, standalone, admin-authored content model with its own image pipeline; (4) Blog — the last content-model item, same standalone shape as Popular Searches plus a Markdown body. **Static pages and FAQs remain unbuilt**, but were explicitly descoped from this phase by user decision on 2026-09-04 rather than continuing to block its closure — unlike every other item above, no hardcoded static-page/FAQ array exists on the live site today for this gap to leave behind as a known-fake element. Tracked as a standalone backlog item for whenever prioritized (see `09-stage-growth-and-scale.md`'s Arch Phase 17 note for the suggested shape: `StaticPage`/`Faq` model + admin CRUD + public route, following this phase's now-established pattern).
+
+### APIs completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/wedding-stories/featured/homepage` | Featured real wedding stories over real vendor albums | None |
+| POST/PATCH/DELETE | `/api/v1/admin/wedding-stories(/:id)` | Admin CRUD over `WeddingStory` | ADMIN |
+| GET | `/api/v1/gallery/featured/homepage` | Featured real vendor portfolio media | None |
+| POST/PATCH/DELETE | `/api/v1/admin/featured-media(/:id)` | Admin CRUD over `FeaturedMedia` | ADMIN |
+| GET | `/api/v1/admin/albums` | Cross-vendor real public album listing (curation support) | ADMIN |
+| GET | `/api/v1/admin/media/approved` | Cross-vendor real approved media listing (curation support) | ADMIN |
+| POST | `/api/v1/admin/media-uploads/vendor-upload-requests(+/:id/confirm)` | Admin-on-behalf-of-vendor cold-start photo upload | ADMIN |
+| POST/PATCH | `/api/v1/admin/albums(/:id)` | Admin create/update an album on a vendor's behalf | ADMIN |
+| GET | `/api/v1/seo/page?categoryId=&cityId=` | Computed SEO metadata for a Category/City/Category+City page | None |
+| GET | `/api/v1/seo/combinations` | Every indexable combination (sitemap source) | None |
+| POST/PATCH/DELETE | `/api/v1/admin/seo-overrides(/:id)` | Admin override of one combination's computed SEO fields | ADMIN |
+| GET | `/api/v1/popular-searches/featured/homepage` | Featured Popular Search cards | None |
+| POST/PATCH/DELETE | `/api/v1/admin/popular-searches(/:id)` | Admin CRUD over `PopularSearchCard` | ADMIN |
+| POST | `/api/v1/admin/media-uploads/popular-search-image-upload-requests(+/:id/confirm)` | `POPULAR_SEARCH_IMAGE` upload pipeline | ADMIN |
+| GET | `/api/v1/blog/featured/homepage` | Top 6 featured+published blog posts | None |
+| GET | `/api/v1/blog` | Published posts, paginated, most-recent-first | None |
+| GET | `/api/v1/blog/:slug` | One published post (404s for draft/nonexistent) | None |
+| GET/POST/PATCH/DELETE | `/api/v1/admin/blog(/:id)` | Admin CRUD over `BlogPost`, incl. drafts; publish = PATCH `publishedAt` | ADMIN |
+| POST | `/api/v1/admin/media-uploads/blog-cover-image-upload-requests(+/:id/confirm)` | `BLOG_COVER_IMAGE` upload pipeline | ADMIN |
+
+### Tables created
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `wedding_stories` | Narrative fields over a real, public `Album` | `id`, `album_id` (fk), `couple_name`, `location`, `tag`, `snippet`, `is_featured`, `sort_order` |
+| `featured_media` | Admin curation of a real, approved `Media` row | `id`, `media_id` (unique fk), `title_override`, `sort_order` |
+| `seo_overrides` | Admin override of one computed Category/City/Category+City page's SEO fields | `id`, `page_type` (enum), `category_id`, `location_id`, `title`, `description`, `og_image_url`, `no_index`, unique on `(page_type, category_id, location_id)` |
+| `popular_search_cards` | Standalone editorial homepage cards, no real backing entity | `id`, `title`, `location_blurb`, `price_label`, `image_url`, `search_query`, `is_featured`, `sort_order` |
+| `blog_posts` | Standalone editorial articles, Markdown body | `id`, `title`, `slug` (unique), `category`, `cover_image_url`, `excerpt`, `body_markdown`, `read_time_minutes`, `published_at` (nullable — null=draft), `is_featured`, `sort_order`, `seo_title`, `seo_description` |
+
+`MediaType` enum gained three additive values across this phase: `CATEGORY_IMAGE` (2026-09-03, technically Arch Phase 4 but same shape precedent), `POPULAR_SEARCH_IMAGE` and `BLOG_COVER_IMAGE` (both 2026-09-04) — each kept separate rather than reused, so admin-media's per-mediaType confirm checks stay unambiguous about which curated content owns a given upload.
+
+### Flow
+
+```
+Admin authors a blog post (the final slice, same shape as Popular Searches):
+POST /admin/blog {title, category, excerpt, bodyMarkdown, readTimeMinutes, ...}
+     │
+     ├─ slug omitted? ──► slugify(title) + generateUniqueSlug() (shared common/utils/slug.util.ts)
+     ▼
+BlogPost row created, publishedAt: null (draft) — invisible to every public endpoint
+     │
+     ▼
+PATCH /admin/blog/:id {publishedAt: <now>}    ── publishing IS this, no separate endpoint
+     │
+     ▼
+GET /blog/featured/homepage, /blog, /blog/:slug now all include it (if isFeatured for the first)
+     │
+     ▼
+DELETE /admin/blog/:id ──► gone from all three again
+```
+
+### Notes
+
+- **Real Wedding Stories / Gallery Inspiration turned out not to need independent content models at all** — both resolved as curation layers over already-real vendor `Album`/`Media` data. A cold-start gap surfaced during this work (a fresh platform with few vendors has nothing to curate) and was fixed with admin-on-behalf-of-vendor upload/album endpoints, still tied to a real vendor, never fabricated.
+- **Popular Searches and Blog are the two genuinely standalone, fully admin-authored content models this phase produced** — neither has a preexisting real entity to curate over, so both are new tables with their own image-upload pipeline (`POPULAR_SEARCH_IMAGE`, `BLOG_COVER_IMAGE`), following the `Category.imageUrl` precedent (plain nullable url, no `Media` relation, since there's no owning vendor).
+- **Blog's body content is Markdown, stored as plain text, rendered via `react-markdown`** (new frontend dependency, v10.1.0) — no rich-text editor, no HTML sanitization pipeline; deliberately as simple as the rest of this phase's models rather than introducing a new authoring subsystem.
+- **Publishing has no dedicated endpoint anywhere in this phase's models** — `isFeatured` and `publishedAt` are both plain `PATCH`-set fields, matching the rest of the codebase's preference for generic update endpoints over bespoke action endpoints where a single field flip suffices.
+- **Static pages and FAQs are the one item of this phase's original scope that remains genuinely unbuilt** — not folded into the Blog model (a static page/FAQ has no title/category/read-time/publish-date shape and wasn't asked for as part of Blog), so this phase's status stays **In Progress**, not Done, until they ship.
+- Blog verified live end-to-end against the real dev DB: unauthenticated `GET /admin/blog` → 401; admin `POST /admin/blog` (draft, `publishedAt: null`) → absent from `GET /blog`, `GET /blog/featured/homepage`, and 404 on `GET /blog/:slug`; `PATCH /admin/blog/:id {publishedAt}` (publish) → now present in all three; `DELETE /admin/blog/:id` → gone from all three again. `npx tsc --noEmit` clean in both `wedhub-backend/` and `wedhub-frontend-app/`; `next build` (Turbopack) compiles cleanly with the new `/blog` and `/blog/[slug]` routes. Migration `20260904090914_add_blog_post` applied cleanly against the real dev DB. Ships with zero rows — all test data created during verification was deleted afterward, including the dedicated bootstrap admin test account used to mint a JWT (a preexisting `admin@wedhub.dev` account from earlier phases was left untouched rather than reused, to avoid disturbing shared dev state).

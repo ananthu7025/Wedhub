@@ -582,6 +582,19 @@ enum MediaType {
   // (a WeddingWebsite owner may have no Vendor at all — see
   // docs/12-stage-wedding-website.md's "Photo ownership" decision).
   WEDDING_WEBSITE_PHOTO
+  // Admin-only, platform-owned image (no vendorId/userId) — backs
+  // PopularSearchCard.imageUrl, same shape as CATEGORY_IMAGE above but
+  // kept as its own value (not reused) so admin-media's per-mediaType
+  // confirm checks stay unambiguous about which curated content owns the
+  // upload. Added 2026-09-04, same day as WeddingStory/FeaturedMedia.
+  POPULAR_SEARCH_IMAGE
+  // Admin-only, platform-owned image (no vendorId/userId) — backs
+  // BlogPost.coverImageUrl, same shape as CATEGORY_IMAGE/POPULAR_SEARCH_IMAGE
+  // above but kept as its own value (not reused) so admin-media's per-
+  // mediaType confirm checks stay unambiguous about which curated content
+  // owns the upload. Added 2026-09-04, closing out Arch Phase 17 (CMS &
+  // SEO Backend)'s last remaining item.
+  BLOG_COVER_IMAGE
 }
 
 enum MediaStatus {
@@ -724,6 +737,74 @@ enum SeoPageType {
   CATEGORY
   CITY
   CATEGORY_CITY
+}
+
+// Arch Phase 17 — backs the public homepage's "Popular Searches" section
+// (page.tsx's hardcoded POPULAR_SEARCH_CARDS). Unlike WeddingStory/
+// FeaturedMedia, there is no existing real entity to curate over here — a
+// "popular search" is a title + location blurb + indicative price + a
+// search link, none of which map onto any real Vendor/Category/Location
+// row. So this is a genuinely standalone, fully admin-curated (editorial,
+// not analytics-driven — Arch Phase 18 analytics doesn't exist yet) model
+// with its own image, following the exact Category.imageUrl precedent
+// (plain nullable String url, resolved through the CATEGORY_IMAGE admin
+// upload pipeline) rather than a Media-reference (there's no owning
+// vendor for this image to attach to, same reasoning as Category's).
+model PopularSearchCard {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title         String
+  locationBlurb String   @map("location_blurb")
+  priceLabel    String   @map("price_label")
+  imageUrl      String?  @map("image_url")
+  searchQuery   String   @map("search_query")
+  isFeatured    Boolean  @default(false) @map("is_featured")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([isFeatured])
+  @@map("popular_search_cards")
+}
+
+// Arch Phase 17 — the last remaining CMS & SEO Backend item: a real Blog/
+// article content model, replacing the homepage's hardcoded LATEST_BLOGS
+// array and backing new public /blog list + /blog/:slug detail pages.
+// Body content is authored as Markdown (bodyMarkdown, rendered client-side
+// via react-markdown) and stored as plain text — no rich-text/HTML
+// sanitization pipeline exists yet, so this deliberately stays as simple
+// as PopularSearchCard rather than introducing a new content-authoring
+// subsystem. category is a plain free-text tag (e.g. "Bridal Fashion"),
+// not a relation to the vendor-facing Category model — a blog category
+// tag is editorial copy, not a taxonomy node vendors attach to. coverImageUrl
+// follows the exact PopularSearchCard.imageUrl precedent (plain nullable
+// String url via the BLOG_COVER_IMAGE admin upload pipeline, no Media
+// relation — there's no owning vendor for this image to attach to).
+// publishedAt does double duty as the draft/published flag (null = draft,
+// set = published) rather than a separate status enum, matching how
+// isFeatured elsewhere is a plain toggle with no dedicated "feature"
+// endpoint — publishing here is just PATCH-setting publishedAt. seoTitle/
+// seoDescription mirror VendorProfile's override-over-a-default fields,
+// falling back to title/excerpt when unset.
+model BlogPost {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String
+  slug            String    @unique
+  category        String
+  coverImageUrl   String?   @map("cover_image_url")
+  excerpt         String
+  bodyMarkdown    String    @map("body_markdown")
+  readTimeMinutes Int       @map("read_time_minutes")
+  publishedAt     DateTime? @map("published_at")
+  isFeatured      Boolean   @default(false) @map("is_featured")
+  sortOrder       Int       @default(0) @map("sort_order")
+  seoTitle        String?   @map("seo_title")
+  seoDescription  String?   @map("seo_description")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([isFeatured])
+  @@index([publishedAt])
+  @@map("blog_posts")
 }
 
 // Arch Phase 17 — SEO page-generation infrastructure. Category/City/

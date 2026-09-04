@@ -5,7 +5,12 @@ import { authenticateMiddleware } from "../../common/middleware/authenticate.mid
 import { authorize } from "../../common/middleware/authorize.middleware";
 import { Role } from "../../common/enums/roles.enum";
 import * as adminMediaController from "./admin-media.controller";
-import { createAdminImageUploadRequestSchema, createAdminVendorUploadRequestSchema } from "./admin-media.schema";
+import {
+  createAdminImageUploadRequestSchema,
+  createAdminVendorUploadRequestSchema,
+  createBlogCoverImageUploadRequestSchema,
+  createPopularSearchImageUploadRequestSchema,
+} from "./admin-media.schema";
 
 export const adminMediaRouter = Router();
 
@@ -30,3 +35,32 @@ adminMediaRouter.post(
 );
 
 adminMediaRouter.post("/vendor-upload-requests/:id/confirm", asyncHandler(adminMediaController.confirmVendorUpload));
+
+// Admin uploading a real image for a PopularSearchCard (Arch Phase 17) —
+// same platform-owned, no-vendor-owner shape as the category-image routes
+// above, tagged POPULAR_SEARCH_IMAGE instead of CATEGORY_IMAGE.
+adminMediaRouter.post(
+  "/popular-search-image-upload-requests",
+  validateBody(createPopularSearchImageUploadRequestSchema),
+  asyncHandler(adminMediaController.createPopularSearchImageUploadRequest),
+);
+
+adminMediaRouter.post(
+  "/popular-search-image-upload-requests/:id/confirm",
+  asyncHandler(adminMediaController.confirmPopularSearchImageUpload),
+);
+
+// Admin uploading a real cover image for a BlogPost (Arch Phase 17) — same
+// platform-owned, no-vendor-owner shape as the category/popular-search
+// image routes above, tagged BLOG_COVER_IMAGE instead of CATEGORY_IMAGE/
+// POPULAR_SEARCH_IMAGE.
+adminMediaRouter.post(
+  "/blog-cover-image-upload-requests",
+  validateBody(createBlogCoverImageUploadRequestSchema),
+  asyncHandler(adminMediaController.createBlogCoverImageUploadRequest),
+);
+
+adminMediaRouter.post(
+  "/blog-cover-image-upload-requests/:id/confirm",
+  asyncHandler(adminMediaController.confirmBlogCoverImageUpload),
+);

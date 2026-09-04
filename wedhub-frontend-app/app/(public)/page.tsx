@@ -7,9 +7,11 @@ import { CategoryCapsuleCarousel } from "@/components/shared/CategoryCapsuleCaro
 import { GalleryInspiration } from "@/components/shared/GalleryInspiration";
 import { VendorCard } from "@/components/shared/VendorCard";
 import {
+  listFeaturedBlogPosts,
   listFeaturedCategories,
   listFeaturedGalleryMedia,
   listFeaturedListings,
+  listFeaturedPopularSearchCards,
   listFeaturedWeddingStories,
   searchVendors,
 } from "@/lib/api/catalog";
@@ -146,82 +148,24 @@ async function getFeaturedVendorCards() {
   }
 }
 
-// TODO(backend): no "curated/trending search" concept exists in the
-// backend today — this is static placeholder content, not sourced from
-// any API. Once a CMS content model exists (see backend Arch Phase 17,
-// docs/09-stage-growth-and-scale.md), replace with a real editorial/
-// analytics-driven "popular searches" endpoint instead of hardcoding.
-const POPULAR_SEARCH_CARDS = [
-  {
-    title: "4 Star & Above Wedding Hotels",
-    location: "Bengaluru, Delhi, Mumbai",
-    price: "₹1,800 per plate onwards",
-    imageUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500&q=80",
-    link: "/search?keyword=Hotel",
-  },
-  {
-    title: "Banquet Halls with Price",
-    location: "Over 500+ AC Banquet Halls",
-    price: "₹800 per plate onwards",
-    imageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=500&q=80",
-    link: "/search?keyword=Banquet",
-  },
-  {
-    title: "Resorts for Destination Wedding",
-    location: "Goa, Jaipur, Udaipur, Kerala",
-    price: "₹2,50,000 per day onwards",
-    imageUrl: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500&q=80",
-    link: "/search?keyword=Resort",
-  },
-  {
-    title: "Lawns / Farmhouses",
-    location: "Spacious Outdoor & Green Venues",
-    price: "₹1,200 per plate onwards",
-    imageUrl: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=500&q=80",
-    link: "/search?keyword=Lawn",
-  },
-];
-
-
-
-
-// TODO(backend): blog/article content is explicitly backend Arch Phase 17
-// scope (CMS & SEO Backend, see docs/09-stage-growth-and-scale.md and
-// frontenddocs/07-stage-growth-and-hardening.md's Frontend Arch Phase
-// 11b) — not started. This is static placeholder content until then.
-const LATEST_BLOGS = [
-  {
-    title: "Top 12 Trending Bridal Lehenga Colors For 2026",
-    category: "Bridal Fashion",
-    readTime: "5 min read",
-    imageUrl: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=600&q=80",
-    date: "Sep 2026",
-  },
-  {
-    title: "The Ultimate Indian Wedding Planning Checklist & Timeline",
-    category: "Wedding Planning",
-    readTime: "8 min read",
-    imageUrl: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=600&q=80",
-    date: "Aug 2026",
-  },
-  {
-    title: "15 Hidden Gem Pre-Wedding Photoshoot Locations In India",
-    category: "Photography Ideas",
-    readTime: "6 min read",
-    imageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80",
-    date: "Aug 2026",
-  },
-];
-
 export default async function HomePage() {
-  const [{ data: featuredCategories }, featuredVendors, session, { data: weddingStories }, { data: galleryMedia }] =
-    await Promise.all([
-      listFeaturedCategories(),
-      getFeaturedVendorCards(),
-      getOptionalSession(),
-      listFeaturedWeddingStories(),
-      listFeaturedGalleryMedia(),
-    ]);
+  const [
+    { data: featuredCategories },
+    featuredVendors,
+    session,
+    { data: weddingStories },
+    { data: galleryMedia },
+    { data: popularSearchCards },
+    { data: blogPosts },
+  ] = await Promise.all([
+    listFeaturedCategories(),
+    getFeaturedVendorCards(),
+    getOptionalSession(),
+    listFeaturedWeddingStories(),
+    listFeaturedGalleryMedia(),
+    listFeaturedPopularSearchCards(),
+    listFeaturedBlogPosts(),
+  ]);
 
   return (
     <div className="min-h-screen bg-surface-page">
@@ -289,43 +233,55 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Popular Searches / Venues Strip (4 Cards) */}
-      <section className="px-6 py-6 max-[900px]:px-4">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold tracking-tight text-jet-black">
-            Popular Searches
-          </h2>
-          <Link href="/search" className="text-xs font-bold text-brand-primary hover:underline">
-            View All →
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {POPULAR_SEARCH_CARDS.map((item) => (
-            <Link
-              key={item.title}
-              href={item.link}
-              className="group flex overflow-hidden rounded-2xl border border-border bg-white p-3 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md no-underline text-inherit"
-            >
-              <div className="relative h-20 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-surface-input">
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  sizes="96px"
-                />
-              </div>
-              <div className="ml-3.5 flex flex-1 flex-col justify-center">
-                <h3 className="text-xs font-bold text-jet-black line-clamp-1 group-hover:text-brand-primary">
-                  {item.title}
-                </h3>
-                <p className="text-[11px] text-text-grey mt-0.5">{item.location}</p>
-                <p className="text-[11px] font-bold text-brand-primary mt-1">{item.price}</p>
-              </div>
+      {/* Popular Searches — real, admin-curated PopularSearchCard rows
+          (Arch Phase 17, 2026-09-04), replacing the previously-hardcoded
+          POPULAR_SEARCH_CARDS array. Unlike Real Wedding Stories/Gallery
+          Inspiration below, this section has no fixed-slot/sample-fallback:
+          there's no real underlying entity (Album/Media) to fall back to
+          sampling from, and per-card content (title/price/location) would
+          be fully fabricated if sampled — so the section simply hides
+          itself when zero cards are curated, same as Featured Vendors
+          further down, rather than showing an empty or fake-looking grid. */}
+      {popularSearchCards.length > 0 && (
+        <section className="px-6 py-6 max-[900px]:px-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-bold tracking-tight text-jet-black">
+              Popular Searches
+            </h2>
+            <Link href="/search" className="text-xs font-bold text-brand-primary hover:underline">
+              View All →
             </Link>
-          ))}
-        </div>
-      </section>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {popularSearchCards.map((item) => (
+              <Link
+                key={item.id}
+                href={`/search?keyword=${encodeURIComponent(item.searchQuery)}`}
+                className="group flex overflow-hidden rounded-2xl border border-border bg-white p-3 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md no-underline text-inherit"
+              >
+                <div className="relative h-20 w-24 flex-shrink-0 overflow-hidden rounded-xl bg-surface-input">
+                  {item.imageUrl && (
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.title}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      sizes="96px"
+                    />
+                  )}
+                </div>
+                <div className="ml-3.5 flex flex-1 flex-col justify-center">
+                  <h3 className="text-xs font-bold text-jet-black line-clamp-1 group-hover:text-brand-primary">
+                    {item.title}
+                  </h3>
+                  <p className="text-[11px] text-text-grey mt-0.5">{item.locationBlurb}</p>
+                  <p className="text-[11px] font-bold text-brand-primary mt-1">{item.priceLabel}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Wedding Categories Capsule Carousel (Matching User Design Reference) */}
       <CategoryCapsuleCarousel categories={featuredCategories} />
@@ -359,60 +315,69 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Latest Blogs & Planning Ideas */}
-      <section id="wedding-blogs" className="px-6 py-8 max-[900px]:px-4 bg-white/70 border-y border-border/60">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-jet-black">
-              Latest Blogs &amp; Advice
-            </h2>
-            <p className="text-xs text-text-grey mt-0.5">Expert tips, styling advice, and practical planning guides</p>
-          </div>
-          <Link href="/search" className="text-xs font-bold text-brand-primary hover:underline">
-            Read More Articles →
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {LATEST_BLOGS.map((blog) => (
-            <div
-              key={blog.title}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-            >
-              <div className="relative aspect-[16/9] overflow-hidden bg-surface-input">
-                <Image
-                  src={blog.imageUrl}
-                  alt={blog.title}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                />
-                <span className="absolute top-2.5 left-2.5 rounded-md bg-white/90 px-2.5 py-0.5 text-[10px] font-bold text-jet-black backdrop-blur-xs">
-                  {blog.category}
-                </span>
-              </div>
-              <div className="flex flex-1 flex-col justify-between p-4">
-                <div>
-                  <div className="flex items-center gap-2 text-[11px] text-text-grey mb-1.5">
-                    <span>{blog.date}</span>
-                    <span>&bull;</span>
-                    <span>{blog.readTime}</span>
-                  </div>
-                  <h3 className="text-sm font-bold text-jet-black group-hover:text-brand-primary transition-colors line-clamp-2 leading-snug">
-                    {blog.title}
-                  </h3>
-                </div>
-                <Link
-                  href="/search"
-                  className="mt-3 text-xs font-bold text-brand-primary hover:underline"
-                >
-                  Read Article →
-                </Link>
-              </div>
+      {/* Latest Blogs & Advice — real, admin-authored BlogPost rows (Arch
+          Phase 17, 2026-09-04), replacing the previously-hardcoded
+          LATEST_BLOGS array. Same hide-when-empty convention as Popular
+          Searches: a blog post is fully editorial content with no real
+          underlying entity to sample/fall back to, so the section simply
+          doesn't render until an admin has published + featured at least
+          one post. "Read Article" links go to the real /blog/[slug]
+          detail page instead of the old /search stub. */}
+      {blogPosts.length > 0 && (
+        <section id="wedding-blogs" className="px-6 py-8 max-[900px]:px-4 bg-white/70 border-y border-border/60">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-jet-black">
+                Latest Blogs &amp; Advice
+              </h2>
+              <p className="text-xs text-text-grey mt-0.5">Expert tips, styling advice, and practical planning guides</p>
             </div>
-          ))}
-        </div>
-      </section>
+            <Link href="/blog" className="text-xs font-bold text-brand-primary hover:underline">
+              Read More Articles →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {blogPosts.map((blog) => (
+              <div
+                key={blog.id}
+                className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+              >
+                <div className="relative aspect-[16/9] overflow-hidden bg-surface-input">
+                  {blog.coverImageUrl && (
+                    <Image
+                      src={blog.coverImageUrl}
+                      alt={blog.title}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
+                  )}
+                  <span className="absolute top-2.5 left-2.5 rounded-md bg-white/90 px-2.5 py-0.5 text-[10px] font-bold text-jet-black backdrop-blur-xs">
+                    {blog.category}
+                  </span>
+                </div>
+                <div className="flex flex-1 flex-col justify-between p-4">
+                  <div>
+                    <div className="flex items-center gap-2 text-[11px] text-text-grey mb-1.5">
+                      <span>{blog.readTimeMinutes} min read</span>
+                    </div>
+                    <h3 className="text-sm font-bold text-jet-black group-hover:text-brand-primary transition-colors line-clamp-2 leading-snug">
+                      {blog.title}
+                    </h3>
+                  </div>
+                  <Link
+                    href={`/blog/${blog.slug}`}
+                    className="mt-3 text-xs font-bold text-brand-primary hover:underline"
+                  >
+                    Read Article →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Gallery Inspiration Component */}
       <GalleryInspiration items={galleryMedia} />

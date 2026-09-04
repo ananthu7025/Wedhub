@@ -3,13 +3,17 @@ import { AdminShell } from "@/components/shared/AdminShell";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import {
   listAdminApprovedMedia,
+  listAdminBlogPosts,
   listAdminFeaturedMedia,
+  listAdminPopularSearchCards,
   listAdminPublicAlbums,
   listAdminVendors,
   listAdminWeddingStories,
 } from "@/lib/api/admin";
 import { WeddingStoriesBoard } from "./WeddingStoriesBoard";
 import { FeaturedMediaBoard } from "./FeaturedMediaBoard";
+import { PopularSearchCardsBoard } from "./PopularSearchCardsBoard";
+import { BlogPostsBoard } from "./BlogPostsBoard";
 
 export const metadata: Metadata = {
   title: "CMS",
@@ -20,32 +24,48 @@ export const metadata: Metadata = {
  * 2026-09-04), matching wedhub-frontend/admin/cms.html. Two of the
  * mockup's stub sections (Real Wedding Stories, Gallery Inspiration) are
  * now real — both curate real vendor Album/Media data rather than being
- * independent editorial content, per user decision. Pages, Blog, Guides,
- * FAQs, and Banners remain genuinely unbuilt (backend Arch Phase 17
- * scope not yet started for those) — kept as an explicit "not yet"
- * placeholder rather than removed, so the admin nav structure and this
- * page's own honesty about what's real stay intact.
+ * independent editorial content, per user decision. Popular Searches is
+ * also now real, but standalone — no existing entity to curate over, so
+ * it's a genuinely new, fully admin-authored content model with its own
+ * image (POPULAR_SEARCH_IMAGE upload pipeline, mirroring Category.imageUrl's
+ * precedent) rather than a reference to real vendor data. Blog is now
+ * real too (added 2026-09-04, closing out backend Arch Phase 17) — same
+ * standalone shape as Popular Searches, with its own BLOG_COVER_IMAGE
+ * upload pipeline and a Markdown body. Pages, Guides, FAQs, and Banners
+ * remain genuinely unbuilt (backend Arch Phase 17 scope not yet started
+ * for those) — kept as an explicit "not yet" placeholder rather than
+ * removed, so the admin nav structure and this page's own honesty about
+ * what's real stay intact.
  */
 
-const STILL_STUB_ITEMS = ["Pages", "Blog", "Guides", "FAQs", "Banners"];
+const STILL_STUB_ITEMS = ["Pages", "Guides", "FAQs", "Banners"];
 
 export default async function AdminCmsPage() {
   await requireAdmin();
 
-  const [{ data: albums }, { data: approvedMedia }, { data: weddingStories }, { data: featuredMedia }, { data: vendors }] =
-    await Promise.all([
-      listAdminPublicAlbums(),
-      listAdminApprovedMedia(),
-      listAdminWeddingStories(),
-      listAdminFeaturedMedia(),
-      listAdminVendors({ status: "APPROVED", limit: 100 }),
-    ]);
+  const [
+    { data: albums },
+    { data: approvedMedia },
+    { data: weddingStories },
+    { data: featuredMedia },
+    { data: popularSearchCards },
+    { data: blogPosts },
+    { data: vendors },
+  ] = await Promise.all([
+    listAdminPublicAlbums(),
+    listAdminApprovedMedia(),
+    listAdminWeddingStories(),
+    listAdminFeaturedMedia(),
+    listAdminPopularSearchCards(),
+    listAdminBlogPosts(),
+    listAdminVendors({ status: "APPROVED", limit: 100 }),
+  ]);
 
   return (
     <AdminShell activeHref="/admin/cms">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">CMS</h1>
-        <p className="text-sm text-text-grey">Homepage content curation, plus pages, blog, guides, FAQs & banners.</p>
+        <p className="text-sm text-text-grey">Homepage content curation, the blog, plus pages, guides, FAQs & banners.</p>
       </div>
 
       <div className="mb-6 rounded-xl border border-border bg-white p-6">
@@ -62,6 +82,24 @@ export default async function AdminCmsPage() {
           Real, approved vendor portfolio photos featured on the homepage gallery.
         </p>
         <FeaturedMediaBoard initialFeatured={featuredMedia} approvedMedia={approvedMedia} vendors={vendors} />
+      </div>
+
+      <div className="mb-6 rounded-xl border border-border bg-white p-6">
+        <h3 className="mb-1 text-base font-bold">Popular Searches</h3>
+        <p className="mb-4 text-[13px] text-text-grey">
+          Standalone editorial cards (title, location, price, image, search link) shown on the homepage — not curated
+          from any other real entity.
+        </p>
+        <PopularSearchCardsBoard initialCards={popularSearchCards} />
+      </div>
+
+      <div className="mb-6 rounded-xl border border-border bg-white p-6">
+        <h3 className="mb-1 text-base font-bold">Blog</h3>
+        <p className="mb-4 text-[13px] text-text-grey">
+          Real, admin-authored articles (Markdown body) backing the public /blog list, /blog/[slug] detail pages, and
+          the homepage&apos;s featured teaser section.
+        </p>
+        <BlogPostsBoard initialPosts={blogPosts} />
       </div>
 
       <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-white px-6 py-16 text-center">

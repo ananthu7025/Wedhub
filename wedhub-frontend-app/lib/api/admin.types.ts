@@ -548,6 +548,28 @@ export interface AdminImageConfirmResult {
   url: string | null;
 }
 
+// ---- POST /admin/media-uploads/popular-search-image-upload-requests, /:id/confirm ----
+// Same presign/confirm shape as AdminImageUploadRequestResult/
+// AdminImageConfirmResult above, but tagged POPULAR_SEARCH_IMAGE instead
+// of CATEGORY_IMAGE — backs AdminPopularSearchCard.imageUrl (Arch Phase 17).
+export interface AdminCreatePopularSearchImageUploadRequestBody {
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+}
+
+export interface AdminPopularSearchImageUploadRequestResult {
+  mediaId: string;
+  uploadUrl: string;
+  objectKey: string;
+}
+
+export interface AdminPopularSearchImageConfirmResult {
+  id: string;
+  status: string;
+  url: string | null;
+}
+
 // ---- GET /admin/audit-logs (extended filters) ----
 // Server-filterable fields are exactly entityType/entityId/actorId (all
 // exact-match) plus pagination — confirmed via buildWhere() read and live
@@ -699,6 +721,125 @@ export interface AdminCreateFeaturedMediaBody {
 export interface AdminUpdateFeaturedMediaBody {
   titleOverride?: string | null;
   sortOrder?: number;
+}
+
+// ---- /admin/popular-searches ----
+// Fully standalone, admin-curated content (Arch Phase 17) — no real
+// Album/Media entity backs this the way WeddingStory/FeaturedMedia do, so
+// there's no nested relation here; imageUrl is a plain resolvable url
+// (same shape as Category.imageUrl), set via the platform-owned
+// POPULAR_SEARCH_IMAGE upload pipeline (createAdminImageUploadRequest's
+// sibling, see admin-client.ts).
+export interface AdminPopularSearchCard {
+  id: string;
+  title: string;
+  locationBlurb: string;
+  priceLabel: string;
+  imageUrl: string | null;
+  searchQuery: string;
+  isFeatured: boolean;
+  sortOrder: number;
+}
+
+export interface AdminCreatePopularSearchCardBody {
+  title: string;
+  locationBlurb: string;
+  priceLabel: string;
+  imageUrl?: string | null;
+  searchQuery: string;
+  isFeatured?: boolean;
+  sortOrder?: number;
+}
+
+export interface AdminUpdatePopularSearchCardBody {
+  title?: string;
+  locationBlurb?: string;
+  priceLabel?: string;
+  imageUrl?: string | null;
+  searchQuery?: string;
+  isFeatured?: boolean;
+  sortOrder?: number;
+}
+
+// ---- /admin/blog ----
+// The last remaining Arch Phase 17 item (added 2026-09-04). Unlike
+// AdminPopularSearchCard, this admin shape carries publishedAt (null =
+// draft, set = published — publishing is just PATCH-setting this field,
+// no separate publish endpoint) plus createdAt/updatedAt, since an admin
+// needs to see/manage draft state; the public BlogPost type in
+// vendors.types.ts omits all three since every post the public endpoints
+// return is already published. coverImageUrl follows the same plain
+// resolvable-url shape as AdminPopularSearchCard.imageUrl, set via the
+// platform-owned BLOG_COVER_IMAGE upload pipeline (see admin-client.ts).
+export interface AdminBlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  coverImageUrl: string | null;
+  excerpt: string;
+  bodyMarkdown: string;
+  readTimeMinutes: number;
+  publishedAt: string | null;
+  isFeatured: boolean;
+  sortOrder: number;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCreateBlogPostBody {
+  title: string;
+  slug?: string;
+  category: string;
+  coverImageUrl?: string | null;
+  excerpt: string;
+  bodyMarkdown: string;
+  readTimeMinutes: number;
+  publishedAt?: string | null;
+  isFeatured?: boolean;
+  sortOrder?: number;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+}
+
+export interface AdminUpdateBlogPostBody {
+  title?: string;
+  slug?: string;
+  category?: string;
+  coverImageUrl?: string | null;
+  excerpt?: string;
+  bodyMarkdown?: string;
+  readTimeMinutes?: number;
+  publishedAt?: string | null;
+  isFeatured?: boolean;
+  sortOrder?: number;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+}
+
+// ---- POST /admin/media-uploads/blog-cover-image-upload-requests, /:id/confirm ----
+// Same presign/confirm shape as AdminCreatePopularSearchImageUploadRequestBody/
+// AdminPopularSearchImageUploadRequestResult above, but tagged
+// BLOG_COVER_IMAGE instead of POPULAR_SEARCH_IMAGE — backs
+// AdminBlogPost.coverImageUrl (Arch Phase 17).
+export interface AdminCreateBlogCoverImageUploadRequestBody {
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+}
+
+export interface AdminBlogCoverImageUploadRequestResult {
+  mediaId: string;
+  uploadUrl: string;
+  objectKey: string;
+}
+
+export interface AdminBlogCoverImageConfirmResult {
+  id: string;
+  status: string;
+  url: string | null;
 }
 
 // ---- /admin/seo-overrides ----

@@ -12,6 +12,32 @@ export function createUnattachedImage(data: { originalObjectKey: string; mimeTyp
   });
 }
 
+// Same shape as createUnattachedImage above, but tagged POPULAR_SEARCH_IMAGE
+// — backs PopularSearchCard.imageUrl (see MediaType enum comment).
+export function createUnattachedPopularSearchImage(data: { originalObjectKey: string; mimeType: string; fileSize: number }) {
+  return prisma.media.create({
+    data: {
+      mediaType: "POPULAR_SEARCH_IMAGE",
+      originalObjectKey: data.originalObjectKey,
+      mimeType: data.mimeType,
+      fileSize: data.fileSize,
+    },
+  });
+}
+
+// Same shape as createUnattachedImage above, but tagged BLOG_COVER_IMAGE —
+// backs BlogPost.coverImageUrl (see MediaType enum comment).
+export function createUnattachedBlogCoverImage(data: { originalObjectKey: string; mimeType: string; fileSize: number }) {
+  return prisma.media.create({
+    data: {
+      mediaType: "BLOG_COVER_IMAGE",
+      originalObjectKey: data.originalObjectKey,
+      mimeType: data.mimeType,
+      fileSize: data.fileSize,
+    },
+  });
+}
+
 export function findImageById(id: string) {
   return prisma.media.findUnique({ where: { id } });
 }
