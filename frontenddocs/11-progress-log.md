@@ -964,3 +964,11 @@ Vendors get a full-featured GST billing interface inside the vendor portal:
 - `npm run build` in `wedhub-frontend-app` passed with 0 errors across all 54 routes.
 - Fully typechecked and compiled with Turbopack.
 
+### Addendum, 2026-09-04 — Full Platform Schema & Validation Harmonization Audit
+
+- **Complete Synchronization of Validation Bounds**: Verified all 33+ backend Zod schema modules against all interactive frontend forms, pickers, and mutation handlers.
+- **Frontend Input Enforcement**: Audited and synchronized constraints across `maxLength`, `minLength`, `min`, `max`, regex patterns, MIME types, URL auto-prefixing, and whitespace trimming.
+- **Unpacked Error Feedback**: Standardized `formatApiError()` from `lib/utils/error.ts` across all forms, ensuring nested backend `error.details` maps (`Record<string, string[]>`) are unpacked and surfaced to users instead of generic fallback messages.
+- **Verification**: `wedhub-backend` passes `npm run typecheck` (0 errors) and `tests/unit` (8/8 passed). `wedhub-frontend-app` passes `npx tsc --noEmit` (0 errors) and `next build` (54/54 routes compiled with Turbopack).
+
+
