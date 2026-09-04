@@ -8,6 +8,7 @@ import { register, login } from "@/lib/api/auth-client";
 import { updateMyProfile } from "@/lib/api/users-client";
 import { createVendor } from "@/lib/api/vendor-onboarding-client";
 import type { UserRole } from "@/lib/auth/types";
+import { formatApiError } from "@/lib/utils/error";
 
 type AccountType = "END_USER" | "VENDOR";
 type Step = "credentials" | "profile" | "done";
@@ -41,7 +42,7 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
 
     const registerResult = await register(email, password, accountType);
     if (!registerResult.success) {
-      setError(registerResult.error.message);
+      setError(formatApiError(registerResult.error));
       setPending(false);
       return;
     }
@@ -64,14 +65,22 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
     setError(null);
 
     if (accountType === "VENDOR") {
-      const result = await createVendor(businessName);
+      const result = await createVendor(businessName.trim());
       if (!result.success) {
-        setError(result.error.message);
+        setError(formatApiError(result.error));
         setPending(false);
         return;
       }
     } else if (firstName || lastName) {
-      await updateMyProfile({ firstName: firstName || undefined, lastName: lastName || undefined });
+      const result = await updateMyProfile({
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+      });
+      if (!result.success) {
+        setError(formatApiError(result.error));
+        setPending(false);
+        return;
+      }
     }
 
     setPending(false);
@@ -147,6 +156,7 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
               placeholder="e.g. Frame & Co. Photography"
+              maxLength={200}
               required
             />
             <p className="mt-1.5 text-xs text-text-grey">You can add photos, packages and more details next.</p>
@@ -160,13 +170,28 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
 
     return (
       <form onSubmit={handleProfileSubmit} className="w-full max-w-md">
+        {error && (
+          <div className="mb-4 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">
+            {error}
+          </div>
+        )}
         <div className="mb-4.5">
           <span className="mb-2 block text-[13px] font-bold">First name</span>
-          <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="e.g. Aditi" />
+          <Input
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="e.g. Aditi"
+            maxLength={100}
+          />
         </div>
         <div className="mb-4.5">
           <span className="mb-2 block text-[13px] font-bold">Last name</span>
-          <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="e.g. Sharma" />
+          <Input
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            placeholder="e.g. Sharma"
+            maxLength={100}
+          />
         </div>
         <Button type="submit" variant="primary" block disabled={pending}>
           {pending ? "Saving…" : "Continue"}

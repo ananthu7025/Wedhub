@@ -7,6 +7,7 @@ import { getMyLeadClient, updateMyLeadStatus, addMyLeadNote } from "@/lib/api/le
 import type { LeadStatus } from "@/lib/api/account.types";
 import { ALL_LEAD_STATUSES, TERMINAL_LEAD_STATUSES } from "@/lib/api/leads.types";
 import type { LeadNote, VendorLead, VendorLeadDetail } from "@/lib/api/leads.types";
+import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Master-detail leads board (Frontend Arch Phase 6), matching
@@ -94,7 +95,7 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
     const result = await updateMyLeadStatus(detail.id, { status: statusDraft, reason: statusReason.trim() || undefined });
     setSaving(false);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setDetail({ ...detail, ...result.data, notes: detail.notes, statusHistory: detail.statusHistory });
@@ -109,7 +110,7 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
     const result = await addMyLeadNote(detail.id, noteDraft.trim());
     setSaving(false);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     const note: LeadNote = result.data;
@@ -328,6 +329,7 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
                     value={noteDraft}
                     onChange={(e) => setNoteDraft(e.target.value)}
                     placeholder="Add a note about this lead…"
+                    maxLength={2000}
                     className="min-h-[80px] w-full rounded-md border border-border p-3 text-[13px]"
                   />
                   <button

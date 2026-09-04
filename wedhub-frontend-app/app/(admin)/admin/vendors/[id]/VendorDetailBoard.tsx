@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/admin-client";
 import type { AdminVendorDetail, AdminVendorStatusHistoryEntry } from "@/lib/api/admin.types";
 import type { VerificationLevel } from "@/lib/api/vendor-self.types";
+import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Vendor detail page (Frontend Arch Phase 8), matching
@@ -87,7 +88,7 @@ export function VendorDetailBoard({
     const result = await setAdminVendorVerification(vendor.id, { verificationLevel: verificationDraft });
     setPending(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     // Every admin write endpoint (verify/approve/reject/suspend/restore/
@@ -105,7 +106,7 @@ export function VendorDetailBoard({
     const result = await approveAdminVendor(vendor.id);
     setPending(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     // Every admin write endpoint (verify/approve/reject/suspend/restore/
@@ -127,7 +128,7 @@ export function VendorDetailBoard({
     const result = await rejectAdminVendor(vendor.id, { reason: reason.trim() });
     setPending(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     // Every admin write endpoint (verify/approve/reject/suspend/restore/
@@ -149,7 +150,7 @@ export function VendorDetailBoard({
     const result = await suspendAdminVendor(vendor.id, { reason: reason.trim() });
     setPending(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     // Every admin write endpoint (verify/approve/reject/suspend/restore/
@@ -167,7 +168,7 @@ export function VendorDetailBoard({
     const result = await restoreAdminVendor(vendor.id);
     setPending(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     // Every admin write endpoint (verify/approve/reject/suspend/restore/
@@ -186,7 +187,7 @@ export function VendorDetailBoard({
     const result = await deactivateAdminVendor(vendor.id);
     setPending(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     // Every admin write endpoint (verify/approve/reject/suspend/restore/

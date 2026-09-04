@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createAdminVendor, createAdminVendorInvitation } from "@/lib/api/admin-client";
+import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Admin-initiated vendor creation (Frontend Arch Phase 8, Route B per
@@ -21,7 +22,7 @@ export function CreateVendorForm() {
   const [invitedEmail, setInvitedEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ vendorId: string; invitationSent: boolean } | null>(null);
+  const [created, setCreated] = useState<{ vendorId: string; invitationSent: boolean; inviteError?: string | null } | null>(null);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -32,18 +33,22 @@ export function CreateVendorForm() {
     const createResult = await createAdminVendor({ businessName: businessName.trim() });
     if (!createResult.success) {
       setSaving(false);
-      setError(createResult.error.message);
+      setError(formatApiError(createResult.error));
       return;
     }
 
     let invitationSent = false;
+    let inviteError: string | null = null;
     if (invitedEmail.trim()) {
       const inviteResult = await createAdminVendorInvitation(createResult.data.id, { invitedEmail: invitedEmail.trim() });
       invitationSent = inviteResult.success;
+      if (!inviteResult.success) {
+        inviteError = formatApiError(inviteResult.error);
+      }
     }
 
     setSaving(false);
-    setCreated({ vendorId: createResult.data.id, invitationSent });
+    setCreated({ vendorId: createResult.data.id, invitationSent, inviteError });
   }
 
   if (created) {
@@ -53,6 +58,8 @@ export function CreateVendorForm() {
         <p className="mb-6 text-sm text-text-grey">
           {created.invitationSent
             ? "An invitation was queued to the email you provided. The vendor can claim the listing and complete their profile via self-service onboarding."
+            : created.inviteError
+            ? `Vendor listing created, but invitation could not be sent: ${created.inviteError}`
             : "No invitation email was provided — you can add one from the vendor's detail page."}
         </p>
         <div className="flex justify-center gap-2">
@@ -108,6 +115,7 @@ export function CreateVendorForm() {
             value={businessName}
             onChange={(e) => setBusinessName(e.target.value)}
             placeholder="e.g. Example Studios"
+            maxLength={200}
             className="w-full rounded-md border border-border px-3 py-2 text-sm"
             required
           />
@@ -119,6 +127,7 @@ export function CreateVendorForm() {
             value={invitedEmail}
             onChange={(e) => setInvitedEmail(e.target.value)}
             placeholder="vendor@example.com"
+            maxLength={254}
             className="w-full rounded-md border border-border px-3 py-2 text-sm"
           />
         </label>

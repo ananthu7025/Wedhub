@@ -4,6 +4,14 @@ import { useState } from "react";
 import { createAdminSeoOverride, deleteAdminSeoOverride, updateAdminSeoOverride } from "@/lib/api/admin-client";
 import type { AdminSeoOverride, SeoOverridePageType } from "@/lib/api/admin.types";
 import type { Category, Location } from "@/lib/api/vendors.types";
+import { formatApiError } from "@/lib/utils/error";
+
+function normalizeUrl(raw: string): string | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
 
 interface FormValues {
   pageType: SeoOverridePageType;
@@ -45,12 +53,12 @@ export function SeoOverridesBoard({
       cityId: values.pageType !== "CATEGORY" ? values.cityId : undefined,
       title: values.title.trim() || undefined,
       description: values.description.trim() || undefined,
-      ogImageUrl: values.ogImageUrl.trim() || undefined,
+      ogImageUrl: normalizeUrl(values.ogImageUrl),
       noIndex: values.noIndex,
     });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setOverrides((prev) => [result.data, ...prev]);
@@ -63,12 +71,12 @@ export function SeoOverridesBoard({
     const result = await updateAdminSeoOverride(override.id, {
       title: values.title.trim() || null,
       description: values.description.trim() || null,
-      ogImageUrl: values.ogImageUrl.trim() || null,
+      ogImageUrl: normalizeUrl(values.ogImageUrl) ?? null,
       noIndex: values.noIndex,
     });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setOverrides((prev) => prev.map((o) => (o.id === override.id ? result.data : o)));
@@ -81,7 +89,7 @@ export function SeoOverridesBoard({
     const result = await deleteAdminSeoOverride(override.id);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setOverrides((prev) => prev.filter((o) => o.id !== override.id));

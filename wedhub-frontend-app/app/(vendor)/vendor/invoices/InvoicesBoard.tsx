@@ -13,6 +13,7 @@ import {
   duplicateMyInvoice,
   issueMyInvoice,
 } from "@/lib/api/vendor-invoices-client";
+import { formatApiError } from "@/lib/utils/error";
 
 interface InvoicesBoardProps {
   initialInvoices: VendorInvoice[];
@@ -98,7 +99,7 @@ export function InvoicesBoard({
       setFeedback({ type: "success", message: `Invoice #${res.data.invoiceNumber} issued successfully.` });
       router.refresh();
     } else {
-      setFeedback({ type: "error", message: res.error.message || "Failed to issue invoice." });
+      setFeedback({ type: "error", message: formatApiError(res.error) });
     }
   }
 
@@ -111,7 +112,7 @@ export function InvoicesBoard({
       setFeedback({ type: "success", message: "Invoice duplicated as draft. Redirecting to edit..." });
       router.push(`/vendor/invoices/${res.data.id}/edit`);
     } else {
-      setFeedback({ type: "error", message: res.error.message || "Failed to duplicate invoice." });
+      setFeedback({ type: "error", message: formatApiError(res.error) });
     }
   }
 
@@ -128,7 +129,7 @@ export function InvoicesBoard({
       setFeedback({ type: "success", message: "Draft invoice deleted." });
       router.refresh();
     } else {
-      setFeedback({ type: "error", message: res.error.message || "Failed to delete draft." });
+      setFeedback({ type: "error", message: formatApiError(res.error) });
     }
   }
 

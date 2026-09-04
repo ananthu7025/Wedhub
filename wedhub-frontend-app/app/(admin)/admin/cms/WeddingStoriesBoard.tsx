@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/admin-client";
 import type { AdminAlbum, AdminVendorListItem, AdminWeddingStory } from "@/lib/api/admin.types";
 import { getPublicMediaUrl, getObjectKeyFromPublicMediaUrl } from "@/lib/media/url";
+import { formatApiError } from "@/lib/utils/error";
 import { VendorPhotoUploader } from "./VendorPhotoUploader";
 
 interface FormValues {
@@ -53,7 +54,7 @@ export function WeddingStoriesBoard({
     const result = await createAdminWeddingStory(values);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setStories((prev) => [...prev, result.data]);
@@ -66,7 +67,7 @@ export function WeddingStoriesBoard({
     const result = await updateAdminWeddingStory(story.id, values);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setStories((prev) => prev.map((s) => (s.id === story.id ? result.data : s)));
@@ -79,7 +80,7 @@ export function WeddingStoriesBoard({
     const result = await updateAdminWeddingStory(story.id, { isFeatured: !story.isFeatured });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setStories((prev) => prev.map((s) => (s.id === story.id ? result.data : s)));
@@ -91,7 +92,7 @@ export function WeddingStoriesBoard({
     const result = await deleteAdminWeddingStory(story.id);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setStories((prev) => prev.filter((s) => s.id !== story.id));
@@ -250,7 +251,7 @@ function NewAlbumFromPhoto({
     }
     const result = await createAdminAlbumForVendor({ vendorId, name: albumName.trim(), visibility: "PUBLIC" });
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setPendingAlbum({ id: result.data.id, vendorId: result.data.vendorId, name: result.data.name });
@@ -261,7 +262,7 @@ function NewAlbumFromPhoto({
     setError(null);
     const result = await updateAdminAlbum(pendingAlbum.id, { coverMediaId: media.id });
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     const vendor = vendors.find((v) => v.id === pendingAlbum.vendorId);

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createSingleVendorEnquiry } from "@/lib/api/shortlists-client";
 import { trackEvent } from "@/lib/analytics/track";
+import { formatApiError } from "@/lib/utils/error";
 
 interface MeResponse {
   email: string;
@@ -87,14 +88,27 @@ function EnquiryModalContent({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    const trimmedName = contactName.trim();
+    if (!trimmedName) {
+      setStatus("error");
+      setErrorMessage("Please enter your name.");
+      return;
+    }
+    const trimmedPhone = contactPhone.trim();
+    if (trimmedPhone && trimmedPhone.length < 6) {
+      setStatus("error");
+      setErrorMessage("Phone number must be at least 6 digits.");
+      return;
+    }
+
     setStatus("submitting");
     setErrorMessage("");
 
     const result = await createSingleVendorEnquiry({
       vendorId,
-      contactName: contactName.trim(),
+      contactName: trimmedName,
       contactEmail,
-      contactPhone: contactPhone.trim() || undefined,
+      contactPhone: trimmedPhone || undefined,
       weddingDate: weddingDate || undefined,
       budget: budget ? Number(budget) : undefined,
       guestCount: guestCount ? Number(guestCount) : undefined,
@@ -105,7 +119,7 @@ function EnquiryModalContent({
       setStatus("success");
     } else {
       setStatus("error");
-      setErrorMessage(result.error.message);
+      setErrorMessage(formatApiError(result.error));
     }
   }
 

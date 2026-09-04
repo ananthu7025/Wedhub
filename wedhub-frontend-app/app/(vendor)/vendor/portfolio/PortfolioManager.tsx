@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/vendor-self-client";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import type { MediaItem } from "@/lib/api/vendor-self.types";
+import { formatApiError } from "@/lib/utils/error";
 
 const POLL_INTERVAL_MS = 3000;
 const SETTLED_STATUSES = new Set(["READY", "FAILED", "INACTIVE", "DELETED"]);
@@ -82,7 +83,7 @@ export function PortfolioManager({
       fileSize: file.size,
     });
     if (!requestResult.success) {
-      setUploads((prev) => prev.map((u) => (u.tempId === tempId ? { ...u, progress: "error", error: requestResult.error.message } : u)));
+      setUploads((prev) => prev.map((u) => (u.tempId === tempId ? { ...u, progress: "error", error: formatApiError(requestResult.error) } : u)));
       return;
     }
 
@@ -97,7 +98,7 @@ export function PortfolioManager({
 
     const confirmResult = await confirmMediaUpload(mediaId);
     if (!confirmResult.success) {
-      setUploads((prev) => prev.map((u) => (u.tempId === tempId ? { ...u, progress: "error", error: confirmResult.error.message } : u)));
+      setUploads((prev) => prev.map((u) => (u.tempId === tempId ? { ...u, progress: "error", error: formatApiError(confirmResult.error) } : u)));
       return;
     }
 
@@ -109,8 +110,34 @@ export function PortfolioManager({
   function handleFilesSelected(files: FileList | null) {
     if (!files) return;
     for (const file of Array.from(files)) {
-      if (!ACCEPTED_TYPES.includes(file.type)) continue;
-      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) continue;
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        const tempId = `${file.name}-${Date.now()}-${Math.random()}`;
+        setUploads((prev) => [
+          ...prev,
+          {
+            tempId,
+            fileName: file.name,
+            previewUrl: "",
+            progress: "error",
+            error: "Unsupported file type. Allowed: JPG, PNG, WebP, MP4, MOV.",
+          },
+        ]);
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        const tempId = `${file.name}-${Date.now()}-${Math.random()}`;
+        setUploads((prev) => [
+          ...prev,
+          {
+            tempId,
+            fileName: file.name,
+            previewUrl: "",
+            progress: "error",
+            error: `File exceeds maximum allowed size of ${MAX_FILE_SIZE_MB}MB.`,
+          },
+        ]);
+        continue;
+      }
       void uploadOneFile(file);
     }
   }

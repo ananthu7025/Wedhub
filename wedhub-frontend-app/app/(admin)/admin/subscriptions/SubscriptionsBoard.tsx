@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { UnavailablePanel } from "@/components/admin/UnavailablePanel";
 import { createAdminPlan, updateAdminPlan, createAdminCoupon } from "@/lib/api/admin-client";
 import type { AdminPlan, BillingInterval, CouponDiscountType, PlanTier } from "@/lib/api/admin.types";
+import { formatApiError } from "@/lib/utils/error";
 import { PlanFormModal } from "./PlanFormModal";
 
 /**
@@ -38,30 +39,34 @@ export function SubscriptionsBoard({ initialPlans }: { initialPlans: AdminPlan[]
   const [editingPlan, setEditingPlan] = useState<AdminPlan | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleCreate(body: { tier: PlanTier; billingInterval: BillingInterval; name: string; price: number; trialDays: number }) {
+  async function handleCreate(body: { tier: PlanTier; billingInterval: BillingInterval; name: string; price: number; trialDays: number }): Promise<{ success: boolean; error?: string }> {
     const result = await createAdminPlan(body);
     if (!result.success) {
-      setError(result.error.message);
-      return;
+      const errMsg = formatApiError(result.error);
+      setError(errMsg);
+      return { success: false, error: errMsg };
     }
     setPlans((prev) => [...prev, result.data]);
     setEditingPlan(null);
+    return { success: true };
   }
 
-  async function handleUpdate(id: string, body: { name: string; price: number; trialDays: number; isActive: boolean }) {
+  async function handleUpdate(id: string, body: { name: string; price: number; trialDays: number; isActive: boolean }): Promise<{ success: boolean; error?: string }> {
     const result = await updateAdminPlan(id, body);
     if (!result.success) {
-      setError(result.error.message);
-      return;
+      const errMsg = formatApiError(result.error);
+      setError(errMsg);
+      return { success: false, error: errMsg };
     }
     setPlans((prev) => prev.map((p) => (p.id === id ? result.data : p)));
     setEditingPlan(null);
+    return { success: true };
   }
 
   async function handleToggleActive(plan: AdminPlan) {
     const result = await updateAdminPlan(plan.id, { isActive: !plan.isActive });
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setPlans((prev) => prev.map((p) => (p.id === plan.id ? result.data : p)));
@@ -199,7 +204,7 @@ function CreateCouponForm({ onCreated, onError }: { onCreated: () => void; onErr
     const result = await createAdminCoupon({ code: code.trim(), discountType, discountValue: Number(discountValue) });
     setSaving(false);
     if (!result.success) {
-      onError(result.error.message);
+      onError(formatApiError(result.error));
       return;
     }
     onCreated();
@@ -227,6 +232,7 @@ function CreateCouponForm({ onCreated, onError }: { onCreated: () => void; onErr
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="WEDHUB25"
+            maxLength={50}
             className="w-40 rounded-md border border-border px-3 py-2 text-sm"
             required
           />

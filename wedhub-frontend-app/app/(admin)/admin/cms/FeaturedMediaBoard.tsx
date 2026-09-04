@@ -9,6 +9,7 @@ import {
 } from "@/lib/api/admin-client";
 import type { AdminApprovedMedia, AdminFeaturedMedia, AdminVendorListItem } from "@/lib/api/admin.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import { formatApiError } from "@/lib/utils/error";
 import { VendorPhotoUploader } from "./VendorPhotoUploader";
 
 function mediaThumbUrl(media: { optimizedObjectKey: string | null; thumbnailObjectKey: string | null; originalObjectKey: string }): string {
@@ -38,7 +39,7 @@ export function FeaturedMediaBoard({
     const result = await createAdminFeaturedMedia({ mediaId });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setFeatured((prev) => [...prev, result.data]);
@@ -47,10 +48,10 @@ export function FeaturedMediaBoard({
   async function handleTitleChange(item: AdminFeaturedMedia, titleOverride: string) {
     setPendingId(item.id);
     setError(null);
-    const result = await updateAdminFeaturedMedia(item.id, { titleOverride: titleOverride || null });
+    const result = await updateAdminFeaturedMedia(item.id, { titleOverride: titleOverride.trim() || null });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setFeatured((prev) => prev.map((f) => (f.id === item.id ? result.data : f)));
@@ -62,7 +63,7 @@ export function FeaturedMediaBoard({
     const result = await deleteAdminFeaturedMedia(item.id);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setFeatured((prev) => prev.filter((f) => f.id !== item.id));

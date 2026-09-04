@@ -29,6 +29,8 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
 
   if (vendorIds.length < 2) {
     errorMessage = "Select at least 2 vendors from your shortlist to compare.";
+  } else if (vendorIds.length > 5) {
+    errorMessage = "You can compare up to 5 vendors at a time.";
   } else {
     try {
       const response = await compareVendors(vendorIds);

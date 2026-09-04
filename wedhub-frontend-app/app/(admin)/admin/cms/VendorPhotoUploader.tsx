@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { confirmAdminVendorUpload, createAdminVendorUploadRequest } from "@/lib/api/admin-client";
 import type { AdminVendorListItem } from "@/lib/api/admin.types";
+import { formatApiError } from "@/lib/utils/error";
 
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -36,6 +37,11 @@ export function VendorPhotoUploader({
     event.target.value = "";
     if (!file || !vendorId) return;
 
+    if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+      setError("Only JPG, PNG, and WebP images are supported.");
+      return;
+    }
+
     setError("");
     setUploading(true);
 
@@ -47,7 +53,7 @@ export function VendorPhotoUploader({
       fileSize: file.size,
     });
     if (!requestResult.success) {
-      setError(requestResult.error.message);
+      setError(formatApiError(requestResult.error));
       setUploading(false);
       return;
     }
@@ -71,7 +77,7 @@ export function VendorPhotoUploader({
     }
 
     if (!confirmed.success) {
-      setError(confirmed.error.message);
+      setError(formatApiError(confirmed.error));
       setUploading(false);
       return;
     }

@@ -8,6 +8,7 @@ import { logout } from "@/lib/api/auth-client";
 import { setNotificationPreference } from "@/lib/api/notification-preferences-client";
 import type { MeResponse } from "@/lib/api/account.types";
 import type { NotificationChannel, NotificationEventType, NotificationPreference } from "@/lib/api/notification-preferences.types";
+import { formatApiError } from "@/lib/utils/error";
 
 function toDateInputValue(iso: string | null): string {
   if (!iso) return "";
@@ -21,20 +22,35 @@ export function WeddingDetailsForm({ me }: { me: MeResponse }) {
   const [guestCount, setGuestCount] = useState(me.weddingProfile?.guestCount?.toString() ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
-    setSaving(true);
+    setError(null);
     setSaved(false);
+
+    let parsedDate: string | undefined = undefined;
+    if (weddingDate) {
+      const d = new Date(weddingDate);
+      if (isNaN(d.getTime())) {
+        setError("Please enter a valid wedding date");
+        return;
+      }
+      parsedDate = d.toISOString();
+    }
+
+    setSaving(true);
     const result = await updateWeddingProfile({
-      weddingDate: weddingDate ? new Date(weddingDate).toISOString() : undefined,
-      partnerName: partnerName || undefined,
+      weddingDate: parsedDate,
+      partnerName: partnerName.trim() || undefined,
       guestCount: guestCount ? Number(guestCount) : undefined,
     });
     setSaving(false);
     if (result.success) {
       setSaved(true);
       router.refresh();
+    } else {
+      setError(formatApiError(result.error));
     }
   }
 
@@ -71,6 +87,7 @@ export function WeddingDetailsForm({ me }: { me: MeResponse }) {
           />
         </label>
       </div>
+      {error && <p className="mt-2 text-[13px] text-red">{error}</p>}
       <button
         type="submit"
         disabled={saving}
@@ -88,28 +105,46 @@ export function AccountDetailsForm({ me }: { me: MeResponse }) {
   const [lastName, setLastName] = useState(me.profile?.lastName ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
+    setError(null);
     setSaving(true);
     setSaved(false);
-    const result = await updateMyProfile({ firstName: firstName || undefined, lastName: lastName || undefined });
+    const result = await updateMyProfile({
+      firstName: firstName.trim() || undefined,
+      lastName: lastName.trim() || undefined,
+    });
     setSaving(false);
     if (result.success) {
       setSaved(true);
       router.refresh();
+    } else {
+      setError(formatApiError(result.error));
     }
   }
 
   return (
     <form onSubmit={handleSave}>
+      {error && <p className="mb-3 rounded-md bg-red-10 p-2.5 text-[13px] text-red-70">{error}</p>}
       <label className="mb-3.5 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">First name</span>
-        <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+        <input
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          maxLength={100}
+          className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+        />
       </label>
       <label className="mb-3.5 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">Last name</span>
-        <input value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+        <input
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          maxLength={100}
+          className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+        />
       </label>
       <label className="mb-3.5 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">Phone</span>
@@ -167,9 +202,11 @@ function isEnabled(preferences: NotificationPreference[], eventType: Notificatio
 export function NotificationPreferencesForm({ initialPreferences }: { initialPreferences: NotificationPreference[] }) {
   const [preferences, setPreferences] = useState(initialPreferences);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleToggle(checked: boolean) {
     setSaving(true);
+    setError(null);
     const result = await setNotificationPreference({ eventType: "LEAD_STATUS_UPDATED", channel: "EMAIL", isEnabled: checked });
     setSaving(false);
     if (result.success) {
@@ -178,11 +215,14 @@ export function NotificationPreferencesForm({ initialPreferences }: { initialPre
         if (existing) return prev.map((p) => (p === existing ? result.data : p));
         return [...prev, result.data];
       });
+    } else {
+      setError(formatApiError(result.error));
     }
   }
 
   return (
     <div>
+      {error && <p className="mb-2 rounded-md bg-red-10 p-2 text-xs text-red-70">{error}</p>}
       <div className="flex items-center justify-between py-3.5">
         <div>
           <div className="text-sm font-semibold">Email notifications</div>
@@ -204,6 +244,7 @@ export function AccountActions() {
   const router = useRouter();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleLogout() {
     await logout();
@@ -213,25 +254,32 @@ export function AccountActions() {
 
   async function handleDeactivate() {
     setPending(true);
+    setError(null);
     const result = await deactivateAccount();
     if (result.success) {
       await logout();
       router.push("/login");
+      return;
     }
     setPending(false);
+    setError(formatApiError(result.error));
   }
 
   async function handleDelete() {
     setPending(true);
+    setError(null);
     const result = await deleteAccount();
     if (result.success) {
       router.push("/login");
+      return;
     }
     setPending(false);
+    setError(formatApiError(result.error));
   }
 
   return (
     <div>
+      {error && <p className="mb-3 rounded-md bg-red-10 p-2.5 text-xs text-red-70">{error}</p>}
       <button
         type="button"
         onClick={handleLogout}

@@ -11,6 +11,7 @@ import {
   upsertMyProfile,
 } from "@/lib/api/vendor-self-client";
 import type { CategorySelf, LocationSelf, VendorSelf } from "@/lib/api/vendor-self.types";
+import { formatApiError } from "@/lib/utils/error";
 import { AttributesSection } from "./AttributesSection";
 import { LogoCoverPicker } from "./LogoCoverPicker";
 import { ServicesSection } from "./ServicesSection";
@@ -32,6 +33,13 @@ function toStringList(csv: string): string[] {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+function normalizeUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
 }
 
 export function ProfileEditor({
@@ -128,6 +136,13 @@ export function ProfileEditor({
       return;
     }
 
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && trimmedPhone.length < 6) {
+      setStatus("error");
+      setError("Phone number must be at least 6 characters.");
+      return;
+    }
+
     setStatus("saving");
     setError("");
 
@@ -145,9 +160,9 @@ export function ProfileEditor({
       teamSize: teamSize ? Number(teamSize) : undefined,
       languages: languages ? languageList : undefined,
       travelPolicy: travelPolicy || undefined,
-      website: website || undefined,
-      phone: phone || undefined,
-      email: email || undefined,
+      website: website.trim() ? normalizeUrl(website) : undefined,
+      phone: trimmedPhone || undefined,
+      email: email.trim() || undefined,
       socialLinks: instagram || facebook ? { instagram, facebook } : undefined,
       businessHours: businessHours ? { general: businessHours } : undefined,
       cityId: cityId || undefined,
@@ -157,7 +172,7 @@ export function ProfileEditor({
 
     if (!profileResult.success) {
       setStatus("error");
-      setError(profileResult.error.message);
+      setError(formatApiError(profileResult.error));
       return;
     }
 
@@ -167,14 +182,14 @@ export function ProfileEditor({
     });
     if (!categoriesResult.success) {
       setStatus("error");
-      setError(categoriesResult.error.message);
+      setError(formatApiError(categoriesResult.error));
       return;
     }
 
     const serviceAreasResult = await setMyServiceAreas({ locationIds: Array.from(serviceAreaIds) });
     if (!serviceAreasResult.success) {
       setStatus("error");
-      setError(serviceAreasResult.error.message);
+      setError(formatApiError(serviceAreasResult.error));
       return;
     }
 
@@ -186,7 +201,7 @@ export function ProfileEditor({
       const result = await attachMyService({ serviceId });
       if (!result.success) {
         setStatus("error");
-        setError(result.error.message);
+        setError(formatApiError(result.error));
         return;
       }
     }
@@ -194,7 +209,7 @@ export function ProfileEditor({
       const result = await detachMyService(serviceId);
       if (!result.success) {
         setStatus("error");
-        setError(result.error.message);
+        setError(formatApiError(result.error));
         return;
       }
     }
@@ -204,7 +219,7 @@ export function ProfileEditor({
     });
     if (!attributesResult.success) {
       setStatus("error");
-      setError(attributesResult.error.message);
+      setError(formatApiError(attributesResult.error));
       return;
     }
 
@@ -447,12 +462,25 @@ export function ProfileEditor({
             <h3 className="mb-4 text-base font-bold">Contact</h3>
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Website</span>
-              <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+              <input
+                type="text"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="https://example.com"
+                className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+              />
             </label>
             <div className="mb-3.5 grid grid-cols-2 gap-3">
               <label className="block text-sm">
                 <span className="mb-1.5 block font-bold text-[13px]">Phone</span>
-                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+                <input
+                  type="tel"
+                  minLength={6}
+                  maxLength={20}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+                />
               </label>
               <label className="block text-sm">
                 <span className="mb-1.5 block font-bold text-[13px]">Email</span>

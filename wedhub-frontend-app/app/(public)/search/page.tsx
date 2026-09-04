@@ -27,15 +27,20 @@ interface SearchPageProps {
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
-  const page = params.page ? Number(params.page) : 1;
+  const rawPage = params.page ? Number(params.page) : 1;
+  const page = typeof rawPage === "number" && !isNaN(rawPage) && rawPage >= 1 ? Math.floor(rawPage) : 1;
+  const rawPriceMin = params.priceMin ? Number(params.priceMin) : undefined;
+  const priceMin = typeof rawPriceMin === "number" && !isNaN(rawPriceMin) && rawPriceMin >= 0 ? rawPriceMin : undefined;
+  const rawPriceMax = params.priceMax ? Number(params.priceMax) : undefined;
+  const priceMax = typeof rawPriceMax === "number" && !isNaN(rawPriceMax) && rawPriceMax >= 0 ? rawPriceMax : undefined;
 
   const [{ data: vendors, meta }, { data: categories }, { data: cities }, session] = await Promise.all([
     searchVendors({
-      keyword: params.keyword || undefined,
+      keyword: params.keyword?.trim() || undefined,
       categoryId: params.categoryId || undefined,
       cityId: params.cityId || undefined,
-      priceMin: params.priceMin ? Number(params.priceMin) : undefined,
-      priceMax: params.priceMax ? Number(params.priceMax) : undefined,
+      priceMin,
+      priceMax,
       verified: params.verified === "true" ? true : undefined,
       sort: (params.sort as SearchSort) || undefined,
       page,

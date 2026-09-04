@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createMyPackage, deleteMyPackage, updateMyPackage } from "@/lib/api/vendor-self-client";
 import type { PackageSelf } from "@/lib/api/vendor-self.types";
+import { formatApiError } from "@/lib/utils/error";
 import { PackageModal } from "./PackageModal";
 
 export function PackagesManager({
@@ -32,20 +33,22 @@ export function PackagesManager({
     await deleteMyPackage(pkg.id);
   }
 
-  async function handleSave(input: { name: string; description: string; price: number; inclusions: string[] }) {
+  async function handleSave(input: { name: string; description: string; price: number; inclusions: string[] }): Promise<{ success: boolean; error?: string }> {
     if (editingPackage) {
       const result = await updateMyPackage(editingPackage.id, input);
       if (result.success) {
         setPackages((prev) => prev.map((p) => (p.id === editingPackage.id ? result.data : p)));
+        return { success: true };
       }
-      return result.success;
+      return { success: false, error: formatApiError(result.error) };
     }
 
     const result = await createMyPackage({ ...input, currency });
     if (result.success) {
       setPackages((prev) => [...prev, result.data]);
+      return { success: true };
     }
-    return result.success;
+    return { success: false, error: formatApiError(result.error) };
   }
 
   return (

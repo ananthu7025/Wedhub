@@ -60,33 +60,34 @@ WedHub's backend architecture was designed with extensive domain depth across 34
 
 ---
 
-## 3. Comprehensive Validation Gaps (Client vs. Server)
+## 3. Comprehensive Validation Gaps (Client vs. Server) — RESOLVED ✅
 
-A detailed comparison of backend Zod schema constraints versus frontend UI form validations:
+> **Status Update (2026-09-04)**: All identified validation gaps across couple, auth, vendor, and admin forms have been aligned with backend Zod schemas. In addition, the unified `formatApiError()` utility (`wedhub-frontend-app/lib/utils/error.ts`) was deployed platform-wide to unpack backend Zod `error.details` maps (`Record<string, string[]>`), ensuring clear, actionable field-level validation feedback instead of generic `"Validation failed"` messages.
 
-| Domain & Field | Backend Validation Rule (Zod) | Frontend Validation (Client UI) | Risk / Behavioral Gap |
-|---|---|---|---|
-| **Login Identifier** | `z.string().min(1)` (can be email **or** phone) | `<Input type="email" required />` in `LoginForm.tsx` | **Artificial Restriction**: Backend allows phone login; frontend forces email format via HTML5 `type="email"`. |
-| **Password Length** | `z.string().min(8).max(128)` | `<Input type="password" minLength={8} />` in `SignupWizard.tsx` | **No Max Length**: Frontend has no `maxLength={128}`. Inputs >128 chars trigger 400 Bad Request. |
-| **Enquiry Contact Name** | `z.string().trim().min(1).max(200)` in `enquiry.schema.ts` | `<input required />` in `EnquiryModal.tsx` | **Whitespace & Length Gaps**: HTML `required` allows whitespace strings (`"   "`), which fails backend `trim().min(1)`. Frontend also lacks `maxLength={200}`. |
-| **Enquiry Contact Phone** | `z.string().trim().min(6).max(20).optional()` | `<input type="tel" />` in `EnquiryModal.tsx` | **Min/Max Length Missing**: Entering a 3-digit phone passes client validation but fails with 400 Bad Request. |
-| **Enquiry Message** | `z.string().trim().max(2000).optional()` | `<textarea rows={3} />` in `EnquiryModal.tsx` | **No Max Length**: Frontend lacks `maxLength={2000}`. |
-| **Review Content** | `z.string().trim().max(3000).optional()` in `review.schema.ts` | `<textarea />` in `ReviewForm.tsx` | **No Max Length**: Review text can exceed 3000 chars in UI and fail with a 400 error upon submit. |
-| **Review Photo Types** | Only `["image/jpeg", "image/png", "image/webp"]` in `media.schema.ts` | `<input type="file" accept="image/*" />` in `ReviewForm.tsx` | **Invalid MIME Types Allowed**: `accept="image/*"` allows `.gif`, `.bmp`, `.svg`, `.heic`, and `.tiff`. Uploading these crashes with `Unsupported file type` from backend. |
-| **Vendor Tags** | `z.array(z.string().min(1).max(50)).max(20)` in `vendor.schema.ts` | Plain comma-separated text `<input />` in `ProfileEditor.tsx` | **Array Bounds Unchecked**: Entering >20 tags or a tag >50 chars causes backend save rejection. |
-| **Vendor Languages** | `z.array(z.string().min(1).max(50)).max(20)` | Plain comma-separated text `<input />` in `ProfileEditor.tsx` | **Array Bounds Unchecked**: No checks for max 20 languages or max 50 chars per language. |
-| **Vendor Team Size** | `z.coerce.number().int().min(0).max(10000).optional()` | `<input type="number" min="0" />` in `ProfileEditor.tsx` | **No Max Limit**: Frontend does not enforce `max="10000"`. |
-| **Vendor Travel Policy** | `z.string().max(500).optional()` | `<textarea />` in `ProfileEditor.tsx` | **No Max Length**: Frontend has no `maxLength={500}`. |
-| **Vendor Address** | `z.string().max(300).optional()` | `<textarea />` in `ProfileEditor.tsx` | **No Max Length**: Frontend has no `maxLength={300}`. |
-| **Package Inclusions** | `z.array(z.string().min(1).max(200)).max(50)` | Repeatable inputs in `PackageModal.tsx` | **Bounds Unchecked**: Frontend does not enforce max 50 inclusions or max 200 chars per inclusion. |
-| **Package Description** | `z.string().max(2000).optional()` | `<textarea />` in `PackageModal.tsx` | **No Max Length**: Frontend textarea has no `maxLength={2000}`. |
-| **Guest Count (Wedding)** | `z.coerce.number().int().min(0).max(100000).optional()` | `<input type="number" min="0" />` in `AccountForms.tsx` | **No Max Limit**: Frontend enforces `min="0"`, but omits `max="100000"`. |
-| **Partner Name** | `z.string().max(200).optional()` | `<input />` in `AccountForms.tsx` | **No Max Length**: Frontend has no `maxLength={200}`. |
-| **Lead Status Reason** | `z.string().max(500).optional()` in `lead.schema.ts` | Dropdown selector in `LeadsBoard.tsx` | **Completely Omitted**: When setting status to `LOST` or `SPAM`, no reason text is captured or sent. |
-| **Vendor Suspension Reason** | `z.string().min(1).max(1000)` in `vendor-admin.schema.ts` | `<textarea required />` in Admin Vendor Detail | **No Max Length**: Frontend checks for non-empty text, but lacks `maxLength={1000}`. |
-| **User Suspension Reason** | `z.string().min(1).max(500)` in `admin-users.schema.ts` | `<textarea required />` in Admin User Detail | **No Max Length**: Frontend has no `maxLength={500}`. |
-| **Category Creation** | `name: min(1).max(150)`, `description: max(2000)` in `categories.schema.ts` | Inputs in `CatalogBoard.tsx` | **Unenforced Text Limits**: Inputs lack `maxLength` limits; empty strings with whitespace bypass HTML required but fail backend `trim()`. |
-| **Location Creation** | `name: min(1).max(150)`, `type: ["COUNTRY","STATE","CITY","AREA"]` | Inputs in `LocationTree.tsx` | **No Max Length**: Frontend lacks `maxLength={150}`. |
+| Domain & Field | Backend Validation Rule (Zod) | Frontend Validation (Client UI) | Resolution / Current Status |
+|---|---|---|:---:|
+| **Login Identifier** | `z.string().min(1)` (email or phone) | `<Input type="text" required />` in `LoginForm.tsx` | ✅ **Resolved**: Relaxed type to text; supports email or phone, handles Zod errors with `formatApiError`. |
+| **Password Length** | `z.string().min(8).max(128)` | `<Input type="password" minLength={8} maxLength={128} />` in `SignupWizard.tsx` & `ResetPasswordForm.tsx` | ✅ **Resolved**: Added `maxLength={128}` constraint across all password forms. |
+| **Enquiry Contact Name** | `z.string().trim().min(1).max(200)` in `enquiry.schema.ts` | `<input required maxLength={200} />` with whitespace pre-check in `EnquiryModal.tsx` | ✅ **Resolved**: Added whitespace trim validation and `maxLength={200}`. |
+| **Enquiry Contact Phone** | `z.string().trim().min(6).max(20).optional()` | `<input type="tel" minLength={6} maxLength={20} />` in `EnquiryModal.tsx` | ✅ **Resolved**: Added `minLength={6}` & `maxLength={20}` client checks and pre-submit validation. |
+| **Enquiry Message** | `z.string().trim().max(2000).optional()` | `<textarea maxLength={2000} />` in `EnquiryModal.tsx` | ✅ **Resolved**: Enforced `maxLength={2000}`. |
+| **Review Content** | `z.string().trim().max(3000).optional()` in `review.schema.ts` | `<textarea maxLength={3000} />` in `ReviewForm.tsx` | ✅ **Resolved**: Enforced `maxLength={3000}`. |
+| **Review Photo Types** | Only `["image/jpeg", "image/png", "image/webp"]` in `media.schema.ts` | `accept="image/jpeg,image/png,image/webp"` + client MIME validation in `ReviewForm.tsx` | ✅ **Resolved**: Strict MIME validation rejects unsupported files prior to upload. |
+| **Vendor Tags** | `z.array(z.string().min(1).max(50)).max(20)` in `vendor.schema.ts` | Clamped to max 20 items, max 50 chars each in `ProfileEditor.tsx` | ✅ **Resolved**: Sanitized and bounded on input and submit. |
+| **Vendor Languages** | `z.array(z.string().min(1).max(50)).max(20)` | Clamped to max 20 items, max 50 chars each in `ProfileEditor.tsx` | ✅ **Resolved**: Sanitized and bounded on input and submit. |
+| **Vendor Team Size** | `z.coerce.number().int().min(0).max(10000).optional()` | `<input type="number" min="0" max="10000" />` in `ProfileEditor.tsx` | ✅ **Resolved**: Added `max={10000}` bounds. |
+| **Vendor Travel Policy** | `z.string().max(500).optional()` | `<textarea maxLength={500} />` in `ProfileEditor.tsx` | ✅ **Resolved**: Enforced `maxLength={500}`. |
+| **Vendor Address** | `z.string().max(300).optional()` | `<textarea maxLength={300} />` in `ProfileEditor.tsx` | ✅ **Resolved**: Enforced `maxLength={300}`. |
+| **Package Inclusions** | `z.array(z.string().min(1).max(200)).max(50)` | Repeatable inputs with `maxLength={200}` capped at 50 in `PackageModal.tsx` | ✅ **Resolved**: Added bounds on inclusions. |
+| **Package Description** | `z.string().max(2000).optional()` | `<textarea maxLength={2000} />` in `PackageModal.tsx` | ✅ **Resolved**: Enforced `maxLength={2000}`. |
+| **Guest Count (Wedding)** | `z.coerce.number().int().min(0).max(100000).optional()` | `<input type="number" min="0" max="100000" />` in `AccountForms.tsx` | ✅ **Resolved**: Added `max={100000}`. |
+| **Partner Name** | `z.string().max(200).optional()` | `<input maxLength={200} />` in `AccountForms.tsx` | ✅ **Resolved**: Enforced `maxLength={200}`. |
+| **Lead Status Reason** | `z.string().max(500).optional()` in `lead.schema.ts` | Dynamic reason textarea with `maxLength={500}` in `LeadsBoard.tsx` | ✅ **Resolved**: Reason captured when setting status to `LOST` or `SPAM`. |
+| **Vendor Suspension Reason** | `z.string().min(1).max(1000)` in `vendor-admin.schema.ts` | `<textarea maxLength={1000} />` in Admin Vendor Detail | ✅ **Resolved**: Enforced `maxLength={1000}` and error unpacking. |
+| **User Suspension Reason** | `z.string().min(1).max(500)` in `admin-users.schema.ts` | Pre-checked prompt & validation in Admin User Detail | ✅ **Resolved**: Enforced `maxLength={500}` and error unpacking. |
+| **Category Creation** | `name: min(1).max(150)`, `description: max(2000)` in `categories.schema.ts` | Inputs with `maxLength={150}` and `maxLength={2000}` in `CatalogBoard.tsx` | ✅ **Resolved**: Added bounds, whitespace trim check, and error unpacking. |
+| **Location Creation** | `name: min(1).max(150)`, `type: ["COUNTRY","STATE","CITY","AREA"]` | Inputs with `maxLength={150}` in `LocationTree.tsx` | ✅ **Resolved**: Added `maxLength={150}` and error unpacking. |
+| **Website & Maps URLs** | `z.string().url()` across vendor & couple websites | Automatic `https://` prefixing via `normalizeUrl()` | ✅ **Resolved**: Eliminates 400 Bad Request when users omit protocol scheme. |
 
 ---
 
@@ -120,7 +121,7 @@ A detailed comparison of backend Zod schema constraints versus frontend UI form 
 * **Gaps**:
   1. `createSingleVendorEnquirySchema` supports `preferredContactMethod` (`EMAIL`, `PHONE`, `WHATSAPP`), `weddingLocation`, and `serviceId`; the frontend enquiry modal omits all three.
   2. `POST /enquiries/multi-vendor` (batch quote requests) is unconsumed in the frontend.
-  3. Lead status update `reason: z.string().max(500)` is omitted in `LeadsBoard.tsx`.
+  3. Lead status update `reason: z.string().max(500)` is captured and transmitted for `LOST` and `SPAM` statuses in `LeadsBoard.tsx` (previously omitted).
 
 ### 4.5 Reviews & Review Media
 * **Backend Endpoints**: `POST /reviews`, `GET /reviews/mine`, `GET /vendors/:id/reviews`, `POST /review-media/*`, `POST /reviews/:id/respond`, `POST /reviews/:id/report`, `PATCH /reviews/:id`
@@ -154,10 +155,9 @@ A detailed comparison of backend Zod schema constraints versus frontend UI form 
 
 ## 5. Critical Architectural Disconnects
 
-### Disconnect 1: Notification Preferences Save Path Mismatch
-* **Frontend Behavior**: In `AccountForms.tsx`, couple notification toggles call `updateMyProfile()` (`PATCH /api/v1/users/me`), saving to `user_profiles.preferences` JSON.
-* **Backend Behavior**: The notification engine (`notification.service.ts`) queries `prisma.notificationPreference` (table `notification_preferences`, managed by `PUT /api/v1/notifications/me/preferences`).
-* **Impact**: Changing notification toggles in the couple account page **has zero effect on actual backend email/SMS delivery**. *(Note: Phase 7 created `notification-preferences-client.ts` for the vendor settings page, but the couple account form has not yet been migrated to it).*
+### Disconnect 1: Notification Preferences Save Path Mismatch — RESOLVED ✅
+* **Previous Behavior**: In `AccountForms.tsx`, couple notification toggles called `updateMyProfile()` (`PATCH /api/users/me`), saving to `user_profiles.preferences` JSON which the notification engine never read.
+* **Resolution**: Both vendor settings (`SettingsBoard.tsx`) and couple account (`AccountForms.tsx`) now call `setNotificationPreference()` (`PUT /notifications/me/preferences`), directly persisting to the dedicated `notification_preferences` table with full error feedback.
 
 ### Disconnect 2: Silent Lead Status Updates
 * **What Happens**: Vendors advance lead statuses (`CONTACTED` → `RESPONDED` → `WON`) in `LeadsBoard.tsx`.

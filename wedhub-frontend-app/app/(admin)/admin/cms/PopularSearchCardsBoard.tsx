@@ -8,6 +8,7 @@ import {
   updateAdminPopularSearchCard,
 } from "@/lib/api/admin-client";
 import type { AdminPopularSearchCard } from "@/lib/api/admin.types";
+import { formatApiError } from "@/lib/utils/error";
 import { PopularSearchImagePicker } from "./PopularSearchImagePicker";
 
 interface FormValues {
@@ -40,7 +41,7 @@ export function PopularSearchCardsBoard({ initialCards }: { initialCards: AdminP
     const result = await createAdminPopularSearchCard(values);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setCards((prev) => [...prev, result.data]);
@@ -53,7 +54,7 @@ export function PopularSearchCardsBoard({ initialCards }: { initialCards: AdminP
     const result = await updateAdminPopularSearchCard(card.id, values);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setCards((prev) => prev.map((c) => (c.id === card.id ? result.data : c)));
@@ -66,7 +67,7 @@ export function PopularSearchCardsBoard({ initialCards }: { initialCards: AdminP
     const result = await updateAdminPopularSearchCard(card.id, { isFeatured: !card.isFeatured });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setCards((prev) => prev.map((c) => (c.id === card.id ? result.data : c)));
@@ -78,7 +79,7 @@ export function PopularSearchCardsBoard({ initialCards }: { initialCards: AdminP
     const result = await deleteAdminPopularSearchCard(card.id);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setCards((prev) => prev.filter((c) => c.id !== card.id));

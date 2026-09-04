@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { initiateUpgrade, cancelMySubscription, undoMyCancellation, getMySubscriptionClient } from "@/lib/api/subscriptions-client";
 import type { Invoice, Subscription, SubscriptionPlan, SubscriptionStatus } from "@/lib/api/subscriptions.types";
 import { trackEvent } from "@/lib/analytics/track";
+import { formatApiError } from "@/lib/utils/error";
 import { CheckoutButton } from "./CheckoutButton";
 
 /**
@@ -90,7 +91,7 @@ export function SubscriptionBoard({
       const result = await cancelMySubscription({ immediate: false });
       setPending(null);
       if (!result.success) {
-        setError(result.error.message);
+        setError(formatApiError(result.error));
         return;
       }
       // cancel/undo-cancel responses omit `plan` — merge back the plan we
@@ -104,7 +105,7 @@ export function SubscriptionBoard({
     const result = await initiateUpgrade({ planId: plan.id });
     setPending(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
 
@@ -142,7 +143,7 @@ export function SubscriptionBoard({
     const result = await cancelMySubscription({ immediate: false });
     setPending(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setSubscription((prev) => (prev ? { ...result.data, plan: prev.plan } : null));
@@ -154,7 +155,7 @@ export function SubscriptionBoard({
     const result = await undoMyCancellation();
     setPending(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setSubscription((prev) => (prev ? { ...result.data, plan: prev.plan } : null));

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { confirmAdminBlogCoverImageUpload, createAdminBlogCoverImageUploadRequest } from "@/lib/api/admin-client";
+import { formatApiError } from "@/lib/utils/error";
 
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -33,6 +34,11 @@ export function BlogCoverImagePicker({
     event.target.value = "";
     if (!file) return;
 
+    if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+      setError("Only JPG, PNG, and WebP images are supported.");
+      return;
+    }
+
     setError("");
     setUploading(true);
     setPreviewUrl(URL.createObjectURL(file));
@@ -43,7 +49,7 @@ export function BlogCoverImagePicker({
       fileSize: file.size,
     });
     if (!requestResult.success) {
-      setError(requestResult.error.message);
+      setError(formatApiError(requestResult.error));
       setUploading(false);
       return;
     }
@@ -66,7 +72,7 @@ export function BlogCoverImagePicker({
     }
 
     if (!confirmed.success) {
-      setError(confirmed.error.message);
+      setError(formatApiError(confirmed.error));
       setUploading(false);
       return;
     }

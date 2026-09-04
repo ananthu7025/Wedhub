@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { restoreAdminUser, suspendAdminUser } from "@/lib/api/admin-client";
 import type { AdminUserListItem, UserStatus } from "@/lib/api/admin.types";
+import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Users list (Frontend Arch Phase 8), matching wedhub-frontend/admin/users.html.
@@ -39,13 +40,13 @@ function roleLabel(role: string): string {
   return role.charAt(0) + role.slice(1).toLowerCase();
 }
 
-function statusBadgeVariant(status: UserStatus): "green" | "amber" | "grey" {
+function statusBadgeVariant(status: string): "green" | "amber" | "grey" {
   switch (status) {
     case "ACTIVE":
       return "green";
     case "SUSPENDED":
       return "amber";
-    case "DEACTIVATED":
+    default:
       return "grey";
   }
 }
@@ -74,15 +75,24 @@ export function UsersTable({
   const [error, setError] = useState<string | null>(null);
 
   async function handleSuspend(id: string) {
-    const reason = prompt("Reason for suspension:");
-    if (!reason) return;
+    const rawReason = prompt("Reason for suspension:");
+    if (rawReason === null) return;
+    const reason = rawReason.trim();
+    if (!reason) {
+      setError("A suspension reason is required.");
+      return;
+    }
+    if (reason.length > 500) {
+      setError("Suspension reason must be 500 characters or fewer.");
+      return;
+    }
     setPending(id);
     setError(null);
     const result = await suspendAdminUser(id, { reason });
     setPending(null);
     setOpenMenuId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: result.data.status } : u)));
@@ -95,7 +105,7 @@ export function UsersTable({
     setPending(null);
     setOpenMenuId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: result.data.status } : u)));

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { respondToMyReview } from "@/lib/api/reviews-client";
 import type { VendorReview } from "@/lib/api/vendors.types";
+import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Reviews list + rating summary + respond action (Frontend Arch Phase 6),
@@ -78,7 +79,7 @@ export function ReviewsBoard({
     const result = await respondToMyReview(reviewId, { vendorResponse: text });
     setSaving(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setReviews((prev) => prev.map((r) => (r.id === reviewId ? { ...r, ...result.data } : r)));
@@ -196,6 +197,7 @@ export function ReviewsBoard({
                         value={replyDrafts[review.id] ?? ""}
                         onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [review.id]: e.target.value }))}
                         placeholder="Write a reply to this review…"
+                        maxLength={2000}
                         className="min-h-[70px] w-full rounded-md border border-border p-3 text-[13px]"
                       />
                       <button

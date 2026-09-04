@@ -5,6 +5,7 @@ import { useState } from "react";
 import { submitMyVendor } from "@/lib/api/vendor-self-client";
 import type { VendorStatus } from "@/lib/api/vendor-self.types";
 import { ApiRequestError } from "@/lib/api/types";
+import { formatApiError } from "@/lib/utils/error";
 
 /**
  * POST /vendors/me/submit — only meaningful from DRAFT/REJECTED (the
@@ -32,7 +33,7 @@ export function SubmitBar({ vendorStatus }: { vendorStatus: VendorStatus }) {
       const result = await submitMyVendor();
       if (!result.success) {
         setStatus("error");
-        setErrorMessage(result.error.message);
+        setErrorMessage(formatApiError(result.error));
         const missingDetail = result.error.details?.missing;
         if (Array.isArray(missingDetail)) setMissing(missingDetail as string[]);
         return;
@@ -41,7 +42,11 @@ export function SubmitBar({ vendorStatus }: { vendorStatus: VendorStatus }) {
       router.refresh();
     } catch (error) {
       setStatus("error");
-      setErrorMessage(error instanceof ApiRequestError ? error.message : "Something went wrong");
+      setErrorMessage(
+        error instanceof ApiRequestError
+          ? formatApiError({ code: error.code, message: error.message, details: error.details })
+          : "Something went wrong",
+      );
     }
   }
 

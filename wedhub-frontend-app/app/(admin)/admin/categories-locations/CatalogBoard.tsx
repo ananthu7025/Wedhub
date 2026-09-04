@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { createAdminCategory, updateAdminCategory } from "@/lib/api/admin-client";
 import type { Category, Location } from "@/lib/api/vendors.types";
+import { formatApiError } from "@/lib/utils/error";
 import { LocationTree } from "./LocationTree";
 import { CategoryImagePicker } from "./CategoryImagePicker";
 import { CategoryAttributesPanel } from "./CategoryAttributesPanel";
@@ -79,7 +80,7 @@ export function CatalogBoard({
     const result = await createAdminCategory({ name: newCategoryName.trim() });
     setCreating(false);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setCategories((prev) => [...prev, { ...result.data, attributes: [] }]);
@@ -92,7 +93,7 @@ export function CatalogBoard({
     const result = await updateAdminCategory(category.id, { isActive: !category.isActive });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setCategories((prev) => prev.map((c) => (c.id === category.id ? { ...c, isActive: result.data.isActive } : c)));
@@ -104,7 +105,7 @@ export function CatalogBoard({
     const result = await updateAdminCategory(category.id, { isFeaturedOnHomepage: !category.isFeaturedOnHomepage });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setCategories((prev) => prev.map((c) => (c.id === category.id ? { ...c, isFeaturedOnHomepage: result.data.isFeaturedOnHomepage } : c)));
@@ -119,7 +120,7 @@ export function CatalogBoard({
     });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setCategories((prev) =>

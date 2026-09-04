@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { confirmMediaUpload, createMediaUploadRequest } from "@/lib/api/vendor-self-client";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import type { MediaType } from "@/lib/api/vendor-self.types";
+import { formatApiError } from "@/lib/utils/error";
 
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -42,6 +43,11 @@ export function LogoCoverPicker({
     event.target.value = "";
     if (!file) return;
 
+    if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+      setError("Only JPG, PNG, and WebP images are supported.");
+      return;
+    }
+
     setError("");
     setUploading(true);
     setPreviewUrl(URL.createObjectURL(file));
@@ -53,7 +59,7 @@ export function LogoCoverPicker({
       fileSize: file.size,
     });
     if (!requestResult.success) {
-      setError(requestResult.error.message);
+      setError(formatApiError(requestResult.error));
       setUploading(false);
       return;
     }
@@ -68,7 +74,7 @@ export function LogoCoverPicker({
 
     const confirmResult = await confirmMediaUpload(newMediaId);
     if (!confirmResult.success) {
-      setError(confirmResult.error.message);
+      setError(formatApiError(confirmResult.error));
       setUploading(false);
       return;
     }

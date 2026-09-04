@@ -121,23 +121,5 @@ export function validateEmail(email?: string | null): string | null {
   return null;
 }
 
-/**
- * Extracts friendly error message from API response, including field-level validation errors.
- */
-export function formatApiError(error?: { message?: string; details?: Record<string, unknown> } | null): string {
-  if (!error) return "An unexpected error occurred.";
-  if (error.details && typeof error.details === "object") {
-    const fieldMessages: string[] = [];
-    for (const [field, msgs] of Object.entries(error.details)) {
-      if (Array.isArray(msgs)) {
-        fieldMessages.push(`${field}: ${msgs.join(", ")}`);
-      } else if (typeof msgs === "string") {
-        fieldMessages.push(`${field}: ${msgs}`);
-      }
-    }
-    if (fieldMessages.length > 0) {
-      return `${error.message || "Validation error"}: ${fieldMessages.join("; ")}`;
-    }
-  }
-  return error.message || "An unexpected error occurred.";
-}
+export { formatApiError } from "./error";
+

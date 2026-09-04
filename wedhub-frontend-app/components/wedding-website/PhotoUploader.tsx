@@ -5,6 +5,7 @@ import Image from "next/image";
 import { confirmWeddingWebsiteUpload, createWeddingWebsiteUploadRequest } from "@/lib/api/wedding-website-media-client";
 import type { WeddingWebsiteMedia } from "@/lib/api/wedding-website.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import { formatApiError } from "@/lib/utils/error";
 
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -41,6 +42,11 @@ export function PhotoUploader({
     event.target.value = "";
     if (!file) return;
 
+    if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+      setError("Only JPG, PNG, and WebP images are supported.");
+      return;
+    }
+
     setError("");
     setUploading(true);
     setPreviewUrl(URL.createObjectURL(file));
@@ -52,7 +58,7 @@ export function PhotoUploader({
       fileSize: file.size,
     });
     if (!requestResult.success) {
-      setError(requestResult.error.message);
+      setError(formatApiError(requestResult.error));
       setUploading(false);
       return;
     }
@@ -74,7 +80,7 @@ export function PhotoUploader({
     }
 
     if (!confirmed.success) {
-      setError(confirmed.error.message);
+      setError(formatApiError(confirmed.error));
       setUploading(false);
       return;
     }

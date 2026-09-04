@@ -19,10 +19,18 @@ import type {
   WeddingWebsiteTemplateOption,
 } from "@/lib/api/wedding-website.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import { formatApiError } from "@/lib/utils/error";
 import { PhotoUploader } from "./PhotoUploader";
 import { GalleryUploader } from "./GalleryUploader";
 import { PublishCheckoutButton } from "./PublishCheckoutButton";
 import { WizardProgress, type WizardStepName } from "./WizardProgress";
+
+function normalizeUrl(raw: string): string | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
 
 const TEMPLATE_BLURB: Record<WeddingWebsiteTemplate, string> = {
   ROYAL_WEDDING: "Opulent gold accents and dark, dramatic imagery.",
@@ -141,7 +149,7 @@ function TemplateStep({
       const result = await updateWeddingWebsite(existingDraftId, { template });
       setPending(false);
       if (!result.success) {
-        setError(result.error.message);
+        setError(formatApiError(result.error));
         return;
       }
       onCreated(result.data);
@@ -156,7 +164,7 @@ function TemplateStep({
     const result = await createWeddingWebsite({ template, brideName: brideName.trim(), groomName: groomName.trim() });
     setPending(false);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     onCreated(result.data);
@@ -256,7 +264,7 @@ function DetailsStep({
       weddingTime: fields.weddingTime || undefined,
       venueName: fields.venueName || undefined,
       venueAddress: fields.venueAddress || undefined,
-      googleMapsUrl: fields.googleMapsUrl || undefined,
+      googleMapsUrl: normalizeUrl(fields.googleMapsUrl),
       shortDescription: fields.shortDescription || undefined,
       brideParents: fields.brideParents || undefined,
       groomParents: fields.groomParents || undefined,
@@ -265,7 +273,7 @@ function DetailsStep({
     });
     setPending(false);
     if (!result.success) {
-      onError(result.error.message);
+      onError(formatApiError(result.error));
       return;
     }
     onSaved(result.data);
@@ -293,7 +301,7 @@ function DetailsStep({
       </div>
       <div className="mb-4">
         <Field label="Google Maps link (optional)">
-          <input value={fields.googleMapsUrl} onChange={(e) => set("googleMapsUrl", e.target.value)} placeholder="https://maps.google.com/..." className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+          <input value={fields.googleMapsUrl} onChange={(e) => set("googleMapsUrl", e.target.value)} placeholder="https://maps.google.com/..." maxLength={1000} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
         </Field>
       </div>
       <div className="mb-4">
@@ -371,7 +379,7 @@ function EventsStep({ draft, onNext, onError }: { draft: WeddingWebsiteDraft; on
     });
     setAdding(false);
     if (!result.success) {
-      onError(result.error.message);
+      onError(formatApiError(result.error));
       return;
     }
     setEvents((prev) => [...prev, result.data]);
@@ -442,7 +450,7 @@ function PhotosStep({
     if (result.success) {
       onSaved(result.data);
     } else {
-      onError(result.error.message);
+      onError(formatApiError(result.error));
     }
   }
 
@@ -452,7 +460,7 @@ function PhotosStep({
     if (result.success) {
       onSaved(result.data);
     } else {
-      onError(result.error.message);
+      onError(formatApiError(result.error));
     }
   }
 
@@ -532,7 +540,7 @@ function StoryStep({
     });
     setPending(false);
     if (!result.success) {
-      onError(result.error.message);
+      onError(formatApiError(result.error));
       return;
     }
     onSaved(result.data);
@@ -608,7 +616,7 @@ function PreviewStep({
     const result = await generateWeddingWebsitePreview(draft.id);
     setPending(false);
     if (!result.success) {
-      onError(result.error.message);
+      onError(formatApiError(result.error));
       return;
     }
     setPreviewUrl(`${siteUrl}/preview/${result.data.previewToken}`);
@@ -670,7 +678,7 @@ function PaymentStep({
     const result = await createWeddingWebsitePublishOrder(draft.id);
     setPending(false);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setOrder(result.data);

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import type { ApiResponse } from "@/lib/api/types";
+import { formatApiError } from "@/lib/utils/error";
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
@@ -25,7 +26,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     const json = (await response.json()) as ApiResponse<{ passwordReset: true }>;
 
     if (!json.success) {
-      setError(json.error.message);
+      setError(formatApiError(json.error));
       setPending(false);
       return;
     }
@@ -47,6 +48,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           minLength={8}
+          maxLength={128}
           required
         />
       </div>

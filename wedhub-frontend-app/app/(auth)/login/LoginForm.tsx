@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { login } from "@/lib/api/auth-client";
 import type { UserRole } from "@/lib/auth/types";
+import { formatApiError } from "@/lib/utils/error";
 
 const roleHomeRoute: Record<UserRole, string> = {
   END_USER: "/shortlist",
@@ -29,7 +30,7 @@ export function LoginForm() {
     const result = await login(identifier, password);
 
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       setPending(false);
       return;
     }

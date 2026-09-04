@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createAdminLocation, listAdminLocationsClient, updateAdminLocation } from "@/lib/api/admin-client";
 import type { Location, LocationType } from "@/lib/api/vendors.types";
+import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Country → state → city → area tree, built from on-demand cascading
@@ -59,7 +60,7 @@ export function LocationTree({ initialCountries }: { initialCountries: Location[
     setError(null);
     const result = await updateAdminLocation(node.id, { isActive: !node.isActive });
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setNodes((prev) => updateNodeTree(prev, node.id, (n) => ({ ...n, isActive: result.data.isActive })));
@@ -72,7 +73,7 @@ export function LocationTree({ initialCountries }: { initialCountries: Location[
     const result = await createAdminLocation({ type, name: newName.trim(), parentId: parentId ?? undefined });
     setSaving(false);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     if (parentId === null) {

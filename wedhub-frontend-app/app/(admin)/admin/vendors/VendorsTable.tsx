@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { approveAdminVendor, restoreAdminVendor, suspendAdminVendor } from "@/lib/api/admin-client";
 import type { AdminVendorListItem } from "@/lib/api/admin.types";
 import type { VendorStatus } from "@/lib/api/vendor-self.types";
+import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Vendors list (Frontend Arch Phase 8), matching
@@ -21,24 +22,25 @@ import type { VendorStatus } from "@/lib/api/vendor-self.types";
 
 const STATUS_TABS: Array<{ value: VendorStatus | "ALL"; label: string }> = [
   { value: "ALL", label: "All" },
-  { value: "PENDING_APPROVAL", label: "Pending approval" },
+  { value: "PENDING_APPROVAL", label: "Pending" },
   { value: "APPROVED", label: "Approved" },
-  { value: "REJECTED", label: "Rejected" },
   { value: "SUSPENDED", label: "Suspended" },
+  { value: "REJECTED", label: "Rejected" },
+  { value: "DRAFT", label: "Draft" },
+  { value: "DEACTIVATED", label: "Deactivated" },
 ];
 
-function statusBadgeVariant(status: VendorStatus): "green" | "amber" | "red" | "grey" | "blue" {
+function statusBadgeVariant(status: string): "green" | "amber" | "grey" | "red" {
   switch (status) {
     case "APPROVED":
       return "green";
     case "PENDING_APPROVAL":
-    case "PENDING_VERIFICATION":
+      return "amber";
+    case "SUSPENDED":
       return "amber";
     case "REJECTED":
-    case "SUSPENDED":
       return "red";
-    case "DRAFT":
-    case "DEACTIVATED":
+    default:
       return "grey";
   }
 }
@@ -73,22 +75,31 @@ export function VendorsTable({
     setPending(null);
     setOpenMenuId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setVendors((prev) => prev.map((v) => (v.id === id ? { ...v, status: result.data.status } : v)));
   }
 
   async function handleSuspend(id: string) {
-    const reason = prompt("Reason for suspension:");
-    if (!reason) return;
+    const rawReason = prompt("Reason for suspension:");
+    if (rawReason === null) return;
+    const reason = rawReason.trim();
+    if (!reason) {
+      setError("A suspension reason is required.");
+      return;
+    }
+    if (reason.length > 500) {
+      setError("Suspension reason must be 500 characters or fewer.");
+      return;
+    }
     setPending(id);
     setError(null);
     const result = await suspendAdminVendor(id, { reason });
     setPending(null);
     setOpenMenuId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setVendors((prev) => prev.map((v) => (v.id === id ? { ...v, status: result.data.status } : v)));
@@ -101,7 +112,7 @@ export function VendorsTable({
     setPending(null);
     setOpenMenuId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setVendors((prev) => prev.map((v) => (v.id === id ? { ...v, status: result.data.status } : v)));

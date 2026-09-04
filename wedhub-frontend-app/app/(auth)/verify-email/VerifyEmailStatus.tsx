@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { ApiResponse } from "@/lib/api/types";
+import { formatApiError } from "@/lib/utils/error";
 
 type Status = "verifying" | "success" | "error";
 
@@ -26,7 +27,7 @@ export function VerifyEmailStatus({ token }: { token: string }) {
         setStatus("success");
       } else {
         setStatus("error");
-        setErrorMessage(json.error.message);
+        setErrorMessage(formatApiError(json.error));
       }
     }
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { submitWeddingWebsiteRsvp } from "@/lib/api/wedding-website-client";
 import type { RsvpAttending } from "@/lib/api/wedding-website.types";
+import { formatApiError } from "@/lib/utils/error";
 
 export function RsvpForm({ slug }: { slug: string }) {
   const [name, setName] = useState("");
@@ -34,7 +35,7 @@ export function RsvpForm({ slug }: { slug: string }) {
     });
     setSubmitting(false);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setSubmitted(true);

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createAdminAttribute, deleteAdminAttribute, updateAdminAttribute } from "@/lib/api/admin-client";
 import type { AttributeDataType, CategoryAttribute } from "@/lib/api/vendors.types";
+import { formatApiError } from "@/lib/utils/error";
 
 const DATA_TYPES: AttributeDataType[] = ["BOOLEAN", "NUMBER", "TEXT", "SELECT", "MULTI_SELECT"];
 const OPTIONS_REQUIRED: AttributeDataType[] = ["SELECT", "MULTI_SELECT"];
@@ -49,7 +50,7 @@ export function CategoryAttributesPanel({
     });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     onAttributesChange([...attributes, result.data]);
@@ -67,7 +68,7 @@ export function CategoryAttributesPanel({
     });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     onAttributesChange(attributes.map((a) => (a.id === attribute.id ? result.data : a)));
@@ -80,7 +81,7 @@ export function CategoryAttributesPanel({
     const result = await deleteAdminAttribute(categoryId, attribute.id);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     onAttributesChange(attributes.filter((a) => a.id !== attribute.id));
@@ -165,7 +166,7 @@ interface AttributeFormValues {
   key: string;
   label: string;
   dataType: AttributeDataType;
-  options: string[];
+  options?: string[];
   isFilterable: boolean;
   isComparable: boolean;
 }
@@ -207,11 +208,13 @@ function AttributeForm({
       setValidationError("Label is required");
       return;
     }
-    const options = optionsText
-      .split(",")
-      .map((o) => o.trim())
-      .filter(Boolean);
-    if (needsOptions && options.length === 0) {
+    const options = needsOptions
+      ? optionsText
+          .split(",")
+          .map((o) => o.trim())
+          .filter(Boolean)
+      : undefined;
+    if (needsOptions && (!options || options.length === 0)) {
       setValidationError(`At least one option is required for ${dataType}`);
       return;
     }
@@ -230,6 +233,7 @@ function AttributeForm({
               value={key}
               onChange={(e) => setKey(e.target.value)}
               placeholder="drone_coverage"
+              maxLength={100}
               className="w-40 rounded-md border border-border px-2 py-1 text-xs"
             />
           </label>
@@ -240,6 +244,7 @@ function AttributeForm({
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="Drone Coverage"
+            maxLength={150}
             className="w-44 rounded-md border border-border px-2 py-1 text-xs"
           />
         </label>

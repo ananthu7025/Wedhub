@@ -10,6 +10,7 @@ import { logout } from "@/lib/api/auth-client";
 import type { VendorSelf } from "@/lib/api/vendor-self.types";
 import type { MeResponse } from "@/lib/api/account.types";
 import type { NotificationChannel, NotificationEventType, NotificationPreference } from "@/lib/api/notification-preferences.types";
+import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Settings page (Frontend Arch Phase 7), matching
@@ -81,10 +82,17 @@ export function SettingsBoard({
     // (e.g. no phone on file yet) can't silently fail every save, business
     // name included. Previously always sent, always 400'd for a vendor who
     // never filled these in during onboarding, with no error surfaced.
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && trimmedPhone.length < 6) {
+      setSaveError("Phone number must be at least 6 characters.");
+      setSavingBusiness(false);
+      return;
+    }
+
     const [vendorResult, userResult, profileResult] = await Promise.all([
-      businessName !== vendor.businessName ? updateMyVendorDetail({ businessName }) : Promise.resolve({ success: true as const, data: null }),
-      updateMyProfile({ firstName: firstName || undefined, lastName: lastName || undefined }),
-      upsertMyProfile({ phone: phone || undefined }),
+      businessName.trim() !== vendor.businessName ? updateMyVendorDetail({ businessName: businessName.trim() }) : Promise.resolve({ success: true as const, data: null }),
+      updateMyProfile({ firstName: firstName.trim() || undefined, lastName: lastName.trim() || undefined }),
+      upsertMyProfile({ phone: trimmedPhone || undefined }),
     ]);
     setSavingBusiness(false);
     if (vendorResult.success && userResult.success && profileResult.success) {
@@ -93,12 +101,13 @@ export function SettingsBoard({
       return;
     }
     const firstError = [vendorResult, userResult, profileResult].find((r) => !r.success);
-    setSaveError(firstError && !firstError.success ? firstError.error.message : "Could not save your changes.");
+    setSaveError(firstError && !firstError.success ? formatApiError(firstError.error) : "Could not save your changes.");
   }
 
   async function handleToggle(eventType: NotificationEventType, channel: NotificationChannel, nextValue: boolean) {
     const key = `${eventType}:${channel}`;
     setSavingToggle(key);
+    setSaveError(null);
     const result = await setNotificationPreference({ eventType, channel, isEnabled: nextValue });
     setSavingToggle(null);
     if (result.success) {
@@ -107,11 +116,14 @@ export function SettingsBoard({
         if (existing) return prev.map((p) => (p === existing ? result.data : p));
         return [...prev, result.data];
       });
+    } else {
+      setSaveError(formatApiError(result.error));
     }
   }
 
   async function handleDeactivate() {
     setDeactivating(true);
+    setSaveError(null);
     const result = await deactivateAccount();
     if (result.success) {
       await logout();
@@ -119,6 +131,7 @@ export function SettingsBoard({
       return;
     }
     setDeactivating(false);
+    setSaveError(formatApiError(result.error));
   }
 
   return (
@@ -127,6 +140,8 @@ export function SettingsBoard({
         <h1 className="text-2xl font-bold">Settings</h1>
         <p className="text-sm text-text-grey">Manage your business account and notifications.</p>
       </div>
+
+      {saveError && <div className="mb-4 rounded-md bg-red-10 p-3 text-[13px] text-red-70">{saveError}</div>}
 
       <form onSubmit={handleSaveBusiness} className="mb-5 rounded-xl border border-border bg-white p-6">
         <h3 className="mb-4 text-base font-bold">Business account info</h3>
@@ -137,6 +152,7 @@ export function SettingsBoard({
               type="text"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
+              maxLength={200}
               className="w-full rounded-md border border-border px-3 py-2 text-sm"
             />
           </label>
@@ -146,6 +162,7 @@ export function SettingsBoard({
               type="text"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
+              maxLength={100}
               className="w-full rounded-md border border-border px-3 py-2 text-sm"
             />
           </label>
@@ -155,6 +172,7 @@ export function SettingsBoard({
               type="text"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
+              maxLength={100}
               className="w-full rounded-md border border-border px-3 py-2 text-sm"
             />
           </label>
@@ -166,6 +184,8 @@ export function SettingsBoard({
             <span className="mb-1.5 block text-xs font-semibold text-text-grey">Business phone</span>
             <input
               type="tel"
+              minLength={6}
+              maxLength={20}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="w-full rounded-md border border-border px-3 py-2 text-sm"

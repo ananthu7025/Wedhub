@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { restoreAdminUser, suspendAdminUser } from "@/lib/api/admin-client";
 import type { AdminUserDetail } from "@/lib/api/admin.types";
+import { formatApiError } from "@/lib/utils/error";
 
 function roleLabel(role: string): string {
   if (role === "END_USER") return "End user";
@@ -38,8 +39,13 @@ export function UserDetailBoard({ initialUser }: { initialUser: AdminUserDetail 
   const [error, setError] = useState<string | null>(null);
 
   async function handleSuspend() {
-    const reason = prompt("Reason for suspension:");
-    if (!reason) return;
+    const rawReason = prompt("Reason for suspension:");
+    if (rawReason === null) return;
+    const reason = rawReason.trim();
+    if (!reason) {
+      setError("A suspension reason is required.");
+      return;
+    }
     if (reason.length > 500) {
       setError("Suspension reason must be 500 characters or fewer.");
       return;
@@ -49,7 +55,7 @@ export function UserDetailBoard({ initialUser }: { initialUser: AdminUserDetail 
     const result = await suspendAdminUser(user.id, { reason });
     setPending(false);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setUser((prev) => ({ ...prev, status: result.data.status }));
@@ -61,7 +67,7 @@ export function UserDetailBoard({ initialUser }: { initialUser: AdminUserDetail 
     const result = await restoreAdminUser(user.id);
     setPending(false);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setUser((prev) => ({ ...prev, status: result.data.status }));

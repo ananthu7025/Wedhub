@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { moderateAdminReview } from "@/lib/api/admin-client";
 import type { AdminReviewListItem, ReviewModerationStatus } from "@/lib/api/admin.types";
+import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Review moderation queue (Frontend Arch Phase 9), matching
@@ -76,7 +77,7 @@ export function AdminReviewsBoard({
     const result = await moderateAdminReview(id, { status });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setReviews((prev) => prev.map((r) => (r.id === id ? { ...r, status: result.data.status } : r)));

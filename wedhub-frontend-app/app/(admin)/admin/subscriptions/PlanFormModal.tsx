@@ -19,8 +19,8 @@ export function PlanFormModal({
 }: {
   plan: AdminPlan | null;
   onClose: () => void;
-  onCreate: (body: { tier: PlanTier; billingInterval: BillingInterval; name: string; price: number; trialDays: number }) => Promise<void>;
-  onUpdate: (id: string, body: { name: string; price: number; trialDays: number; isActive: boolean }) => Promise<void>;
+  onCreate: (body: { tier: PlanTier; billingInterval: BillingInterval; name: string; price: number; trialDays: number }) => Promise<{ success: boolean; error?: string }>;
+  onUpdate: (id: string, body: { name: string; price: number; trialDays: number; isActive: boolean }) => Promise<{ success: boolean; error?: string }>;
 }) {
   const [tier, setTier] = useState<PlanTier>(plan?.tier ?? "PRO");
   const [billingInterval, setBillingInterval] = useState<BillingInterval>(plan?.billingInterval ?? "MONTHLY");
@@ -29,22 +29,26 @@ export function PlanFormModal({
   const [trialDays, setTrialDays] = useState(String(plan?.trialDays ?? 0));
   const [isActive, setIsActive] = useState(plan?.isActive ?? true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    setError(null);
     setSaving(true);
-    if (plan) {
-      await onUpdate(plan.id, { name, price: Number(price), trialDays: Number(trialDays), isActive });
-    } else {
-      await onCreate({ tier, billingInterval, name, price: Number(price), trialDays: Number(trialDays) });
-    }
+    const result = plan
+      ? await onUpdate(plan.id, { name: name.trim(), price: Number(price), trialDays: Number(trialDays), isActive })
+      : await onCreate({ tier, billingInterval, name: name.trim(), price: Number(price), trialDays: Number(trialDays) });
     setSaving(false);
+    if (!result.success) {
+      setError(result.error || "Could not save plan");
+    }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[440px] rounded-xl bg-white p-6">
         <h3 className="mb-4 text-lg font-bold">{plan ? `Edit ${plan.name}` : "Create plan"}</h3>
+        {error && <div className="mb-3 rounded-md bg-red-10 p-2.5 text-[12px] text-red-70">{error}</div>}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {!plan && (
             <div className="flex gap-3">
@@ -72,7 +76,13 @@ export function PlanFormModal({
           )}
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold text-text-grey">Plan name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full rounded-md border border-border px-3 py-2 text-sm" />
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={100}
+              required
+              className="w-full rounded-md border border-border px-3 py-2 text-sm"
+            />
           </label>
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold text-text-grey">Price (₹)</span>

@@ -5,8 +5,10 @@ import Image from "next/image";
 import { confirmWeddingWebsiteUpload, createWeddingWebsiteUploadRequest, deleteWeddingWebsiteMedia } from "@/lib/api/wedding-website-media-client";
 import type { WeddingWebsiteMedia } from "@/lib/api/wedding-website.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import { formatApiError } from "@/lib/utils/error";
 
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_GALLERY_PHOTOS = 30;
 
 function objectKeyFor(media: WeddingWebsiteMedia): string {
   return media.thumbnailObjectKey ?? media.optimizedObjectKey ?? media.originalObjectKey;
@@ -29,10 +31,20 @@ export function GalleryUploader({
     event.target.value = "";
     if (files.length === 0) return;
 
+    if (gallery.length >= MAX_GALLERY_PHOTOS) {
+      setError(`You can upload up to ${MAX_GALLERY_PHOTOS} photos to a wedding website.`);
+      return;
+    }
+
     setError("");
     setUploading(true);
 
     for (const file of files) {
+      if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+        setError("Only JPG, PNG, and WebP images are supported.");
+        continue;
+      }
+
       const requestResult = await createWeddingWebsiteUploadRequest({
         weddingWebsiteId,
         filename: file.name,
@@ -40,7 +52,7 @@ export function GalleryUploader({
         fileSize: file.size,
       });
       if (!requestResult.success) {
-        setError(requestResult.error.message);
+        setError(formatApiError(requestResult.error));
         continue;
       }
 

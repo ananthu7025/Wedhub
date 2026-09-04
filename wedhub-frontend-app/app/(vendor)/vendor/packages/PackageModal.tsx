@@ -10,7 +10,7 @@ export function PackageModal({
 }: {
   initialPackage: PackageSelf | null;
   onClose: () => void;
-  onSave: (input: { name: string; description: string; price: number; inclusions: string[] }) => Promise<boolean>;
+  onSave: (input: { name: string; description: string; price: number; inclusions: string[] }) => Promise<{ success: boolean; error?: string }>;
 }) {
   const [name, setName] = useState(initialPackage?.name ?? "");
   const [price, setPrice] = useState(initialPackage?.price ?? "");
@@ -42,12 +42,12 @@ export function PackageModal({
     }
     setSaving(true);
     setError("");
-    const success = await onSave({ name: name.trim(), description: description.trim(), price: Number(price), inclusions });
-    if (success) {
+    const saveResult = await onSave({ name: name.trim(), description: description.trim(), price: Number(price), inclusions });
+    if (saveResult.success) {
       onClose();
     } else {
       setSaving(false);
-      setError("Could not save this package. Please try again.");
+      setError(saveResult.error || "Could not save this package. Please try again.");
     }
   }
 
@@ -67,6 +67,7 @@ export function PackageModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Signature"
+              maxLength={200}
               required
               className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
             />

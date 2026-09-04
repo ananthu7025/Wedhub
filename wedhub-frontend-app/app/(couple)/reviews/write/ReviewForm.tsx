@@ -4,8 +4,10 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { createReview } from "@/lib/api/account-client";
 import { uploadReviewPhoto } from "@/lib/media/upload";
+import { formatApiError } from "@/lib/utils/error";
 
 const MAX_PHOTOS = 6;
+const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export function ReviewForm({
   vendorId,
@@ -27,6 +29,13 @@ export function ReviewForm({
 
   function handlePhotoSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files ?? []);
+    const invalid = selected.find((f) => !ALLOWED_PHOTO_TYPES.has(f.type));
+    if (invalid) {
+      setErrorMessage("Only JPEG, PNG and WebP images are allowed.");
+      setStatus("error");
+      event.target.value = "";
+      return;
+    }
     setPhotoFiles((prev) => [...prev, ...selected].slice(0, MAX_PHOTOS));
     event.target.value = "";
   }
@@ -70,7 +79,7 @@ export function ReviewForm({
       router.refresh();
     } else {
       setStatus("error");
-      setErrorMessage(result.error.message);
+      setErrorMessage(formatApiError(result.error));
     }
   }
 

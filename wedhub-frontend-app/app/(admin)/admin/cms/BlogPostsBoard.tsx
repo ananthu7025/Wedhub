@@ -5,6 +5,7 @@ import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import { createAdminBlogPost, deleteAdminBlogPost, updateAdminBlogPost } from "@/lib/api/admin-client";
 import type { AdminBlogPost } from "@/lib/api/admin.types";
+import { formatApiError } from "@/lib/utils/error";
 import { BlogCoverImagePicker } from "./BlogCoverImagePicker";
 
 interface FormValues {
@@ -43,7 +44,7 @@ export function BlogPostsBoard({ initialPosts }: { initialPosts: AdminBlogPost[]
     const result = await createAdminBlogPost(values);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setPosts((prev) => [result.data, ...prev]);
@@ -56,7 +57,7 @@ export function BlogPostsBoard({ initialPosts }: { initialPosts: AdminBlogPost[]
     const result = await updateAdminBlogPost(post.id, values);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setPosts((prev) => prev.map((p) => (p.id === post.id ? result.data : p)));
@@ -69,7 +70,7 @@ export function BlogPostsBoard({ initialPosts }: { initialPosts: AdminBlogPost[]
     const result = await updateAdminBlogPost(post.id, { isFeatured: !post.isFeatured });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setPosts((prev) => prev.map((p) => (p.id === post.id ? result.data : p)));
@@ -83,7 +84,7 @@ export function BlogPostsBoard({ initialPosts }: { initialPosts: AdminBlogPost[]
     });
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setPosts((prev) => prev.map((p) => (p.id === post.id ? result.data : p)));
@@ -95,7 +96,7 @@ export function BlogPostsBoard({ initialPosts }: { initialPosts: AdminBlogPost[]
     const result = await deleteAdminBlogPost(post.id);
     setPendingId(null);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setPosts((prev) => prev.filter((p) => p.id !== post.id));

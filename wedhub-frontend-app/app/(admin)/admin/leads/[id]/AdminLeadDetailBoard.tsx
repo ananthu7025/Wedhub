@@ -7,6 +7,7 @@ import { updateAdminLeadStatus } from "@/lib/api/admin-client";
 import { ALL_LEAD_STATUSES } from "@/lib/api/leads.types";
 import type { AdminLeadDetail } from "@/lib/api/admin.types";
 import type { LeadStatus } from "@/lib/api/account.types";
+import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Admin lead detail (Frontend Arch Phase 9). Unlike the vendor leads board
@@ -43,7 +44,7 @@ export function AdminLeadDetailBoard({ initialLead }: { initialLead: AdminLeadDe
     const result = await updateAdminLeadStatus(lead.id, { status: statusDraft, reason: reason.trim() || undefined });
     setSaving(false);
     if (!result.success) {
-      setError(result.error.message);
+      setError(formatApiError(result.error));
       return;
     }
     setLead((prev) => ({ ...prev, status: result.data.status, isSpam: result.data.isSpam }));
