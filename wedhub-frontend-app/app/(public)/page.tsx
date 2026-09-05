@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { PublicFooter } from "@/components/shared/PublicFooter";
 import { CategoryCapsuleCarousel } from "@/components/shared/CategoryCapsuleCarousel";
@@ -13,7 +14,6 @@ import {
   listFeaturedListings,
   listFeaturedPopularSearchCards,
   listFeaturedWeddingStories,
-  searchVendors,
 } from "@/lib/api/catalog";
 import { getOptionalSession } from "@/lib/auth/dal";
 import { getPublicMediaUrl } from "@/lib/media/url";
@@ -130,46 +130,11 @@ function fillWeddingStorySlots(realStories: RealWeddingStory[]): DisplayWeddingS
   return remaining > 0 ? [...real, ...SAMPLE_WEDDING_STORIES.slice(0, remaining)] : real;
 }
 
-async function getFeaturedVendorCards() {
-  try {
-    const { data: listings } = await listFeaturedListings("HOMEPAGE", 8);
-    if (!listings || listings.length === 0) return [];
-
-    // featured-listings only returns {id, businessName, slug} per vendor — no
-    // logo/price. Cross-reference against search to get a renderable card.
-    const results = await Promise.all(
-      listings.map(async (listing) => {
-        try {
-          const { data } = await searchVendors({ keyword: listing.vendor.businessName, limit: 5 });
-          return data.find((v) => v.slug === listing.vendor.slug) ?? null;
-        } catch {
-          return null;
-        }
-      }),
-    );
-    return results.filter((v) => v !== null);
-  } catch {
-    return [];
-  }
-}
-
 export default async function HomePage() {
-  const [
-    { data: featuredCategories },
-    featuredVendors,
-    session,
-    { data: weddingStories },
-    { data: galleryMedia },
-    { data: popularSearchCards },
-    { data: blogPosts },
-  ] = await Promise.all([
+  const [{ data: featuredCategories }, session, { data: popularSearchCards }] = await Promise.all([
     listFeaturedCategories(),
-    getFeaturedVendorCards(),
     getOptionalSession(),
-    listFeaturedWeddingStories(),
-    listFeaturedGalleryMedia(),
     listFeaturedPopularSearchCards(),
-    listFeaturedBlogPosts(),
   ]);
 
   return (
@@ -298,132 +263,21 @@ export default async function HomePage() {
           previously static placeholder content per a since-superseded
           2026-09-03 decision (see frontenddocs/10-risks-and-open-
           questions.md Open Question 21). */}
-      <section id="wedding-stories" className="px-6 py-14 sm:py-16 max-[900px]:px-4">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-extrabold tracking-tight text-jet-black sm:text-2xl">
-              Real Wedding Stories
-            </h2>
-            <p className="mt-0.5 text-xs text-text-grey">
-              Get inspired by real couples, stunning celebrations, and dream wedding vendors
-            </p>
-          </div>
-          <Link href="/real-weddings" className="text-xs font-bold text-brand-primary hover:underline">
-            View All Weddings →
-          </Link>
-        </div>
+      <Suspense fallback={<WeddingStoriesSkeleton />}>
+        <WeddingStoriesSection />
+      </Suspense>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
-          {fillWeddingStorySlots(weddingStories).map((story) => (
-            <WeddingStoryCard key={story.key} story={story} className="h-[195px] sm:h-[210px]" />
-          ))}
-        </div>
-      </section>
+      <Suspense fallback={null}>
+        <BlogSection />
+      </Suspense>
 
-      {/* Latest Blogs & Advice — real, admin-authored BlogPost rows (Arch
-          Phase 17, 2026-09-04), replacing the previously-hardcoded
-          LATEST_BLOGS array. Same hide-when-empty convention as Popular
-          Searches: a blog post is fully editorial content with no real
-          underlying entity to sample/fall back to, so the section simply
-          doesn't render until an admin has published + featured at least
-          one post. "Read Article" links go to the real /blog/[slug]
-          detail page instead of the old /search stub. */}
-      {blogPosts.length > 0 && (
-        <section id="wedding-blogs" className="px-6 py-8 max-[900px]:px-4 bg-white/70 border-y border-border/60">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-jet-black">
-                Latest Blogs &amp; Advice
-              </h2>
-              <p className="text-xs text-text-grey mt-0.5">Expert tips, styling advice, and practical planning guides</p>
-            </div>
-            <Link href="/blog" className="text-xs font-bold text-brand-primary hover:underline">
-              Read More Articles →
-            </Link>
-          </div>
+      <Suspense fallback={<GallerySkeleton />}>
+        <GallerySection />
+      </Suspense>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {blogPosts.map((blog) => (
-              <div
-                key={blog.id}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-              >
-                <div className="relative aspect-[16/9] overflow-hidden bg-surface-input">
-                  {blog.coverImageUrl && (
-                    <Image
-                      src={blog.coverImageUrl}
-                      alt={blog.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
-                  )}
-                  <span className="absolute top-2.5 left-2.5 rounded-md bg-white/90 px-2.5 py-0.5 text-[10px] font-bold text-jet-black backdrop-blur-xs">
-                    {blog.category}
-                  </span>
-                </div>
-                <div className="flex flex-1 flex-col justify-between p-4">
-                  <div>
-                    <div className="flex items-center gap-2 text-[11px] text-text-grey mb-1.5">
-                      <span>{blog.readTimeMinutes} min read</span>
-                    </div>
-                    <h3 className="text-sm font-bold text-jet-black group-hover:text-brand-primary transition-colors line-clamp-2 leading-snug">
-                      {blog.title}
-                    </h3>
-                  </div>
-                  <Link
-                    href={`/blog/${blog.slug}`}
-                    className="mt-3 text-xs font-bold text-brand-primary hover:underline"
-                  >
-                    Read Article →
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Gallery Inspiration Component */}
-      <GalleryInspiration items={galleryMedia} />
-
-      {/* Featured Vendors — real data only (featuredVendors comes from a
-          real GET /featured-listings + search cross-reference, see
-          getFeaturedVendorCards above); no fabricated placeholder vendors,
-          since a fake vendor card would link to a slug that 404s. */}
-      {featuredVendors.length > 0 && (
-        <section className="px-6 py-10 max-[900px]:px-4">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-jet-black">
-                Featured Vendors &amp; Services
-              </h2>
-              <p className="text-xs text-text-grey mt-0.5">Top-rated, verified wedding professionals ready for your date</p>
-            </div>
-            <Link href="/search" className="text-xs font-bold text-brand-primary hover:underline">
-              View All Vendors →
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {featuredVendors.map((vendor) => (
-              <VendorCard
-                key={vendor.id}
-                vendorId={vendor.id}
-                slug={vendor.slug}
-                businessName={vendor.businessName}
-                logoUrl={vendor.logoUrl}
-                shortDescription={vendor.shortDescription}
-                startingPrice={vendor.startingPrice}
-                currency={vendor.currency}
-                featured
-                isAuthenticated={session !== null}
-                listContext="homepage_featured"
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      <Suspense fallback={null}>
+        <FeaturedVendorsSection isAuthenticated={session !== null} />
+      </Suspense>
 
       {/* Telegram Wedding Assistant Matchmaker Banner (Preserved from existing code) */}
       <section className="px-6 pb-12 max-[900px]:px-4">
@@ -458,6 +312,179 @@ export default async function HomePage() {
       {/* Comprehensive itsmyKalyanam Footer */}
       <PublicFooter />
     </div>
+  );
+}
+
+/** Streamed independently in its own <Suspense> boundary — see the HomePage's Suspense wiring above. */
+async function WeddingStoriesSection() {
+  const { data: weddingStories } = await listFeaturedWeddingStories();
+
+  return (
+    <section id="wedding-stories" className="px-6 py-14 sm:py-16 max-[900px]:px-4">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-extrabold tracking-tight text-jet-black sm:text-2xl">
+            Real Wedding Stories
+          </h2>
+          <p className="mt-0.5 text-xs text-text-grey">
+            Get inspired by real couples, stunning celebrations, and dream wedding vendors
+          </p>
+        </div>
+        <Link href="/real-weddings" className="text-xs font-bold text-brand-primary hover:underline">
+          View All Weddings →
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+        {fillWeddingStorySlots(weddingStories).map((story) => (
+          <WeddingStoryCard key={story.key} story={story} className="h-[195px] sm:h-[210px]" />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function WeddingStoriesSkeleton() {
+  return (
+    <section className="px-6 py-14 sm:py-16 max-[900px]:px-4">
+      <div className="mb-6 h-6 w-56 animate-pulse rounded bg-surface-input" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-[195px] animate-pulse rounded-[18px] bg-surface-input sm:h-[210px]" />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Streamed independently in its own <Suspense> boundary — see the HomePage's Suspense wiring above.
+ * Same hide-when-empty convention as Popular Searches: a blog post is fully
+ * editorial content with no real underlying entity to sample/fall back to,
+ * so the section simply doesn't render until an admin has published +
+ * featured at least one post. "Read Article" links go to the real
+ * /blog/[slug] detail page instead of the old /search stub. */
+async function BlogSection() {
+  const { data: blogPosts } = await listFeaturedBlogPosts();
+  if (blogPosts.length === 0) return null;
+
+  return (
+    <section id="wedding-blogs" className="px-6 py-8 max-[900px]:px-4 bg-white/70 border-y border-border/60">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-jet-black">
+            Latest Blogs &amp; Advice
+          </h2>
+          <p className="text-xs text-text-grey mt-0.5">Expert tips, styling advice, and practical planning guides</p>
+        </div>
+        <Link href="/blog" className="text-xs font-bold text-brand-primary hover:underline">
+          Read More Articles →
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {blogPosts.map((blog) => (
+          <div
+            key={blog.id}
+            className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+          >
+            <div className="relative aspect-[16/9] overflow-hidden bg-surface-input">
+              {blog.coverImageUrl && (
+                <Image
+                  src={blog.coverImageUrl}
+                  alt={blog.title}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                />
+              )}
+              <span className="absolute top-2.5 left-2.5 rounded-md bg-white/90 px-2.5 py-0.5 text-[10px] font-bold text-jet-black backdrop-blur-xs">
+                {blog.category}
+              </span>
+            </div>
+            <div className="flex flex-1 flex-col justify-between p-4">
+              <div>
+                <div className="flex items-center gap-2 text-[11px] text-text-grey mb-1.5">
+                  <span>{blog.readTimeMinutes} min read</span>
+                </div>
+                <h3 className="text-sm font-bold text-jet-black group-hover:text-brand-primary transition-colors line-clamp-2 leading-snug">
+                  {blog.title}
+                </h3>
+              </div>
+              <Link
+                href={`/blog/${blog.slug}`}
+                className="mt-3 text-xs font-bold text-brand-primary hover:underline"
+              >
+                Read Article →
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Streamed independently in its own <Suspense> boundary — see the HomePage's Suspense wiring above. */
+async function GallerySection() {
+  const { data: galleryMedia } = await listFeaturedGalleryMedia();
+  return <GalleryInspiration items={galleryMedia} />;
+}
+
+function GallerySkeleton() {
+  return (
+    <section className="px-6 py-10 max-[900px]:px-4">
+      <div className="mb-6 h-6 w-48 animate-pulse rounded bg-surface-input" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="aspect-square animate-pulse rounded-xl bg-surface-input" />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Streamed independently in its own <Suspense> boundary — see the HomePage's
+ * Suspense wiring above. Fetches featured-listings directly (backend now
+ * joins vendor profile/logo data in, see featured-listing.service.ts) — no
+ * more cross-referencing against /search/vendors for card data. Real data
+ * only: no fabricated placeholder vendors, since a fake vendor card would
+ * link to a slug that 404s. */
+async function FeaturedVendorsSection({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const { data: listings } = await listFeaturedListings("HOMEPAGE", 8);
+  if (!listings || listings.length === 0) return null;
+
+  return (
+    <section className="px-6 py-10 max-[900px]:px-4">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-jet-black">
+            Featured Vendors &amp; Services
+          </h2>
+          <p className="text-xs text-text-grey mt-0.5">Top-rated, verified wedding professionals ready for your date</p>
+        </div>
+        <Link href="/search" className="text-xs font-bold text-brand-primary hover:underline">
+          View All Vendors →
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {listings.map((listing) => (
+          <VendorCard
+            key={listing.vendor.id}
+            vendorId={listing.vendor.id}
+            slug={listing.vendor.slug}
+            businessName={listing.vendor.businessName}
+            logoUrl={listing.vendor.logoUrl}
+            shortDescription={listing.vendor.shortDescription}
+            startingPrice={listing.vendor.startingPrice}
+            currency={listing.vendor.currency}
+            featured
+            isAuthenticated={isAuthenticated}
+            listContext="homepage_featured"
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 

@@ -1,4 +1,5 @@
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
+import { getPublicUrl } from "../../integrations/storage/r2.client";
 import * as categoryRepository from "../categories/categories.repository";
 import * as locationRepository from "../locations/locations.repository";
 import * as featuredListingRepository from "./featured-listing.repository";
@@ -136,15 +137,34 @@ export function listFeaturedListingsAdmin(filter: {
   ]);
 }
 
-export function listActiveFeaturedListings(filter: {
+export async function listActiveFeaturedListings(filter: {
   placementType: "HOMEPAGE" | "CATEGORY_PAGE" | "CITY_PAGE" | "SEARCH_RESULTS" | undefined;
   categoryId: string | undefined;
   cityId: string | undefined;
   page: number;
   limit: number;
 }) {
-  return Promise.all([
+  const [listings, total] = await Promise.all([
     featuredListingRepository.listActiveFeaturedListings(filter),
     featuredListingRepository.countActiveFeaturedListings(filter),
   ]);
+
+  const publicListings = listings.map((listing) => {
+    const profile = listing.vendor.profile;
+    const logoKey = profile?.logoMedia?.optimizedObjectKey ?? profile?.logoMedia?.originalObjectKey;
+    return {
+      ...listing,
+      vendor: {
+        id: listing.vendor.id,
+        businessName: listing.vendor.businessName,
+        slug: listing.vendor.slug,
+        shortDescription: profile?.shortDescription ?? null,
+        startingPrice: profile?.startingPrice != null ? profile.startingPrice.toString() : null,
+        currency: profile?.currency ?? null,
+        logoUrl: logoKey ? getPublicUrl(logoKey) : null,
+      },
+    };
+  });
+
+  return [publicListings, total] as const;
 }

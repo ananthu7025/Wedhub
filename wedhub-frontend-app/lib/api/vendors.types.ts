@@ -316,7 +316,15 @@ export interface FeaturedListing {
   startDate: string;
   endDate: string;
   status: string;
-  vendor: { id: string; businessName: string; slug: string };
+  vendor: {
+    id: string;
+    businessName: string;
+    slug: string;
+    shortDescription: string | null;
+    startingPrice: string | null;
+    currency: string | null;
+    logoUrl: string | null;
+  };
   category: { id: string; name: string; slug: string } | null;
   city: { id: string; name: string; slug: string } | null;
 }

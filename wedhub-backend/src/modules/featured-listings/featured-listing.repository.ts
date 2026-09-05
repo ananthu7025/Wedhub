@@ -3,7 +3,21 @@ import { prisma } from "../../config/database";
 import { omitUndefined } from "../../common/utils/object.util";
 
 const VENDOR_SUMMARY_INCLUDE = {
-  vendor: { select: { id: true, businessName: true, slug: true } },
+  vendor: {
+    select: {
+      id: true,
+      businessName: true,
+      slug: true,
+      profile: {
+        select: {
+          shortDescription: true,
+          startingPrice: true,
+          currency: true,
+          logoMedia: { select: { optimizedObjectKey: true, originalObjectKey: true } },
+        },
+      },
+    },
+  },
   category: { select: { id: true, name: true, slug: true } },
   city: { select: { id: true, name: true, slug: true } },
 } satisfies Prisma.FeaturedListingInclude;
