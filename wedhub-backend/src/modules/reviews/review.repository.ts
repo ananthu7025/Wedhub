@@ -1,6 +1,7 @@
 import type { Prisma, ReviewStatus } from "@prisma/client";
 import { prisma } from "../../config/database";
 import { omitUndefined } from "../../common/utils/object.util";
+import { toPageParams } from "../../common/utils/pagination.util";
 
 export function findVendorStatus(vendorId: string) {
   return prisma.vendor.findUnique({ where: { id: vendorId }, select: { id: true, status: true, ownerUserId: true } });
@@ -75,8 +76,7 @@ export function listVendorReviews(vendorId: string, page: number, limit: number)
     where: { vendorId, status: "APPROVED" },
     include: REVIEW_PHOTOS_INCLUDE,
     orderBy: { createdAt: "desc" },
-    skip: (page - 1) * limit,
-    take: limit,
+    ...toPageParams(page, limit),
   });
 }
 
@@ -89,8 +89,7 @@ export function listMyReviews(userId: string, page: number, limit: number) {
     where: { userId },
     include: { vendor: { select: { id: true, businessName: true, slug: true } }, ...REVIEW_PHOTOS_INCLUDE },
     orderBy: { createdAt: "desc" },
-    skip: (page - 1) * limit,
-    take: limit,
+    ...toPageParams(page, limit),
   });
 }
 
@@ -128,8 +127,7 @@ export function listReviewsAdmin(filter: { status: ReviewStatus | undefined; pag
       ...REVIEW_PHOTOS_INCLUDE,
     },
     orderBy: { createdAt: "desc" },
-    skip: (filter.page - 1) * filter.limit,
-    take: filter.limit,
+    ...toPageParams(filter.page, filter.limit),
   });
 }
 

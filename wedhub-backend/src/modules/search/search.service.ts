@@ -1,4 +1,3 @@
-import { prisma } from "../../config/database";
 import { getPublicUrl } from "../../integrations/storage/r2.client";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
 import * as searchRepository from "./search.repository";
@@ -58,21 +57,19 @@ async function logSearch(input: {
 
   const writeSearchLog = async () => {
     try {
-      await prisma.searchLog.create({
-        data: {
-          userId: loggedInUserId ?? null,
-          keyword: query.keyword ?? null,
-          categoryId: query.categoryId ?? null,
-          cityId: query.cityId ?? null,
-          sort: query.sort,
-          resultCount,
-          filters: {
-            serviceAreaId: query.serviceAreaId ?? null,
-            priceMin: query.priceMin ?? null,
-            priceMax: query.priceMax ?? null,
-            verified: query.verified ?? null,
-            attr: query.attr ?? null,
-          },
+      await searchRepository.createSearchLog({
+        userId: loggedInUserId ?? null,
+        keyword: query.keyword ?? null,
+        categoryId: query.categoryId ?? null,
+        cityId: query.cityId ?? null,
+        sort: query.sort,
+        resultCount,
+        filters: {
+          serviceAreaId: query.serviceAreaId ?? null,
+          priceMin: query.priceMin ?? null,
+          priceMax: query.priceMax ?? null,
+          verified: query.verified ?? null,
+          attr: query.attr ?? null,
         },
       });
     } catch {

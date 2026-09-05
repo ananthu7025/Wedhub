@@ -94,26 +94,13 @@ export async function setCategories(vendorId: string, input: SetCategoriesInput)
   if (primaryChanged) {
     const vendor = await vendorRepository.findVendorById(vendorId);
     if (vendor?.status === "APPROVED") {
-      await prisma.$transaction([
-        prisma.vendor.update({ where: { id: vendorId }, data: { status: "PENDING_APPROVAL" } }),
-        prisma.vendorStatusHistory.create({
-          data: {
-            vendorId,
-            fromStatus: "APPROVED",
-            toStatus: "PENDING_APPROVAL",
-            reason: "Primary category changed — re-review required",
-          },
-        }),
-        prisma.auditLog.create({
-          data: {
-            action: "VENDOR_PRIMARY_CATEGORY_CHANGED",
-            entityType: "vendor",
-            entityId: vendorId,
-            before: { status: "APPROVED" },
-            after: { status: "PENDING_APPROVAL" },
-          },
-        }),
-      ]);
+      await vendorRepository.changeStatusWithAuditLogTx({
+        vendorId,
+        fromStatus: "APPROVED",
+        toStatus: "PENDING_APPROVAL",
+        reason: "Primary category changed — re-review required",
+        auditAction: "VENDOR_PRIMARY_CATEGORY_CHANGED",
+      });
     }
   }
 
@@ -258,17 +245,13 @@ export async function advanceIfEmailNowVerified(vendorId: string): Promise<void>
     return;
   }
 
-  await prisma.$transaction([
-    prisma.vendor.update({ where: { id: vendorId }, data: { status: "PENDING_APPROVAL" } }),
-    prisma.vendorStatusHistory.create({
-      data: {
-        vendorId,
-        fromStatus: "PENDING_VERIFICATION",
-        toStatus: "PENDING_APPROVAL",
-        reason: "Owner email verified",
-      },
-    }),
-  ]);
+  await vendorRepository.changeStatusTx({
+    vendorId,
+    fromStatus: "PENDING_VERIFICATION",
+    toStatus: "PENDING_APPROVAL",
+    reason: "Owner email verified",
+    changedByUserId: undefined,
+  });
 }
 
 export async function submitForReview(vendorId: string, ownerUserId: string) {
@@ -293,21 +276,14 @@ export async function submitForReview(vendorId: string, ownerUserId: string) {
   const emailVerified = owner?.emailVerifiedAt != null;
   const nextStatus = emailVerified ? "PENDING_APPROVAL" : "PENDING_VERIFICATION";
 
-  await prisma.$transaction([
-    prisma.vendor.update({
-      where: { id: vendorId },
-      data: { status: nextStatus, submittedAt: new Date() },
-    }),
-    prisma.vendorStatusHistory.create({
-      data: {
-        vendorId,
-        fromStatus: vendor.status,
-        toStatus: nextStatus,
-        reason: emailVerified ? "Submitted, email already verified" : "Submitted, awaiting email verification",
-        changedByUserId: ownerUserId,
-      },
-    }),
-  ]);
+  await vendorRepository.changeStatusTx({
+    vendorId,
+    toStatus: nextStatus,
+    submittedAt: new Date(),
+    fromStatus: vendor.status,
+    reason: emailVerified ? "Submitted, email already verified" : "Submitted, awaiting email verification",
+    changedByUserId: ownerUserId,
+  });
 
   if (!emailVerified) {
     logger.info({ vendorId }, "Vendor submitted but owner email not verified yet — awaiting verification");

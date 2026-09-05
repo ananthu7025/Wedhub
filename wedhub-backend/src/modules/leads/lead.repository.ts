@@ -1,5 +1,6 @@
 import type { LeadStatus, Prisma } from "@prisma/client";
 import { prisma } from "../../config/database";
+import { toPageParams } from "../../common/utils/pagination.util";
 
 const LEAD_DETAIL_INCLUDE = {
   enquiry: true,
@@ -43,8 +44,7 @@ export function listVendorLeads(filter: LeadListFilter) {
     where,
     include: { enquiry: true },
     orderBy: { createdAt: "desc" },
-    skip: (filter.page - 1) * filter.limit,
-    take: filter.limit,
+    ...toPageParams(filter.page, filter.limit),
   });
 }
 
@@ -114,8 +114,7 @@ export function findAllLeadsAdmin(filter: AdminLeadListFilter) {
     where,
     include: { enquiry: true, vendor: { select: { id: true, businessName: true, slug: true } } },
     orderBy: { createdAt: "desc" },
-    skip: (filter.page - 1) * filter.limit,
-    take: filter.limit,
+    ...toPageParams(filter.page, filter.limit),
   });
 }
 

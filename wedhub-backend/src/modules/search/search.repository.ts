@@ -2,6 +2,18 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/database";
 import type { VendorSearchFilters, VendorSearchRow } from "./search.types";
 
+export function createSearchLog(data: {
+  userId: string | null;
+  keyword: string | null;
+  categoryId: string | null;
+  cityId: string | null;
+  sort: string;
+  resultCount: number;
+  filters: Prisma.InputJsonValue;
+}) {
+  return prisma.searchLog.create({ data });
+}
+
 // Raw SQL is required here (not Prisma's query builder) for two things
 // Prisma can't express: pg_trgm similarity() as an orderable/filterable
 // score, and a dynamic number of category-attribute EXISTS joins built from

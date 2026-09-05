@@ -1,6 +1,7 @@
 import type { Prisma, VendorStatus } from "@prisma/client";
 import { prisma } from "../../config/database";
 import { omitUndefined } from "../../common/utils/object.util";
+import { toPageParams } from "../../common/utils/pagination.util";
 
 export const VENDOR_FULL_INCLUDE = {
   profile: { include: { logoMedia: true, coverMedia: true } },
@@ -78,8 +79,7 @@ export function listApprovedVendors(filter: {
   return prisma.vendor.findMany({
     where,
     include: VENDOR_FULL_INCLUDE,
-    skip: (filter.page - 1) * filter.limit,
-    take: filter.limit,
+    ...toPageParams(filter.page, filter.limit),
     orderBy: { profileCompleteness: "desc" },
   });
 }
@@ -294,6 +294,60 @@ export function recordStatusChange(input: {
       ...optionalFields,
     },
   });
+}
+
+export function changeStatusTx(input: {
+  vendorId: string;
+  toStatus: VendorStatus;
+  submittedAt?: Date;
+  fromStatus: string | null;
+  reason: string | undefined;
+  changedByUserId: string | undefined;
+}) {
+  const optionalFields = omitUndefined({ reason: input.reason, changedByUserId: input.changedByUserId });
+  return prisma.$transaction([
+    prisma.vendor.update({
+      where: { id: input.vendorId },
+      data: omitUndefined({ status: input.toStatus, submittedAt: input.submittedAt }),
+    }),
+    prisma.vendorStatusHistory.create({
+      data: {
+        vendorId: input.vendorId,
+        fromStatus: input.fromStatus as VendorStatus | null,
+        toStatus: input.toStatus,
+        ...optionalFields,
+      },
+    }),
+  ]);
+}
+
+export function changeStatusWithAuditLogTx(input: {
+  vendorId: string;
+  toStatus: VendorStatus;
+  fromStatus: string | null;
+  reason: string | undefined;
+  auditAction: string;
+}) {
+  return prisma.$transaction([
+    prisma.vendor.update({ where: { id: input.vendorId }, data: { status: input.toStatus } }),
+    prisma.vendorStatusHistory.create({
+      data: {
+        vendorId: input.vendorId,
+        fromStatus: input.fromStatus as VendorStatus | null,
+        toStatus: input.toStatus,
+        ...omitUndefined({ reason: input.reason }),
+      },
+    }),
+    prisma.auditLog.create({
+      data: {
+        action: input.auditAction,
+        entityType: "vendor",
+        entityId: input.vendorId,
+        before: { status: input.fromStatus },
+        after: { status: input.toStatus },
+      },
+    }),
+  ]);
 }
 
 export function findStatusHistory(vendorId: string) {
