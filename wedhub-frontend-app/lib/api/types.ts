@@ -37,3 +37,20 @@ export class ApiRequestError extends Error {
     this.details = details;
   }
 }
+
+/**
+ * Thrown when the request never got a backend error response to unpack —
+ * `fetch` itself rejected (offline, DNS failure, CORS) or the response body
+ * wasn't valid JSON. Distinct from ApiRequestError, which always carries a
+ * real HTTP status/code from the backend; this has neither, since the
+ * backend was never actually reached (or its response couldn't be parsed).
+ */
+export class ApiNetworkError extends Error {
+  public readonly cause: unknown;
+
+  constructor(message: string, cause: unknown) {
+    super(message);
+    this.name = "ApiNetworkError";
+    this.cause = cause;
+  }
+}

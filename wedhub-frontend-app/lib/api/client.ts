@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
-import { ApiRequestError, type ApiResponse } from "./types";
+import { ApiNetworkError, ApiRequestError, type ApiResponse } from "./types";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -68,15 +68,25 @@ export async function apiFetch<T, M = Record<string, unknown>>(
     if (incomingForwardedFor) requestHeaders["X-Forwarded-For"] = incomingForwardedFor;
   }
 
-  const response = await fetch(buildUrl(path, query), {
-    method,
-    headers: requestHeaders,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    cache,
-    next,
-  });
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(path, query), {
+      method,
+      headers: requestHeaders,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      cache,
+      next,
+    });
+  } catch (cause) {
+    throw new ApiNetworkError("Could not reach the server. Check your connection and try again.", cause);
+  }
 
-  const json = (await response.json()) as ApiResponse<T, M>;
+  let json: ApiResponse<T, M>;
+  try {
+    json = (await response.json()) as ApiResponse<T, M>;
+  } catch (cause) {
+    throw new ApiNetworkError("The server returned an unexpected response.", cause);
+  }
 
   if (!json.success) {
     throw new ApiRequestError(response.status, json.error.code, json.error.message, json.error.details);

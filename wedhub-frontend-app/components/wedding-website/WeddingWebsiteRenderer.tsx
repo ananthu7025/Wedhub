@@ -20,6 +20,15 @@ function objectKeyFor(media: WeddingWebsiteMedia): string {
   return media.optimizedObjectKey ?? media.thumbnailObjectKey ?? media.originalObjectKey;
 }
 
+// Grid cells only ever render at ~300px (aspect-square, 50vw/33vw sizes) —
+// serving the medium/800px optimizedObjectKey there is ~5x the necessary
+// bytes per photo. Falls back the other way from objectKeyFor's default
+// (thumbnail preferred, optimized as fallback) since a thumbnail is exactly
+// what a grid cell needs, and a nonexistent thumbnail is the rarer case.
+function gridThumbnailKeyFor(media: WeddingWebsiteMedia): string {
+  return media.thumbnailObjectKey ?? media.optimizedObjectKey ?? media.originalObjectKey;
+}
+
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
@@ -187,7 +196,7 @@ export function WeddingWebsiteRenderer({
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {website.gallery.map((item) => (
                 <div key={item.id} className="relative aspect-square overflow-hidden rounded-md">
-                  <Image src={getPublicMediaUrl(objectKeyFor(item))} alt={coupleNames} fill className="object-cover" sizes="(max-width: 640px) 50vw, 33vw" />
+                  <Image src={getPublicMediaUrl(gridThumbnailKeyFor(item))} alt={coupleNames} fill className="object-cover" sizes="(max-width: 640px) 50vw, 33vw" />
                 </div>
               ))}
             </div>
