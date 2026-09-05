@@ -183,12 +183,21 @@ export async function createVendorKycLink(userId: string): Promise<{ shortUrl: s
     throw new ValidationError("Payment account has no gateway reference.");
   }
 
-  if (!razorpayClient.isPaymentProviderConfigured()) {
-    // In dev / test simulator mode, return simulated onboarding link
+  if (
+    !razorpayClient.isPaymentProviderConfigured() ||
+    account.razorpayAccountId.startsWith("acc_test_") ||
+    account.razorpayAccountId.startsWith("acc_sim_")
+  ) {
+    // In dev / test simulator mode or fallback account, return simulated onboarding link
     return { shortUrl: `https://dashboard.razorpay.com/app/route/accounts/${account.razorpayAccountId}/kyc` };
   }
 
-  return razorpayClient.createAccountLink(account.razorpayAccountId);
+  try {
+    return await razorpayClient.createAccountLink(account.razorpayAccountId);
+  } catch (err) {
+    logger.warn({ err, accountId: account.razorpayAccountId }, "Failed to generate Razorpay account link, returning dashboard fallback URL");
+    return { shortUrl: `https://dashboard.razorpay.com/app/route/accounts/${account.razorpayAccountId}/kyc` };
+  }
 }
 
 export function canVendorAcceptOnlinePayments(account: {
