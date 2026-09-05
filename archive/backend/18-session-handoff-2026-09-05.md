@@ -1,6 +1,8 @@
 # Session Handoff — 2026-09-05
 
-> Written at context-close so a fresh session can pick up cold. Read this first, then `docs/00-index.md` for full navigation.
+> **Archived 2026-09-05 as part of the v1 build-phase close-out.** This is a historical narrative from the active-build period — its file paths below (`docs/17-...`, `docs/18-...`, `docs/20-...`, `frontenddocs/13-...`, etc.) refer to the **old, pre-reorg directory layout** and are intentionally left as originally written, since this file is a point-in-time record of what happened, not a live reference doc. For current status and navigation, read `/PENDING-WORK.md` at the repo root first, then `00-INDEX.md` in this archive folder. Note: this file's own §4 claims `docs/20-non-claude-commits-log.md` was created — that file never actually existed on disk at any point; this is a known, still-uncorrected discrepancy from the original session, preserved here rather than silently fixed.
+>
+> Originally written at context-close so a fresh session could pick up cold.
 
 ---
 

@@ -1,7 +1,7 @@
 # Stage 11 — Category-Gated Vendor Mini-Store & Direct Commerce Engine
 
 > **Arch Phase 29**
-> Sourced from: Vendor Mini-Store Specification, Admin Category Taxonomy Controls, Direct WhatsApp Commerce Engine, and Codebase Standards Review (`docs/16-vendor-store-plan-review.md`).
+> Sourced from: Vendor Mini-Store Specification, Admin Category Taxonomy Controls, Direct WhatsApp Commerce Engine, and a Codebase Standards Review (formerly the standalone `docs/16-vendor-store-plan-review.md`, merged into §5 of this file below).
 > Dependent on: Arch Phase 4 (Category & Location Catalog), Arch Phase 5 (Vendor Module), Arch Phase 6 (Media Pipeline), Arch Phase 27 (Vendor GST Invoices), Arch Phase 28 (Standalone Vendor Portfolio).
 
 ---
@@ -253,3 +253,21 @@ model VendorStoreOrderItem {
   - Saves order with status `PENDING_CONFIRMATION`.
   - Returns formatted WhatsApp URL pre-populated with order details and deep link.
   - Emits `store_order_initiated` analytics event.
+
+---
+
+## 5. Plan Review History (merged from the former standalone `16-vendor-store-plan-review.md`)
+
+This plan was code-reviewed against the codebase's actual conventions before implementation, in two passes. **All findings from both passes are already resolved and reflected in the schema/API spec above** — this section is a condensed audit trail only, kept for provenance.
+
+**Pass 1 — 4 findings, all resolved:**
+1. *Media pipeline bypass* — the original draft had `VendorStoreItem.images: String[]` (a raw URL array), bypassing this codebase's rule that all media goes through the `Media` model. Resolved: replaced with the `VendorStoreItemMedia` join table shown in §3 above, using `MediaType.STORE_ITEM_PHOTO` through the standard R2 presign/moderation/WebP pipeline.
+2. *Order-number collision safety* — no atomic-increment mechanism or rate limiter was specified for the public order-creation endpoint. Resolved: `VendorStore.nextOrderNumber` atomic counter (§3) + `storeOrderRateLimiter` (§4), mirroring `VendorInvoice.invoiceNumber`'s pattern.
+3. *Invoice-handoff field gaps* — `gstRate`/`placeOfSupply` weren't captured anywhere upstream, but are load-bearing for the GST invoice conversion. Resolved: `gstRate` added to `VendorStoreItem`/`VendorStoreOrderItem`, `customerState` added to `VendorStoreOrder` (§3), both wired into the `create-invoice` endpoint (§4).
+4. *Smaller items* — category-disable cascade (resolved via live request-time check, §2), WhatsApp phone format validation (resolved, §4), explicit multi-tenant ownership statement (resolved, §4) — all three folded into the spec above.
+
+**Pass 2 — 2 follow-up findings on the revision itself, both resolved:**
+- The revision's `MediaType` enum listing didn't match the real `prisma/schema.prisma` enum (contained invented values). Resolved: replaced with the enum transcribed verbatim from the real schema (§3).
+- `VendorStoreOrder.invoiceId`'s relation was declared one-sided (Prisma requires both sides). Resolved: added `VendorInvoice.storeOrder` back-reference (§3).
+
+No open findings remain from either review pass.

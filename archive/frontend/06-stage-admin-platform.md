@@ -16,7 +16,7 @@ Maps to product.md §2.3 "Admin goals" (all 15 points) and product.md §39's adm
 
 ## Backend Dependency
 
-Arch Phase 16 (Admin Platform Backend) ✅ Done — covers dashboard metrics, user suspend/restore, audit log read, RBAC read-only visibility. Also depends on Arch Phase 4 (Categories/Locations), 9 (Leads), 10 (Reviews), 11–13 (Subscriptions/Entitlements/Featured Listings) for the domain data admin operates on — all ✅/⚠️ per `../docs/11-progress-log.md`. **Two real gaps exist** — see Open Questions below, both already identified during the admin mockup build.
+Arch Phase 16 (Admin Platform Backend) ✅ Done — covers dashboard metrics, user suspend/restore, audit log read, RBAC read-only visibility. Also depends on Arch Phase 4 (Categories/Locations), 9 (Leads), 10 (Reviews), 11–13 (Subscriptions/Entitlements/Featured Listings) for the domain data admin operates on — all ✅/⚠️ per `../backend/11-progress-log.md`. **Two real gaps exist** — see Open Questions below, both already identified during the admin mockup build.
 
 ## Included Mockup Screens
 

@@ -15,7 +15,7 @@ Maps to product.md §3.5 ("SEO is a first-class acquisition channel") and Produc
 ## Backend Dependency
 
 - Telegram surfacing: Arch Phase 15 (Telegram Bot MVP) ✅ Done — no blocker.
-- SEO page generation: Arch Phase 17 (CMS & SEO Backend) 🟡 In Progress per `../docs/11-progress-log.md` — the category/city/category+city page-generation slice shipped 2026-09-03 (unblocks 11b below); the blog/article content model shipped 2026-09-04 (see below); FAQs/static-pages content models remain unbuilt, see [Open Question 1](10-risks-and-open-questions.md#1-frontend-arch-phase-11-partially-blocked-on-backend-arch-phase-17).
+- SEO page generation: Arch Phase 17 (CMS & SEO Backend) 🟡 In Progress per `../backend/11-progress-log.md` — the category/city/category+city page-generation slice shipped 2026-09-03 (unblocks 11b below); the blog/article content model shipped 2026-09-04 (see below); FAQs/static-pages content models remain unbuilt, see [Open Question 1](10-risks-and-open-questions.md#1-frontend-arch-phase-11-partially-blocked-on-backend-arch-phase-17).
 
 ## Included Mockup Screens
 
@@ -30,7 +30,7 @@ None new for Telegram surfacing (the "Chat on Telegram" CTA already exists in `c
 
 ### Frontend Arch Phase 11b — SEO Page Generation
 - [x] **Category landing pages** — ✅ Done 2026-09-03. `/category/[categorySlug]`, server-rendered, real `generateMetadata` (title, description, canonical, OG, robots) from the backend's `GET /seo/page`.
-- [x] **Location + category+city landing pages** — ✅ Done 2026-09-03. `/city/[citySlug]` and `/category/[categorySlug]/[citySlug]`, same pattern. Not literally `/[category]/[city]` under `/vendors` — that collides with the already-shipped `/vendors/[slug]` vendor-detail route (two differently-named dynamic segments can't share a route level in Next.js, and 14+ files already link to `/vendors/[slug]`); `/category`/`/city` are the equivalent non-colliding routes actually implemented. See `../docs/09-stage-growth-and-scale.md` Arch Phase 17 for the full write-up.
+- [x] **Location + category+city landing pages** — ✅ Done 2026-09-03. `/city/[citySlug]` and `/category/[categorySlug]/[citySlug]`, same pattern. Not literally `/[category]/[city]` under `/vendors` — that collides with the already-shipped `/vendors/[slug]` vendor-detail route (two differently-named dynamic segments can't share a route level in Next.js, and 14+ files already link to `/vendors/[slug]`); `/category`/`/city` are the equivalent non-colliding routes actually implemented. See `../backend/09-stage-growth-and-scale.md` Arch Phase 17 for the full write-up.
 - [ ] Structured data (schema.org `Service`/`LocalBusiness` markup) on the landing pages — not yet added, deferred (no user decision yet on scope/priority for this on top of the base metadata work).
 - [x] **Blog/guides pages** — ✅ Done 2026-09-04. Backend Arch Phase 17's `BlogPost` model + `/blog` public endpoints shipped, unblocking this item. Real `/blog` list page (paginated, published-only) and `/blog/[slug]` detail page (real `generateMetadata` from `seoTitle`/`seoDescription`/`coverImageUrl`, `notFound()` on a missing/unpublished slug, same pattern as `/category/[categorySlug]`), body rendered via the new `react-markdown` dependency (v10.1.0). Homepage's `LATEST_BLOGS` hardcoded array replaced with a real `listFeaturedBlogPosts()` call, teaser section now hides itself when empty. Admin authoring UI: `BlogPostsBoard.tsx` (with a Markdown Preview toggle) + `BlogCoverImagePicker.tsx`, wired into `/admin/cms`. "Guides" specifically (a distinct content type from Blog per product.md §39's "Blog, Guides, FAQs, Banners" enumeration) has no dedicated model of its own — treated as the same `BlogPost` model/routes for now, no separate Guides UI; revisit if a real product need for a distinct Guides shape emerges.
 - [x] **Sitemap generation** — ✅ Done 2026-09-03. `app/sitemap.ts`, sourced from the backend's `GET /seo/combinations` (every indexable category/city/category+city combination — thin combinations, below `MIN_VENDORS_FOR_INDEXABLE_PAGE = 3`, are excluded).
@@ -58,4 +58,4 @@ Requires Stages 1–4 complete (this is explicitly the last stage in the recomme
 
 ## Open Questions
 
-- [Open Question 1](10-risks-and-open-questions.md#1-frontend-arch-phase-11-partially-blocked-on-backend-arch-phase-17) — the central open question for this entire stage. Re-check `../docs/11-progress-log.md` before scheduling Frontend Arch Phase 11b.
+- [Open Question 1](10-risks-and-open-questions.md#1-frontend-arch-phase-11-partially-blocked-on-backend-arch-phase-17) — the central open question for this entire stage. Re-check `../backend/11-progress-log.md` before scheduling Frontend Arch Phase 11b.

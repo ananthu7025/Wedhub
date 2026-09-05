@@ -2,9 +2,9 @@
 
 ## Stage Goal
 
-Build the public/couple-facing half of the ₹49 Instant Wedding Website product: the multi-step creation flow (template → details → events → photos → preview → payment → published), the temporary preview page, the permanent published wedding-website page, and a "Wedding Website" module inside the existing couple (`(couple)`) dashboard. The Telegram-bot half of this feature is backend-only scope (see `../docs/12-stage-wedding-website.md`) and has no frontend deliverable in this stage.
+Build the public/couple-facing half of the ₹49 Instant Wedding Website product: the multi-step creation flow (template → details → events → photos → preview → payment → published), the temporary preview page, the permanent published wedding-website page, and a "Wedding Website" module inside the existing couple (`(couple)`) dashboard. The Telegram-bot half of this feature is backend-only scope (see `../backend/12-stage-wedding-website.md`) and has no frontend deliverable in this stage.
 
-**Real deviation from the feature spec, confirmed with the user 2026-09-03**: the spec's own "Feature Entry Points" section lists two web-adjacent entry points — the chatbot and a vendor-dashboard module. The user explicitly confirmed only end users (couples) should get website creation from the web app — no vendor dashboard entry point was built. The backend's ownership model still supports a `VENDOR`-role user owning a `WeddingWebsite` (ownership keys on `User.id`, not `Vendor.id` — see `../docs/12-stage-wedding-website.md`'s Ownership decision), so this is a **UI entry-point decision only**, not a backend restriction — a vendor could still reach the flow via a direct URL or a future Telegram conversation, they just have no dashboard link to it.
+**Real deviation from the feature spec, confirmed with the user 2026-09-03**: the spec's own "Feature Entry Points" section lists two web-adjacent entry points — the chatbot and a vendor-dashboard module. The user explicitly confirmed only end users (couples) should get website creation from the web app — no vendor dashboard entry point was built. The backend's ownership model still supports a `VENDOR`-role user owning a `WeddingWebsite` (ownership keys on `User.id`, not `Vendor.id` — see `../backend/12-stage-wedding-website.md`'s Ownership decision), so this is a **UI entry-point decision only**, not a backend restriction — a vendor could still reach the flow via a direct URL or a future Telegram conversation, they just have no dashboard link to it.
 
 ## Included Frontend Arch Phases
 
@@ -12,7 +12,7 @@ Build the public/couple-facing half of the ₹49 Instant Wedding Website product
 
 ## Origin and Numbering
 
-Mirrors the backend's `../docs/12-stage-wedding-website.md` — this feature originates from a standalone feature spec ([`../wedhub_49_wedding_website_feature.md`](../wedhub_49_wedding_website_feature.md), supplied 2026-09-03), not from `product.md` or the 34-screen approved mockup (`../wedhub-frontend/`). **There is no mockup screen for this feature** — every screen in this stage is new UI with no existing visual reference to port from, unlike every prior Frontend Arch Phase. Design should follow the feature spec's own explicit UI/UX guidance (premium-feeling despite the low price, elegant wedding visuals, strong typography, large mobile-friendly buttons, minimal form friction) and this codebase's existing design system/component library — not invent a new visual language from scratch.
+Mirrors the backend's `../backend/12-stage-wedding-website.md` — this feature originates from a standalone feature spec ([`../wedhub_49_wedding_website_feature.md`](../wedhub_49_wedding_website_feature.md), supplied 2026-09-03), not from `product.md` or the 34-screen approved mockup (`../wedhub-frontend/`). **There is no mockup screen for this feature** — every screen in this stage is new UI with no existing visual reference to port from, unlike every prior Frontend Arch Phase. Design should follow the feature spec's own explicit UI/UX guidance (premium-feeling despite the low price, elegant wedding visuals, strong typography, large mobile-friendly buttons, minimal form friction) and this codebase's existing design system/component library — not invent a new visual language from scratch.
 
 ## Product Roadmap Cross-Reference
 
@@ -20,7 +20,7 @@ No existing Product Phase — parallel, standalone scope, same as the backend st
 
 ## Backend Dependency
 
-Backend Arch Phase 26 (`../docs/12-stage-wedding-website.md`) — **hard blocker**, not started as of this file's creation (2026-09-03). Do not begin frontend implementation until Arch Phase 26 has at minimum: draft CRUD, template listing, preview generation/read, Razorpay order-creation + webhook publish, and the published-website read endpoint — re-read that stage file's actual shipped API surface before writing any API client code, per this docs set's standing discipline (never build against an assumed backend shape).
+Backend Arch Phase 26 (`../backend/12-stage-wedding-website.md`) — **hard blocker**, not started as of this file's creation (2026-09-03). Do not begin frontend implementation until Arch Phase 26 has at minimum: draft CRUD, template listing, preview generation/read, Razorpay order-creation + webhook publish, and the published-website read endpoint — re-read that stage file's actual shipped API surface before writing any API client code, per this docs set's standing discipline (never build against an assumed backend shape).
 
 ## Existing Frontend Infrastructure Reused
 

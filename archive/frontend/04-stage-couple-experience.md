@@ -16,7 +16,7 @@ Maps to product.md §2.1 "End-user goals" (all 13 points) and Product Phases 2 (
 
 ## Backend Dependency
 
-Arch Phases 4 (Category/Location Catalog), 5 (Vendor Module), 6 (Media & Portfolio), 7 (Search & Discovery), 8 (Favorites/Shortlists/Comparison), 9 (Enquiries & Leads), 10 (Reviews & Trust), 14 (Notifications) — all ✅ Done per `../docs/11-progress-log.md`. No backend blocker for this entire stage.
+Arch Phases 4 (Category/Location Catalog), 5 (Vendor Module), 6 (Media & Portfolio), 7 (Search & Discovery), 8 (Favorites/Shortlists/Comparison), 9 (Enquiries & Leads), 10 (Reviews & Trust), 14 (Notifications) — all ✅ Done per `../backend/11-progress-log.md`. No backend blocker for this entire stage.
 
 ## Included Mockup Screens
 
@@ -61,7 +61,7 @@ Arch Phases 4 (Category/Location Catalog), 5 (Vendor Module), 6 (Media & Portfol
 - [x] `(couple)/account` — port `couple/profile.html`: wedding details form (`PUT /users/me/wedding-profile`), account details form (`PATCH /users/me`, phone/email read-only per the real backend — no endpoint updates them post-registration), notification preference toggles (`PATCH /users/me`'s `preferences.notifications`, whole-object-replace semantics), logout, deactivate, and delete (anonymize) — all wired to their real, confirmed endpoints
 - [x] `components/shared/CoupleShell.tsx` (already built ahead-of-schedule in Frontend Arch Phase 3) extended with Enquiries/Notifications/Profile nav links and a notification-bell icon — the shared shell called out in this phase's original checklist item was already in place, this phase just completed its nav surface
 
-### Backend additions required for this phase (see `../docs/11-progress-log.md`'s 2026-09-02 addendum)
+### Backend additions required for this phase (see `../backend/11-progress-log.md`'s 2026-09-02 addendum)
 Research at the start of this phase found 3 real gaps: no couple-scoped "list my enquiries" endpoint, no couple-scoped "list my reviews" endpoint, and no review-photo upload path at all (the existing `media` module is deeply vendor-scoped — required `Media.vendorId`, `getOwnedVendorOrThrow`, entitlement checks — none of which fit a couple uploading a review photo). Rather than fake this data or block the phase, added 3 small, additive backend endpoints (`GET /enquiries/mine`, `GET /reviews/mine`, a new `review-media` module + `POST /reviews`'s optional `mediaIds[]`) as a deliberate, user-approved addendum — not a resumption of the paused backend Arch Phase sequence. All three verified live end-to-end (real R2 upload → real worker processing → real approval → real public visibility) before any frontend code was written against them.
 
 See [`11-progress-log.md`](11-progress-log.md#frontend-arch-phase-2--public-discovery) for the full write-up once complete.

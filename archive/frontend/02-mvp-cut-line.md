@@ -1,6 +1,6 @@
 # MVP Cut Line (Frontend)
 
-> Reconciles which of the 34 approved mockup screens (`../wedhub-frontend/`) and which Frontend Arch Phases are MVP vs. deferred, directly against the backend's own MVP decision in [`../docs/02-mvp-cut-line.md`](../docs/02-mvp-cut-line.md). The frontend cannot ship a screen as MVP if the backend surface it depends on is itself post-MVP — that's the primary filter here, not a separate frontend-only judgment call.
+> Reconciles which of the 34 approved mockup screens (`../wedhub-frontend/`) and which Frontend Arch Phases are MVP vs. deferred, directly against the backend's own MVP decision in [`../backend/02-mvp-cut-line.md`](../backend/02-mvp-cut-line.md). The frontend cannot ship a screen as MVP if the backend surface it depends on is itself post-MVP — that's the primary filter here, not a separate frontend-only judgment call.
 
 See [`00-index.md`](00-index.md) for the Frontend Arch Phase numbering convention.
 
@@ -8,7 +8,7 @@ See [`00-index.md`](00-index.md) for the Frontend Arch Phase numbering conventio
 
 ## Governing principle
 
-The backend's reconciled MVP list (`../docs/02-mvp-cut-line.md`, "Final reconciled MVP phase list") already decided this once. The frontend MVP list is **derived**, not re-litigated:
+The backend's reconciled MVP list (`../backend/02-mvp-cut-line.md`, "Final reconciled MVP phase list") already decided this once. The frontend MVP list is **derived**, not re-litigated:
 
 - If a backend Arch Phase is `✅ Full` MVP → the mockup screens depending on it are in scope for frontend MVP.
 - If a backend Arch Phase is `⚠️ Minimal`/`⚠️ Thin slice` MVP (Arch Phase 12 Entitlements, Arch Phase 13 Featured Listings) → the frontend renders whatever the thin backend slice actually returns, not the full mockup vision for that feature. Concretely: the vendor `subscription.html` mockup's plan-gating badges are real (Arch Phase 12 minimal entitlements exist), but Featured Listings' "automatic campaign activation" and "vendor self-purchase flow" have no backend to call — the frontend does not build UI for flows the backend doesn't support yet.
@@ -28,7 +28,7 @@ The backend's reconciled MVP list (`../docs/02-mvp-cut-line.md`, "Final reconcil
 | 7 | Vendor Monetization | Arch Phase 11 ✅, 12 ⚠️, 13 ⚠️ | ⚠️ Full for subscription display/upgrade; thin for entitlement-gated UI limits; Featured Listings UI is admin-CRUD-only (matches backend thin slice) |
 | 8 | Admin Core | Arch Phase 16 ✅ | ✅ Full |
 | 9 | Admin Catalog & Moderation | Arch Phase 4,9,10,16 ✅ | ✅ Full |
-| 10 | Admin Monetization, Governance & Audit | Arch Phase 11,12,13,16 ✅ | ⚠️ Same thin-slice caveat as Frontend Arch Phase 7 for Subscriptions/Featured Listings tabs; Roles & Permissions ships as explicitly **read-only** (matches the backend's real state — see `../docs/08-stage-telegram-and-admin.md`) |
+| 10 | Admin Monetization, Governance & Audit | Arch Phase 11,12,13,16 ✅ | ⚠️ Same thin-slice caveat as Frontend Arch Phase 7 for Subscriptions/Featured Listings tabs; Roles & Permissions ships as explicitly **read-only** (matches the backend's real state — see `../backend/08-stage-telegram-and-admin.md`) |
 | 11 | Telegram Surfacing, SEO & Hardening | Arch Phase 15 ✅, 17 ⬜ | ⚠️ Telegram deep-link surfacing is MVP (backend ready); SEO page generation is blocked until backend Arch Phase 17 ships — see [Open Question 1](10-risks-and-open-questions.md#1-frontend-arch-phase-11-partially-blocked-on-backend-arch-phase-17) |
 
 ## Mockup screens explicitly deferred or thinned at MVP
@@ -47,7 +47,7 @@ Cross-referencing the 34 screens against the table above:
 
 ## What ships post-MVP (frontend)
 
-Directly inherited from `../docs/02-mvp-cut-line.md`'s post-MVP list, translated to frontend terms — no frontend screens exist yet for any of these, so there is nothing to defer beyond simply not building them:
+Directly inherited from `../backend/02-mvp-cut-line.md`'s post-MVP list, translated to frontend terms — no frontend screens exist yet for any of these, so there is nothing to defer beyond simply not building them:
 
 - Advanced analytics dashboards beyond the metrics the backend computes today
 - WhatsApp-based discovery UI
@@ -61,7 +61,7 @@ Directly inherited from `../docs/02-mvp-cut-line.md`'s post-MVP list, translated
 
 ## Definition of a Successful Frontend MVP
 
-Directly mapped from `../docs/02-mvp-cut-line.md`'s product.md §71 checklist — the frontend-observable half of each point:
+Directly mapped from `../backend/02-mvp-cut-line.md`'s product.md §71 checklist — the frontend-observable half of each point:
 
 1. Vendors can register. → `auth/signup.html` vendor path wired (Frontend Arch Phase 1)
 2. Admin can create vendors. → `admin/vendor-create.html` wired (Frontend Arch Phase 8)
@@ -81,4 +81,4 @@ Directly mapped from `../docs/02-mvp-cut-line.md`'s product.md §71 checklist �
 16. SEO pages can generate organic traffic. → **not achievable at frontend MVP** — blocked on backend Arch Phase 17, tracked as the one open gap against this checklist (see Open Question 1)
 17. The platform can scale horizontally without architectural rewrites. → satisfied by Next.js's stateless-by-default rendering model + the single typed API client layer; no frontend-specific rework anticipated
 
-Point 16 is the only checklist item this frontend plan cannot satisfy at MVP through no fault of its own — it is exactly the item the backend's own pause-point decision (`../docs/11-progress-log.md`, "Paused here, 2026-09-02") anticipated when it named Arch Phase 17 as the next backend phase to resume.
+Point 16 is the only checklist item this frontend plan cannot satisfy at MVP through no fault of its own — it is exactly the item the backend's own pause-point decision (`../backend/11-progress-log.md`, "Paused here, 2026-09-02") anticipated when it named Arch Phase 17 as the next backend phase to resume.

@@ -1,6 +1,6 @@
 # Cross-Cutting Reference (Frontend)
 
-> Rules and standards referenced by every stage. Changes here apply platform-wide. **Do not duplicate these into stage files** — link back to this doc instead. Mirrors [`../docs/01-reference-cross-cutting.md`](../docs/01-reference-cross-cutting.md)'s role for the backend; read that file too, since the backend's API contract, error format, and auth model are the ones this frontend consumes as-is, not reinvented.
+> Rules and standards referenced by every stage. Changes here apply platform-wide. **Do not duplicate these into stage files** — link back to this doc instead. Mirrors [`../backend/01-reference-cross-cutting.md`](../backend/01-reference-cross-cutting.md)'s role for the backend; read that file too, since the backend's API contract, error format, and auth model are the ones this frontend consumes as-is, not reinvented.
 
 See [`00-index.md`](00-index.md) for the Frontend Arch Phase / Arch Phase / Product Phase numbering convention.
 
@@ -57,7 +57,7 @@ For every individual screen/route:
 
 ## Verification standard
 
-Same non-negotiable as the backend build (`../docs/01-reference-cross-cutting.md` implies this throughout, stated explicitly here): **never claim a screen "works" without actually running it against the live backend** (`npm run dev` in `wedhub-backend/`, real Postgres/Redis, real seeded data) and observing the real response in the browser/network tab. Screens that only compile, or that only render against hand-written mock JSON, are not verified. If the backend has a genuine gap for a screen (an endpoint that doesn't exist yet, e.g. admin subscription listing per [Open Question 2](10-risks-and-open-questions.md#2-admin-subscriptions-screen-has-no-backing-list-endpoint)), say so explicitly in that phase's progress-log entry rather than silently shipping against invented data.
+Same non-negotiable as the backend build (`../backend/01-reference-cross-cutting.md` implies this throughout, stated explicitly here): **never claim a screen "works" without actually running it against the live backend** (`npm run dev` in `wedhub-backend/`, real Postgres/Redis, real seeded data) and observing the real response in the browser/network tab. Screens that only compile, or that only render against hand-written mock JSON, are not verified. If the backend has a genuine gap for a screen (an endpoint that doesn't exist yet, e.g. admin subscription listing per [Open Question 2](10-risks-and-open-questions.md#2-admin-subscriptions-screen-has-no-backing-list-endpoint)), say so explicitly in that phase's progress-log entry rather than silently shipping against invented data.
 
 ### Mandatory: headed Playwright verification before marking any phase done
 
@@ -104,10 +104,10 @@ The approved mockup (`../wedhub-frontend/assets/css/tokens.css` + `base.css`) is
 ## API integration standard
 
 - Base URL from `NEXT_PUBLIC_API_URL` (or a server-only `API_URL` for Server Component fetches that don't need to run in the browser) — never hardcode `http://localhost:4000`.
-- Every response envelope is `{ success, data, meta }` or `{ success: false, error: { code, message, details } }`, exactly as defined in `../docs/01-reference-cross-cutting.md`'s "API design standards" — the typed API client layer (`lib/api/`) unwraps this once, centrally, so components never pattern-match on `success` themselves.
-- Auth: the backend issues short-lived JWT access tokens + rotating opaque refresh tokens (`../docs/01-reference-cross-cutting.md`, Arch Phase 2). The frontend's session strategy (cookie-based vs. client-held token) is decided once in Frontend Arch Phase 1 and documented there — do not mix strategies across stages.
+- Every response envelope is `{ success, data, meta }` or `{ success: false, error: { code, message, details } }`, exactly as defined in `../backend/01-reference-cross-cutting.md`'s "API design standards" — the typed API client layer (`lib/api/`) unwraps this once, centrally, so components never pattern-match on `success` themselves.
+- Auth: the backend issues short-lived JWT access tokens + rotating opaque refresh tokens (`../backend/01-reference-cross-cutting.md`, Arch Phase 2). The frontend's session strategy (cookie-based vs. client-held token) is decided once in Frontend Arch Phase 1 and documented there — do not mix strategies across stages.
 - Pagination: consume `meta.page/limit/total/totalPages` as-is; do not reimplement pagination math client-side beyond what's needed to render controls.
-- Never trust client-side role/plan/price state for anything the backend enforces — mirrors backend Coding Rule 8 and the "Never trust" list in `../docs/01-reference-cross-cutting.md` (frontend roles, frontend prices, frontend subscription state, frontend payment status). The frontend may optimistically render, but the backend response after a mutation is the actual truth to reconcile against.
+- Never trust client-side role/plan/price state for anything the backend enforces — mirrors backend Coding Rule 8 and the "Never trust" list in `../backend/01-reference-cross-cutting.md` (frontend roles, frontend prices, frontend subscription state, frontend payment status). The frontend may optimistically render, but the backend response after a mutation is the actual truth to reconcile against.
 
 ## Accessibility & performance baseline
 

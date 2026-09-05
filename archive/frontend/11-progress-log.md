@@ -1,6 +1,6 @@
 # Progress Log (Frontend)
 
-> Running record of what has actually shipped on the frontend. Updated **after** each Frontend Arch Phase completes — not in advance. Mirrors [`../docs/11-progress-log.md`](../docs/11-progress-log.md)'s role for the backend. See [`00-index.md`](00-index.md) for the numbering convention and [`01-reference-cross-cutting.md`](01-reference-cross-cutting.md) for the Definition of Done every phase below must satisfy before being marked complete.
+> Running record of what has actually shipped on the frontend. Updated **after** each Frontend Arch Phase completes — not in advance. Mirrors [`../backend/11-progress-log.md`](../backend/11-progress-log.md)'s role for the backend. See [`00-index.md`](00-index.md) for the numbering convention and [`01-reference-cross-cutting.md`](01-reference-cross-cutting.md) for the Definition of Done every phase below must satisfy before being marked complete.
 
 **Convention:** when a Frontend Arch Phase finishes, (1) flip its row in the status table below from `⬜ Not Started` to `✅ Done` with the date, (2) fill in that phase's section further down with real routes/components/API-integration/flow-diagram — replacing the placeholder text, never leaving it half-filled, and (3) tick every task checkbox in the corresponding stage file (`03`–`07`) for that phase.
 
@@ -314,7 +314,7 @@ Test-authoring mistakes (not app bugs), for the record: an early version of the 
 
 A logged-in couple can now track every enquiry they've sent through its real per-vendor status, write a real review (with real R2-uploaded photos) once a vendor marks a lead WON, see their real notifications, and manage their wedding/account details and notification preferences — the full authenticated couple-account surface product.md's discovery/lead-engine loop depends on.
 
-### Backend additions (required before this phase could be built against real data — see `../docs/11-progress-log.md`'s 2026-09-02 addendum for the full backend-side write-up)
+### Backend additions (required before this phase could be built against real data — see `../backend/11-progress-log.md`'s 2026-09-02 addendum for the full backend-side write-up)
 
 - `GET /enquiries/mine` — couple-scoped, paginated, joins `Enquiry` → fanned-out `Lead[]` → `vendor` summary.
 - `GET /reviews/mine` — couple-scoped, paginated, with vendor summary + attached photos.
@@ -1101,7 +1101,7 @@ Vendors get a full-featured GST billing interface inside the vendor portal:
 ## Frontend Arch Phase 16 — Vendor Marketplace Online Payments, Route Settlements & Admin Finance
 
 **Status:** ✅ Done — 2026-09-05  
-**Stage:** [Stage 13 — Vendor Marketplace Payment Architecture](../docs/18-vendor-store-payment-architecture-plan.md)
+**Stage:** [Stage 13 — Vendor Marketplace Payment Architecture](../backend/17-vendor-store-payment-architecture-plan.md)
 
 ### What this unlocks
 

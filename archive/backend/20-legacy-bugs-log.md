@@ -1,11 +1,10 @@
-# WedHub — Verified Bug List
+# WedHub — Legacy Bug Log (v1 build phase)
 
-> Source: `docs/api-frontend-gap-analysis.md` (written by another agent). Every item below was
-> independently re-verified against the real running code before being listed here — several claims
-> in that doc turned out to be stale or fabricated and are **not** included (see "Rejected findings"
-> at the bottom). Only confirmed, real defects are tracked as tasks.
+> **Archived 2026-09-05** as part of the v1 build-phase close-out. This is historical record from the active-build period — see `/PENDING-WORK.md` at the repo root for current status. Originally two files: `bugs.md` (the verified/actioned list below) and `api-frontend-gap-analysis.md` (the raw source it was checked against, now condensed into §3 below for provenance).
 >
-> Created: 2026-09-03
+> Every item in §1 was independently re-verified against the real running code before being tracked — several claims in the original gap-analysis source turned out to be stale or fabricated and were rejected (see §2). Only confirmed, real defects were tracked as tasks; all were fixed.
+>
+> Created: 2026-09-03. Merged: 2026-09-05.
 
 ## Status legend
 - [ ] Not started
@@ -13,7 +12,7 @@
 
 ---
 
-## Tasks
+## 1. Tasks (all fixed)
 
 ### 1. [x] Admin lead search filter is validated but silently dropped
 **Where**: `wedhub-backend/src/modules/leads/lead.controller.ts` (`listAllLeadsAdmin`, ~line 66-72), `lead.service.ts` (`listAllLeadsAdmin`, ~line 92-94), `lead.repository.ts` (`findAllLeadsAdmin`/`countAllLeadsAdmin`, ~line 87-101).
@@ -30,7 +29,6 @@
 ### 3. [x] Notification preference toggles write to the wrong table — have zero effect on real notifications
 **Where**: `wedhub-frontend-app/app/(couple)/account/AccountForms.tsx` (`NotificationPreferencesForm.persist`, ~line 156-164) calls `updateMyProfile({ preferences: { notifications: next, ... } })` → backend `users.schema.ts` `updateProfileSchema.preferences` → a JSON blob on `UserProfile`. Meanwhile `wedhub-backend/src/modules/notifications/notification.service.ts` (`resolveChannels`, ~line 16-24) reads from the dedicated `notification_preferences` table (`schema.prisma:1264-1277`, keyed by `userId + eventType + channel`) via `notificationRepository.findPreferences`.
 **Bug**: These are two entirely disconnected storage paths. A couple toggling "email notifications off" in their account page updates a JSON field nobody reads; the actual send logic checks a completely different table that's never written by this UI. Toggling preferences silently does nothing.
-**Note**: Per the existing gap-analysis doc, Phase 7 already built the correct client (`notification-preferences-client.ts`) for the vendor settings page, which presumably does hit the right endpoint (`PUT /notifications/me/preferences`) — confirm this before reusing it.
 **Fix**: Point `AccountForms.tsx`'s couple notification toggles at the same `PUT /notifications/me/preferences` endpoint/client the vendor settings page already uses, instead of `updateMyProfile()`. Remove the dead `preferences.notifications` JSON write once migrated (or leave it and just stop relying on it — confirm nothing else reads it first).
 **Fixed 2026-09-03**: `NotificationPreferencesForm` now calls `setNotificationPreference()` (`PUT /notifications/me/preferences`), same as the vendor settings page. Per user decision, the old SMS and marketing-email toggles were removed rather than rewired — neither has a real backing API (no `SMS` channel exists at all; no marketing-email event type exists). Only "Email notifications" remains, now wired to the real `LEAD_STATUS_UPDATED`/`EMAIL` preference (see #4). The old `preferences.notifications` JSON field on `UserProfile` is left alone (harmless, unused, mirrors a real backend field shape) since nothing else reads it.
 
@@ -47,19 +45,37 @@
 **Fixed 2026-09-03.**
 
 ### 6. [x] Broader pattern: most forms don't mirror backend Zod length/bounds limits client-side
-**Where**: confirmed via repo-wide grep — only `ProfileEditor.tsx` uses any `maxLength` attribute anywhere in the frontend; every other form flagged in the gap-analysis doc's Section 3 table has zero client-side length/bounds enforcement matching its backend schema (enquiry contact name/phone/message, review content, vendor tags/languages/team size/travel policy/address, package inclusions/description, wedding guest count, partner name, lead status reason, suspension reason fields, category/location name & description).
+**Where**: confirmed via repo-wide grep — only `ProfileEditor.tsx` uses any `maxLength` attribute anywhere in the frontend; every other form flagged in the original gap-analysis's §3 table (see below) had zero client-side length/bounds enforcement matching its backend schema (enquiry contact name/phone/message, review content, vendor tags/languages/team size/travel policy/address, package inclusions/description, wedding guest count, partner name, lead status reason, suspension reason fields, category/location name & description).
 **Bug**: Not a functional break — the backend still rejects invalid input with a 400 — but every one of these is a bad UX paper cut: the user fills a long form, submits, and only then learns a field was too long, with no early client-side signal.
-**Fix**: Lower priority / do last. Go through the specific fields listed in `docs/api-frontend-gap-analysis.md` Section 3 and add matching `maxLength`/`min`/`max` attributes (and for the two `Array.max(N)` cases — tags/languages/inclusions — client-side count validation before submit, since HTML has no native array-length constraint).
 **Fixed 2026-09-03**: Added matching `maxLength`/`min`/`max` to: `EnquiryModal.tsx` (contact name 200, phone 6–20, message 2000, plus `.trim()` before submit so whitespace-only no longer bypasses `required`), `ReviewForm.tsx` (content 3000), `ProfileEditor.tsx` (address 300, travel policy 500, team size max 10000, plus a pre-submit guard on tags/languages — 20 items × 50 chars each — that blocks the whole multi-request save fan-out before it starts rather than failing partway through), `PackageModal.tsx` (description 2000, inclusions capped at 50 items × 200 chars each, enforced at the "+ Add item" step), `AccountForms.tsx` (partner name 200, guest count max 100000), `VendorDetailBoard.tsx` (suspension reason 1000), `UserDetailBoard.tsx` (suspension reason 500 — this one uses a native `prompt()` with no `maxLength` support, so it's enforced as a pre-submit length check instead), `CatalogBoard.tsx` (category name 150, starting price label 60), `LocationTree.tsx` (location name 150, both country and child-node inputs). Also added the missing `reason` UI to the vendor leads board (`LeadsBoard.tsx`) — previously the field existed on the type and backend but nothing in the vendor UI ever collected or sent it — and a `maxLength={500}` to the admin lead detail reason input, which already worked correctly.
 
 ---
 
-## Rejected findings (from the source doc — verified FALSE, not real)
+## 2. Rejected findings (from the original gap-analysis source — verified FALSE, not real)
 
-These claims in `docs/api-frontend-gap-analysis.md` were checked against the current code and do
-**not** describe a real bug. Not tracked as tasks. Worth fixing the source doc's accuracy at some
-point, but not urgent.
+These claims in the original gap-analysis were checked against the current code and did **not** describe a real bug. Never tracked as tasks.
 
-- **"Login Identifier" (Section 3)** — claimed `LoginForm.tsx` uses `<Input type="email" required />`, forcing email-only format and blocking valid phone logins. **False**: `LoginForm.tsx:52-59` actually uses `type="text"` with placeholder "Email or phone" — there is no `type="email"` anywhere in the file. Phone login works fine.
-- **"Review Photo Types" (Section 3)** — claimed frontend uses `accept="image/*"`, allowing `.gif`/`.bmp`/`.svg`/`.heic`/`.tiff` uploads that the backend then rejects. **False**: `ReviewForm.tsx:156` already uses `accept="image/jpeg,image/png,image/webp"` — an exact match to the backend's `IMAGE_MIME_TYPES` allow-list in `review-media.schema.ts:3`.
-- **"5-Request Save Fan-Out" (Section 4.2)** — the "exactly 5 requests" framing is imprecise (the real count is data-dependent — 3 fixed calls plus a variable-length loop of service attach/detach calls, so it's rarely exactly 5). The underlying claim (sequential, no rollback, but each step does surface its own error) is real and is tracked as a lower-priority note under item 6 rather than its own task, since partial-save-with-error-shown is a real but low-severity gap, not silent data corruption.
+- **"Login Identifier" (§3)** — claimed `LoginForm.tsx` uses `<Input type="email" required />`, forcing email-only format and blocking valid phone logins. **False**: `LoginForm.tsx:52-59` actually uses `type="text"` with placeholder "Email or phone" — there is no `type="email"` anywhere in the file. Phone login works fine.
+- **"Review Photo Types" (§3)** — claimed frontend uses `accept="image/*"`, allowing `.gif`/`.bmp`/`.svg`/`.heic`/`.tiff` uploads that the backend then rejects. **False**: `ReviewForm.tsx:156` already uses `accept="image/jpeg,image/png,image/webp"` — an exact match to the backend's `IMAGE_MIME_TYPES` allow-list in `review-media.schema.ts:3`.
+- **"5-Request Save Fan-Out" (§4.2)** — the "exactly 5 requests" framing is imprecise (the real count is data-dependent — 3 fixed calls plus a variable-length loop of service attach/detach calls, so it's rarely exactly 5). The underlying claim (sequential, no rollback, but each step does surface its own error) is real and was tracked as a lower-priority note under item 6 above rather than its own task, since partial-save-with-error-shown is a real but low-severity gap, not silent data corruption.
+
+---
+
+## 3. Original gap-analysis source (condensed, for provenance)
+
+The following is a condensed version of the original `api-frontend-gap-analysis.md` (dated 2026-09-03, "incorporates Frontend Arch Phases 0 through 10 and the 2026-09-03 homepage redesign") — the raw ask this bug log's §1 tasks were verified against. **This is a point-in-time snapshot** — some items below were resolved as part of the tasks above; others describe intentional scope gaps (unbuilt features, not bugs) that may since have been built in later phases (check `/PENDING-WORK.md` and the archived progress logs for current state rather than trusting this section as live).
+
+### Endpoint & parameter gaps noted at the time (by domain)
+- **Discovery/Search**: `serviceAreaId` and dynamic `attr[<attributeId>]` filters accepted by the backend but not exposed in the search sidebar UI; `GET /search/vendors` didn't join `Review`/`Location` (rating/city omitted from cards to avoid N+1); `GET /featured-listings` returned only `{id, businessName, slug}` requiring a frontend cross-query to `/search/vendors` for full card data (**this specific gap was later fixed 2026-09-05** — see the archived review-feedback tasklist, featured-listings now returns full card data directly).
+- **Vendor self-service**: omitted profile fields (`latitude`/`longitude`/`currency`/`availabilityNotes`/`seoTitle`/`seoDescription`/`canonicalUrl`); `socialLinks` only rendering `instagram`/`facebook` despite backend accepting any key; service-attach `note` field with no UI; "5-Request Save Fan-Out" on profile save (see Rejected Findings above for accuracy correction).
+- **Shortlists/Comparison**: multi-board creation/renaming/deletion/partner-sharing 0% exposed (hardcoded to one `/favorites/items` board); item notes unexposed; Prisma Decimal string-serialization requiring client-side coercion.
+- **Enquiries/Leads**: `preferredContactMethod`/`weddingLocation`/`serviceId` omitted from the enquiry modal; multi-vendor batch enquiry endpoint unconsumed; lead-status `reason` field gap (**fixed as part of task 6 above**).
+- **Reviews**: `title`/`eventDate` fields uncollected; review editing/reporting UI unbuilt; no private vendor-scoped reviews endpoint (vendor dashboard reads the public endpoint, so pending/flagged reviews are invisible to the vendor).
+- **Media/Albums**: the entire Album management system 0% exposed in `PortfolioManager.tsx`; caption/tag editing unbuilt.
+- **Monetization**: Razorpay checkout needs real keys (dev shows a placeholder message); yearly billing plans seeded but UI only renders monthly; only 3 of 8 plan entitlement keys enforced.
+- **Admin**: scalar-only (unjoined) responses on some admin write endpoints requiring frontend-side state merging; admin leads search `search` param ignored by backend SQL (**fixed as task 1 above**); an "Active Subscriptions" list shown in the mockup with no backing list endpoint (only refund/coupon mutations existed); RBAC tables unused by `authorize()` (**fixed as task 2 above**).
+
+### Unimplemented modules noted at the time (later status, if known, in parentheses)
+1. Telegram bot account linking + SEO landing pages/sitemap/structured data (Frontend Arch Phase 11 — **partially done later**: SEO shipped 2026-09-04, Telegram surfacing and production hardening still not started as of the last status check — see `/PENDING-WORK.md`).
+2. CMS/editorial content for the 2026-09-03 homepage redesign sections, then hardcoded with `TODO(backend)` comments (**fixed later**: real Popular Searches/Blog/Wedding Stories/Gallery models shipped backend Arch Phase 17, 2026-09-04).
+3. Vendor Claim flow (`/vendors/claim/:token/*`) — status at time of last check not confirmed in this archive; verify current state before assuming either way.

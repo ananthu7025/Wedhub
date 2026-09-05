@@ -1,7 +1,7 @@
 # Stage 13 / Arch Phase 30 — Vendor Marketplace Payment Architecture (Razorpay Route)
 
 > **Implementation Plan & Architectural Blueprint**
-> Sourced from an informal root-level brief (formerly `storefrondupdates.md`, folded into this file's "Implementation Log" section below and then deleted — see that section for the full self-reported build log), `docs/15-stage-vendor-store.md`, `docs/16-vendor-store-plan-review.md`, and `docs/01-reference-cross-cutting.md`.
+> Sourced from an informal root-level brief (formerly `storefrondupdates.md`, folded into this file's "Implementation Log" section below and then deleted — see that section for the full self-reported build log), [`15-stage-vendor-store.md`](15-stage-vendor-store.md) (including its merged-in plan review, §5), and [`01-reference-cross-cutting.md`](01-reference-cross-cutting.md).
 > Codebase Standards: Zero direct-binary uploads (Media pipeline only), atomic sequential counters inside `$transaction`, strict rate limiting on public endpoints, thin controllers, services owning business workflows, repositories doing queries only, and multi-tenant security isolation.
 
 ---
@@ -445,7 +445,7 @@ New enums: `StorePaymentStatus` (`CREATED`/`PENDING`/`AUTHORIZED`/`CAPTURED`/`FA
 | `GET` | `/api/v1/admin/store-payments/orders` | Admin | Global marketplace orders ledger |
 | `GET` | `/api/v1/admin/store-payments/metrics` | Admin | Global GMV, settlements, and commission metrics |
 
-**Known discrepancy (confirmed 2026-09-05, see `docs/17-review-feedback-tasklist-backend.md`-adjacent audit):** the frontend actually calls `GET /admin/store-payments/metrics`, but the real registered backend route is `/overview` (`admin-store-payments.routes.ts`) with a differently-shaped response — this endpoint is currently broken, contrary to the table above. Tracked as a fix-pending item, not yet corrected.
+**Historical note — discrepancy since fixed:** this section originally documented a table entry claiming `GET /admin/store-payments/metrics` as a real route; it was not — the actually-registered route is `/overview` (`admin-store-payments.routes.ts`), with a differently-shaped response than the frontend originally assumed. This was found during a 2026-09-05 audit and **fixed the same day**: the frontend now calls `/overview` and uses its real field names (`totalRefundsAmount`/`activeAccountsCount`/`totalAccounts`/`totalPlatformCommission`) — see the "Public-data caching / payment-bug fixes" entries in `18-session-handoff-2026-09-05.md` and `16-review-feedback-tasklist-backend.md` for the fix detail. The table row above (`/admin/store-payments/metrics`) is left as originally written for historical accuracy — the real route is `/overview`, not `/metrics`.
 
 ### 5. Frontend pages/components claimed created/modified
 
