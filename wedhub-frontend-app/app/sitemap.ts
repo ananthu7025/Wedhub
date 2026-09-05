@@ -4,15 +4,25 @@ import { listPublishedWeddingWebsiteSlugs } from "@/lib/api/wedding-website";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-// Every published blog post's slug, for the sitemap entries below — a
-// single high-limit call rather than a new dedicated endpoint, same as
-// how listSeoCombinations/listPublishedWeddingWebsiteSlugs are each a
-// single full-inventory read. 1000 covers the realistic post count for
-// the foreseeable future; revisit with real pagination if the blog ever
-// approaches that scale.
+// Every published blog post's slug, for the sitemap entries below —
+// paginated at the backend's max allowed limit of 100 per request.
+// Safe fallback with try/catch ensures prerender does not fail the build.
 async function listAllPublishedBlogSlugs() {
-  const { data: posts } = await listBlogPosts({ page: 1, limit: 1000 });
-  return posts;
+  try {
+    const firstPage = await listBlogPosts({ page: 1, limit: 100 });
+    const posts = [...(firstPage.data ?? [])];
+    const totalPages = firstPage.meta?.totalPages ?? 1;
+
+    for (let page = 2; page <= totalPages; page++) {
+      const nextPage = await listBlogPosts({ page, limit: 100 });
+      posts.push(...(nextPage.data ?? []));
+    }
+
+    return posts;
+  } catch (error) {
+    console.error("Failed to fetch blog posts for sitemap:", error);
+    return [];
+  }
 }
 
 // Single sitemap for now — real vendor/category/city inventory is small
@@ -20,11 +30,20 @@ async function listAllPublishedBlogSlugs() {
 // generateSitemaps() (see product.md §44 "segmented if necessary") once
 // combinations grow large enough to need it.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [{ data: combinations }, { data: weddingWebsites }, blogPosts] = await Promise.all([
-    listSeoCombinations(),
-    listPublishedWeddingWebsiteSlugs(),
+  const [combinationsRes, weddingWebsitesRes, blogPosts] = await Promise.all([
+    listSeoCombinations().catch((err) => {
+      console.error("Failed to fetch SEO combinations for sitemap:", err);
+      return { data: [] };
+    }),
+    listPublishedWeddingWebsiteSlugs().catch((err) => {
+      console.error("Failed to fetch wedding websites for sitemap:", err);
+      return { data: [] };
+    }),
     listAllPublishedBlogSlugs(),
   ]);
+
+  const combinations = combinationsRes.data ?? [];
+  const weddingWebsites = weddingWebsitesRes.data ?? [];
 
   const staticEntries: MetadataRoute.Sitemap = [
     { url: SITE_URL, changeFrequency: "daily", priority: 1 },
