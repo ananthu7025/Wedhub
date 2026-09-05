@@ -113,11 +113,11 @@ export function DashboardInteractiveSections({
   );
 
   return (
-    <div className="grid grid-cols-12 gap-5">
+    <div className="grid grid-cols-12 gap-5 min-w-0">
       {/* Left Column (~65%) */}
-      <div className="col-span-12 flex flex-col gap-5 lg:col-span-8">
+      <div className="col-span-12 flex min-w-0 flex-col gap-5 lg:col-span-8">
         {/* Card 1: Leads & Inquiries Table */}
-        <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm">
           {/* Card Header with Tabs & View All */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -225,7 +225,7 @@ export function DashboardInteractiveSections({
         </div>
 
         {/* Card 2: Manage Prospects & Visibility */}
-        <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-surface-input text-text-dark">
@@ -350,9 +350,9 @@ export function DashboardInteractiveSections({
       </div>
 
       {/* Right Column (~35%) */}
-      <div className="col-span-12 flex flex-col gap-5 lg:col-span-4">
+      <div className="col-span-12 flex min-w-0 flex-col gap-5 lg:col-span-4">
         {/* Recent Activity Card */}
-        <div className="rounded-2xl border border-border bg-white p-5 shadow-sm">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm">
           {/* Tabs */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">

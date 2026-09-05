@@ -146,7 +146,7 @@ export default async function VendorDashboardPage() {
         {/* Top 4 Hero Metric Cards with Sparklines */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {/* Card 1: Total Customer Views */}
-          <div className="flex flex-col justify-between rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
             <div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -174,7 +174,7 @@ export default async function VendorDashboardPage() {
           </div>
 
           {/* Card 2: WhatsApp Inquiries */}
-          <div className="flex flex-col justify-between rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
             <div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -203,7 +203,7 @@ export default async function VendorDashboardPage() {
           </div>
 
           {/* Card 3: Inquiries Received */}
-          <div className="flex flex-col justify-between rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
             <div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -235,7 +235,7 @@ export default async function VendorDashboardPage() {
           </div>
 
           {/* Card 4: Conversion Rate */}
-          <div className="flex flex-col justify-between rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
             <div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -261,33 +261,33 @@ export default async function VendorDashboardPage() {
 
         {/* Secondary KPI Bar (Canonical Design Tokens) */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <div className="rounded-xl border border-border bg-white p-3.5 shadow-sm">
-            <p className="text-[11px] font-semibold text-text-muted">Avg. Response Time</p>
-            <p className="mt-1 text-base font-bold text-text-dark">
+          <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-white p-3.5 shadow-sm">
+            <p className="truncate text-[11px] font-semibold text-text-muted">Avg. Response Time</p>
+            <p className="mt-1 truncate text-base font-bold text-text-dark">
               {analytics ? formatResponseTime(analytics.averageResponseTimeMs) : "No data yet"}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-white p-3.5 shadow-sm">
-            <p className="text-[11px] font-semibold text-text-muted">Response Rate</p>
-            <p className="mt-1 text-base font-bold text-text-dark">
+          <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-white p-3.5 shadow-sm">
+            <p className="truncate text-[11px] font-semibold text-text-muted">Response Rate</p>
+            <p className="mt-1 truncate text-base font-bold text-text-dark">
               {analytics ? formatPercent(analytics.responseRate) : "0%"}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-white p-3.5 shadow-sm">
-            <p className="text-[11px] font-semibold text-text-muted">Total Leads ({windowDays}d)</p>
-            <p className="mt-1 text-base font-bold text-text-dark">
+          <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-white p-3.5 shadow-sm">
+            <p className="truncate text-[11px] font-semibold text-text-muted">Total Leads ({windowDays}d)</p>
+            <p className="mt-1 truncate text-base font-bold text-text-dark">
               {analytics?.leads ? analytics.leads.toLocaleString("en-IN") : "0"}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-white p-3.5 shadow-sm">
-            <p className="text-[11px] font-semibold text-text-muted">Impressions ({windowDays}d)</p>
-            <p className="mt-1 text-base font-bold text-text-dark">
+          <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-white p-3.5 shadow-sm">
+            <p className="truncate text-[11px] font-semibold text-text-muted">Impressions ({windowDays}d)</p>
+            <p className="mt-1 truncate text-base font-bold text-text-dark">
               {analytics?.impressions ? analytics.impressions.toLocaleString("en-IN") : "0"}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-white p-3.5 shadow-sm col-span-2 sm:col-span-1">
-            <p className="text-[11px] font-semibold text-text-muted">Approved Reviews</p>
-            <p className="mt-1 text-base font-bold text-text-dark">
+          <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-white p-3.5 shadow-sm col-span-2 sm:col-span-1">
+            <p className="truncate text-[11px] font-semibold text-text-muted">Approved Reviews</p>
+            <p className="mt-1 truncate text-base font-bold text-text-dark">
               {analytics?.reviews ? `${analytics.reviews} verified` : "0 verified"}
             </p>
           </div>

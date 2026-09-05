@@ -75,7 +75,7 @@ export function DashboardSparkline({ color, dataPoints, className = "" }: Sparkl
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      className={`h-12 w-28 overflow-visible sm:h-14 sm:w-36 ${className}`}
+      className={`h-12 w-28 overflow-hidden sm:h-14 sm:w-36 ${className}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >

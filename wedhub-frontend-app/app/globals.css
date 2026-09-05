@@ -103,6 +103,12 @@
   --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   background-color: var(--color-surface-page);
   color: var(--color-text-dark);

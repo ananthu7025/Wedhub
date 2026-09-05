@@ -118,7 +118,7 @@ export async function VendorShell({
   ]);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden">
       <aside className="flex w-[240px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
         <BrandLogo variant="dark" href="/vendor/dashboard" className="mb-5 px-1" />
 
@@ -142,7 +142,7 @@ export async function VendorShell({
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         <header className="flex h-16 items-center justify-end gap-3 border-b border-border bg-white px-6">
           {resolvedSlug && (
             <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
@@ -167,7 +167,7 @@ export async function VendorShell({
             {initials}
           </div>
         </header>
-        <main className="flex-1 bg-surface-page p-6">{children}</main>
+        <main className="flex-1 min-w-0 bg-surface-page p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );
