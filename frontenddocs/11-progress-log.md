@@ -24,7 +24,7 @@
 | 11 | Telegram Surfacing, SEO & Hardening | [Stage 5](07-stage-growth-and-hardening.md) | 🟡 In Progress (11b done 2026-09-03; 11a, 11c not started) | — |
 | 12 | ₹49 Instant Wedding Website | [Stage 6](08-stage-wedding-website.md) | ⬜ Not Started (blocked on backend Arch Phase 26) | — |
 | 13 | Vendor GST Invoicing & Billing | [Stage 7](09-stage-vendor-invoices.md) | ✅ Done | 2026-09-04 |
-| 14 | Standalone Vendor-First Digital Portfolio & WhatsApp Share | [Stage 8](10-stage-vendor-portfolio.md) | ✅ Done | 2026-09-04 |
+| 14 | Standalone Vendor-First Digital Portfolio & WhatsApp Share | [Stage 8](14-stage-vendor-portfolio.md) | ✅ Done | 2026-09-04 |
 | 15 | Category-Gated Vendor Mini-Store & Direct Commerce Engine | [Stage 12](12-stage-vendor-store.md) | ✅ Done | 2026-09-04 |
 | 16 | Vendor Marketplace Payments & Route Settlements | [Stage 13](18-vendor-store-payment-architecture-plan.md) | ✅ Done | 2026-09-05 |
 
@@ -979,7 +979,7 @@ Vendors get a full-featured GST billing interface inside the vendor portal:
 ## Frontend Arch Phase 14 — Standalone Vendor-First Digital Portfolio & 1-Click WhatsApp Direct Connect
 
 **Status:** ✅ Done — 2026-09-04  
-**Stage:** [Stage 8 — Standalone Vendor-First Digital Portfolio](10-stage-vendor-portfolio.md)
+**Stage:** [Stage 8 — Standalone Vendor-First Digital Portfolio](14-stage-vendor-portfolio.md)
 
 ### What this unlocks
 
@@ -1022,7 +1022,7 @@ Vendors get a full-featured GST billing interface inside the vendor portal:
 - `wedhub-frontend-app/components/vendor/SharePortfolioButton.tsx`: Interactive modal with copy link, WhatsApp share, preview, and QR code download.
 - `wedhub-frontend-app/components/shared/VendorShell.tsx`: Header bar integration for "Share Portfolio" button.
 - `wedhub-frontend-app/app/(vendor)/vendor/dashboard/page.tsx`: Dashboard header action and live portfolio highlight banner.
-- `frontenddocs/10-stage-vendor-portfolio.md`: Architecture specification.
+- `frontenddocs/14-stage-vendor-portfolio.md`: Architecture specification.
 - `docs/14-stage-vendor-portfolio.md`: Platform stage documentation.
 
 ### Verification

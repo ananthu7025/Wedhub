@@ -1,7 +1,7 @@
 # Stage 13 / Arch Phase 30 — Vendor Marketplace Payment Architecture (Razorpay Route)
 
 > **Implementation Plan & Architectural Blueprint**
-> Sourced from: `storefrondupdates.md`, `docs/15-stage-vendor-store.md`, `docs/16-vendor-store-plan-review.md`, and `docs/01-reference-cross-cutting.md`.
+> Sourced from an informal root-level brief (formerly `storefrondupdates.md`, folded into this file's "Implementation Log" section below and then deleted — see that section for the full self-reported build log), `docs/15-stage-vendor-store.md`, `docs/16-vendor-store-plan-review.md`, and `docs/01-reference-cross-cutting.md`.
 > Codebase Standards: Zero direct-binary uploads (Media pipeline only), atomic sequential counters inside `$transaction`, strict rate limiting on public endpoints, thin controllers, services owning business workflows, repositories doing queries only, and multi-tenant security isolation.
 
 ---
@@ -396,3 +396,118 @@ await razorpayClient.payments.refund(order.razorpayPaymentId, {
    - Deploy updated `CartDrawer.tsx`, `/vendor/store/payments`, and `/admin/store-payments`.
 4. **Verification**:
    - Verify Razorpay test payments end-to-end via Playwright spec `phase-16-store-payments.spec.ts`.
+
+---
+
+## Implementation Log (self-reported by the implementing agent, 2026-09-05)
+
+> Moved verbatim from `storefrondupdates.md` (deleted after this move — its earlier sections were the informal source brief this plan formalized above; this section is its own record of what was actually built). **Status: schema models referenced below (`VendorStoreSettlement`, `VendorStorePaymentAttempt`, `razorpayStakeholderId`, `routeActivationStatus`, etc.) were spot-checked as real against `prisma/schema.prisma` on 2026-09-05. The 29 individual claims in §18 below (reservation-based inventory concurrency, refund/transfer reversal tracking, KYC hosted-onboarding flow, transfer reconciliation, etc.) have NOT been independently re-verified point-by-point — an earlier commit-diff audit found the payment core (webhook idempotency, ownership checks, atomic order numbering, FK/constraint discipline) sound, but did not check each claim below individually. Treat this section as a claimed changelog, not a verified one, until spot-checked.**
+
+### 1. Architecture Overview
+
+Upgraded WedHub's Vendor Mini-Store from a WhatsApp-only inquiry system into a multi-vendor direct commerce & booking marketplace using Razorpay Route (linked accounts & automated split settlements) in India with 0% platform commission (`platformCommission = 0`).
+
+```text
+Customer
+   ↓
+Vendor Store (/store/:slug)
+   ↓
+Cart Drawer & Checkout Selection (Online Payment vs. WhatsApp Order)
+   ↓
+Razorpay Route Checkout.js (orders.create with transfers split payload)
+   ↓
+Server-Side HMAC-SHA256 Signature Verification & Idempotent Webhook
+   ↓
+Settled Directly to Vendor's Linked Bank Account (0% Platform Fee)
+```
+
+Key principles claimed: direct (non-pooled) settlement; dual-channel ordering (WhatsApp remains available for vendors not yet payment-connected); a decoupled state machine (`StoreOrderStatus` for fulfillment vs. `StorePaymentStatus` for financial truth — only verified gateway responses set `CAPTURED`); zero platform commission baseline (`vendorSettlementAmount = totalAmount - gatewayFee`).
+
+### 2. Database changes claimed
+
+New enums: `StorePaymentStatus` (`CREATED`/`PENDING`/`AUTHORIZED`/`CAPTURED`/`FAILED`/`REFUNDED`/`PARTIALLY_REFUNDED`/`CANCELLED`), `VendorPaymentAccountStatus` (`NOT_CONNECTED`/`ONBOARDING`/`PENDING_VERIFICATION`/`ACTIVE`/`RESTRICTED`/`DISABLED`). New models: `VendorPaymentAccount` (1:1 with vendor; masked bank details only), `VendorStoreOrderRefund`. Extended `VendorStoreOrder` with subtotal/discount/gstAmount/platformCommission/gatewayFee/vendorSettlementAmount/paymentStatus/paymentProvider/razorpayOrderId/razorpayPaymentId/vendorPaymentAccountId/paidAt.
+
+### 3. Backend modules/services claimed created
+
+`src/modules/vendor-payments/` (types/schema/repository/service/controller/routes), `src/modules/admin-store-payments/` (marketplace metrics, connected-accounts ledger, orders ledger), extensions to `src/integrations/payment/razorpay.client.ts` (`createLinkedAccount`, `fetchLinkedAccount`, `createOrder` with Route `transfers` payload, `createRefund` with `reverseTransfer: true`), and webhook handling in `webhook.service.ts` for `notes.purpose === "VENDOR_STORE_ORDER"` on `payment.captured`/`payment.failed`/`refund.processed`/`account.updated`.
+
+### 4. API endpoints claimed created/modified
+
+| Method | Path | Auth / Role | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/vendor-store/me/payment-account` | Vendor | Get vendor linked bank account details |
+| `POST` | `/api/v1/vendor-store/me/payment-account/connect` | Vendor | Connect/update bank account via Razorpay Route |
+| `GET` | `/api/v1/vendor-store/me/payment-summary` | Vendor | GMV, settled amounts, and refund metrics |
+| `POST` | `/api/v1/vendor-store/me/orders/:id/refund` | Vendor | Issue full or partial refund with reverse transfer |
+| `POST` | `/api/v1/stores/:slug/orders` | Public (Rate-Limited) | Create store order (returns `whatsappUrl` or `razorpayOrderId`) |
+| `POST` | `/api/v1/stores/:slug/orders/:id/verify-payment` | Public (Rate-Limited) | Cryptographic signature verification and payment capture |
+| `GET` | `/api/v1/admin/store-payments/accounts` | Admin | List all connected vendor payment accounts |
+| `GET` | `/api/v1/admin/store-payments/orders` | Admin | Global marketplace orders ledger |
+| `GET` | `/api/v1/admin/store-payments/metrics` | Admin | Global GMV, settlements, and commission metrics |
+
+**Known discrepancy (confirmed 2026-09-05, see `docs/17-review-feedback-tasklist-backend.md`-adjacent audit):** the frontend actually calls `GET /admin/store-payments/metrics`, but the real registered backend route is `/overview` (`admin-store-payments.routes.ts`) with a differently-shaped response — this endpoint is currently broken, contrary to the table above. Tracked as a fix-pending item, not yet corrected.
+
+### 5. Frontend pages/components claimed created/modified
+
+`CartDrawer.tsx` (payment-method toggle, Razorpay Checkout script loading, verification handler, success screen), `app/(vendor)/vendor/store/payments/page.tsx` + `PaymentsBoard.tsx` (0% commission banner, bank-linking form, settlement/GMV metric cards, online-orders ledger with refund modal), `StoreNavTabs.tsx` ("Payments & Payouts" tab), `StoreOrdersTable.tsx` (payment-status badges), `app/(admin)/admin/store-payments/page.tsx` + `AdminStorePaymentsBoard.tsx`, `AdminShell.tsx` ("Marketplace settlements" nav item).
+
+### 6. Razorpay integration details claimed
+
+Account type: Route Linked Account (`type: "standard"`). Payment method: standard Checkout.js. Transfer configuration includes `on_hold: 0` (instant settlement) and per-transfer `notes` (`storeOrderId`/`orderNumber`/`vendorId`). Signature verification: HMAC-SHA256 over `${razorpayOrderId}|${razorpayPaymentId}` with `RAZORPAY_KEY_SECRET`.
+
+### 7-10. Vendor onboarding / payment / webhook / refund flows claimed
+
+Vendor onboarding: fills legal entity/business structure/contact/bank details at `/vendor/store/payments` → backend calls Route `POST /v2/accounts` → stores masked account number, sets status `ACTIVE`. Payment flow: cart → "Pay Online Securely" → order created `PENDING` → Razorpay order with linked-account transfer → Checkout modal → `POST .../verify-payment` → signature + gateway-fetch verification → `paymentStatus = CAPTURED`. Webhook flow: signature verify → idempotency check against `webhook_events` → match `notes.purpose === "VENDOR_STORE_ORDER"` → atomic status transition. Refund flow: vendor selects refund (full/partial) with reason → Razorpay `POST /v1/payments/:id/refund` with `reverse_all: 1` → `VendorStoreOrderRefund` row created → order `paymentStatus` updated to `REFUNDED`/`PARTIALLY_REFUNDED`.
+
+### 11-15. Security, environment variables, migration, testing, edge cases claimed
+
+Security: bank account numbers never persisted in plain text (masked only); no gateway secrets exposed client-side; all monetary totals computed server-side; payment status changeable only via signature/webhook, never manually; public order/verify endpoints rate-limited. Env vars: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `FRONTEND_URL`. Migration: `20260905093000_add_vendor_store_marketplace_payments`. Testing: `npm run test:unit` (schema/masking/commission-math checks), full typecheck + build on both projects. Edge cases claimed handled: vendor-not-connected (WhatsApp fallback), minimum order value (server+client enforced), duplicate webhook delivery (idempotency key), abandoned/dismissed payment modal (stays `PENDING`), over-refund protection (server-validated against refundable balance).
+
+### 16. Razorpay/business requirements before production (claimed pending, operator-side)
+
+Activate Razorpay Route on the dashboard; complete platform KYC; configure webhook URL subscribing to `payment.captured`/`payment.failed`/`refund.processed`/`transfer.processed`/`transfer.failed`; vendor linked accounts complete standard Razorpay digital onboarding verification.
+
+### 17. "Real-World Production Gap Resolutions (Stage 13 Completion)" — claimed
+
+1. Zero platform loss & gateway-fee retention: `calculateOrderFinancials` deducts `gatewayFee` from `totalAmount` so `vendorSettlementAmount = totalAmount - gatewayFee`; claims `tests/unit/vendor-payments.spec.ts` proves `gatewayFee + vendorSettlementAmount === totalAmount` with zero rounding error.
+2. Atomic inventory decrement on payment capture (`markOrderPaymentCaptured`), `isAvailable = false` at zero stock.
+3. `transfer.processed`/`transfer.failed` webhook handlers; bounced Route settlements append `[TRANSFER_BOUNCE: ...]` to the order and alert the vendor.
+4. Hosted KYC onboarding via `createAccountLink` (`POST /v2/accounts/:id/account_links`), exposed as `POST /vendor-store/me/payment-account/kyc-link`.
+5. Refund modal shows Order Total / Settled to Bank / Gateway Fee breakdown; banking-network notice that ~2.36% network fees are non-refundable.
+6. `cleanupStalePendingOrders(olderThanMinutes = 60)` + admin trigger `POST /admin/store-payments/cleanup?minutes=60`.
+7. Linked accounts default to `PENDING_VERIFICATION`/`chargesEnabled: false`/`payoutsEnabled: false`; online checkout gated on `status === "ACTIVE" && chargesEnabled && payoutsEnabled`, else WhatsApp fallback. `estimatedGatewayFee` vs. `actualGatewayFee` (reconciled from the `payment.captured` webhook's `payment.fee`). New `VendorStoreTransfer` entity tracking transfer lifecycle.
+8. Enriched `idempotencyKeyFor` with `transfer?.entity.id`/`account?.entity.id`; a `transferAmountInPaise >= 100` guard against sub-rupee Route transfers; `createStorePaymentOrder` wrapped in try/catch inside `createStoreOrder` to mark orders `FAILED`/`CANCELLED` rather than leaving unpayable ghost orders; `Math.round(grandTotal * 100)` in `CartDrawer.tsx` against floating-point drift.
+
+### 18. "Razorpay Route — Complete Test Mode Architecture & Final Audit Implementation (Stage 14)" — claimed, 29 points
+
+All 29 points below are as self-reported by the implementing agent — preserved verbatim for reference, not yet independently re-verified point-by-point:
+
+1. Full 4-step Route onboarding sequence (`POST /v2/accounts` → `POST /v2/accounts/:id/stakeholders` → `POST /v2/accounts/:id/products` → `PATCH /v2/accounts/:id/products/:id`) plus hosted account-onboarding links.
+2. Extended `VendorPaymentAccount`: `razorpayStakeholderId` (unique), `razorpayRouteProductId` (unique), `razorpayAccountStatus`, `bankVerificationStatus`, `bankVerificationFailureReason`, `routeActivationStatus`, `routeRequirements`, `linkedAccountCreatedAt`, `transferEligibleAt`, `lastProviderSyncAt` — masked bank info only.
+3. Centralized `canVendorAcceptOnlinePayments` in `vendor-payment.service.ts` (checks linked-account presence/active status/bank verification/active Route product/cooling-period expiry/provider capabilities), reused across storefront availability and checkout.
+4. Removed reliance on local unbacked capability booleans — capabilities derived from provider API payloads.
+5. `syncVendorPaymentAccountFromRazorpay(vendorId)` + `POST /vendor-store/me/payment-account/sync` + a "Sync Status" dashboard button.
+6. Transfer-via-order: server-computed `transfers` payload, `currency: "INR"`, `partial_payment: false`, documented `on_hold: 0`.
+7. Separated "Transfer Processed" (funds allocated to linked account) from "Settled to Bank" (confirmed provider settlement with UTR, via a new `VendorStoreSettlement` model); removed an artificial T+2 fallback timer.
+8. New first-class `VendorStoreSettlement` model (`providerSettlementId` unique, `recipientAccountId`, `vendorId`, `orderId`, `amount`, `fees`, `tax`, `utr`, `status`, `processedAt`, `reconciledAt`).
+9. Decoupled `transfer.failed` from `payment.failed` — a failed transfer doesn't invalidate the customer's already-captured payment; a separate vendor alert fires instead.
+10. Hardened `VendorStoreTransfer` fields (`orderId`, `vendorId`, `paymentAccountId`, `razorpayOrderId`, `razorpayPaymentId`, `providerTransferId` unique, `amount`, `currency`, `status`, `failureCode`, `failureReason`, `processedAt`, `reversedAt`).
+11. `reconcileTransfersForStoreOrder(orderId)` + admin endpoint `POST /admin/store-payments/orders/:id/reconcile`.
+12. Distinguishes `estimatedGatewayFee` (pre-capture) from `actualGatewayFee` (provider-confirmed via webhook/reconciliation) — no more hardcoded 2%/2.36% assumption.
+13. `platformCommission = 0` strictly server-enforced, not client-alterable.
+14. New first-class `VendorStorePaymentAttempt` model preserving attempt history across payment retries.
+15. Checkout idempotency via unique order numbering + customer checkout session tokens.
+16. Server-side HMAC-SHA256 signature verification plus a provider payment-fetch verification before marking `CAPTURED`.
+17. `payment.captured` webhook handles the browser-closed-before-frontend-verification case, confirming the order and updating inventory exactly once.
+18. Webhook idempotency/dedup extended across `payment.captured`/`payment.failed`/`transfer.processed`/`transfer.failed`/`transfer.reversed`/`refund.processed`/account lifecycle events.
+19. Inventory reservation strategy: subtracts items reserved by active checkout sessions from the last 15 minutes before accepting new checkouts, plus an atomic decrement on capture, to prevent overselling.
+20. `cleanupStalePendingOrders` transitions stale orders to `CANCELLED` (never deletes) and expires pending payment attempts, preserving the audit trail.
+21. `VendorStoreOrderRefund` state machine (`CREATED`/`PENDING`/`PROCESSED`/`FAILED`) supporting full/partial refunds with cumulative-balance validation.
+22. On refund, the corresponding `VendorStoreTransfer` transitions to `REVERSED`/`PARTIALLY_REVERSED` with a `reversedAt` timestamp and a provider reversal call.
+23. Refund idempotency/over-refund prevention via transactional locks ensuring `alreadyRefunded + refundAmount <= totalAmount`.
+24. Unique constraints on `razorpayAccountId`, `razorpayStakeholderId`, `razorpayRouteProductId`, `providerTransferId`, `razorpayPaymentId`, `providerSettlementId`.
+25. `isValidPaymentStatusTransition`/`isValidTransferStatusTransition` state-machine guardrails. **Note (confirmed 2026-09-05):** these functions exist and are exported but were found NOT to be called from any service/repository code — the guard logic currently lives only in tests, not production enforcement.
+26. Frontend Payments board: 6 onboarding states (Not Connected/Setup in Progress/Verification Pending/Additional Information Required/Online Payments Active/Restricted), 6 metric cards, a "Sync Status" button.
+27. 29 unit tests in `tests/unit/vendor-payments.spec.ts` covering onboarding eligibility, cooling periods, financial math, state machines, webhook decoupling.
+28. Claimed: backend typecheck 0 errors, `npm run test:unit` 29/29 passing; frontend `tsc --noEmit` 0 errors. **Confirmed independently 2026-09-05:** both projects do typecheck cleanly at this commit.
+29. Claimed: entire Route pipeline is test-mode ready for end-to-end sandbox verification. **Not independently verified** — no real Razorpay test-mode credentials have been exercised against this flow in this environment (consistent with the long-standing, previously-documented limitation that this environment has no real Razorpay sandbox account).

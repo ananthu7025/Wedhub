@@ -86,9 +86,10 @@ Every backend module Frontend Arch Phase 0–10 needs already exists and is live
 | `07-stage-growth-and-hardening.md` | SEO pages (blocked on backend Arch Phase 17), Telegram surfacing, performance/accessibility hardening |
 | `08-stage-wedding-website.md` | ₹49 Instant Wedding Website — new, standalone feature outside the original 12 Frontend Arch Phases (Frontend Arch Phase 12), blocked on backend Arch Phase 26 |
 | `09-stage-vendor-invoices.md` | Vendor GST Invoicing & Billing — dashboard, live GST creator, A4 print, settings (Frontend Arch Phase 13) |
+| `14-stage-vendor-portfolio.md` | Standalone Vendor-First Digital Portfolio & 1-Click WhatsApp Share — `/portfolio/[slug]`, gallery/packages/about/reviews tabs, dashboard share tool (Frontend Arch Phase 14). Numbered to match the file's own "Frontend Arch Phase 14" and the backend's `docs/14-stage-vendor-portfolio.md`, not sequential with the table above — this file predates several others and was originally misfiled as `10-*`. |
 | `10-risks-and-open-questions.md` | Canonical log of frontend-specific ambiguities and cross-doc/cross-mockup conflicts |
 | `11-progress-log.md` | What has actually shipped — status table + per-phase routes/components/flow, filled in as each Frontend Arch Phase completes |
-| `13-review-feedback-tasklist-frontend.md` | Frontend task list from a full codebase audit of `../review-feedback.md` — confirmed-true findings only (no client-side image compression, unbounded upload concurrency, uncacheable public data, homepage sequential fetch, oversized Client Components, and more), split from the backend half at `../docs/17-review-feedback-tasklist-backend.md` |
+| `13-review-feedback-tasklist-frontend.md` | Frontend task list from a full codebase audit of `../docs/19-review-feedback-source.md` — confirmed-true findings only (no client-side image compression, unbounded upload concurrency, uncacheable public data, homepage sequential fetch, oversized Client Components, and more), split from the backend half at `../docs/17-review-feedback-tasklist-backend.md` |
 
 ## Recommended build order
 

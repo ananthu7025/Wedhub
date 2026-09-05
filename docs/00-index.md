@@ -86,7 +86,9 @@ Never write a bare "Phase 5" anywhere in this docs set — it's ambiguous. The s
 | `14-stage-vendor-portfolio.md` | Standalone Vendor Digital Portfolio & WhatsApp Connect (Arch Phase 28) |
 | `15-stage-vendor-store.md` | Category-Gated Vendor Mini-Store & Direct Commerce Engine (Arch Phase 29) |
 | `18-vendor-store-payment-architecture-plan.md` | Vendor Marketplace Payment Architecture & Razorpay Route (Arch Phase 30) |
-| `17-review-feedback-tasklist-backend.md` | Backend task list from a full codebase audit of `../review-feedback.md` — confirmed-true findings only (attribute N+1, non-transactional profile save, search blocking on analytics writes, uncacheable public data, near-zero test coverage, and more), split from the frontend half at `../frontenddocs/13-review-feedback-tasklist-frontend.md` |
+| `17-review-feedback-tasklist-backend.md` | Backend task list from a full codebase audit of `19-review-feedback-source.md` — confirmed-true findings only (attribute N+1, non-transactional profile save, search blocking on analytics writes, uncacheable public data, near-zero test coverage, and more), split from the frontend half at `../frontenddocs/13-review-feedback-tasklist-frontend.md` |
+| `19-review-feedback-source.md` | Source brief: the original 30-section codebase-improvement task document, audited claim-by-claim into `17-review-feedback-tasklist-backend.md`/`../frontenddocs/13-review-feedback-tasklist-frontend.md`. Moved here from repo root (2026-09-05) — was a stray untracked file, not indexed. |
+| `20-non-claude-commits-log.md` | Historical record: catalogs commits authored outside a Claude-supervised session (an unsupervised agent's work while usage limits were hit). Moved here from repo root (2026-09-05). See `16-vendor-store-plan-review.md`-style precedent for reviewing unsupervised work before trusting it — the corresponding audit for these commits is recorded inline in that session's conversation, not yet its own doc file. |
 
 ## Recommended build order
 
