@@ -61,6 +61,9 @@ Never write a bare "Phase 5" anywhere in this docs set — it's ambiguous. The s
 | 7 — Growth & Scale | [`09-stage-growth-and-scale.md`](09-stage-growth-and-scale.md) | 17–25 | 7, 8 (+ 9 placeholder) | Mostly post-MVP (17 partially MVP via SEO) |
 | 8 — ₹49 Instant Wedding Website | [`12-stage-wedding-website.md`](12-stage-wedding-website.md) | 26 | *(none — new, standalone)* | Post-MVP, parallel scope — not sourced from `product.md`/`wedhub_backend_architecture.md`, see the stage file's own "Origin and Numbering" section |
 | 9 — Vendor GST Invoicing & Billing | [`13-stage-vendor-invoices.md`](13-stage-vendor-invoices.md) | 27 | 5 — Monetization / Operations | Post-MVP, vendor self-service billing engine |
+| 10 — Standalone Vendor Portfolio | [`14-stage-vendor-portfolio.md`](14-stage-vendor-portfolio.md) | 28 | 2 — Marketplace Supply | Post-MVP, standalone vendor-first portfolio |
+| 11 — Vendor Mini-Store | [`15-stage-vendor-store.md`](15-stage-vendor-store.md) | 29 | 2 / 5 — Commerce | Category-gated vendor commerce engine |
+| 13 — Vendor Marketplace Payments | [`18-vendor-store-payment-architecture-plan.md`](18-vendor-store-payment-architecture-plan.md) | 30 | 5 — Monetization / Marketplace | Razorpay Route direct payments & settlements |
 
 ## Full file list
 
@@ -80,6 +83,9 @@ Never write a bare "Phase 5" anywhere in this docs set — it's ambiguous. The s
 | `11-progress-log.md` | What has actually shipped — status table + per-phase APIs/tables/flow diagram, filled in as each Arch Phase completes |
 | `12-stage-wedding-website.md` | ₹49 Instant Wedding Website — new, standalone monetized feature outside the original 26 Arch Phases (Arch Phase 26) |
 | `13-stage-vendor-invoices.md` | Vendor GST Invoicing & Billing Engine — statutory GST billing, payment history, and logo integration (Arch Phase 27) |
+| `14-stage-vendor-portfolio.md` | Standalone Vendor Digital Portfolio & WhatsApp Connect (Arch Phase 28) |
+| `15-stage-vendor-store.md` | Category-Gated Vendor Mini-Store & Direct Commerce Engine (Arch Phase 29) |
+| `18-vendor-store-payment-architecture-plan.md` | Vendor Marketplace Payment Architecture & Razorpay Route (Arch Phase 30) |
 | `17-review-feedback-tasklist-backend.md` | Backend task list from a full codebase audit of `../review-feedback.md` — confirmed-true findings only (attribute N+1, non-transactional profile save, search blocking on analytics writes, uncacheable public data, near-zero test coverage, and more), split from the frontend half at `../frontenddocs/13-review-feedback-tasklist-frontend.md` |
 
 ## Recommended build order

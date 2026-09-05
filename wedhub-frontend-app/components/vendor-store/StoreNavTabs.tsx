@@ -28,6 +28,10 @@ export function StoreNavTabs({
       href: "/vendor/store/orders",
       count: orderCount,
     },
+    {
+      label: "Payments & Payouts",
+      href: "/vendor/store/payments",
+    },
   ];
 
   return (

@@ -89,6 +89,11 @@ const sections: NavSection[] = [
         label: "Subscriptions & payments",
         icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></>,
       },
+      {
+        href: "/admin/store-payments",
+        label: "Marketplace settlements",
+        icon: <><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>,
+      },
     ],
   },
   {

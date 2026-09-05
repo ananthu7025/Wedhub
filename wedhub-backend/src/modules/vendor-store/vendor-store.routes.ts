@@ -4,8 +4,9 @@ import { validateBody } from "../../common/middleware/validate.middleware";
 import { authenticateMiddleware } from "../../common/middleware/authenticate.middleware";
 import { authorize } from "../../common/middleware/authorize.middleware";
 import { Role } from "../../common/enums/roles.enum";
-import { storeOrderRateLimiter } from "../../common/middleware/rate-limit.middleware";
+import { storeOrderRateLimiter, storePaymentVerifyRateLimiter } from "../../common/middleware/rate-limit.middleware";
 import * as controller from "./vendor-store.controller";
+import * as paymentController from "../vendor-payments/vendor-payment.controller";
 import {
   createStoreItemSchema,
   publicCreateOrderSchema,
@@ -13,6 +14,11 @@ import {
   updateStoreItemSchema,
   upsertStoreProfileSchema,
 } from "./vendor-store.schema";
+import {
+  onboardPaymentAccountSchema,
+  refundStoreOrderSchema,
+  verifyStoreOrderPaymentSchema,
+} from "../vendor-payments/vendor-payment.schema";
 
 export const vendorStoreRouter = Router();
 export const publicStoreRouter = Router();
@@ -46,6 +52,25 @@ vendorStoreRouter.patch(
 );
 vendorStoreRouter.post("/me/orders/:id/create-invoice", asyncHandler(controller.createOrderInvoice));
 
+// Vendor Payment & Settlement Management
+vendorStoreRouter.get("/me/payment-account", asyncHandler(paymentController.getPaymentAccount));
+vendorStoreRouter.post(
+  "/me/payment-account/connect",
+  validateBody(onboardPaymentAccountSchema),
+  asyncHandler(paymentController.onboardPaymentAccount),
+);
+vendorStoreRouter.post(
+  "/me/payment-account/kyc-link",
+  asyncHandler(paymentController.createKycLink),
+);
+vendorStoreRouter.get("/me/payments/summary", asyncHandler(paymentController.getPaymentSummary));
+vendorStoreRouter.get("/me/payment-summary", asyncHandler(paymentController.getPaymentSummary));
+vendorStoreRouter.post(
+  "/me/orders/:id/refund",
+  validateBody(refundStoreOrderSchema),
+  asyncHandler(paymentController.refundOrder),
+);
+
 // ---------------------------------------------------------------------------
 // Public Storefront Endpoints: /api/v1/stores/*
 // ---------------------------------------------------------------------------
@@ -57,3 +82,10 @@ publicStoreRouter.post(
   validateBody(publicCreateOrderSchema),
   asyncHandler(controller.createPublicOrder),
 );
+publicStoreRouter.post(
+  "/:slug/orders/:id/verify-payment",
+  storePaymentVerifyRateLimiter,
+  validateBody(verifyStoreOrderPaymentSchema),
+  asyncHandler(paymentController.verifyStorePayment),
+);
+

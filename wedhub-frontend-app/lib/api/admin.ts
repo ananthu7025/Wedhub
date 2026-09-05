@@ -189,3 +189,16 @@ export function listAdminSeoOverrides(pageType?: SeoOverridePageType) {
 export function listAdminWeddingWebsites(page = 1, limit = 20) {
   return apiFetch<AdminWeddingWebsite[], PaginationMeta>("/admin/wedding-websites", { query: { page, limit } });
 }
+
+/** Marketplace Direct Payments & Route Settlements */
+export function listAdminStorePaymentAccounts() {
+  return apiFetch<import("./vendor-store.types").VendorPaymentAccountSummary[]>("/admin/store-payments/accounts");
+}
+
+export function listAdminStoreOrders(params: { status?: string; paymentStatus?: string } = {}) {
+  return apiFetch<import("./vendor-store.types").VendorStoreOrder[]>("/admin/store-payments/orders", { query: params });
+}
+
+export function getAdminStorePaymentMetrics() {
+  return apiFetch<import("./vendor-payments-client").AdminStorePaymentMetrics>("/admin/store-payments/metrics");
+}

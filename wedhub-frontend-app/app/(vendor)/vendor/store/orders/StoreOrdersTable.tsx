@@ -20,6 +20,15 @@ const STATUS_LABELS: Record<StoreOrderStatus, { label: string; color: string }> 
   CANCELLED: { label: "Cancelled", color: "bg-neutral-grey-20 text-text-grey border-border" },
 };
 
+const PAYMENT_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  CAPTURED: { label: "Paid Online", color: "bg-emerald-100 text-emerald-800 border-emerald-300" },
+  PARTIALLY_REFUNDED: { label: "Partially Refunded", color: "bg-amber-100 text-amber-800 border-amber-300" },
+  REFUNDED: { label: "Refunded", color: "bg-red-100 text-red-800 border-red-300" },
+  PENDING: { label: "Payment Pending", color: "bg-amber-50 text-amber-700 border-amber-200" },
+  FAILED: { label: "Payment Failed", color: "bg-red-50 text-red-700 border-red-200" },
+  CREATED: { label: "Awaiting Payment", color: "bg-surface-input text-text-grey border-border" },
+};
+
 export function StoreOrdersTable({
   initialOrders,
 }: {
@@ -207,6 +216,15 @@ export function StoreOrdersTable({
                     >
                       {statusConfig.label}
                     </span>
+                    {order.paymentStatus && (
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold border ${
+                          PAYMENT_STATUS_LABELS[order.paymentStatus]?.color ?? "bg-surface-input text-text-grey border-border"
+                        }`}
+                      >
+                        {PAYMENT_STATUS_LABELS[order.paymentStatus]?.label ?? order.paymentStatus}
+                      </span>
+                    )}
                     <span className="text-xs text-text-grey">
                       {new Date(order.createdAt).toLocaleDateString("en-IN", {
                         day: "numeric",
@@ -307,6 +325,14 @@ export function StoreOrdersTable({
                     <span className="text-[11px] rounded bg-surface-input px-1.5 py-0.5 text-text-grey">
                       Channel: {order.orderChannel}
                     </span>
+                    {order.razorpayPaymentId && (
+                      <Link
+                        href="/vendor/store/payments"
+                        className="text-[11px] text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded font-mono transition-colors"
+                      >
+                        Tx: {order.razorpayPaymentId}
+                      </Link>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">

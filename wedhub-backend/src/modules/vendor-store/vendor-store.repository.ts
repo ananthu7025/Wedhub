@@ -1,6 +1,7 @@
 import { prisma } from "../../config/database";
-import { Prisma, type StoreItemType, type StoreOrderStatus } from "@prisma/client";
+import { Prisma, type StoreItemType, type StoreOrderStatus, type StorePaymentStatus } from "@prisma/client";
 import { omitUndefined } from "../../common/utils/object.util";
+import { ValidationError } from "../../common/errors";
 
 export async function checkVendorStoreEligibility(vendorId: string): Promise<boolean> {
   const vendorCategories = await prisma.vendorCategory.findMany({
@@ -42,6 +43,18 @@ export function findVendorStoreBySlug(slug: string) {
               email: true,
               logoMediaId: true,
               coverMediaId: true,
+              logoMedia: {
+                select: {
+                  thumbnailObjectKey: true,
+                  originalObjectKey: true,
+                },
+              },
+              coverMedia: {
+                select: {
+                  optimizedObjectKey: true,
+                  originalObjectKey: true,
+                },
+              },
             },
           },
           categories: {
@@ -57,11 +70,13 @@ export function findVendorStoreBySlug(slug: string) {
               },
             },
           },
+          paymentAccount: true,
         },
       },
     },
   });
 }
+
 
 export async function upsertVendorStore(
   vendorId: string,
@@ -258,7 +273,20 @@ export async function createStoreOrderAtomicTx(
     pincode?: string | null | undefined;
     eventDate?: Date | null | undefined;
     notes?: string | null | undefined;
+    subtotal?: number | undefined;
+    discount?: number | undefined;
+    gstAmount?: number | undefined;
     totalAmount: number;
+    orderChannel?: string | undefined;
+    paymentStatus?: "CREATED" | "PENDING" | "AUTHORIZED" | "CAPTURED" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED" | "CANCELLED" | undefined;
+    paymentProvider?: string | undefined;
+    razorpayOrderId?: string | null | undefined;
+    vendorPaymentAccountId?: string | null | undefined;
+    platformCommission?: number | undefined;
+    gatewayFee?: number | undefined;
+    estimatedGatewayFee?: number | undefined;
+    actualGatewayFee?: number | null | undefined;
+    vendorSettlementAmount?: number | undefined;
   },
   orderItems: Array<{
     itemId: string;
@@ -271,6 +299,18 @@ export async function createStoreOrderAtomicTx(
   }>,
 ) {
   return prisma.$transaction(async (tx) => {
+    // Verify inventory availability before order creation
+    for (const oi of orderItems) {
+      const storeItem = await tx.vendorStoreItem.findUnique({
+        where: { id: oi.itemId },
+      });
+      if (storeItem && storeItem.stockQuantity !== null && storeItem.stockQuantity < oi.quantity) {
+        throw new ValidationError(
+          `Item "${oi.itemTitle}" has only ${storeItem.stockQuantity} in stock. Please adjust quantity.`,
+        );
+      }
+    }
+
     const updatedStore = await tx.vendorStore.update({
       where: { id: storeId },
       data: { nextOrderNumber: { increment: 1 } },
@@ -293,10 +333,23 @@ export async function createStoreOrderAtomicTx(
         pincode: orderData.pincode ?? null,
         eventDate: orderData.eventDate ?? null,
         notes: orderData.notes ?? null,
+        subtotal: new Prisma.Decimal(orderData.subtotal ?? orderData.totalAmount),
+        discount: new Prisma.Decimal(orderData.discount ?? 0),
+        gstAmount: new Prisma.Decimal(orderData.gstAmount ?? 0),
         totalAmount: new Prisma.Decimal(orderData.totalAmount),
         status: "PENDING_CONFIRMATION",
-        orderChannel: "WHATSAPP",
-        paymentStatus: "PENDING",
+        orderChannel: orderData.orderChannel || "WHATSAPP",
+        paymentStatus: orderData.paymentStatus || "PENDING",
+        paymentProvider: orderData.paymentProvider || "razorpay",
+        razorpayOrderId: orderData.razorpayOrderId ?? null,
+        vendorPaymentAccountId: orderData.vendorPaymentAccountId ?? null,
+        platformCommission: new Prisma.Decimal(orderData.platformCommission ?? 0),
+        gatewayFee: new Prisma.Decimal(orderData.gatewayFee ?? 0),
+        estimatedGatewayFee: new Prisma.Decimal(orderData.estimatedGatewayFee ?? orderData.gatewayFee ?? 0),
+        actualGatewayFee: orderData.actualGatewayFee ? new Prisma.Decimal(orderData.actualGatewayFee) : null,
+        vendorSettlementAmount: orderData.vendorSettlementAmount
+          ? new Prisma.Decimal(orderData.vendorSettlementAmount)
+          : null,
         items: {
           create: orderItems.map((oi) => ({
             itemId: oi.itemId,
@@ -318,6 +371,7 @@ export async function createStoreOrderAtomicTx(
   });
 }
 
+
 export function findStoreOrders(storeId: string, status?: StoreOrderStatus) {
   return prisma.vendorStoreOrder.findMany({
     where: {
@@ -327,6 +381,7 @@ export function findStoreOrders(storeId: string, status?: StoreOrderStatus) {
     orderBy: { createdAt: "desc" },
     include: {
       items: true,
+      refunds: true,
       invoice: {
         select: {
           id: true,
@@ -338,6 +393,7 @@ export function findStoreOrders(storeId: string, status?: StoreOrderStatus) {
     },
   });
 }
+
 
 export function findStoreOrderById(id: string) {
   return prisma.vendorStoreOrder.findUnique({
@@ -362,12 +418,16 @@ export function updateStoreOrderStatus(
   id: string,
   data: {
     status?: StoreOrderStatus | undefined;
-    paymentStatus?: string | undefined;
+    paymentStatus?: StorePaymentStatus | undefined;
   },
 ) {
+  const updateData: Prisma.VendorStoreOrderUpdateInput = {};
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.paymentStatus !== undefined) updateData.paymentStatus = data.paymentStatus;
+
   return prisma.vendorStoreOrder.update({
     where: { id },
-    data: omitUndefined(data),
+    data: updateData,
     include: {
       items: true,
       invoice: true,
@@ -379,5 +439,47 @@ export function linkOrderInvoice(orderId: string, invoiceId: string) {
   return prisma.vendorStoreOrder.update({
     where: { id: orderId },
     data: { invoiceId },
+  });
+}
+
+export async function cleanupStalePendingOrders(olderThanMinutes: number = 60) {
+  const threshold = new Date(Date.now() - olderThanMinutes * 60 * 1000);
+  const staleOrders = await prisma.vendorStoreOrder.findMany({
+    where: {
+      orderChannel: "ONLINE",
+      paymentStatus: "PENDING",
+      createdAt: { lt: threshold },
+    },
+    select: { id: true },
+  });
+
+  if (staleOrders.length === 0) {
+    return { count: 0 };
+  }
+
+  const orderIds = staleOrders.map((o) => o.id);
+
+  await prisma.vendorStorePaymentAttempt.updateMany({
+    where: {
+      orderId: { in: orderIds },
+      status: "PENDING",
+    },
+    data: {
+      status: "FAILED",
+      failureCode: "SESSION_EXPIRED",
+      failureReason: "Checkout session expired after inactivity",
+      failedAt: new Date(),
+    },
+  });
+
+  return prisma.vendorStoreOrder.updateMany({
+    where: {
+      id: { in: orderIds },
+    },
+    data: {
+      paymentStatus: "CANCELLED",
+      status: "CANCELLED",
+      notes: "Order cancelled automatically due to payment session timeout.",
+    },
   });
 }

@@ -381,6 +381,9 @@ model Vendor {
   billingProfile   VendorBillingProfile?
   vendorInvoices   VendorInvoice[]
   store            VendorStore?
+  paymentAccount   VendorPaymentAccount?
+  storeTransfers   VendorStoreTransfer[]
+  storeSettlements VendorStoreSettlement[]
 
   @@index([status])
   @@index([cityId])
@@ -1949,6 +1952,66 @@ enum StoreOrderStatus {
   CANCELLED
 }
 
+enum StorePaymentStatus {
+  CREATED
+  PENDING
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELLED
+}
+
+enum VendorPaymentAccountStatus {
+  NOT_CONNECTED
+  ONBOARDING
+  PENDING_VERIFICATION
+  ACTIVE
+  RESTRICTED
+  DISABLED
+}
+
+model VendorPaymentAccount {
+  id                     String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId               String                     @unique @map("vendor_id") @db.Uuid
+  provider               String                     @default("razorpay")
+  razorpayAccountId      String?                    @unique @map("razorpay_account_id") // acc_xxxxxxxx
+  status                 VendorPaymentAccountStatus @default(NOT_CONNECTED)
+  legalBusinessName      String?                    @map("legal_business_name")
+  businessType           String?                    @map("business_type")
+  contactEmail           String?                    @map("contact_email")
+  contactPhone           String?                    @map("contact_phone")
+  bankName               String?                    @map("bank_name")
+  accountNumberMasked    String?                    @map("account_number_masked")
+  ifscCode               String?                    @map("ifsc_code")
+  chargesEnabled                Boolean                    @default(false) @map("charges_enabled")
+  payoutsEnabled                Boolean                    @default(false) @map("payouts_enabled")
+  razorpayStakeholderId         String?                    @unique @map("razorpay_stakeholder_id")
+  razorpayRouteProductId        String?                    @unique @map("razorpay_route_product_id")
+  razorpayAccountStatus         String?                    @map("razorpay_account_status") // created, suspended, activated
+  bankVerificationStatus        String                     @default("UNKNOWN") @map("bank_verification_status") // UNKNOWN, PENDING, VERIFIED, FAILED
+  bankVerificationFailureReason String?                    @map("bank_verification_failure_reason")
+  routeActivationStatus         String?                    @map("route_activation_status") // requested, needs_clarification, under_review, activated, suspended
+  routeRequirements             Json?                      @map("route_requirements")
+  linkedAccountCreatedAt        DateTime?                  @map("linked_account_created_at")
+  transferEligibleAt            DateTime?                  @map("transfer_eligible_at")
+  lastProviderSyncAt            DateTime?                  @map("last_provider_sync_at")
+  onboardingUrl                 String?                    @map("onboarding_url") @db.Text
+  onboardingUrlExpiresAt        DateTime?                  @map("onboarding_url_expires_at")
+  kycDetails                    Json?                      @map("kyc_details")
+  createdAt                     DateTime                   @default(now()) @map("created_at")
+  updatedAt                     DateTime                   @updatedAt @map("updated_at")
+
+  vendor                 Vendor                     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orders                 VendorStoreOrder[]
+
+  @@index([status])
+  @@index([razorpayStakeholderId])
+  @@index([razorpayRouteProductId])
+  @@map("vendor_payment_accounts")
+}
+
 model VendorStore {
   id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   vendorId           String             @unique @map("vendor_id") @db.Uuid
@@ -2016,33 +2079,53 @@ model VendorStoreItemMedia {
 }
 
 model VendorStoreOrder {
-  id              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderNumber     String                 @unique @map("order_number")
-  storeId         String                 @map("store_id") @db.Uuid
-  userId          String?                @map("user_id") @db.Uuid
-  customerName    String                 @map("customer_name")
-  customerPhone   String                 @map("customer_phone")
-  customerEmail   String?                @map("customer_email")
-  shippingAddress String?                @map("shipping_address") @db.Text
-  city            String?                @map("city")
-  customerState   String?                @map("customer_state")
-  pincode         String?                @map("pincode")
-  eventDate       DateTime?              @map("event_date")
-  totalAmount     Decimal                @map("total_amount") @db.Decimal(10, 2)
-  status          StoreOrderStatus       @default(PENDING_CONFIRMATION) @map("status")
-  orderChannel    String                 @default("WHATSAPP") @map("order_channel")
-  paymentStatus   String                 @default("PENDING") @map("payment_status")
-  notes           String?                @map("notes") @db.Text
-  invoiceId       String?                @unique @map("invoice_id") @db.Uuid
-  createdAt       DateTime               @default(now()) @map("created_at")
-  updatedAt       DateTime               @updatedAt @map("updated_at")
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderNumber            String                 @unique @map("order_number")
+  storeId                String                 @map("store_id") @db.Uuid
+  userId                 String?                @map("user_id") @db.Uuid
+  customerName           String                 @map("customer_name")
+  customerPhone          String                 @map("customer_phone")
+  customerEmail          String?                @map("customer_email")
+  shippingAddress        String?                @map("shipping_address") @db.Text
+  city                   String?                @map("city")
+  customerState          String?                @map("customer_state")
+  pincode                String?                @map("pincode")
+  eventDate              DateTime?              @map("event_date")
+  subtotal               Decimal                @default(0) @map("subtotal") @db.Decimal(10, 2)
+  discount               Decimal                @default(0) @map("discount") @db.Decimal(10, 2)
+  gstAmount              Decimal                @default(0) @map("gst_amount") @db.Decimal(10, 2)
+  totalAmount            Decimal                @map("total_amount") @db.Decimal(10, 2)
+  currency               String                 @default("INR") @map("currency")
+  status                 StoreOrderStatus       @default(PENDING_CONFIRMATION) @map("status")
+  orderChannel           String                 @default("WHATSAPP") @map("order_channel")
+  paymentStatus          StorePaymentStatus     @default(PENDING) @map("payment_status")
+  paymentProvider        String                 @default("razorpay") @map("payment_provider")
+  razorpayOrderId        String?                @unique @map("razorpay_order_id")
+  razorpayPaymentId      String?                @unique @map("razorpay_payment_id")
+  vendorPaymentAccountId String?                @map("vendor_payment_account_id") @db.Uuid
+  platformCommission     Decimal                @default(0) @map("platform_commission") @db.Decimal(10, 2)
+  gatewayFee             Decimal                @default(0) @map("gateway_fee") @db.Decimal(10, 2)
+  estimatedGatewayFee    Decimal                @default(0) @map("estimated_gateway_fee") @db.Decimal(10, 2)
+  actualGatewayFee       Decimal?               @map("actual_gateway_fee") @db.Decimal(10, 2)
+  vendorSettlementAmount Decimal?               @map("vendor_settlement_amount") @db.Decimal(10, 2)
+  paidAt                 DateTime?              @map("paid_at")
+  notes                  String?                @map("notes") @db.Text
+  invoiceId              String?                @unique @map("invoice_id") @db.Uuid
+  createdAt              DateTime               @default(now()) @map("created_at")
+  updatedAt              DateTime               @updatedAt @map("updated_at")
 
-  store           VendorStore            @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  invoice         VendorInvoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  items           VendorStoreOrderItem[]
+  store                  VendorStore            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  invoice                VendorInvoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  vendorPaymentAccount   VendorPaymentAccount?  @relation(fields: [vendorPaymentAccountId], references: [id], onDelete: SetNull)
+  items                  VendorStoreOrderItem[]
+  refunds                VendorStoreOrderRefund[]
+  transfers              VendorStoreTransfer[]
+  paymentAttempts        VendorStorePaymentAttempt[]
+  settlements            VendorStoreSettlement[]
 
   @@index([storeId, status])
   @@index([customerPhone])
+  @@index([paymentStatus])
   @@map("vendor_store_orders")
 }
 
@@ -2062,4 +2145,116 @@ model VendorStoreOrderItem {
 
   @@map("vendor_store_order_items")
 }
+
+model VendorStoreOrderRefund {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId          String   @map("order_id") @db.Uuid
+  razorpayRefundId String?  @unique @map("razorpay_refund_id")
+  amount           Decimal  @db.Decimal(10, 2)
+  currency         String   @default("INR")
+  status           String   @default("PROCESSED")
+  reason           String?  @map("reason")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  order            VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("vendor_store_order_refunds")
+}
+
+enum StoreTransferStatus {
+  CREATED
+  PENDING
+  PROCESSED
+  FAILED
+  REVERSED
+  PARTIALLY_REVERSED
+}
+
+model VendorStoreTransfer {
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId            String              @map("order_id") @db.Uuid
+  vendorId           String              @map("vendor_id") @db.Uuid
+  provider           String              @default("razorpay")
+  providerTransferId String?             @unique @map("provider_transfer_id") // trf_xxxxxxxx
+  recipientAccountId String              @map("recipient_account_id") // acc_xxxxxxxx
+  paymentAccountId   String?             @map("payment_account_id") @db.Uuid
+  razorpayOrderId    String?             @map("razorpay_order_id")
+  razorpayPaymentId  String?             @map("razorpay_payment_id")
+  amount             Decimal             @db.Decimal(10, 2)
+  currency           String              @default("INR")
+  status             StoreTransferStatus @default(CREATED)
+  failureCode        String?             @map("failure_code")
+  failureReason      String?             @map("failure_reason") @db.Text
+  processedAt        DateTime?           @map("processed_at")
+  failedAt           DateTime?           @map("failed_at")
+  reversedAt         DateTime?           @map("reversed_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  order              VendorStoreOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendor             Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([vendorId])
+  @@index([paymentAccountId])
+  @@index([razorpayOrderId])
+  @@index([razorpayPaymentId])
+  @@index([status])
+  @@map("vendor_store_transfers")
+}
+
+model VendorStorePaymentAttempt {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId           String             @map("order_id") @db.Uuid
+  attemptNumber     Int                @default(1) @map("attempt_number")
+  razorpayOrderId   String?            @map("razorpay_order_id")
+  razorpayPaymentId String?            @unique @map("razorpay_payment_id")
+  amount            Decimal            @db.Decimal(10, 2)
+  currency          String             @default("INR")
+  status            StorePaymentStatus @default(PENDING)
+  failureCode       String?            @map("failure_code")
+  failureReason     String?            @map("failure_reason") @db.Text
+  createdAt         DateTime           @default(now()) @map("created_at")
+  authorizedAt      DateTime?          @map("authorized_at")
+  capturedAt        DateTime?          @map("captured_at")
+  failedAt          DateTime?          @map("failed_at")
+
+  order             VendorStoreOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([razorpayOrderId])
+  @@index([razorpayPaymentId])
+  @@index([status])
+  @@map("vendor_store_payment_attempts")
+}
+
+model VendorStoreSettlement {
+  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId             String            @map("vendor_id") @db.Uuid
+  orderId              String?           @map("order_id") @db.Uuid
+  providerSettlementId String            @unique @map("provider_settlement_id") // setl_xxxxxxxx
+  recipientAccountId   String            @map("recipient_account_id") // acc_xxxxxxxx
+  amount               Decimal           @db.Decimal(10, 2)
+  fees                 Decimal           @default(0) @db.Decimal(10, 2)
+  tax                  Decimal           @default(0) @db.Decimal(10, 2)
+  utr                  String?           @map("utr")
+  status               String            @default("PROCESSED") // PENDING, PROCESSED, RECONCILED, FAILED
+  processedAt          DateTime?         @map("processed_at")
+  reconciledAt         DateTime?         @map("reconciled_at")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+
+  vendor               Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  order                VendorStoreOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([vendorId])
+  @@index([orderId])
+  @@index([utr])
+  @@index([status])
+  @@map("vendor_store_settlements")
+}
+
+
+
 

@@ -2,8 +2,10 @@ import { NotFoundError, ValidationError } from "../../common/errors";
 import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
 import { getPublicUrl } from "../../integrations/storage/r2.client";
 import { getOwnedVendorOrThrow } from "../vendors/vendor.policy";
+import { prisma } from "../../config/database";
 import * as storeRepository from "./vendor-store.repository";
 import * as vendorInvoiceService from "../vendor-invoices/vendor-invoice.service";
+import * as vendorPaymentService from "../vendor-payments/vendor-payment.service";
 import type {
   CreateStoreItemInput,
   PublicCreateOrderInput,
@@ -259,6 +261,12 @@ export async function updateStoreOrderStatus(
     throw new NotFoundError("Order not found");
   }
 
+  if (input.paymentStatus && order.orderChannel === "ONLINE" && input.paymentStatus !== order.paymentStatus) {
+    throw new ValidationError(
+      "Online order payment status is cryptographically managed by payment gateway webhooks and cannot be changed manually.",
+    );
+  }
+
   return storeRepository.updateStoreOrderStatus(orderId, {
     status: input.status,
     paymentStatus: input.paymentStatus,
@@ -325,6 +333,10 @@ export async function getPublicStoreBySlug(slug: string) {
     throw new NotFoundError("Store is not active for this vendor category");
   }
 
+  const isOnlinePaymentEnabled = vendorPaymentService.canVendorAcceptOnlinePayments(
+    store.vendor.paymentAccount as any,
+  ).eligible;
+
   return {
     id: store.id,
     vendorId: store.vendor.id,
@@ -336,12 +348,23 @@ export async function getPublicStoreBySlug(slug: string) {
     shippingPolicy: store.shippingPolicy,
     returnPolicy: store.returnPolicy,
     minOrderValue: store.minOrderValue ? Number(store.minOrderValue) : null,
+    isOnlinePaymentEnabled,
     vendor: {
       businessName: store.vendor.businessName,
       slug: store.vendor.slug,
       address: store.vendor.profile?.address ?? null,
       email: store.vendor.profile?.email ?? null,
       phone: store.vendor.profile?.phone ?? null,
+      logoUrl: store.vendor.profile?.logoMedia?.thumbnailObjectKey
+        ? getPublicUrl(store.vendor.profile.logoMedia.thumbnailObjectKey)
+        : store.vendor.profile?.logoMedia?.originalObjectKey
+        ? getPublicUrl(store.vendor.profile.logoMedia.originalObjectKey)
+        : null,
+      coverUrl: store.vendor.profile?.coverMedia?.optimizedObjectKey
+        ? getPublicUrl(store.vendor.profile.coverMedia.optimizedObjectKey)
+        : store.vendor.profile?.coverMedia?.originalObjectKey
+        ? getPublicUrl(store.vendor.profile.coverMedia.originalObjectKey)
+        : null,
     },
   };
 }
@@ -353,7 +376,17 @@ export async function listPublicStoreItems(slug: string) {
 }
 
 export async function createPublicStoreOrder(slug: string, input: PublicCreateOrderInput) {
-  const store = await getPublicStoreBySlug(slug);
+  const store = await storeRepository.findVendorStoreBySlug(slug);
+  if (!store || !store.isEnabled || store.vendor.status !== "APPROVED") {
+    throw new NotFoundError("Store not found or inactive");
+  }
+
+  const isCategoryEligible = store.vendor.categories.some(
+    (vc) => vc.category.hasStoreEnabled && vc.category.isActive,
+  );
+  if (!isCategoryEligible) {
+    throw new NotFoundError("Store is not active for this vendor category");
+  }
 
   const availableItems = await storeRepository.findStoreItems(store.id, false);
   const itemMap = new Map(availableItems.map((i) => [i.id, i]));
@@ -368,7 +401,8 @@ export async function createPublicStoreOrder(slug: string, input: PublicCreateOr
     customizationNotes?: string | null | undefined;
   }> = [];
 
-  let totalAmount = 0;
+  let subtotal = 0;
+  let gstTotal = 0;
 
   for (const requestedItem of input.items) {
     const item = itemMap.get(requestedItem.itemId);
@@ -382,9 +416,32 @@ export async function createPublicStoreOrder(slug: string, input: PublicCreateOr
       );
     }
 
+    if (item.stockQuantity !== null) {
+      const pendingCheckouts = await prisma.vendorStoreOrderItem.findMany({
+        where: {
+          itemId: item.id,
+          order: {
+            paymentStatus: "PENDING",
+            createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) },
+          },
+        },
+        select: { quantity: true },
+      });
+      const reservedQuantity = pendingCheckouts.reduce((sum, r) => sum + r.quantity, 0);
+      const availableUnits = item.stockQuantity - reservedQuantity;
+      if (availableUnits < requestedItem.quantity) {
+        throw new ValidationError(
+          `"${item.title}" is currently out of stock or reserved by another checkout session (${Math.max(0, availableUnits)} available).`,
+        );
+      }
+    }
+
     const unitPrice = Number(item.price);
     const lineTotal = Number((unitPrice * requestedItem.quantity).toFixed(2));
-    totalAmount += lineTotal;
+    const itemGst = Number(((lineTotal * item.gstRate) / 100).toFixed(2));
+
+    subtotal += lineTotal;
+    gstTotal += itemGst;
 
     orderLineItems.push({
       itemId: item.id,
@@ -397,10 +454,99 @@ export async function createPublicStoreOrder(slug: string, input: PublicCreateOr
     });
   }
 
-  if (store.minOrderValue && totalAmount < store.minOrderValue) {
+  const totalAmount = Math.round(subtotal + gstTotal);
+
+  if (store.minOrderValue && totalAmount < Number(store.minOrderValue)) {
     throw new ValidationError(`Minimum order value for this store is ₹${store.minOrderValue}`);
   }
 
+  const paymentMethod = input.paymentMethod || "WHATSAPP";
+
+  if (paymentMethod === "ONLINE") {
+    const paymentAccount = store.vendor.paymentAccount;
+    const eligibility = vendorPaymentService.canVendorAcceptOnlinePayments(paymentAccount);
+    if (!eligibility.eligible) {
+      throw new ValidationError(
+        eligibility.reason ||
+          "Online payments are not currently active for this store. Please complete your order via WhatsApp.",
+      );
+    }
+
+    const financials = vendorPaymentService.calculateOrderFinancials(totalAmount);
+
+    const order = await storeRepository.createStoreOrderAtomicTx(
+      store.id,
+      {
+        customerName: input.customerName,
+        customerPhone: input.customerPhone,
+        customerEmail: input.customerEmail,
+        shippingAddress: input.shippingAddress,
+        city: input.city,
+        customerState: input.customerState,
+        pincode: input.pincode,
+        eventDate: input.eventDate ? new Date(input.eventDate) : null,
+        notes: input.notes,
+        subtotal,
+        discount: 0,
+        gstAmount: gstTotal,
+        totalAmount,
+        orderChannel: "ONLINE",
+        paymentStatus: "PENDING",
+        paymentProvider: "razorpay",
+        vendorPaymentAccountId: paymentAccount!.id,
+        platformCommission: financials.platformCommission,
+        gatewayFee: financials.gatewayFee,
+        estimatedGatewayFee: financials.gatewayFee,
+        vendorSettlementAmount: financials.vendorSettlementAmount,
+      },
+      orderLineItems,
+    );
+
+    let rzpOrderInfo: { razorpayOrderId: string; keyId: string };
+    try {
+      rzpOrderInfo = await vendorPaymentService.createStorePaymentOrder(
+        {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          store: { slug: store.slug, vendorId: store.vendorId },
+        },
+        totalAmount,
+        {
+          razorpayAccountId: paymentAccount!.razorpayAccountId,
+          status: paymentAccount!.status,
+          chargesEnabled: paymentAccount!.chargesEnabled,
+          payoutsEnabled: paymentAccount!.payoutsEnabled,
+          bankVerificationStatus: paymentAccount!.bankVerificationStatus,
+          transferEligibleAt: paymentAccount!.transferEligibleAt,
+          routeActivationStatus: paymentAccount!.routeActivationStatus,
+        },
+        financials.vendorSettlementAmount,
+      );
+    } catch (err) {
+      await prisma.vendorStoreOrder.update({
+        where: { id: order.id },
+        data: { paymentStatus: "FAILED", status: "CANCELLED" },
+      });
+      throw err;
+    }
+
+    await prisma.vendorStoreOrder.update({
+      where: { id: order.id },
+      data: { razorpayOrderId: rzpOrderInfo.razorpayOrderId },
+    });
+
+    return {
+      orderNumber: order.orderNumber,
+      orderId: order.id,
+      totalAmount,
+      paymentMethod: "ONLINE",
+      razorpayOrderId: rzpOrderInfo.razorpayOrderId,
+      keyId: rzpOrderInfo.keyId,
+      currency: "INR",
+    };
+  }
+
+  // Fallback / standard WHATSAPP order flow
   const order = await storeRepository.createStoreOrderAtomicTx(
     store.id,
     {
@@ -413,13 +559,22 @@ export async function createPublicStoreOrder(slug: string, input: PublicCreateOr
       pincode: input.pincode,
       eventDate: input.eventDate ? new Date(input.eventDate) : null,
       notes: input.notes,
+      subtotal,
+      discount: 0,
+      gstAmount: gstTotal,
       totalAmount,
+      orderChannel: "WHATSAPP",
+      paymentStatus: "PENDING",
+      paymentProvider: "razorpay",
+      platformCommission: 0,
+      gatewayFee: 0,
+      vendorSettlementAmount: totalAmount,
     },
     orderLineItems,
   );
 
   // Build formatted WhatsApp message and link
-  const targetPhone = normalizePhone(store.whatsappOrderPhone || store.vendor.phone || "919999999999");
+  const targetPhone = normalizePhone(store.whatsappOrderPhone || store.vendor.profile?.phone || "919999999999");
   const itemsSummary = orderLineItems
     .map((item) => `• ${item.itemTitle} × ${item.quantity} (₹${item.unitPrice}) = ₹${item.totalPrice}`)
     .join("\n");
@@ -449,6 +604,8 @@ export async function createPublicStoreOrder(slug: string, input: PublicCreateOr
     orderNumber: order.orderNumber,
     orderId: order.id,
     totalAmount,
+    paymentMethod: "WHATSAPP",
     whatsappUrl,
   };
 }
+

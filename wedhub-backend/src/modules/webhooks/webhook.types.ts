@@ -7,8 +7,33 @@ declare module "express-serve-static-core" {
 export interface RazorpayWebhookPayload {
   event: string;
   payload: {
-    payment?: { entity: { id: string; order_id: string; status: string; error_description?: string } };
-    refund?: { entity: { id: string; payment_id: string; amount: number } };
+    payment?: {
+      entity: {
+        id: string;
+        order_id: string;
+        status: string;
+        amount?: number;
+        fee?: number;
+        tax?: number;
+        currency?: string;
+        error_description?: string;
+        notes?: Record<string, any>;
+      };
+    };
+    refund?: {
+      entity: {
+        id: string;
+        payment_id: string;
+        amount: number;
+        notes?: Record<string, any>;
+      };
+    };
+    account?: {
+      entity: {
+        id: string;
+        status?: string;
+      };
+    };
     // Fires for Razorpay Payment Links (Arch Phase 26's Telegram ₹49
     // publish flow) — a distinct event from payment.captured because a
     // Payment Link generates its own internal order that was never
@@ -17,6 +42,24 @@ export interface RazorpayWebhookPayload {
     // creation — see razorpay.client.ts's createPaymentLink), not via a
     // pre-known order_id.
     payment_link?: { entity: { id: string; notes?: Record<string, string> } };
+    // Razorpay Route split settlement transfer events
+    transfer?: {
+      entity: {
+        id: string;
+        source?: string;
+        recipient?: string;
+        amount: number;
+        currency?: string;
+        status: string;
+        settlement_status?: string;
+        error?: {
+          code?: string;
+          description?: string;
+          reason?: string;
+        };
+        notes?: Record<string, any>;
+      };
+    };
   };
   created_at: number;
 }

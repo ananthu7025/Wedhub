@@ -4,6 +4,7 @@ import type { ApiResponse } from "./types";
 import type {
   CreateStoreItemInput,
   PublicCreateOrderInput,
+  PublicCreateOrderResponse,
   PublicStoreData,
   StoreOrderStatus,
   UpdateOrderStatusInput,
@@ -85,10 +86,5 @@ export function getPublicStoreItems(slug: string) {
 }
 
 export function createPublicStoreOrder(slug: string, body: PublicCreateOrderInput) {
-  return call<{
-    orderId: string;
-    orderNumber: string;
-    whatsappUrl: string;
-    totalAmount: number;
-  }>(`/stores/${encodeURIComponent(slug)}/orders`, "POST", body);
+  return call<PublicCreateOrderResponse>(`/stores/${encodeURIComponent(slug)}/orders`, "POST", body);
 }

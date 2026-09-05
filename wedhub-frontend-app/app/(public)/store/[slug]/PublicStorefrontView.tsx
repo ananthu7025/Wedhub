@@ -293,6 +293,7 @@ export function PublicStorefrontView({
         storeSlug={store.slug}
         storeName={store.storeName}
         minOrderValue={store.minOrderValue}
+        isOnlinePaymentEnabled={store.isOnlinePaymentEnabled}
         cart={cart}
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}

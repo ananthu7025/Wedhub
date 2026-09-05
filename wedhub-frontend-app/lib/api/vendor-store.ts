@@ -6,6 +6,8 @@ import type {
   VendorStoreItem,
   VendorStoreOrder,
   VendorStoreProfile,
+  VendorPaymentAccountSummary,
+  VendorPaymentMetrics,
 } from "./vendor-store.types";
 
 export function fetchPublicStore(slug: string) {
@@ -38,6 +40,18 @@ export function fetchVendorStoreOrders(status?: StoreOrderStatus) {
   const query = status ? { status } : undefined;
   return apiFetch<VendorStoreOrder[]>("/vendor-store/me/orders", {
     query,
+    cache: "no-store",
+  });
+}
+
+export function fetchVendorPaymentAccount() {
+  return apiFetch<VendorPaymentAccountSummary | null>("/vendor-store/me/payment-account", {
+    cache: "no-store",
+  });
+}
+
+export function fetchVendorPaymentSummary() {
+  return apiFetch<VendorPaymentMetrics>("/vendor-store/me/payment-summary", {
     cache: "no-store",
   });
 }

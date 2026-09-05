@@ -75,6 +75,17 @@ export const publicCreateOrderItemSchema = z.object({
   customizationNotes: z.string().max(500).nullable().optional(),
 });
 
+export const storePaymentStatusEnum = z.enum([
+  "CREATED",
+  "PENDING",
+  "AUTHORIZED",
+  "CAPTURED",
+  "FAILED",
+  "REFUNDED",
+  "PARTIALLY_REFUNDED",
+  "CANCELLED",
+]);
+
 export const publicCreateOrderSchema = z.object({
   customerName: z.string().min(1).max(150),
   customerPhone: indianPhoneSchema,
@@ -85,10 +96,12 @@ export const publicCreateOrderSchema = z.object({
   pincode: z.string().max(20).nullable().optional(),
   eventDate: z.string().nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
+  paymentMethod: z.enum(["ONLINE", "WHATSAPP"]).default("WHATSAPP"),
   items: z.array(publicCreateOrderItemSchema).min(1).max(50),
 });
 
 export const updateOrderStatusSchema = z.object({
   status: storeOrderStatusEnum.optional(),
-  paymentStatus: z.string().max(50).optional(),
+  paymentStatus: storePaymentStatusEnum.optional(),
 });
+

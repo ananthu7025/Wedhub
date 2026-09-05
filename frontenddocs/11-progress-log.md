@@ -26,8 +26,9 @@
 | 13 | Vendor GST Invoicing & Billing | [Stage 7](09-stage-vendor-invoices.md) | ✅ Done | 2026-09-04 |
 | 14 | Standalone Vendor-First Digital Portfolio & WhatsApp Share | [Stage 8](10-stage-vendor-portfolio.md) | ✅ Done | 2026-09-04 |
 | 15 | Category-Gated Vendor Mini-Store & Direct Commerce Engine | [Stage 12](12-stage-vendor-store.md) | ✅ Done | 2026-09-04 |
+| 16 | Vendor Marketplace Payments & Route Settlements | [Stage 13](18-vendor-store-payment-architecture-plan.md) | ✅ Done | 2026-09-05 |
 
-**Overall: 14 / 15 Frontend Arch Phases complete, Phase 11 in progress.** The combined Playwright pass for Phases 7–10 (deferred since 2026-09-02) ran 2026-09-04 — all 15 tests pass, stable across repeated runs — see the "Combined Playwright verification — Phases 7–10" entry below for what it found and fixed (2 real production bugs, plus test-infrastructure gaps: a duplicated, incomplete admin-test-user helper that predated 2026-09-04's real RBAC enforcement, and several dead test-cleanup variables that never freed the unique slots/rows they created). Frontend Arch Phase 11b (SEO Page Generation) shipped 2026-09-03 once backend Arch Phase 17's page-generation slice unblocked it — see `07-stage-growth-and-hardening.md`'s checklist for the full item-by-item write-up. Preceding this: the 34-screen static mockup (`../wedhub-frontend/`) is done and approved — it is the visual/content contract this plan implements, not itself a Frontend Arch Phase. The backend (17/26 Arch Phases, Stages 1–6 done, Arch Phase 17 in progress) is ahead of the frontend on this phase's remaining CMS-content half (blog/FAQs/static pages).
+**Overall: 15 / 16 Frontend Arch Phases complete, Phase 11 in progress.**
 
 ---
 
@@ -1094,6 +1095,60 @@ Vendors get a full-featured GST billing interface inside the vendor portal:
 
 - `npx tsc --noEmit`: Passed with 0 errors across all frontend files.
 - `npm run build`: Compiled cleanly with Turbopack across all 57 routes, including all new vendor store and public store routes (`/store/[slug]`, `/vendor/store`, `/vendor/store/items`, `/vendor/store/orders`).
+
+---
+
+## Frontend Arch Phase 16 — Vendor Marketplace Online Payments, Route Settlements & Admin Finance
+
+**Status:** ✅ Done — 2026-09-05  
+**Stage:** [Stage 13 — Vendor Marketplace Payment Architecture](../docs/18-vendor-store-payment-architecture-plan.md)
+
+### What this unlocks
+
+- **Customer Dual-Channel Checkout (`CartDrawer.tsx`)**:
+  - Direct selector between **"Pay Online Securely"** (UPI, Cards, NetBanking via Razorpay Route) and **"Via WhatsApp"** (chat-to-order fallback).
+  - Dynamically loads `checkout.js`, initializes Razorpay modal with `orders.create` Route transfers payload, calls cryptographic signature verification on completion, and renders an instant order confirmation view with transaction reference.
+- **Vendor Payments & Settlements Dashboard (`/vendor/store/payments`)**:
+  - Banner highlighting **0% WedHub Commission** and automated bank settlement.
+  - Linked Bank Account onboarding form with account confirmation and IFSC validation.
+  - Metric cards: Total GMV, Settled to Bank, Refunds Issued, and Commission = ₹0.
+  - Interactive Orders Ledger with single-click **Refund Modal** supporting full or partial reverse-transfer refunds.
+- **Store Navigation Suite (`StoreNavTabs.tsx`)**:
+  - Added **"Payments & Payouts"** navigation tab (`/vendor/store/payments`).
+- **Store Orders Table Enhancements (`StoreOrdersTable.tsx`)**:
+  - Color-coded payment status badges (`PAID ONLINE`, `PARTIAL REFUND`, `REFUNDED`, `AWAITING PAYMENT`).
+  - Transaction reference links leading directly to the Payments board.
+- **Admin Marketplace Settlements Oversight (`/admin/store-payments`)**:
+  - Superadmin visibility into platform-wide GMV, connected vendor bank accounts, and multi-vendor order audit trail.
+  - `AdminShell.tsx` navigation updated with "Marketplace settlements" under Monetization.
+
+### Routes Implemented
+
+- `/vendor/store/payments` (Vendor bank onboarding, settlement metrics, transactions ledger, refunds)
+- `/admin/store-payments` (Admin marketplace GMV, connected accounts, and ledger)
+
+### Components Added
+
+- `app/(vendor)/vendor/store/payments/PaymentsBoard.tsx`
+- `app/(vendor)/vendor/store/payments/page.tsx`
+- `app/(admin)/admin/store-payments/AdminStorePaymentsBoard.tsx`
+- `app/(admin)/admin/store-payments/page.tsx`
+- `lib/api/vendor-payments-client.ts`
+- Updated: `components/vendor-store/CartDrawer.tsx`
+- Updated: `components/vendor-store/StoreNavTabs.tsx`
+- Updated: `app/(vendor)/vendor/store/orders/StoreOrdersTable.tsx`
+- Updated: `components/shared/AdminShell.tsx`
+
+### Verification
+
+- `npx tsc --noEmit`: Passed with 0 errors.
+- `npm run build`: Successfully compiled and generated static/dynamic bundles for all 64 routes with Turbopack.
+
+### Production Gap Resolutions Added
+
+- **Razorpay Hosted KYC Link**: In `PaymentsBoard.tsx`, added a "Complete Digital KYC" button calling `POST /api/v1/vendor-store/me/payment-account/kyc-link` that launches Razorpay's hosted verification flow in a secure new window.
+- **Transparent Non-Refundable Fee Notice**: In `PaymentsBoard.tsx` refund modal, added breakdown for "Settled to Your Bank" vs. "Payment Gateway Fee (2% + GST)" and clear banking network disclaimer.
+
 
 
 

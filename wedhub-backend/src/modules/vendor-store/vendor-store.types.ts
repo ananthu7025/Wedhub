@@ -1,6 +1,7 @@
-import type { StoreItemType, StoreOrderStatus } from "@prisma/client";
+import type { StoreItemType, StoreOrderStatus, StorePaymentStatus } from "@prisma/client";
 
-export type { StoreItemType, StoreOrderStatus };
+export type { StoreItemType, StoreOrderStatus, StorePaymentStatus };
+
 
 export interface UpsertStoreProfileInput {
   storeName?: string | undefined;
@@ -57,10 +58,12 @@ export interface PublicCreateOrderInput {
   pincode?: string | null | undefined;
   eventDate?: string | null | undefined;
   notes?: string | null | undefined;
+  paymentMethod?: "ONLINE" | "WHATSAPP" | undefined;
   items: PublicCreateOrderItemInput[];
 }
 
 export interface UpdateOrderStatusInput {
   status?: StoreOrderStatus | undefined;
-  paymentStatus?: string | undefined;
+  paymentStatus?: StorePaymentStatus | undefined;
 }
+

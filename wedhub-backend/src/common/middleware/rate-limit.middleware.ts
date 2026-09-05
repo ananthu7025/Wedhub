@@ -71,3 +71,11 @@ export const storeOrderRateLimiter = createRateLimiter({
   max: process.env.STORE_ORDER_RATE_LIMIT_MAX ? Number(process.env.STORE_ORDER_RATE_LIMIT_MAX) : 10,
   message: "Too many store order attempts. Please try again later.",
 });
+
+// Stage 13 / Arch Phase 30 — public store payment signature verification
+export const storePaymentVerifyRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.STORE_PAYMENT_VERIFY_RATE_LIMIT_MAX ? Number(process.env.STORE_PAYMENT_VERIFY_RATE_LIMIT_MAX) : 15,
+  message: "Too many payment verification attempts. Please try again later.",
+});
+

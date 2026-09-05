@@ -40,8 +40,9 @@
 | 27 | Vendor GST Invoices & Payment Engine | [Stage 9](13-stage-vendor-invoices.md) | ✅ Done | 2026-09-04 |
 | 28 | Standalone Vendor Digital Portfolio & WhatsApp Connect | [Stage 10](14-stage-vendor-portfolio.md) | ✅ Done | 2026-09-04 |
 | 29 | Category-Gated Vendor Mini-Store & Direct Commerce Engine | [Stage 11](15-stage-vendor-store.md) | ✅ Done | 2026-09-04 |
+| 30 | Vendor Marketplace Payments & Razorpay Route Settlements | [Stage 13](18-vendor-store-payment-architecture-plan.md) | ✅ Done | 2026-09-05 |
 
-**Overall: 22 / 29 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), Stage 6 (Telegram & Admin), Stage 7 (CMS & SEO, Analytics), Stage 9 (Vendor GST Invoices), Stage 10 (Standalone Vendor Portfolio), and Stage 11 (Vendor Mini-Store & Direct Commerce Engine) are all fully shipped.**
+**Overall: 23 / 30 Arch Phases complete. Stage 1 (Foundation), Stage 2 (Marketplace Supply), Stage 3 (Discovery & Engagement), Stage 4 (Lead Engine), Stage 5 (Monetization), Stage 6 (Telegram & Admin), Stage 7 (CMS & SEO, Analytics), Stage 9 (Vendor GST Invoices), Stage 10 (Standalone Vendor Portfolio), Stage 11 (Vendor Mini-Store), and Stage 13 (Marketplace Payments & Settlements) are all fully shipped.**
 
 **Paused 2026-09-02, resumed 2026-09-04, by user decision:** the backend build-out deliberately paused before Arch Phase 17 to wire up the frontend against everything shipped so far (Arch Phases 0–16 cover the full couple/vendor-facing product surface — auth, vendors, media, search, shortlists, leads, reviews, subscriptions, entitlements, featured listings, notifications, Telegram, and admin). That frontend integration work happened (Frontend Arch Phases 1–10 all shipped and Playwright-verified — see `frontenddocs/11-progress-log.md`), and Arch Phase 17 (CMS & SEO Backend) resumed 2026-09-04. Its first slice is done: Real Wedding Stories and Gallery Inspiration, both resolved as curation layers over already-real vendor Album/Media data rather than independent CMS content (see `09-stage-growth-and-scale.md`'s Arch Phase 17 checklist for the exact resolution). Its second slice, done 2026-09-03: SEO page-generation infrastructure — templated (not hand-authored) Category/City/Category+City landing pages backed by real vendor counts, thin-page avoidance (`MIN_VENDORS_FOR_INDEXABLE_PAGE = 3`), admin override CRUD, sitemap/robots data, and the corresponding frontend routes/`generateMetadata`/admin UI — this also unblocks Frontend Arch Phase 11b, previously hard-blocked on this phase (see `frontenddocs/10-risks-and-open-questions.md` Open Question 1). Its third slice, done 2026-09-04: Popular Searches — a new standalone `PopularSearchCard` model (no existing real entity to curate over, unlike wedding stories/gallery above), editorial/admin-curated per explicit decision (not analytics-driven — Arch Phase 18 doesn't exist yet). Full admin CRUD (`/admin/popular-searches`) + public `GET /popular-searches/featured/homepage`, wired into the homepage replacing the hardcoded `POPULAR_SEARCH_CARDS` array; its image field follows the `Category.imageUrl` precedent (plain url, resolved through a new small `MediaType.POPULAR_SEARCH_IMAGE` admin upload pipeline — migration `20260904085052_add_popular_search_cards`) rather than a `Media`-relation, since there's no owning vendor. Ships with zero rows, verified live: `POST` → appears in the public featured list → `PATCH` → `DELETE` → list empty again, via `wedhub-backend/src/modules/popular-search-cards/`. Its fourth and last content-model slice, done 2026-09-04: Blog — same standalone-editorial shape as Popular Searches (new `BlogPost` model, `MediaType.BLOG_COVER_IMAGE` upload pipeline, migration `20260904090914_add_blog_post`), plus a Markdown `bodyMarkdown` column rendered via the new `react-markdown` dependency (v10.1.0). Public `GET /blog/featured/homepage` + `GET /blog` (paginated) + `GET /blog/:slug`; full admin CRUD at `/admin/blog`, with publishing being a plain `PATCH publishedAt` (no separate publish endpoint). Real `/blog` list page and `/blog/[slug]` detail page with `generateMetadata`/`notFound()`, homepage teaser now hides itself when empty, sitemap includes every published post. Verified live end-to-end the same draft→public-absent→publish→public-present→delete→public-absent round trip as Popular Searches — see this file's own Arch Phase 17 section further down for the full trace.
 
@@ -1812,6 +1813,66 @@ Vendors can generate statutory Indian GST tax invoices for clients (couples) wit
 - `wedhub-backend`: Vitest test suite (`npm test`) passed 100% across all 13 unit tests (`vendor-store.spec.ts` & `vendor-invoice.spec.ts`).
 - `wedhub-frontend-app`: `npx tsc --noEmit` passed with 0 errors.
 - `wedhub-frontend-app`: `npm run build` compiled all 57 routes successfully via Turbopack.
+
+---
+
+## Arch Phase 30 — Vendor Marketplace Payments & Razorpay Route Settlements
+
+### What this unlocks
+
+- Upgraded the Vendor Mini-Store from a WhatsApp-only inquiry system into a full-fledged **multi-vendor direct commerce & booking payment marketplace**.
+- **Razorpay Route Integration**: Direct automated split settlements straight to the vendor's linked bank account (`type: "standard"`) with **0% platform commission (`platformCommission = 0`)**.
+- **Server-Side Decoupled Financial State**: `StorePaymentStatus` (`CREATED`, `PENDING`, `CAPTURED`, `REFUNDED`, etc.) is fully decoupled from fulfillment `StoreOrderStatus`. Unpaid orders cannot be marked as paid manually.
+- **Dual-Channel Ordering**: Dual-channel support — customers can pay online via UPI, Cards, and NetBanking, or order via WhatsApp if the vendor has not connected a bank account.
+- **Automated Reverse-Transfer Refunds**: Vendors can issue full or partial refunds directly from the dashboard, pulling settled funds back from their linked Route account.
+- **Idempotent Webhooks**: Signature-verified Razorpay webhooks (`payment.captured`, `payment.failed`, `refund.processed`, `account.updated`) recorded in `webhook_events` before execution.
+- **Admin Marketplace Finance Oversight**: Superadmins have full visibility into platform GMV, connected vendor bank accounts, and orders ledger.
+
+### APIs Completed
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/vendor-store/me/payment-account` | Get vendor linked bank account details | Bearer (VENDOR) |
+| POST | `/api/v1/vendor-store/me/payment-account/connect` | Onboard bank account via Razorpay Route | Bearer (VENDOR) |
+| GET | `/api/v1/vendor-store/me/payment-summary` | Vendor financial GMV & settlement metrics | Bearer (VENDOR) |
+| POST | `/api/v1/vendor-store/me/orders/:id/refund` | Issue full/partial refund with reverse transfer | Bearer (VENDOR) |
+| POST | `/api/v1/stores/:slug/orders` | Create store order (returns WhatsApp or Razorpay order) | Public (Rate Limited) |
+| POST | `/api/v1/stores/:slug/orders/:id/verify-payment` | Verify HMAC signature & capture payment | Public (Rate Limited) |
+| GET | `/api/v1/admin/store-payments/accounts` | List connected vendor payment accounts | Bearer (ADMIN) |
+| GET | `/api/v1/admin/store-payments/orders` | Multi-vendor marketplace orders ledger | Bearer (ADMIN) |
+| GET | `/api/v1/admin/store-payments/metrics` | Global GMV, settlements, and commission metrics | Bearer (ADMIN) |
+
+### Database Tables Created / Modified
+
+- `VendorPaymentAccount`: Vendor linked account ID, status, legal business name, masked bank account (`•••• 1234`), IFSC code, and Route account reference.
+- `VendorStoreOrderRefund`: Detailed audit of order refunds, amounts, reasons, and gateway refund IDs.
+- `VendorStoreOrder` (Extended): Added `subtotal`, `discount`, `gstAmount`, `platformCommission`, `gatewayFee`, `vendorSettlementAmount`, `paymentStatus`, `razorpayOrderId`, `razorpayPaymentId`, `paidAt`.
+- Migration: `20260905093000_add_vendor_store_marketplace_payments`.
+
+| POST | `/api/v1/vendor-store/me/payment-account/kyc-link` | Generate Razorpay hosted KYC onboarding link | Bearer (VENDOR) |
+| POST | `/api/v1/admin/store-payments/cleanup` | Maintenance cleanup for stale pending orders | Bearer (ADMIN) |
+
+### Real-World Production Gaps Resolved
+
+1. **Zero Platform Loss on Gateway Fees**:
+   - Razorpay Route deducts the ~2.36% gateway fee from the primary platform account. To prevent WedHub from losing money, `calculateOrderFinancials` deducts the fee and sets `vendorSettlementAmount = totalAmount - gatewayFee`, settling the net amount to the vendor's linked account and leaving WedHub's balance impact at exactly ₹0.
+2. **Atomic Inventory Decrement**:
+   - Validates item stock before order creation. On payment capture, decrements `stockQuantity` in Prisma `$transaction` and updates `isAvailable` to `false` if stock hits 0.
+3. **Transfer Webhook Observability**:
+   - Handled `transfer.processed` and `transfer.failed` in `webhook.service.ts` to log Route transfer events and alert vendors if bank settlement fails.
+4. **Hosted Digital KYC Onboarding**:
+   - Added `createAccountLink` in `razorpay.client.ts` and UI action in `PaymentsBoard.tsx` allowing vendors to complete verification directly on Razorpay.
+5. **Non-Refundable Fee Transparency**:
+   - Refund modal in `PaymentsBoard.tsx` displays gateway fee breakdown and banking network notice.
+6. **Automated Stale Order Cleanup**:
+   - Stale pending orders (>60m) are cancelled via `cleanupStalePendingOrders()`.
+
+### Verification
+
+- `wedhub-backend`: `npm run typecheck` passed with 0 errors (`exactOptionalPropertyTypes: true`).
+- `wedhub-backend`: Vitest suite `npm run test:unit` passed 100% across 20 unit tests.
+- `wedhub-frontend-app`: `npx tsc --noEmit` passed with 0 errors.
+- `wedhub-frontend-app`: `npm run build` compiled all 64 pages and route handlers successfully.
 
 
 
