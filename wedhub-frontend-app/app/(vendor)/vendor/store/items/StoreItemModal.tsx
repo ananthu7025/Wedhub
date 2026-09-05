@@ -9,6 +9,7 @@ import {
   createMediaUploadRequest,
   confirmMediaUpload,
 } from "@/lib/api/vendor-self-client";
+import { compressImageIfPossible } from "@/lib/media/compress-image";
 import type {
   StoreItemType,
   VendorStoreItem,
@@ -71,7 +72,8 @@ export function StoreItemModal({
 
     try {
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+        const originalFile = files[i];
+        const file = await compressImageIfPossible(originalFile);
         // 1. Request presigned upload URL
         const reqRes = await createMediaUploadRequest({
           mediaType: "STORE_ITEM_PHOTO",

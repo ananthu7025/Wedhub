@@ -11,6 +11,8 @@ import {
   upsertMyProfile,
 } from "@/lib/api/vendor-self-client";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import { compressImageIfPossible } from "@/lib/media/compress-image";
+import { runWithConcurrencyLimit } from "@/lib/utils/concurrency";
 import type { MediaItem } from "@/lib/api/vendor-self.types";
 import { formatApiError } from "@/lib/utils/error";
 
@@ -19,11 +21,13 @@ const SETTLED_STATUSES = new Set(["READY", "FAILED", "INACTIVE", "DELETED"]);
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime"];
 const MAX_FILE_SIZE_MB = 50;
+const MAX_CONCURRENT_UPLOADS = 3;
 
 interface UploadingItem {
   tempId: string;
   fileName: string;
   previewUrl: string;
+  file: File;
   progress: "uploading" | "confirming" | "processing" | "error";
   error?: string;
 }
@@ -69,18 +73,17 @@ export function PortfolioManager({
   const photoCount = media.filter((m) => m.mediaType === "PORTFOLIO" && m.mimeType.startsWith("image/")).length;
   const videoCount = media.filter((m) => m.mediaType === "VIDEO" || m.mimeType.startsWith("video/")).length;
 
-  async function uploadOneFile(file: File) {
-    const tempId = `${file.name}-${Date.now()}-${Math.random()}`;
-    const previewUrl = URL.createObjectURL(file);
-    const mediaType = file.type.startsWith("video/") ? "VIDEO" : "PORTFOLIO";
+  async function uploadOneFile(file: File, tempId: string) {
+    setUploads((prev) => prev.map((u) => (u.tempId === tempId ? { ...u, progress: "uploading", error: undefined } : u)));
 
-    setUploads((prev) => [...prev, { tempId, fileName: file.name, previewUrl, progress: "uploading" }]);
+    const compressed = await compressImageIfPossible(file);
+    const mediaType = compressed.type.startsWith("video/") ? "VIDEO" : "PORTFOLIO";
 
     const requestResult = await createMediaUploadRequest({
       mediaType,
-      filename: file.name,
-      mimeType: file.type,
-      fileSize: file.size,
+      filename: compressed.name,
+      mimeType: compressed.type,
+      fileSize: compressed.size,
     });
     if (!requestResult.success) {
       setUploads((prev) => prev.map((u) => (u.tempId === tempId ? { ...u, progress: "error", error: formatApiError(requestResult.error) } : u)));
@@ -88,7 +91,7 @@ export function PortfolioManager({
     }
 
     const { mediaId, uploadUrl } = requestResult.data;
-    const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+    const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": compressed.type }, body: compressed });
     if (!putResponse.ok) {
       setUploads((prev) => prev.map((u) => (u.tempId === tempId ? { ...u, progress: "error", error: "Upload to storage failed" } : u)));
       return;
@@ -109,6 +112,8 @@ export function PortfolioManager({
 
   function handleFilesSelected(files: FileList | null) {
     if (!files) return;
+    const accepted: Array<{ file: File; tempId: string }> = [];
+
     for (const file of Array.from(files)) {
       if (!ACCEPTED_TYPES.includes(file.type)) {
         const tempId = `${file.name}-${Date.now()}-${Math.random()}`;
@@ -118,6 +123,7 @@ export function PortfolioManager({
             tempId,
             fileName: file.name,
             previewUrl: "",
+            file,
             progress: "error",
             error: "Unsupported file type. Allowed: JPG, PNG, WebP, MP4, MOV.",
           },
@@ -132,14 +138,33 @@ export function PortfolioManager({
             tempId,
             fileName: file.name,
             previewUrl: "",
+            file,
             progress: "error",
             error: `File exceeds maximum allowed size of ${MAX_FILE_SIZE_MB}MB.`,
           },
         ]);
         continue;
       }
-      void uploadOneFile(file);
+      const tempId = `${file.name}-${Date.now()}-${Math.random()}`;
+      const previewUrl = URL.createObjectURL(file);
+      setUploads((prev) => [...prev, { tempId, fileName: file.name, previewUrl, file, progress: "uploading" }]);
+      accepted.push({ file, tempId });
     }
+
+    void runWithConcurrencyLimit(
+      accepted.map(({ file, tempId }) => () => uploadOneFile(file, tempId)),
+      MAX_CONCURRENT_UPLOADS,
+    );
+  }
+
+  function handleRetryUpload(tempId: string) {
+    const upload = uploads.find((u) => u.tempId === tempId);
+    if (!upload) return;
+    void uploadOneFile(upload.file, tempId);
+  }
+
+  function handleRemoveUpload(tempId: string) {
+    setUploads((prev) => prev.filter((u) => u.tempId !== tempId));
   }
 
   async function handleDelete(mediaId: string) {
@@ -239,7 +264,25 @@ export function PortfolioManager({
             <img src={upload.previewUrl} alt="" className="h-full w-full object-cover opacity-60" />
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 text-white">
               {upload.progress === "error" ? (
-                <span className="px-3 text-center text-xs font-bold">{upload.error ?? "Upload failed"}</span>
+                <>
+                  <span className="px-3 text-center text-xs font-bold">{upload.error ?? "Upload failed"}</span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleRetryUpload(upload.tempId)}
+                      className="rounded-md bg-white/90 px-2.5 py-1 text-[11px] font-bold text-text-dark hover:bg-white"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveUpload(upload.tempId)}
+                      className="rounded-md bg-white/90 px-2.5 py-1 text-[11px] font-bold text-text-dark hover:bg-white"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </>
               ) : (
                 <>
                   <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-white/30 border-t-white" />

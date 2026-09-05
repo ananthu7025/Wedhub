@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { confirmMediaUpload, createMediaUploadRequest } from "@/lib/api/vendor-self-client";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import { compressImageIfPossible } from "@/lib/media/compress-image";
 import type { MediaType } from "@/lib/api/vendor-self.types";
 import { formatApiError } from "@/lib/utils/error";
 
@@ -39,19 +40,20 @@ export function LogoCoverPicker({
   const [error, setError] = useState("");
 
   async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+    const selectedFile = event.target.files?.[0];
     event.target.value = "";
-    if (!file) return;
+    if (!selectedFile) return;
 
-    if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+    if (!ACCEPTED_MIME_TYPES.includes(selectedFile.type)) {
       setError("Only JPG, PNG, and WebP images are supported.");
       return;
     }
 
     setError("");
     setUploading(true);
-    setPreviewUrl(URL.createObjectURL(file));
+    setPreviewUrl(URL.createObjectURL(selectedFile));
 
+    const file = await compressImageIfPossible(selectedFile);
     const requestResult = await createMediaUploadRequest({
       mediaType,
       filename: file.name,

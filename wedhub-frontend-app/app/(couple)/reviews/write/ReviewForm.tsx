@@ -4,10 +4,14 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { createReview } from "@/lib/api/account-client";
 import { uploadReviewPhoto } from "@/lib/media/upload";
+import { runWithConcurrencyLimit } from "@/lib/utils/concurrency";
 import { formatApiError } from "@/lib/utils/error";
 
 const MAX_PHOTOS = 6;
+const MAX_CONCURRENT_UPLOADS = 3;
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+type PhotoUploadState = "pending" | "done" | "error";
 
 export function ReviewForm({
   vendorId,
@@ -23,7 +27,9 @@ export function ReviewForm({
   const [hoverRating, setHoverRating] = useState(0);
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [content, setContent] = useState("");
-  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photos, setPhotos] = useState<
+    Array<{ id: string; file: File; state: PhotoUploadState; mediaId?: string }>
+  >([]);
   const [status, setStatus] = useState<"idle" | "uploading" | "submitting" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -36,12 +42,35 @@ export function ReviewForm({
       event.target.value = "";
       return;
     }
-    setPhotoFiles((prev) => [...prev, ...selected].slice(0, MAX_PHOTOS));
+    setPhotos((prev) =>
+      [
+        ...prev,
+        ...selected.map((file) => ({ id: `${file.name}-${Date.now()}-${Math.random()}`, file, state: "pending" as const })),
+      ].slice(0, MAX_PHOTOS),
+    );
     event.target.value = "";
   }
 
-  function removePhoto(index: number) {
-    setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
+  function removePhoto(id: string) {
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  async function uploadPhoto(photoId: string, file: File): Promise<{ id: string; mediaId?: string; failed: boolean }> {
+    try {
+      const mediaId = await uploadReviewPhoto(file);
+      setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, state: "done", mediaId } : p)));
+      return { id: photoId, mediaId, failed: false };
+    } catch {
+      setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, state: "error" } : p)));
+      return { id: photoId, failed: true };
+    }
+  }
+
+  function retryPhoto(photoId: string) {
+    const photo = photos.find((p) => p.id === photoId);
+    if (!photo) return;
+    setPhotos((prev) => prev.map((p) => (p.id === photoId ? { ...p, state: "pending" } : p)));
+    void uploadPhoto(photoId, photo.file);
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -55,14 +84,36 @@ export function ReviewForm({
     setErrorMessage("");
     setStatus("uploading");
 
-    let mediaIds: string[] = [];
-    try {
-      mediaIds = await Promise.all(photoFiles.map((file) => uploadReviewPhoto(file)));
-    } catch (error) {
+    const alreadyDone = photos.filter((p) => p.state === "done" && p.mediaId);
+    const toUpload = photos.filter((p) => p.state !== "done");
+
+    const freshResults: Array<{ id: string; mediaId?: string; failed: boolean }> = [];
+    if (toUpload.length > 0) {
+      await runWithConcurrencyLimit(
+        toUpload.map(
+          ({ id, file }) =>
+            () =>
+              uploadPhoto(id, file).then((result) => {
+                freshResults.push(result);
+              }),
+        ),
+        MAX_CONCURRENT_UPLOADS,
+      );
+    }
+
+    const failedCount = freshResults.filter((r) => r.failed).length;
+    if (failedCount > 0) {
       setStatus("error");
-      setErrorMessage(error instanceof Error ? error.message : "Photo upload failed");
+      setErrorMessage(
+        `${failedCount} of ${photos.length} photo${photos.length === 1 ? "" : "s"} failed to upload. Retry or remove ${failedCount === 1 ? "it" : "them"} below, or submit without ${failedCount === 1 ? "it" : "them"}.`,
+      );
       return;
     }
+
+    const mediaIds = [
+      ...alreadyDone.map((p) => p.mediaId as string),
+      ...freshResults.map((r) => r.mediaId).filter((id): id is string => Boolean(id)),
+    ];
 
     setStatus("submitting");
     const result = await createReview({
@@ -136,13 +187,28 @@ export function ReviewForm({
           Add photos <span className="font-normal text-text-grey">(optional)</span>
         </span>
         <div className="mb-2 flex flex-wrap gap-2">
-          {photoFiles.map((file, index) => (
-            <div key={`${file.name}-${index}`} className="relative h-16 w-16 overflow-hidden rounded-md bg-surface-input">
+          {photos.map((photo) => (
+            <div key={photo.id} className="relative h-16 w-16 overflow-hidden rounded-md bg-surface-input">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={URL.createObjectURL(file)} alt="" className="h-full w-full object-cover" />
+              <img
+                src={URL.createObjectURL(photo.file)}
+                alt=""
+                className={`h-full w-full object-cover ${photo.state === "error" ? "opacity-50" : ""}`}
+              />
+              {photo.state === "error" && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-black/50">
+                  <button
+                    type="button"
+                    onClick={() => retryPhoto(photo.id)}
+                    className="rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-bold text-text-dark"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
-                onClick={() => removePhoto(index)}
+                onClick={() => removePhoto(photo.id)}
                 aria-label="Remove photo"
                 className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-[9px] text-white"
               >
@@ -151,7 +217,7 @@ export function ReviewForm({
             </div>
           ))}
         </div>
-        {photoFiles.length < MAX_PHOTOS && (
+        {photos.length < MAX_PHOTOS && (
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}

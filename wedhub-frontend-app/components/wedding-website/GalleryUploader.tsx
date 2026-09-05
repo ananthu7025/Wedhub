@@ -5,6 +5,7 @@ import Image from "next/image";
 import { confirmWeddingWebsiteUpload, createWeddingWebsiteUploadRequest, deleteWeddingWebsiteMedia } from "@/lib/api/wedding-website-media-client";
 import type { WeddingWebsiteMedia } from "@/lib/api/wedding-website.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import { compressImageIfPossible } from "@/lib/media/compress-image";
 import { formatApiError } from "@/lib/utils/error";
 
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -39,12 +40,13 @@ export function GalleryUploader({
     setError("");
     setUploading(true);
 
-    for (const file of files) {
-      if (!ACCEPTED_MIME_TYPES.includes(file.type)) {
+    for (const selectedFile of files) {
+      if (!ACCEPTED_MIME_TYPES.includes(selectedFile.type)) {
         setError("Only JPG, PNG, and WebP images are supported.");
         continue;
       }
 
+      const file = await compressImageIfPossible(selectedFile);
       const requestResult = await createWeddingWebsiteUploadRequest({
         weddingWebsiteId,
         filename: file.name,
