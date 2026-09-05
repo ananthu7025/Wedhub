@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>V4 — Monetization</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --paper:#f5f6f8; --surface:#ffffff; --ink:#1b1f27; --ink-soft:#565d6b; --ink-faint:#8b91a0;
+    --line:#e2e5ea; --line-soft:#ecedf1;
+    --accent:#0b5fff; --accent-ink:#0b5fff; --accent-wash:#e8f0ff;
+    --good:#12805c; --good-ink:#12805c; --good-wash:#e1f5ec;
+    --warn:#a15c00; --warn-ink:#a15c00; --warn-wash:#fdf0da;
+    --crit:#b23b3b; --crit-ink:#b23b3b; --crit-wash:#fbe9e9;
+    --none-wash:#eceef1; --none-ink:#8b91a0;
+    --shadow: 0 1px 2px rgba(20,20,30,.04), 0 8px 20px -10px rgba(20,20,30,.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+      --line:#2c303a; --line-soft:#23262e;
+      --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+      --good:#4ade95; --good-ink:#4ade95; --good-wash:#123326;
+      --warn:#e0b25c; --warn-ink:#e0b25c; --warn-wash:#3a2c10;
+      --crit:#f08a8a; --crit-ink:#f08a8a; --crit-wash:#3a1f1f;
+      --none-wash:#282b33; --none-ink:#767c8a;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+    --line:#2c303a; --line-soft:#23262e;
+    --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+    --good:#4ade95; --good-ink:#4ade95; --good-wash:#123326;
+    --warn:#e0b25c; --warn-ink:#e0b25c; --warn-wash:#3a2c10;
+    --crit:#f08a8a; --crit-ink:#f08a8a; --crit-wash:#3a1f1f;
+    --none-wash:#282b33; --none-ink:#767c8a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;}
+  a{color:var(--accent-ink);}
+  .topbar{
+    position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line);
+    padding:14px 28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  .back{font-size:13px; color:var(--ink-soft); text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;}
+  .back:hover{color:var(--accent-ink);}
+  .topbar h1{font-size:16px; font-weight:700; margin:0; flex:1; min-width:200px;}
+  .summary{display:flex; gap:10px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:12px;}
+  .chip{padding:4px 10px; border-radius:99px; display:flex; align-items:center; gap:5px;}
+  .chip.pass{background:var(--good-wash); color:var(--good-ink);}
+  .chip.fail{background:var(--crit-wash); color:var(--crit-ink);}
+  .chip.blocked{background:var(--warn-wash); color:var(--warn-ink);}
+  .chip.none{background:var(--none-wash); color:var(--none-ink);}
+  .wrap{max-width:1180px; margin:0 auto; padding:28px 28px 100px;}
+
+  .intro{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px 22px;
+    box-shadow:var(--shadow); margin-bottom:28px; font-size:13.5px; line-height:1.6; color:var(--ink-soft);
+  }
+  .intro b{color:var(--ink);}
+  .intro .precond{margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft);}
+  .intro .warnbox{
+    margin-top:12px; padding:12px 14px; border-radius:8px; background:var(--warn-wash); color:var(--warn-ink);
+    border-left:3px solid var(--warn);
+  }
+  .intro code{font-family:'JetBrains Mono',monospace; background:var(--line-soft); padding:1px 6px; border-radius:4px; font-size:12.5px;}
+
+  .filters{display:flex; gap:8px; align-items:center; margin-bottom:18px; flex-wrap:wrap;}
+  .filters button{
+    font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600; padding:6px 13px; border-radius:99px;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink-soft); cursor:pointer;
+  }
+  .filters button.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .filters input[type="text"]{
+    font-family:'Inter',sans-serif; font-size:13px; padding:6px 12px; border-radius:8px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); min-width:220px;
+  }
+
+  .group{margin-bottom:30px;}
+  .group-head{
+    display:flex; align-items:baseline; gap:10px; padding-bottom:8px; margin-bottom:2px;
+    border-bottom:2px solid var(--ink);
+  }
+  .group-head h2{font-size:16px; font-weight:700; margin:0;}
+  .group-head .cnt{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-faint);}
+
+  .case{
+    display:grid; grid-template-columns: 90px 1fr 130px 190px; gap:14px; align-items:start;
+    padding:14px 4px; border-bottom:1px solid var(--line-soft);
+  }
+  .case:last-child{border-bottom:none;}
+  .case .id{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--ink-faint); padding-top:2px;}
+  .case .title{font-weight:600; font-size:14px; margin-bottom:5px;}
+  .case .steps{font-size:12.5px; color:var(--ink-soft); line-height:1.6; margin-bottom:5px;}
+  .case .steps b{color:var(--ink); font-weight:600;}
+  .case .expected{font-size:12.5px; color:var(--ink-soft); line-height:1.6; padding-left:10px; border-left:2px solid var(--accent-wash);}
+  .case .expected b{color:var(--accent-ink); font-weight:600;}
+  .case .known{
+    display:inline-block; margin-top:6px; font-size:11px; font-weight:700; color:var(--warn-ink);
+    background:var(--warn-wash); padding:2px 8px; border-radius:6px;
+  }
+  .pri{font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; text-align:center; align-self:start;}
+  .pri.P0{background:var(--crit-wash); color:var(--crit-ink);}
+  .pri.P1{background:var(--warn-wash); color:var(--warn-ink);}
+  .pri.P2{background:var(--none-wash); color:var(--ink-faint);}
+
+  .statusblock{display:flex; flex-direction:column; gap:6px;}
+  .statusbtn{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:6px;
+    cursor:pointer; border:1px solid transparent; text-align:center; user-select:none;
+  }
+  .statusbtn.none{background:var(--none-wash); color:var(--none-ink); border-color:var(--line);}
+  .statusbtn.pass{background:var(--good-wash); color:var(--good-ink);}
+  .statusbtn.fail{background:var(--crit-wash); color:var(--crit-ink);}
+  .statusbtn.blocked{background:var(--warn-wash); color:var(--warn-ink);}
+  .note{
+    font-family:'Inter',sans-serif; font-size:12px; padding:5px 8px; border-radius:6px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); width:100%;
+  }
+  .note::placeholder{color:var(--ink-faint);}
+
+  @media (max-width:760px){
+    .case{grid-template-columns:1fr; gap:8px;}
+    .pri{justify-self:start;}
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="00-index.html">← Board</a>
+    <h1>V4 — Monetization</h1>
+    <div class="summary" id="summary"></div>
+  </div>
+
+  <div class="wrap">
+    <div class="intro">
+      This phase covers every place real or test money moves through the platform. It requires an <b>approved vendor</b> (from V3) and Razorpay <b>test-mode</b> credentials configured in the environment.
+      <div class="precond">
+        <b>Before you start:</b> confirm <code>NEXT_PUBLIC_RAZORPAY_KEY_ID</code> and the backend's matching Razorpay test secret are actually set — if they're not, the checkout buttons will show a "not configured" message instead of opening Razorpay, and every payment-dependent test case below will be blocked, not failed. Check this first so you don't waste time misdiagnosing a config gap as a bug.
+      </div>
+      <div class="warnbox">
+        <b>Known issue — expect this to fail, don't re-log it:</b> the admin store-payments metrics dashboard calls a route that doesn't match what the backend actually returns, so its summary tile shows 0/— even when real orders exist. This is already tracked. Confirm the underlying order data itself is correct elsewhere in the admin UI (orders list) — that's the part that should actually work.
+      </div>
+    </div>
+
+    <div class="filters">
+      <span style="font-size:12.5px;color:var(--ink-faint);font-weight:600;">Priority:</span>
+      <button data-f="pri" data-v="all" class="active">All</button>
+      <button data-f="pri" data-v="P0">P0</button>
+      <button data-f="pri" data-v="P1">P1</button>
+      <button data-f="pri" data-v="P2">P2</button>
+      <span style="font-size:12.5px;color:var(--ink-faint);font-weight:600;margin-left:10px;">Status:</span>
+      <button data-f="status" data-v="all" class="active">All</button>
+      <button data-f="status" data-v="none">Not started</button>
+      <button data-f="status" data-v="fail">Fail</button>
+      <input type="text" id="search" placeholder="Search test cases…">
+    </div>
+
+    <div id="groups"></div>
+  </div>
+
+<script>
+const STORAGE_KEY = 'wedhub-qa-v4';
+
+const data = [
+{ group:'Subscription Plans & Pricing Display', cases:[
+  {id:'V4-001', pri:'P0', title:'Plans page shows all 3 tiers with correct pricing', steps:'View the public/vendor-facing subscription plans page.', expected:'Free, Pro, and Premium all display with their current admin-configured price, currency, and feature list.'},
+  {id:'V4-002', pri:'P1', title:'Monthly vs yearly billing toggle', steps:'Switch the billing interval toggle.', expected:'Prices update to the correct interval-specific rate (yearly should reflect its own configured price, not just monthly×12 unless that\'s intentional).'},
+  {id:'V4-003', pri:'P2', title:'Free tier has no checkout button', steps:'Check the Free plan card.', expected:'No payment action offered — Free requires no checkout, just default assignment on signup.'},
+]},
+{ group:'Upgrade Checkout (Razorpay Orders)', cases:[
+  {id:'V4-004', pri:'P0', title:'Successful upgrade payment', steps:'As a Free vendor, click Upgrade to Pro, complete a Razorpay test-mode payment with a valid test card.', expected:'Razorpay checkout opens; on success, the UI polls and eventually reflects the new ACTIVE Pro subscription — confirm it does NOT flip to active purely from the client-side callback before the webhook fires.'},
+  {id:'V4-005', pri:'P0', title:'Webhook-only activation (not client callback)', steps:'If feasible, close/refresh the browser tab immediately after Razorpay shows payment success but before the app polling would normally catch it, then reopen the app later.', expected:'Subscription still activates correctly once the webhook has processed — activation must not depend on the client staying open.'},
+  {id:'V4-006', pri:'P1', title:'Duplicate webhook delivery is idempotent', steps:'If you can trigger Razorpay to resend the same webhook event (test-mode replay, or check server logs for a natural retry), observe the result.', expected:'Subscription/payment state does not double-process — no duplicate activation, no duplicate invoice.'},
+  {id:'V4-007', pri:'P0', title:'Failed payment', steps:'Use a Razorpay test card configured to fail.', expected:'Clear failure message shown; vendor remains on their previous plan; no partial/broken subscription state created.'},
+  {id:'V4-008', pri:'P1', title:'Apply a valid coupon at checkout', steps:'Enter a real, active coupon code before paying.', expected:'Discount applied correctly to the charged amount; coupon redemption count increments only after payment is confirmed, not on entry alone.'},
+  {id:'V4-009', pri:'P1', title:'Apply an expired or invalid coupon', steps:'Enter a made-up code or one past its validity window.', expected:'Rejected with a clear message; checkout still proceeds at full price.'},
+  {id:'V4-010', pri:'P1', title:'Free trial period', steps:'Upgrade to a plan that has trial days configured.', expected:'Subscription starts in TRIALING status; vendor gets full plan features during the trial without being charged yet.'},
+]},
+{ group:'Cancel, Downgrade & Entitlement Gating', cases:[
+  {id:'V4-011', pri:'P0', title:'Cancel immediately', steps:'From an active paid plan, cancel with the "immediately" option.', expected:'Subscription ends right away; vendor drops to Free-tier entitlements without delay.'},
+  {id:'V4-012', pri:'P0', title:'Cancel at period end', steps:'Cancel with the default "at period end" option.', expected:'Vendor keeps paid features until the current period expires, then drops to Free — not immediately.'},
+  {id:'V4-013', pri:'P1', title:'Undo a pending cancellation', steps:'After V4-012, use "undo cancel" before the period ends.', expected:'Subscription reverts to normal ACTIVE renewal — cancellation is fully reversed.'},
+  {id:'V4-014', pri:'P0', title:'Downgrade archives excess portfolio media (never deletes)', steps:'As a Pro/Premium vendor with more than 10 portfolio photos, downgrade/expire to Free.', expected:'Excess photos are archived/hidden (INACTIVE), not deleted — vendor still has them in the system, just not all publicly counted against the Free cap.'},
+  {id:'V4-015', pri:'P1', title:'Re-upgrade restores archived media', steps:'From the state in V4-014, upgrade back to Pro.', expected:'Previously archived photos become active/visible again, oldest-restored-first (or however the real restore order is designed) — confirm nothing was actually lost.'},
+  {id:'V4-016', pri:'P0', title:'Free tier sees only 30-day analytics', steps:'Check a Free-tier vendor\'s analytics dashboard.', expected:'Shows only a 30-day total window — no daily breakdown chart.'},
+  {id:'V4-017', pri:'P0', title:'Pro/Premium tier sees 90-day analytics with daily chart', steps:'Check a Pro or Premium vendor\'s analytics dashboard.', expected:'Shows a 90-day window with a real day-by-day breakdown chart.'},
+  {id:'V4-018', pri:'P1', title:'Grace period / past-due handling', steps:'If reproducible, let a subscription go past-due (failed renewal payment) and check vendor-facing messaging.', expected:'Vendor is warned of past-due status and a grace period before being dropped to Free — not an abrupt, unexplained downgrade.'},
+]},
+{ group:'GST Invoicing', cases:[
+  {id:'V4-019', pri:'P0', title:'Create a vendor billing profile', steps:'Enter GSTIN, PAN, tax address, and bank/UPI details in vendor billing settings.', expected:'Saves correctly; required fields validated (e.g. GSTIN format).'},
+  {id:'V4-020', pri:'P0', title:'Create an invoice manually', steps:'Create a new invoice with a client name, line items, and quantities.', expected:'Saves as DRAFT; totals compute correctly.'},
+  {id:'V4-021', pri:'P0', title:'Prefill an invoice from a won lead', steps:'From a WON lead (from V3-034), use "Create Invoice."', expected:'New invoice pre-fills client contact info from the lead correctly.'},
+  {id:'V4-022', pri:'P0', title:'Intra-state tax calculation (CGST + SGST)', steps:'Create an invoice where the vendor and client are in the same state.', expected:'Tax splits correctly into CGST + SGST (e.g. 9%+9% for an 18% rate), not IGST.'},
+  {id:'V4-023', pri:'P0', title:'Inter-state tax calculation (IGST)', steps:'Create an invoice where the vendor and client are in different states.', expected:'Full tax rate applied as IGST only, no CGST/SGST split.'},
+  {id:'V4-024', pri:'P1', title:'Discount and round-off math', steps:'Add a percentage or flat discount to an invoice with an odd total.', expected:'Discount subtracts correctly before tax (or per whatever the intended order is); round-off adjustment is shown and the grand total is mathematically correct to the paisa.'},
+  {id:'V4-025', pri:'P1', title:'Amount-in-words renders correctly', steps:'Check the invoice\'s amount-in-words field against its numeric total.', expected:'Correctly spells out the actual total (spot check a few different amounts, including ones with decimals).'},
+  {id:'V4-026', pri:'P0', title:'Issue an invoice (freezes it)', steps:'Move an invoice from DRAFT to ISSUED.', expected:'Gets a sequential invoice number; further edits to line items are blocked.'},
+  {id:'V4-027', pri:'P1', title:'Attempt to edit an issued invoice', steps:'Try changing a line item on an already-ISSUED invoice.', expected:'Blocked — issued invoices are immutable except for payment recording/cancellation.'},
+  {id:'V4-028', pri:'P1', title:'Sequential invoice numbering has no collisions', steps:'Issue several invoices in quick succession (rapid clicks, or from two browser tabs if possible).', expected:'Every invoice number is unique and sequential — no duplicates or gaps from a race condition.'},
+  {id:'V4-029', pri:'P0', title:'Record a full payment against an invoice', steps:'Record a payment equal to the full invoice total.', expected:'Invoice status moves to PAID; balance due shows zero.'},
+  {id:'V4-030', pri:'P1', title:'Record a partial payment', steps:'Record a payment less than the full total.', expected:'Balance due updates correctly; invoice remains in an unpaid/partially-paid state, not incorrectly marked PAID.'},
+  {id:'V4-031', pri:'P1', title:'Attempt to overpay an invoice', steps:'Try recording a payment greater than the remaining balance due.', expected:'Blocked with a clear error.'},
+  {id:'V4-032', pri:'P1', title:'Reverse a recorded payment', steps:'Reverse a previously recorded payment.', expected:'Balance due recalculates correctly back to what it was before that payment.'},
+  {id:'V4-033', pri:'P1', title:'Cancel an invoice', steps:'Cancel an issued-but-unpaid invoice.', expected:'Status moves to CANCELLED; no longer counted as outstanding revenue.'},
+  {id:'V4-034', pri:'P2', title:'Duplicate an existing invoice', steps:'Use "duplicate" on a past invoice.', expected:'Creates a new DRAFT copy with the same line items but a fresh number, editable independently.'},
+  {id:'V4-035', pri:'P2', title:'Print / A4 view', steps:'Open the printable invoice view.', expected:'Renders a clean, correctly-formatted A4 layout with the vendor\'s logo (if set), suitable for actually printing or saving as PDF.'},
+]},
+{ group:'Vendor Mini-Store — Catalog & Storefront', cases:[
+  {id:'V4-036', pri:'P0', title:'Store tab is hidden for non-store-enabled categories', steps:'As a vendor whose primary/secondary categories all have "Store Enabled" off (check via admin categories settings), look for the store feature.', expected:'No store tab/section is offered at all.'},
+  {id:'V4-037', pri:'P0', title:'Store tab appears once category is store-enabled', steps:'As admin, enable "Store Enabled" for one of this vendor\'s categories, then check the vendor dashboard again.', expected:'Store setup becomes available without needing any migration/manual fix — takes effect live.'},
+  {id:'V4-038', pri:'P0', title:'Create a store profile', steps:'Set up store name, slug, tagline, WhatsApp order phone, policies.', expected:'Saves correctly; public storefront becomes reachable at its slug URL.'},
+  {id:'V4-039', pri:'P0', title:'Add each item type: physical product, rental, digital download, service token', steps:'Create one item of each of the 4 types with a GST rate, price, and stock quantity where applicable.', expected:'All 4 types save and display correctly on the public storefront with type-appropriate fields.'},
+  {id:'V4-040', pri:'P1', title:'Compare-at (strikethrough) pricing', steps:'Set a compare-at price higher than the actual price on one item.', expected:'Public storefront shows the strikethrough original price next to the real price.'},
+  {id:'V4-041', pri:'P1', title:'Public storefront renders correctly', steps:'Visit the public store URL as a logged-out visitor.', expected:'Cover banner, verified badge (if applicable), category filters, and all active items display correctly.'},
+  {id:'V4-042', pri:'P2', title:'Toggle an item\'s availability off', steps:'Mark an item unavailable.', expected:'No longer purchasable/visible (or shown as out of stock) on the public storefront.'},
+]},
+{ group:'Store Checkout — WhatsApp Path', cases:[
+  {id:'V4-043', pri:'P0', title:'Place an order via WhatsApp fallback (no payment account connected)', steps:'As a customer on a storefront where the vendor has no ACTIVE payment account, add items to cart and choose the WhatsApp order option.', expected:'Order is created in the system with a pending/awaiting-payment-style status, and a correctly pre-filled WhatsApp deep link opens with the order details.'},
+  {id:'V4-044', pri:'P1', title:'Order appears on vendor\'s orders board', steps:'Check the vendor-side store orders list after V4-043.', expected:'New order visible with correct items, customer contact, and status.'},
+]},
+{ group:'Store Checkout — Online Payment (Razorpay Route)', cases:[
+  {id:'V4-045', pri:'P0', title:'Vendor payment account onboarding', steps:'As the vendor, start "Connect bank account" / KYC onboarding for the store.', expected:'A real Razorpay-hosted KYC link is generated and opens; status shows ONBOARDING while pending.'},
+  {id:'V4-046', pri:'P1', title:'Payment account status progression', steps:'After completing test-mode KYC steps (if the test environment allows simulating this), check the account status.', expected:'Progresses NOT_CONNECTED → ONBOARDING → PENDING_VERIFICATION → ACTIVE as expected; bank details display masked (e.g. •••• 4321), never in full.'},
+  {id:'V4-047', pri:'P0', title:'Online checkout button only appears once fully eligible', steps:'Check the storefront checkout options before and after the vendor\'s payment account reaches ACTIVE with charges/payouts enabled.', expected:'"Pay Online" only appears once truly eligible; WhatsApp fallback remains available throughout regardless.'},
+  {id:'V4-048', pri:'P0', title:'Successful online order payment', steps:'Complete a test-mode Razorpay payment for a store order via "Pay Online."', expected:'Payment verified server-side, order status updates to paid/confirmed, and — if this vendor is genuinely ACTIVE — funds are attributed toward direct settlement to the vendor\'s own linked account.'},
+  {id:'V4-049', pri:'P1', title:'Payment verification ambiguous/failed messaging', steps:'If reproducible, interrupt the flow after Razorpay charges but before the app\'s verification call completes (e.g. close the tab at that exact moment).', expected:'Customer sees a "payment pending verification, contact vendor" message rather than a false failure or false success claim.'},
+  {id:'V4-050', pri:'P1', title:'0% platform commission reflected correctly', steps:'Check the order\'s commission/fee breakdown after a successful online payment.', expected:'Platform commission shows 0% as currently configured; gateway fee is shown transparently and separately.'},
+  {id:'V4-051', pri:'P1', title:'Full refund', steps:'As the vendor, issue a full refund on a captured online order.', expected:'Refund succeeds via reverse transfer; order status updates; customer-facing status reflects the refund.'},
+  {id:'V4-052', pri:'P1', title:'Partial refund', steps:'Issue a partial refund on a different captured order.', expected:'Correct partial amount refunded; remaining balance/status tracked accurately, not treated as fully refunded.'},
+  {id:'V4-053', pri:'P1', title:'Order status vs payment status are tracked independently', steps:'Check an order\'s fulfillment status (e.g. Processing, Shipped) against its payment status (e.g. Captured) at various points.', expected:'The two are independent — a vendor cannot manually mark an order as "paid" if the real payment status is still pending/failed.'},
+  {id:'V4-054', pri:'P1', title:'Convert a store order into a GST invoice', steps:'From a completed order, use "Create GST Invoice."', expected:'Bridges correctly into the invoicing module (V4 GST group) with order details pre-filled.'},
+  {id:'V4-055', pri:'P2', title:'Admin store-payments dashboard order data', steps:'As admin, view the store-payments section\'s orders/ledger list (not the summary metrics tile — see the known-issue note above).', expected:'Real orders and connected vendor accounts show correctly, even though the summary tile itself is known-broken.'},
+]},
+];
+
+// ---------- render ----------
+const groupsEl = document.getElementById('groups');
+let state = {};
+try{ state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }catch(e){ state = {}; }
+
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); renderSummary(); }
+
+function cycle(id){
+  const order = ['none','pass','fail','blocked'];
+  const cur = (state[id] && state[id].status) || 'none';
+  const next = order[(order.indexOf(cur)+1) % order.length];
+  state[id] = state[id] || {};
+  state[id].status = next;
+  save();
+  document.querySelectorAll('.statusbtn[data-id="'+id+'"]').forEach(btn=>{
+    btn.className = 'statusbtn ' + next;
+    btn.textContent = labelFor(next);
+  });
+}
+function labelFor(s){
+  return s==='none' ? 'Not started' : s==='pass' ? 'Pass' : s==='fail' ? 'Fail' : 'Blocked';
+}
+
+function renderSummary(){
+  const vals = Object.values(state);
+  const total = data.reduce((a,g)=>a+g.cases.length,0);
+  const count = s => vals.filter(v=>v && v.status===s).length;
+  const el = document.getElementById('summary');
+  el.innerHTML = `
+    <span class="chip pass">✓ ${count('pass')} pass</span>
+    <span class="chip fail">✕ ${count('fail')} fail</span>
+    <span class="chip blocked">◐ ${count('blocked')} blocked</span>
+    <span class="chip none">${total - count('pass') - count('fail') - count('blocked')} / ${total} left</span>
+  `;
+}
+
+function render(){
+  groupsEl.innerHTML = '';
+  data.forEach(g=>{
+    const gDiv = document.createElement('div');
+    gDiv.className = 'group';
+    gDiv.dataset.group = g.group;
+    gDiv.innerHTML = `<div class="group-head"><h2>${g.group}</h2><span class="cnt">${g.cases.length} cases</span></div>`;
+    g.cases.forEach(c=>{
+      const st = (state[c.id] && state[c.id].status) || 'none';
+      const note = (state[c.id] && state[c.id].note) || '';
+      const row = document.createElement('div');
+      row.className = 'case';
+      row.dataset.id = c.id;
+      row.dataset.pri = c.pri;
+      row.dataset.search = (c.title+' '+c.steps+' '+c.expected+' '+c.id).toLowerCase();
+      row.innerHTML = `
+        <div class="id">${c.id}</div>
+        <div>
+          <div class="title">${c.title}</div>
+          <div class="steps"><b>Steps:</b> ${c.steps}</div>
+          <div class="expected"><b>Expected:</b> ${c.expected}</div>
+          ${c.known ? `<div class="known">⚠ Known issue: ${c.known}</div>` : ''}
+        </div>
+        <div class="pri ${c.pri}">${c.pri}</div>
+        <div class="statusblock">
+          <div class="statusbtn ${st}" data-id="${c.id}">${labelFor(st)}</div>
+          <input type="text" class="note" data-id="${c.id}" placeholder="Note (esp. on Fail)" value="${note.replace(/"/g,'&quot;')}">
+        </div>
+      `;
+      gDiv.appendChild(row);
+    });
+    groupsEl.appendChild(gDiv);
+  });
+
+  document.querySelectorAll('.statusbtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>cycle(btn.dataset.id));
+  });
+  document.querySelectorAll('.note').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const id = inp.dataset.id;
+      state[id] = state[id] || {};
+      state[id].note = inp.value;
+      save();
+    });
+  });
+  applyFilters();
+}
+
+// ---------- filters ----------
+let activePri = 'all', activeStatus = 'all', searchTerm = '';
+document.querySelectorAll('.filters button[data-f="pri"]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.filters button[data-f="pri"]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); activePri = b.dataset.v; applyFilters();
+  });
+});
+document.querySelectorAll('.filters button[data-f="status"]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.filters button[data-f="status"]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); activeStatus = b.dataset.v; applyFilters();
+  });
+});
+document.getElementById('search').addEventListener('input', (e)=>{ searchTerm = e.target.value.toLowerCase(); applyFilters(); });
+
+function applyFilters(){
+  document.querySelectorAll('.case').forEach(row=>{
+    const id = row.dataset.id;
+    const st = (state[id] && state[id].status) || 'none';
+    let show = true;
+    if(activePri !== 'all' && row.dataset.pri !== activePri) show = false;
+    if(activeStatus !== 'all' && st !== activeStatus) show = false;
+    if(searchTerm && !row.dataset.search.includes(searchTerm)) show = false;
+    row.style.display = show ? 'grid' : 'none';
+  });
+  document.querySelectorAll('.group').forEach(g=>{
+    const visible = Array.from(g.querySelectorAll('.case')).some(r=>r.style.display !== 'none');
+    g.style.display = visible ? 'block' : 'none';
+  });
+}
+
+render();
+renderSummary();
+</script>
+</body>
+</html>

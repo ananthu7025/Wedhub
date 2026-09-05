@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>V5 — Wedding Website, Telegram, Admin & Edge Cases</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --paper:#f5f6f8; --surface:#ffffff; --ink:#1b1f27; --ink-soft:#565d6b; --ink-faint:#8b91a0;
+    --line:#e2e5ea; --line-soft:#ecedf1;
+    --accent:#0b5fff; --accent-ink:#0b5fff; --accent-wash:#e8f0ff;
+    --good:#12805c; --good-ink:#12805c; --good-wash:#e1f5ec;
+    --warn:#a15c00; --warn-ink:#a15c00; --warn-wash:#fdf0da;
+    --crit:#b23b3b; --crit-ink:#b23b3b; --crit-wash:#fbe9e9;
+    --none-wash:#eceef1; --none-ink:#8b91a0;
+    --shadow: 0 1px 2px rgba(20,20,30,.04), 0 8px 20px -10px rgba(20,20,30,.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+      --line:#2c303a; --line-soft:#23262e;
+      --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+      --good:#4ade95; --good-ink:#4ade95; --good-wash:#123326;
+      --warn:#e0b25c; --warn-ink:#e0b25c; --warn-wash:#3a2c10;
+      --crit:#f08a8a; --crit-ink:#f08a8a; --crit-wash:#3a1f1f;
+      --none-wash:#282b33; --none-ink:#767c8a;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+    --line:#2c303a; --line-soft:#23262e;
+    --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+    --good:#4ade95; --good-ink:#4ade95; --good-wash:#123326;
+    --warn:#e0b25c; --warn-ink:#e0b25c; --warn-wash:#3a2c10;
+    --crit:#f08a8a; --crit-ink:#f08a8a; --crit-wash:#3a1f1f;
+    --none-wash:#282b33; --none-ink:#767c8a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;}
+  a{color:var(--accent-ink);}
+  .topbar{
+    position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line);
+    padding:14px 28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  .back{font-size:13px; color:var(--ink-soft); text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;}
+  .back:hover{color:var(--accent-ink);}
+  .topbar h1{font-size:16px; font-weight:700; margin:0; flex:1; min-width:200px;}
+  .summary{display:flex; gap:10px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:12px;}
+  .chip{padding:4px 10px; border-radius:99px; display:flex; align-items:center; gap:5px;}
+  .chip.pass{background:var(--good-wash); color:var(--good-ink);}
+  .chip.fail{background:var(--crit-wash); color:var(--crit-ink);}
+  .chip.blocked{background:var(--warn-wash); color:var(--warn-ink);}
+  .chip.none{background:var(--none-wash); color:var(--none-ink);}
+  .wrap{max-width:1180px; margin:0 auto; padding:28px 28px 100px;}
+
+  .intro{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px 22px;
+    box-shadow:var(--shadow); margin-bottom:28px; font-size:13.5px; line-height:1.6; color:var(--ink-soft);
+  }
+  .intro b{color:var(--ink);}
+  .intro .precond{margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft);}
+  .intro .napp{margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft);}
+  .intro code{font-family:'JetBrains Mono',monospace; background:var(--line-soft); padding:1px 6px; border-radius:4px; font-size:12.5px;}
+
+  .filters{display:flex; gap:8px; align-items:center; margin-bottom:18px; flex-wrap:wrap;}
+  .filters button{
+    font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600; padding:6px 13px; border-radius:99px;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink-soft); cursor:pointer;
+  }
+  .filters button.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .filters input[type="text"]{
+    font-family:'Inter',sans-serif; font-size:13px; padding:6px 12px; border-radius:8px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); min-width:220px;
+  }
+
+  .group{margin-bottom:30px;}
+  .group-head{
+    display:flex; align-items:baseline; gap:10px; padding-bottom:8px; margin-bottom:2px;
+    border-bottom:2px solid var(--ink);
+  }
+  .group-head h2{font-size:16px; font-weight:700; margin:0;}
+  .group-head .cnt{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-faint);}
+
+  .case{
+    display:grid; grid-template-columns: 90px 1fr 130px 190px; gap:14px; align-items:start;
+    padding:14px 4px; border-bottom:1px solid var(--line-soft);
+  }
+  .case:last-child{border-bottom:none;}
+  .case .id{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--ink-faint); padding-top:2px;}
+  .case .title{font-weight:600; font-size:14px; margin-bottom:5px;}
+  .case .steps{font-size:12.5px; color:var(--ink-soft); line-height:1.6; margin-bottom:5px;}
+  .case .steps b{color:var(--ink); font-weight:600;}
+  .case .expected{font-size:12.5px; color:var(--ink-soft); line-height:1.6; padding-left:10px; border-left:2px solid var(--accent-wash);}
+  .case .expected b{color:var(--accent-ink); font-weight:600;}
+  .case .known{
+    display:inline-block; margin-top:6px; font-size:11px; font-weight:700; color:var(--warn-ink);
+    background:var(--warn-wash); padding:2px 8px; border-radius:6px;
+  }
+  .pri{font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; text-align:center; align-self:start;}
+  .pri.P0{background:var(--crit-wash); color:var(--crit-ink);}
+  .pri.P1{background:var(--warn-wash); color:var(--warn-ink);}
+  .pri.P2{background:var(--none-wash); color:var(--ink-faint);}
+
+  .statusblock{display:flex; flex-direction:column; gap:6px;}
+  .statusbtn{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:6px;
+    cursor:pointer; border:1px solid transparent; text-align:center; user-select:none;
+  }
+  .statusbtn.none{background:var(--none-wash); color:var(--none-ink); border-color:var(--line);}
+  .statusbtn.pass{background:var(--good-wash); color:var(--good-ink);}
+  .statusbtn.fail{background:var(--crit-wash); color:var(--crit-ink);}
+  .statusbtn.blocked{background:var(--warn-wash); color:var(--warn-ink);}
+  .note{
+    font-family:'Inter',sans-serif; font-size:12px; padding:5px 8px; border-radius:6px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); width:100%;
+  }
+  .note::placeholder{color:var(--ink-faint);}
+
+  @media (max-width:760px){
+    .case{grid-template-columns:1fr; gap:8px;}
+    .pri{justify-self:start;}
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="00-index.html">← Board</a>
+    <h1>V5 — Wedding Website, Telegram, Admin &amp; Edge Cases</h1>
+    <div class="summary" id="summary"></div>
+  </div>
+
+  <div class="wrap">
+    <div class="intro">
+      The final phase: the standalone ₹49 wedding website product, the Telegram bot, the complete admin back-office, and a cross-cutting sweep of security/mobile/non-functional edge cases that don't belong to any single feature.
+      <div class="precond">
+        <b>Before you start:</b> admin access, a couple account, a real Telegram account to test the bot with, and Razorpay test-mode credentials (same as V4) for the wedding-website payment.
+      </div>
+      <div class="napp">
+        <b>Not applicable — don't test these, they don't exist:</b> WhatsApp Business bot, natural-language/AI understanding in the Telegram bot (it's a fixed-step conversation flow, not AI), platform settings/feature-flag admin UI (static placeholder only), fine-grained RBAC enforcement (roles/permissions are visible in admin but not actually enforced — see V5-Admin-RBAC case below for how to verify that's still true), installable/offline PWA behavior.
+      </div>
+    </div>
+
+    <div class="filters">
+      <span style="font-size:12.5px;color:var(--ink-faint);font-weight:600;">Priority:</span>
+      <button data-f="pri" data-v="all" class="active">All</button>
+      <button data-f="pri" data-v="P0">P0</button>
+      <button data-f="pri" data-v="P1">P1</button>
+      <button data-f="pri" data-v="P2">P2</button>
+      <span style="font-size:12.5px;color:var(--ink-faint);font-weight:600;margin-left:10px;">Status:</span>
+      <button data-f="status" data-v="all" class="active">All</button>
+      <button data-f="status" data-v="none">Not started</button>
+      <button data-f="status" data-v="fail">Fail</button>
+      <input type="text" id="search" placeholder="Search test cases…">
+    </div>
+
+    <div id="groups"></div>
+  </div>
+
+<script>
+const STORAGE_KEY = 'wedhub-qa-v5';
+
+const data = [
+{ group:'₹49 Wedding Website — Builder', cases:[
+  {id:'V5-001', pri:'P0', title:'Create a draft and walk the full wizard', steps:'Go Template → Details → Events → Photos → Story → Preview, filling each step.', expected:'Every step auto-saves; refreshing mid-way does not lose completed steps.'},
+  {id:'V5-002', pri:'P1', title:'Each of the 3 templates renders distinctly', steps:'Switch between Royal Wedding, Minimal Elegant, and Traditional Indian.', expected:'Visual skin changes correctly while the same underlying content carries over.'},
+  {id:'V5-003', pri:'P1', title:'Add multiple sub-events', steps:'Add Mehendi, Sangeet, and Reception as separate events with their own date/time/venue.', expected:'All save and display correctly, each with its own details.'},
+  {id:'V5-004', pri:'P0', title:'Gallery photo cap at 30', steps:'Upload photos up to 30, then attempt a 31st.', expected:'31st upload is blocked with a clear cap message.'},
+  {id:'V5-005', pri:'P1', title:'Couple story / "how we met" text saves', steps:'Fill in the free-text story sections.', expected:'Saves and renders correctly on the public site later.'},
+]},
+{ group:'₹49 Wedding Website — Preview & Publish', cases:[
+  {id:'V5-006', pri:'P0', title:'Generate a free preview', steps:'Request a preview before paying.', expected:'A working preview link opens showing the site as it will look, clearly marked as a preview.'},
+  {id:'V5-007', pri:'P0', title:'Preview link is single-use', steps:'After viewing the preview once, try opening the exact same preview link a second time.', expected:'Blocked with an "already used" or similar message — matches the one-time-preview business rule.'},
+  {id:'V5-008', pri:'P1', title:'Preview link expires after its time window', steps:'Wait past the configured preview expiry (check the env/config for the exact window, default ~60 min) then try the link.', expected:'Rejected as expired, with a way to generate a new one.'},
+  {id:'V5-009', pri:'P1', title:'Expired preview does not delete the draft', steps:'After V5-008, check that the underlying draft website is still intact and editable.', expected:'Draft content is fully preserved — only the preview link itself expired.'},
+  {id:'V5-010', pri:'P0', title:'Preview page is not publicly indexable', steps:'Check the preview URL\'s meta tags / robots directive.', expected:'Marked noindex,nofollow and excluded from the sitemap.'},
+  {id:'V5-011', pri:'P0', title:'₹49 publish payment', steps:'Click "Publish My Website," complete a Razorpay test-mode payment.', expected:'On webhook-verified success, the site becomes permanently published at a real public URL.'},
+  {id:'V5-012', pri:'P0', title:'Public site is not accessible before payment', steps:'Before completing payment, try guessing/visiting what would be the permanent public URL.', expected:'Not accessible — publishing is strictly payment-gated, no client-side bypass.'},
+  {id:'V5-013', pri:'P1', title:'Editing after publishing is free', steps:'After publishing, edit a detail (e.g. change the couple story text) and save.', expected:'Saves without any additional payment prompt; public site reflects the update.'},
+  {id:'V5-014', pri:'P1', title:'Public visitor cannot see draft/payment/owner data', steps:'As a random visitor, view a published site and inspect network requests (devtools).', expected:'No API response leaks the owner\'s account info, payment details, or unrelated draft data.'},
+]},
+{ group:'₹49 Wedding Website — RSVP', cases:[
+  {id:'V5-015', pri:'P0', title:'Submit an RSVP as a guest', steps:'On a published site, submit RSVP as Yes with a guest count and message.', expected:'Saves successfully; couple can see it (check the couple-side RSVP list).'},
+  {id:'V5-016', pri:'P1', title:'Guest count cap at 50', steps:'Try entering a guest count above 50.', expected:'Blocked or capped with a clear message.'},
+  {id:'V5-017', pri:'P1', title:'RSVP with No or Maybe', steps:'Submit RSVPs with each of the other two response options.', expected:'Both save correctly and are distinguishable in the couple\'s RSVP list.'},
+]},
+{ group:'Telegram Bot', cases:[
+  {id:'V5-018', pri:'P0', title:'Full vendor-discovery flow via /start', steps:'Message the real bot, run /start, choose "Find a vendor," and go through category → city → date/budget/guest count → contact.', expected:'Ends in a ranked vendor shortlist and, on confirming, creates a real Enquiry/Lead visible on the vendor\'s lead board with source=TELEGRAM.'},
+  {id:'V5-019', pri:'P1', title:'Skip optional steps in the bot flow', steps:'Skip date, budget, and guest count where the bot allows it.', expected:'Flow still completes successfully with those fields left blank.'},
+  {id:'V5-020', pri:'P1', title:'Conversation state persists across a bot restart/delay', steps:'Start the flow, wait several minutes (or restart the Telegram app), then continue.', expected:'Bot remembers where you left off — state is stored server-side, not lost.'},
+  {id:'V5-021', pri:'P1', title:'Duplicate Telegram update does not double-process', steps:'If reproducible (e.g. Telegram\'s own retry on a slow response), send the same message twice in quick succession.', expected:'Only one enquiry/lead results, not two — update_id idempotency holds.'},
+  {id:'V5-022', pri:'P0', title:'Create a wedding website via the bot', steps:'Use the bot\'s wedding-website flow end to end, including the ₹49 payment step.', expected:'A Telegram-native Payment Link opens (not a broken web checkout inside the chat); on success, the site publishes the same as the web flow.'},
+]},
+{ group:'Admin — Vendor & User Management', cases:[
+  {id:'V5-023', pri:'P0', title:'Admin dashboard metrics load correctly', steps:'Open the admin dashboard.', expected:'Users, vendors, leads, revenue, MRR, ARR, conversion, and churn all show real (not placeholder/zero-by-default) numbers matching actual data.'},
+  {id:'V5-024', pri:'P1', title:'Admin suspends a user with a required reason', steps:'Suspend a test couple account, providing a reason.', expected:'Account is suspended; reason is recorded; user is blocked from logging in (cross-check V1-018).'},
+  {id:'V5-025', pri:'P1', title:'Admin restores a suspended user', steps:'Restore the account suspended in V5-024.', expected:'User can log in again normally.'},
+  {id:'V5-026', pri:'P1', title:'Category & location CRUD', steps:'Create a new category with custom attributes, and a new city under an existing state.', expected:'Both save and immediately become selectable in vendor onboarding and search filters.'},
+  {id:'V5-027', pri:'P1', title:'Toggle a category\'s store-enabled flag', steps:'Cross-check with V4-036/V4-037 — flip the toggle off after it was on.', expected:'Vendors in that category immediately lose access to the store feature, live, with no manual fix-up needed.'},
+]},
+{ group:'Admin — Leads, Reviews & Content Moderation', cases:[
+  {id:'V5-028', pri:'P0', title:'Admin reopens a terminal-status lead', steps:'Take a lead marked Won/Lost/Spam/Closed and change its status back.', expected:'Succeeds for admin, where it was blocked for the vendor in V3-036 — confirming the admin-only override.'},
+  {id:'V5-029', pri:'P0', title:'Moderate a flagged review (approve/reject/flag/hide)', steps:'Take the review reported in V2-056 and apply each of the 4 moderation actions across different test reviews.', expected:'Each action changes the review\'s visible status correctly on the public vendor profile, and the vendor\'s aggregate rating recalculates appropriately.'},
+  {id:'V5-030', pri:'P2', title:'CMS: create/edit a blog post, wedding story, and popular-search card', steps:'As admin, create one of each content type with an image.', expected:'All three save and appear correctly on the public homepage/blog.'},
+  {id:'V5-031', pri:'P2', title:'SEO override on a category/city landing page', steps:'Set a custom title/description/OG-image override for one landing page.', expected:'Public page reflects the override in its meta tags instead of the auto-generated default.'},
+]},
+{ group:'Admin — Subscriptions, Audit & RBAC', cases:[
+  {id:'V5-032', pri:'P1', title:'Create/edit a subscription plan\'s price', steps:'As admin, change the Pro plan\'s price.', expected:'New price reflects on the public plans page (V4-001) immediately; existing active subscribers are not retroactively re-charged.'},
+  {id:'V5-033', pri:'P1', title:'Issue a coupon', steps:'Create a new percentage-discount coupon with a redemption cap.', expected:'Usable at checkout (cross-check V4-008); stops working once the cap is hit.'},
+  {id:'V5-034', pri:'P1', title:'Audit log captures an admin action', steps:'Perform any admin mutation (e.g. approve a vendor), then check the audit log.', expected:'Entry appears with correct actor, action, entity, before/after state, and timestamp.'},
+  {id:'V5-035', pri:'P2', title:'Roles & permissions screen is visible but confirm it is NOT actually enforced', steps:'As a non-super admin user with a restricted role assigned (if one exists), try performing an action their assigned permission should block.', expected:'This is a known, documented gap — expect the action to still succeed (enforcement only checks the coarse Couple/Vendor/Admin role today, not fine-grained permissions). Confirm this matches reality rather than assuming; if fine-grained enforcement now actually blocks it, that\'s a meaningful positive change worth noting, not a bug.'},
+]},
+{ group:'Cross-Cutting — Security', cases:[
+  {id:'V5-036', pri:'P0', title:'IDOR check on vendor "me" endpoints', steps:'While logged in as Vendor A, use browser devtools to call a /vendors/me/... or similar mutating endpoint but pass Vendor B\'s resource ID in the payload/URL.', expected:'Blocked server-side — ownership resolves from the session, never trusts a client-supplied ID (cross-check V1-040).'},
+  {id:'V5-037', pri:'P0', title:'Direct unauthenticated API access to protected endpoints', steps:'While logged out, use curl/devtools to directly call a protected API endpoint (e.g. GET /users/me, GET /vendors/me/analytics).', expected:'401/403 response, no data leaked.'},
+  {id:'V5-038', pri:'P1', title:'Rate limiting on public write endpoints', steps:'Rapidly submit enquiries or store orders from the same IP in a short window.', expected:'Eventually blocked with a 429 rate-limit response, not allowed to spam indefinitely.'},
+  {id:'V5-039', pri:'P1', title:'Malicious file upload rejected', steps:'Attempt to upload a disguised executable (e.g. renamed .exe to .jpg) as a portfolio/review photo.', expected:'Rejected by real content-type/file-signature validation, not just trusting the file extension.'},
+  {id:'V5-040', pri:'P2', title:'CORS restricts cross-origin requests', steps:'From an unrelated origin (e.g. a local test HTML file or a tool like Postman spoofing an Origin header), call the API.', expected:'Requests from origins outside the configured FRONTEND_URL/ADMIN_URL are rejected by CORS.'},
+]},
+{ group:'Cross-Cutting — Non-Functional', cases:[
+  {id:'V5-041', pri:'P1', title:'Mobile responsiveness sweep', steps:'View homepage, search, vendor profile, enquiry form, and vendor dashboard at a 375px mobile width.', expected:'All usable without horizontal scroll, overlapping elements, or unreachable buttons.'},
+  {id:'V5-042', pri:'P2', title:'Browser back-button mid-flow', steps:'Use the browser back button in the middle of a multi-step flow (e.g. wedding-website wizard, vendor onboarding).', expected:'Doesn\'t corrupt saved progress or land on a broken/blank state.'},
+  {id:'V5-043', pri:'P2', title:'Session expiry mid-form', steps:'If feasible, let a session expire while mid-way through filling a long form (e.g. invoice creation), then submit.', expected:'Clear re-login prompt without silently losing all the entered data if avoidable, or at minimum a clear error rather than a silent failure.'},
+  {id:'V5-044', pri:'P2', title:'Concurrent tabs stay in sync', steps:'Log in in one tab, open a second tab already on the site, log out from the first.', expected:'Second tab reflects the logged-out state on its next action/refresh, not stuck showing stale authenticated UI indefinitely.'},
+  {id:'V5-045', pri:'P2', title:'Empty/loading states never hang indefinitely', steps:'Throttle network speed in devtools while loading a data-heavy page (search results, vendor dashboard analytics).', expected:'A real loading indicator shows, and it resolves to either content or a clear error — never an infinite spinner.'},
+]},
+];
+
+// ---------- render ----------
+const groupsEl = document.getElementById('groups');
+let state = {};
+try{ state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }catch(e){ state = {}; }
+
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); renderSummary(); }
+
+function cycle(id){
+  const order = ['none','pass','fail','blocked'];
+  const cur = (state[id] && state[id].status) || 'none';
+  const next = order[(order.indexOf(cur)+1) % order.length];
+  state[id] = state[id] || {};
+  state[id].status = next;
+  save();
+  document.querySelectorAll('.statusbtn[data-id="'+id+'"]').forEach(btn=>{
+    btn.className = 'statusbtn ' + next;
+    btn.textContent = labelFor(next);
+  });
+}
+function labelFor(s){
+  return s==='none' ? 'Not started' : s==='pass' ? 'Pass' : s==='fail' ? 'Fail' : 'Blocked';
+}
+
+function renderSummary(){
+  const vals = Object.values(state);
+  const total = data.reduce((a,g)=>a+g.cases.length,0);
+  const count = s => vals.filter(v=>v && v.status===s).length;
+  const el = document.getElementById('summary');
+  el.innerHTML = `
+    <span class="chip pass">✓ ${count('pass')} pass</span>
+    <span class="chip fail">✕ ${count('fail')} fail</span>
+    <span class="chip blocked">◐ ${count('blocked')} blocked</span>
+    <span class="chip none">${total - count('pass') - count('fail') - count('blocked')} / ${total} left</span>
+  `;
+}
+
+function render(){
+  groupsEl.innerHTML = '';
+  data.forEach(g=>{
+    const gDiv = document.createElement('div');
+    gDiv.className = 'group';
+    gDiv.dataset.group = g.group;
+    gDiv.innerHTML = `<div class="group-head"><h2>${g.group}</h2><span class="cnt">${g.cases.length} cases</span></div>`;
+    g.cases.forEach(c=>{
+      const st = (state[c.id] && state[c.id].status) || 'none';
+      const note = (state[c.id] && state[c.id].note) || '';
+      const row = document.createElement('div');
+      row.className = 'case';
+      row.dataset.id = c.id;
+      row.dataset.pri = c.pri;
+      row.dataset.search = (c.title+' '+c.steps+' '+c.expected+' '+c.id).toLowerCase();
+      row.innerHTML = `
+        <div class="id">${c.id}</div>
+        <div>
+          <div class="title">${c.title}</div>
+          <div class="steps"><b>Steps:</b> ${c.steps}</div>
+          <div class="expected"><b>Expected:</b> ${c.expected}</div>
+          ${c.known ? `<div class="known">⚠ Known issue: ${c.known}</div>` : ''}
+        </div>
+        <div class="pri ${c.pri}">${c.pri}</div>
+        <div class="statusblock">
+          <div class="statusbtn ${st}" data-id="${c.id}">${labelFor(st)}</div>
+          <input type="text" class="note" data-id="${c.id}" placeholder="Note (esp. on Fail)" value="${note.replace(/"/g,'&quot;')}">
+        </div>
+      `;
+      gDiv.appendChild(row);
+    });
+    groupsEl.appendChild(gDiv);
+  });
+
+  document.querySelectorAll('.statusbtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>cycle(btn.dataset.id));
+  });
+  document.querySelectorAll('.note').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const id = inp.dataset.id;
+      state[id] = state[id] || {};
+      state[id].note = inp.value;
+      save();
+    });
+  });
+  applyFilters();
+}
+
+// ---------- filters ----------
+let activePri = 'all', activeStatus = 'all', searchTerm = '';
+document.querySelectorAll('.filters button[data-f="pri"]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.filters button[data-f="pri"]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); activePri = b.dataset.v; applyFilters();
+  });
+});
+document.querySelectorAll('.filters button[data-f="status"]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.filters button[data-f="status"]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); activeStatus = b.dataset.v; applyFilters();
+  });
+});
+document.getElementById('search').addEventListener('input', (e)=>{ searchTerm = e.target.value.toLowerCase(); applyFilters(); });
+
+function applyFilters(){
+  document.querySelectorAll('.case').forEach(row=>{
+    const id = row.dataset.id;
+    const st = (state[id] && state[id].status) || 'none';
+    let show = true;
+    if(activePri !== 'all' && row.dataset.pri !== activePri) show = false;
+    if(activeStatus !== 'all' && st !== activeStatus) show = false;
+    if(searchTerm && !row.dataset.search.includes(searchTerm)) show = false;
+    row.style.display = show ? 'grid' : 'none';
+  });
+  document.querySelectorAll('.group').forEach(g=>{
+    const visible = Array.from(g.querySelectorAll('.case')).some(r=>r.style.display !== 'none');
+    g.style.display = visible ? 'block' : 'none';
+  });
+}
+
+render();
+renderSummary();
+</script>
+</body>
+</html>

@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>V2 — Couple Discovery & Engagement</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --paper:#f5f6f8; --surface:#ffffff; --ink:#1b1f27; --ink-soft:#565d6b; --ink-faint:#8b91a0;
+    --line:#e2e5ea; --line-soft:#ecedf1;
+    --accent:#0b5fff; --accent-ink:#0b5fff; --accent-wash:#e8f0ff;
+    --good:#12805c; --good-ink:#12805c; --good-wash:#e1f5ec;
+    --warn:#a15c00; --warn-ink:#a15c00; --warn-wash:#fdf0da;
+    --crit:#b23b3b; --crit-ink:#b23b3b; --crit-wash:#fbe9e9;
+    --none-wash:#eceef1; --none-ink:#8b91a0;
+    --shadow: 0 1px 2px rgba(20,20,30,.04), 0 8px 20px -10px rgba(20,20,30,.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+      --line:#2c303a; --line-soft:#23262e;
+      --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+      --good:#4ade95; --good-ink:#4ade95; --good-wash:#123326;
+      --warn:#e0b25c; --warn-ink:#e0b25c; --warn-wash:#3a2c10;
+      --crit:#f08a8a; --crit-ink:#f08a8a; --crit-wash:#3a1f1f;
+      --none-wash:#282b33; --none-ink:#767c8a;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+    --line:#2c303a; --line-soft:#23262e;
+    --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+    --good:#4ade95; --good-ink:#4ade95; --good-wash:#123326;
+    --warn:#e0b25c; --warn-ink:#e0b25c; --warn-wash:#3a2c10;
+    --crit:#f08a8a; --crit-ink:#f08a8a; --crit-wash:#3a1f1f;
+    --none-wash:#282b33; --none-ink:#767c8a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;}
+  a{color:var(--accent-ink);}
+  .topbar{
+    position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line);
+    padding:14px 28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  .back{font-size:13px; color:var(--ink-soft); text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;}
+  .back:hover{color:var(--accent-ink);}
+  .topbar h1{font-size:16px; font-weight:700; margin:0; flex:1; min-width:200px;}
+  .summary{display:flex; gap:10px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:12px;}
+  .chip{padding:4px 10px; border-radius:99px; display:flex; align-items:center; gap:5px;}
+  .chip.pass{background:var(--good-wash); color:var(--good-ink);}
+  .chip.fail{background:var(--crit-wash); color:var(--crit-ink);}
+  .chip.blocked{background:var(--warn-wash); color:var(--warn-ink);}
+  .chip.none{background:var(--none-wash); color:var(--none-ink);}
+  .wrap{max-width:1180px; margin:0 auto; padding:28px 28px 100px;}
+
+  .intro{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px 22px;
+    box-shadow:var(--shadow); margin-bottom:28px; font-size:13.5px; line-height:1.6; color:var(--ink-soft);
+  }
+  .intro b{color:var(--ink);}
+  .intro .precond{margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft);}
+  .intro .napp{margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft);}
+  .intro code{font-family:'JetBrains Mono',monospace; background:var(--line-soft); padding:1px 6px; border-radius:4px; font-size:12.5px;}
+
+  .filters{display:flex; gap:8px; align-items:center; margin-bottom:18px; flex-wrap:wrap;}
+  .filters button{
+    font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600; padding:6px 13px; border-radius:99px;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink-soft); cursor:pointer;
+  }
+  .filters button.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .filters input[type="text"]{
+    font-family:'Inter',sans-serif; font-size:13px; padding:6px 12px; border-radius:8px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); min-width:220px;
+  }
+
+  .group{margin-bottom:30px;}
+  .group-head{
+    display:flex; align-items:baseline; gap:10px; padding-bottom:8px; margin-bottom:2px;
+    border-bottom:2px solid var(--ink);
+  }
+  .group-head h2{font-size:16px; font-weight:700; margin:0;}
+  .group-head .cnt{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-faint);}
+
+  .case{
+    display:grid; grid-template-columns: 90px 1fr 130px 190px; gap:14px; align-items:start;
+    padding:14px 4px; border-bottom:1px solid var(--line-soft);
+  }
+  .case:last-child{border-bottom:none;}
+  .case .id{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--ink-faint); padding-top:2px;}
+  .case .title{font-weight:600; font-size:14px; margin-bottom:5px;}
+  .case .steps{font-size:12.5px; color:var(--ink-soft); line-height:1.6; margin-bottom:5px;}
+  .case .steps b{color:var(--ink); font-weight:600;}
+  .case .expected{font-size:12.5px; color:var(--ink-soft); line-height:1.6; padding-left:10px; border-left:2px solid var(--accent-wash);}
+  .case .expected b{color:var(--accent-ink); font-weight:600;}
+  .case .known{
+    display:inline-block; margin-top:6px; font-size:11px; font-weight:700; color:var(--warn-ink);
+    background:var(--warn-wash); padding:2px 8px; border-radius:6px;
+  }
+  .pri{font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; text-align:center; align-self:start;}
+  .pri.P0{background:var(--crit-wash); color:var(--crit-ink);}
+  .pri.P1{background:var(--warn-wash); color:var(--warn-ink);}
+  .pri.P2{background:var(--none-wash); color:var(--ink-faint);}
+
+  .statusblock{display:flex; flex-direction:column; gap:6px;}
+  .statusbtn{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:6px;
+    cursor:pointer; border:1px solid transparent; text-align:center; user-select:none;
+  }
+  .statusbtn.none{background:var(--none-wash); color:var(--none-ink); border-color:var(--line);}
+  .statusbtn.pass{background:var(--good-wash); color:var(--good-ink);}
+  .statusbtn.fail{background:var(--crit-wash); color:var(--crit-ink);}
+  .statusbtn.blocked{background:var(--warn-wash); color:var(--warn-ink);}
+  .note{
+    font-family:'Inter',sans-serif; font-size:12px; padding:5px 8px; border-radius:6px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); width:100%;
+  }
+  .note::placeholder{color:var(--ink-faint);}
+
+  @media (max-width:760px){
+    .case{grid-template-columns:1fr; gap:8px;}
+    .pri{justify-self:start;}
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="00-index.html">← Board</a>
+    <h1>V2 — Couple Discovery &amp; Engagement</h1>
+    <div class="summary" id="summary"></div>
+  </div>
+
+  <div class="wrap">
+    <div class="intro">
+      This is the free, public-facing marketplace loop: a couple finding, comparing, and reaching out to vendors. Test both as a <b>logged-out visitor</b> and a <b>logged-in couple</b> — several features (favorites, enquiry submission) behave differently depending on auth state, and that difference is itself something to verify.
+      <div class="precond">
+        <b>Before you start:</b> you need at least 3-4 real, <b>APPROVED</b> vendors across at least 2 categories and 2 cities in the dev database to search against meaningfully (seed via admin panel or use existing seeded vendors). Have one couple account ready from V1.
+      </div>
+      <div class="napp">
+        <b>Not applicable — don't test these, they don't exist:</b> in-app chat/messaging with a vendor (WhatsApp deep-links are the real mechanism, tested here instead), guest-list manager, seating planner, budget-tracking tool, social/OAuth login.
+      </div>
+    </div>
+
+    <div class="filters">
+      <span style="font-size:12.5px;color:var(--ink-faint);font-weight:600;">Priority:</span>
+      <button data-f="pri" data-v="all" class="active">All</button>
+      <button data-f="pri" data-v="P0">P0</button>
+      <button data-f="pri" data-v="P1">P1</button>
+      <button data-f="pri" data-v="P2">P2</button>
+      <span style="font-size:12.5px;color:var(--ink-faint);font-weight:600;margin-left:10px;">Status:</span>
+      <button data-f="status" data-v="all" class="active">All</button>
+      <button data-f="status" data-v="none">Not started</button>
+      <button data-f="status" data-v="fail">Fail</button>
+      <input type="text" id="search" placeholder="Search test cases…">
+    </div>
+
+    <div id="groups"></div>
+  </div>
+
+<script>
+const STORAGE_KEY = 'wedhub-qa-v2';
+
+const data = [
+{ group:'Homepage', cases:[
+  {id:'V2-001', pri:'P0', title:'Homepage loads all sections', steps:'Visit the homepage logged out.', expected:'Hero search, category carousel, popular-search cards, real wedding stories, gallery inspiration, and blog teaser all render with real data — no section stuck empty or showing a loading skeleton indefinitely.'},
+  {id:'V2-002', pri:'P1', title:'Hero search redirects correctly', steps:'Type a keyword into the homepage hero search box and submit.', expected:'Navigates to the search results page with that keyword pre-filled in the query.'},
+  {id:'V2-003', pri:'P1', title:'Category carousel links work', steps:'Click a category tile from the homepage carousel.', expected:'Navigates to that category\'s landing page, showing only vendors in that category.'},
+  {id:'V2-004', pri:'P2', title:'Wedding story / gallery card click-through', steps:'Click a "Real Wedding Story" card and a gallery inspiration image.', expected:'Both navigate to their respective detail/listing pages without broken links or console errors.'},
+  {id:'V2-005', pri:'P2', title:'Blog teaser links to real post', steps:'Click the blog teaser on the homepage.', expected:'Opens a real, admin-authored blog post — not a 404 or placeholder.'},
+  {id:'V2-006', pri:'P1', title:'Homepage on mobile viewport', steps:'View the homepage at a narrow (375px) width.', expected:'All sections stack cleanly, no horizontal scroll, carousel/cards remain usable via touch.'},
+]},
+{ group:'Search & Filters', cases:[
+  {id:'V2-007', pri:'P0', title:'Keyword search returns relevant results', steps:'Search a keyword that matches a known vendor\'s name or description.', expected:'That vendor appears in results, ranked reasonably given fuzzy matching.'},
+  {id:'V2-008', pri:'P0', title:'Category filter narrows results', steps:'Apply a single category filter.', expected:'Only vendors tagged with that category (primary or secondary) appear.'},
+  {id:'V2-009', pri:'P0', title:'City filter narrows results', steps:'Apply a single city filter.', expected:'Only vendors serving that city appear.'},
+  {id:'V2-010', pri:'P1', title:'Combined category + city + budget filters', steps:'Apply all three filters together to a combination with known matching vendors.', expected:'Result set is the correct intersection — not just one filter silently winning.'},
+  {id:'V2-011', pri:'P1', title:'Budget min/max range filter', steps:'Set a narrow price range that should exclude most vendors.', expected:'Only vendors whose starting price/range falls in that band appear.'},
+  {id:'V2-012', pri:'P1', title:'Verified-only toggle', steps:'Enable "verified only."', expected:'Only vendors with a verification level above Unverified appear.'},
+  {id:'V2-013', pri:'P1', title:'Category-specific attribute filter', steps:'On a category that has custom attributes (e.g. photography style), apply one.', expected:'Results correctly filter to vendors with that attribute value set.'},
+  {id:'V2-014', pri:'P1', title:'Each of the 5 sort modes', steps:'Try Relevance, Rating, Popularity, Distance/Newest, and Recommended sort options one at a time.', expected:'Result order visibly changes and makes sense for each mode (e.g. Rating sort puts highest-rated first) — no sort silently doing nothing.'},
+  {id:'V2-015', pri:'P0', title:'Empty result state', steps:'Search a nonsense keyword or an impossible filter combination guaranteed to match nothing.', expected:'A clear "no vendors found" empty state, not a blank page, spinner stuck forever, or error.'},
+  {id:'V2-016', pri:'P1', title:'Pagination works', steps:'If more than one page of results exists, navigate to page 2+.', expected:'Different vendors shown, page state reflected in the URL, back button returns to page 1 correctly.'},
+  {id:'V2-017', pri:'P1', title:'Search filters persist in the URL (shareable)', steps:'Apply filters, copy the URL, open it in a new private/incognito tab.', expected:'Same filtered results load directly from the URL — filters are not lost.'},
+  {id:'V2-018', pri:'P1', title:'Search page price/verified filters survive navigation', steps:'Apply a priceMin or verified=true filter, then use any in-app link that returns to the search/vendors listing.', expected:'Filter is preserved, not silently dropped by a redirect.'},
+  {id:'V2-019', pri:'P2', title:'XSS/script injection in search keyword', steps:'Search for <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>.', expected:'Treated as a literal search string (likely zero results), rendered safely, no script execution.'},
+  {id:'V2-020', pri:'P2', title:'Category + city SEO landing page renders', steps:'Visit a real category+city combination page directly (e.g. /category/photographers/city/mumbai style URL).', expected:'Renders a real templated page with actual vendor counts, correct meta title/description.'},
+  {id:'V2-021', pri:'P2', title:'Thin category+city page is not indexable', steps:'Visit a category+city combination known to have fewer than 3 vendors.', expected:'Page either doesn\'t render as a distinct SEO page, or renders with noindex — confirm it doesn\'t get treated as a real indexable landing page.'},
+]},
+{ group:'Vendor Profile Page', cases:[
+  {id:'V2-022', pri:'P0', title:'Valid vendor profile loads fully', steps:'Open a real approved vendor\'s profile page.', expected:'Identity, about/description, portfolio albums, packages & pricing, and reviews all render.'},
+  {id:'V2-023', pri:'P0', title:'Unknown vendor slug', steps:'Visit a vendor profile URL with a made-up/nonexistent slug.', expected:'A proper 404 page, not a crash or blank page.'},
+  {id:'V2-024', pri:'P1', title:'Unapproved/draft vendor is not publicly visible', steps:'Take a vendor still in DRAFT or PENDING status and try to visit their public profile URL directly.', expected:'404 or "not available" — draft/pending vendors must not be publicly browsable.'},
+  {id:'V2-025', pri:'P1', title:'Portfolio album lightbox / gallery view', steps:'Open a portfolio album and click through photos.', expected:'Images open in a larger/lightbox view, navigation between photos works, closes cleanly.'},
+  {id:'V2-026', pri:'P1', title:'Private album is not shown publicly', steps:'If a vendor has a private-visibility album, view their public profile.', expected:'Private albums are excluded from the public view entirely.'},
+  {id:'V2-027', pri:'P0', title:'Enquiry CTA while logged out', steps:'Click "Send Enquiry" on a vendor profile while logged out.', expected:'Prompted to log in (with a way back to complete the enquiry after), not a broken form or silent failure.'},
+  {id:'V2-028', pri:'P1', title:'Package & pricing display', steps:'Check a vendor with multiple packages.', expected:'All packages show with correct price, currency, and inclusions list.'},
+]},
+{ group:'Favorites, Shortlists & Compare', cases:[
+  {id:'V2-029', pri:'P0', title:'Favorite a vendor while logged in', steps:'Click the heart icon on a vendor card or profile.', expected:'Vendor is added to the default Favorites shortlist; icon state updates immediately (optimistic UI).'},
+  {id:'V2-030', pri:'P1', title:'Un-favorite a vendor', steps:'Click the heart icon again on an already-favorited vendor.', expected:'Removed from Favorites; icon reverts.'},
+  {id:'V2-031', pri:'P1', title:'Favorite while logged out', steps:'Click the heart icon while not logged in.', expected:'Prompted to log in — does not silently fail or throw a console error.'},
+  {id:'V2-032', pri:'P1', title:'Create a named shortlist', steps:'Create a new shortlist beyond the default Favorites (e.g. "Photographers").', expected:'New shortlist created and selectable; a vendor can be added to it independently of Favorites.'},
+  {id:'V2-033', pri:'P1', title:'Compare 2 vendors in the same category', steps:'Select 2 vendors from a shortlist/search results and compare.', expected:'Side-by-side table shows category-relevant attributes (price, rating, experience, etc.) correctly per vendor.'},
+  {id:'V2-034', pri:'P2', title:'Compare the maximum of 5 vendors', steps:'Select exactly 5 vendors and compare.', expected:'All 5 render side by side without layout breaking.'},
+  {id:'V2-035', pri:'P1', title:'Attempt to compare more than 5 vendors', steps:'Try selecting a 6th vendor for comparison.', expected:'Blocked with a clear message (e.g. "max 5"), not silently ignored or crashing.'},
+  {id:'V2-036', pri:'P1', title:'Attempt to compare vendors from different categories', steps:'Select one photographer and one venue, try to compare.', expected:'Blocked with a clear message — comparison requires the same primary category.'},
+]},
+{ group:'Enquiries', cases:[
+  {id:'V2-037', pri:'P0', title:'Submit a single-vendor enquiry (logged in)', steps:'Fill out and submit the enquiry form on a vendor profile with valid details.', expected:'Success confirmation; a real Lead is created and later visible on the vendor\'s lead board.'},
+  {id:'V2-038', pri:'P1', title:'Submit enquiry anonymously (no account)', steps:'As an unauthenticated visitor, if the flow allows contact-info-only submission, try it.', expected:'Either works end-to-end anonymously, or cleanly requires login — confirm which and that it\'s not a half-broken in-between state.'},
+  {id:'V2-039', pri:'P1', title:'Submit enquiry with missing required fields', steps:'Leave wedding date or contact info blank and submit.', expected:'Blocked client-side with clear per-field errors.'},
+  {id:'V2-040', pri:'P1', title:'Submit enquiry with invalid phone/email format', steps:'Enter a malformed phone number or email in the enquiry form.', expected:'Blocked with a validation message before hitting the server.'},
+  {id:'V2-041', pri:'P0', title:'Duplicate enquiry within the 15-minute dedupe window', steps:'Submit the same enquiry (same vendor, contact, date) twice within a few minutes.', expected:'Second submission is deduplicated — does not create a second billable-style Lead. Confirm via the vendor lead board that only one Lead exists.'},
+  {id:'V2-042', pri:'P1', title:'Same enquiry submitted again after the dedupe window passes', steps:'Wait past 15 minutes (or check with a shorter test window if configurable) and resubmit.', expected:'This time a new, separate Lead is created — dedupe is time-boxed, not permanent.'},
+  {id:'V2-043', pri:'P0', title:'Multi-vendor enquiry with consent', steps:'Use the "send to multiple vendors" flow, explicitly opt in to sharing details, submit.', expected:'Up to 3 ranked vendors each receive a separate Lead from the one Enquiry.'},
+  {id:'V2-044', pri:'P1', title:'Multi-vendor enquiry without consent', steps:'Attempt the multi-vendor flow but decline/skip the consent checkbox.', expected:'Blocked from submitting — consent is mandatory for multi-vendor sharing.'},
+  {id:'V2-045', pri:'P0', title:'Enquiry tracker shows correct status', steps:'After submitting an enquiry, visit "My Enquiries."', expected:'Shows the enquiry with a status reflecting the 4-step tracker (Sent/Viewed/Responded/Closed) matching the real underlying Lead status.'},
+  {id:'V2-046', pri:'P1', title:'Enquiry tracker empty state', steps:'View "My Enquiries" on a brand-new account with none sent yet.', expected:'Clear empty state, not a blank page or error.'},
+  {id:'V2-047', pri:'P2', title:'"Write a review" CTA appears only on won leads', steps:'Check the enquiry tracker for a lead a vendor has marked WON (may require coordinating with V3 vendor-side testing) versus one still open.', expected:'The prompt to write a review appears only on the WON one.'},
+]},
+{ group:'Reviews', cases:[
+  {id:'V2-048', pri:'P0', title:'Submit a valid review', steps:'Leave a star rating + written review for a vendor.', expected:'Review saved, appears on the vendor profile (possibly after moderation), rating aggregate updates.'},
+  {id:'V2-049', pri:'P0', title:'Submit review without a star rating', steps:'Try submitting with the rating field left unset.', expected:'Blocked — rating is required.'},
+  {id:'V2-050', pri:'P1', title:'Review text exceeds max length', steps:'Enter more than 3000 characters in the review body.', expected:'Blocked or truncated at the limit with a clear character-count indicator, not silently cut off without warning.'},
+  {id:'V2-051', pri:'P1', title:'Upload photos with a review (within limit)', steps:'Attach up to 6 photos to a review.', expected:'All 6 upload successfully and display on the published review.'},
+  {id:'V2-052', pri:'P1', title:'Upload a 7th photo (over the limit)', steps:'Try attaching a 7th photo to the same review.', expected:'Blocked with a clear "max 6 photos" message.'},
+  {id:'V2-053', pri:'P0', title:'"Verified" badge on a review with real lead history', steps:'Submit a review for a vendor you have a real Enquiry/Lead history with.', expected:'Review shows a "Verified" indicator.'},
+  {id:'V2-054', pri:'P1', title:'Review without any lead history is not marked verified', steps:'Submit a review for a vendor you\'ve never actually contacted.', expected:'Review posts successfully but WITHOUT the verified badge.'},
+  {id:'V2-055', pri:'P0', title:'Second review for the same vendor is blocked', steps:'After already reviewing a vendor once, try to submit a second review for the same vendor.', expected:'Blocked — one review per (couple, vendor) pair is enforced.'},
+  {id:'V2-056', pri:'P1', title:'Report a review as abuse', steps:'Use the report/flag option on someone else\'s visible review.', expected:'Report is recorded; confirm later (in V5 admin testing) that it surfaces in the admin moderation queue.'},
+]},
+{ group:'Wedding Profile & Account', cases:[
+  {id:'V2-057', pri:'P1', title:'Create/edit wedding profile', steps:'Fill in partner name, wedding date, city, guest count, budget, preferred categories.', expected:'Saves correctly and persists on reload; used to personalize search/enquiry prefill.'},
+  {id:'V2-058', pri:'P2', title:'Leave all wedding profile fields blank', steps:'Skip every optional field and save.', expected:'Saves successfully — none of these fields are mandatory for a couple account to function.'},
+  {id:'V2-059', pri:'P1', title:'Budget and guest count reject non-numeric input', steps:'Type letters into the budget or guest-count field.', expected:'Blocked or auto-filtered — these are numeric fields.'},
+  {id:'V2-060', pri:'P2', title:'Notification preferences', steps:'Toggle off one notification channel/event type in account settings.', expected:'Preference saves and is respected (cross-check in V3/V5 that the opted-out channel truly doesn\'t send).'},
+]},
+];
+
+// ---------- render ----------
+const groupsEl = document.getElementById('groups');
+let state = {};
+try{ state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }catch(e){ state = {}; }
+
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); renderSummary(); }
+
+function cycle(id){
+  const order = ['none','pass','fail','blocked'];
+  const cur = (state[id] && state[id].status) || 'none';
+  const next = order[(order.indexOf(cur)+1) % order.length];
+  state[id] = state[id] || {};
+  state[id].status = next;
+  save();
+  document.querySelectorAll('.statusbtn[data-id="'+id+'"]').forEach(btn=>{
+    btn.className = 'statusbtn ' + next;
+    btn.textContent = labelFor(next);
+  });
+}
+function labelFor(s){
+  return s==='none' ? 'Not started' : s==='pass' ? 'Pass' : s==='fail' ? 'Fail' : 'Blocked';
+}
+
+function renderSummary(){
+  const vals = Object.values(state);
+  const total = data.reduce((a,g)=>a+g.cases.length,0);
+  const count = s => vals.filter(v=>v && v.status===s).length;
+  const el = document.getElementById('summary');
+  el.innerHTML = `
+    <span class="chip pass">✓ ${count('pass')} pass</span>
+    <span class="chip fail">✕ ${count('fail')} fail</span>
+    <span class="chip blocked">◐ ${count('blocked')} blocked</span>
+    <span class="chip none">${total - count('pass') - count('fail') - count('blocked')} / ${total} left</span>
+  `;
+}
+
+function render(){
+  groupsEl.innerHTML = '';
+  data.forEach(g=>{
+    const gDiv = document.createElement('div');
+    gDiv.className = 'group';
+    gDiv.dataset.group = g.group;
+    gDiv.innerHTML = `<div class="group-head"><h2>${g.group}</h2><span class="cnt">${g.cases.length} cases</span></div>`;
+    g.cases.forEach(c=>{
+      const st = (state[c.id] && state[c.id].status) || 'none';
+      const note = (state[c.id] && state[c.id].note) || '';
+      const row = document.createElement('div');
+      row.className = 'case';
+      row.dataset.id = c.id;
+      row.dataset.pri = c.pri;
+      row.dataset.search = (c.title+' '+c.steps+' '+c.expected+' '+c.id).toLowerCase();
+      row.innerHTML = `
+        <div class="id">${c.id}</div>
+        <div>
+          <div class="title">${c.title}</div>
+          <div class="steps"><b>Steps:</b> ${c.steps}</div>
+          <div class="expected"><b>Expected:</b> ${c.expected}</div>
+          ${c.known ? `<div class="known">⚠ Known issue: ${c.known}</div>` : ''}
+        </div>
+        <div class="pri ${c.pri}">${c.pri}</div>
+        <div class="statusblock">
+          <div class="statusbtn ${st}" data-id="${c.id}">${labelFor(st)}</div>
+          <input type="text" class="note" data-id="${c.id}" placeholder="Note (esp. on Fail)" value="${note.replace(/"/g,'&quot;')}">
+        </div>
+      `;
+      gDiv.appendChild(row);
+    });
+    groupsEl.appendChild(gDiv);
+  });
+
+  document.querySelectorAll('.statusbtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>cycle(btn.dataset.id));
+  });
+  document.querySelectorAll('.note').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const id = inp.dataset.id;
+      state[id] = state[id] || {};
+      state[id].note = inp.value;
+      save();
+    });
+  });
+  applyFilters();
+}
+
+// ---------- filters ----------
+let activePri = 'all', activeStatus = 'all', searchTerm = '';
+document.querySelectorAll('.filters button[data-f="pri"]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.filters button[data-f="pri"]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); activePri = b.dataset.v; applyFilters();
+  });
+});
+document.querySelectorAll('.filters button[data-f="status"]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.filters button[data-f="status"]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); activeStatus = b.dataset.v; applyFilters();
+  });
+});
+document.getElementById('search').addEventListener('input', (e)=>{ searchTerm = e.target.value.toLowerCase(); applyFilters(); });
+
+function applyFilters(){
+  document.querySelectorAll('.case').forEach(row=>{
+    const id = row.dataset.id;
+    const st = (state[id] && state[id].status) || 'none';
+    let show = true;
+    if(activePri !== 'all' && row.dataset.pri !== activePri) show = false;
+    if(activeStatus !== 'all' && st !== activeStatus) show = false;
+    if(searchTerm && !row.dataset.search.includes(searchTerm)) show = false;
+    row.style.display = show ? 'grid' : 'none';
+  });
+  document.querySelectorAll('.group').forEach(g=>{
+    const visible = Array.from(g.querySelectorAll('.case')).some(r=>r.style.display !== 'none');
+    g.style.display = visible ? 'block' : 'none';
+  });
+}
+
+render();
+renderSummary();
+</script>
+</body>
+</html>

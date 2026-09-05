@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>V1 — Auth & Account Foundation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --paper:#f5f6f8; --surface:#ffffff; --ink:#1b1f27; --ink-soft:#565d6b; --ink-faint:#8b91a0;
+    --line:#e2e5ea; --line-soft:#ecedf1;
+    --accent:#0b5fff; --accent-ink:#0b5fff; --accent-wash:#e8f0ff;
+    --good:#12805c; --good-ink:#12805c; --good-wash:#e1f5ec;
+    --warn:#a15c00; --warn-ink:#a15c00; --warn-wash:#fdf0da;
+    --crit:#b23b3b; --crit-ink:#b23b3b; --crit-wash:#fbe9e9;
+    --none-wash:#eceef1; --none-ink:#8b91a0;
+    --shadow: 0 1px 2px rgba(20,20,30,.04), 0 8px 20px -10px rgba(20,20,30,.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+      --line:#2c303a; --line-soft:#23262e;
+      --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+      --good:#4ade95; --good-ink:#4ade95; --good-wash:#123326;
+      --warn:#e0b25c; --warn-ink:#e0b25c; --warn-wash:#3a2c10;
+      --crit:#f08a8a; --crit-ink:#f08a8a; --crit-wash:#3a1f1f;
+      --none-wash:#282b33; --none-ink:#767c8a;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+    --line:#2c303a; --line-soft:#23262e;
+    --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+    --good:#4ade95; --good-ink:#4ade95; --good-wash:#123326;
+    --warn:#e0b25c; --warn-ink:#e0b25c; --warn-wash:#3a2c10;
+    --crit:#f08a8a; --crit-ink:#f08a8a; --crit-wash:#3a1f1f;
+    --none-wash:#282b33; --none-ink:#767c8a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;}
+  a{color:var(--accent-ink);}
+  .topbar{
+    position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line);
+    padding:14px 28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  .back{font-size:13px; color:var(--ink-soft); text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;}
+  .back:hover{color:var(--accent-ink);}
+  .topbar h1{font-size:16px; font-weight:700; margin:0; flex:1; min-width:200px;}
+  .summary{display:flex; gap:10px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:12px;}
+  .chip{padding:4px 10px; border-radius:99px; display:flex; align-items:center; gap:5px;}
+  .chip.pass{background:var(--good-wash); color:var(--good-ink);}
+  .chip.fail{background:var(--crit-wash); color:var(--crit-ink);}
+  .chip.blocked{background:var(--warn-wash); color:var(--warn-ink);}
+  .chip.none{background:var(--none-wash); color:var(--none-ink);}
+  .wrap{max-width:1180px; margin:0 auto; padding:28px 28px 100px;}
+
+  .intro{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px 22px;
+    box-shadow:var(--shadow); margin-bottom:28px; font-size:13.5px; line-height:1.6; color:var(--ink-soft);
+  }
+  .intro b{color:var(--ink);}
+  .intro .precond{margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft);}
+  .intro code{font-family:'JetBrains Mono',monospace; background:var(--line-soft); padding:1px 6px; border-radius:4px; font-size:12.5px;}
+
+  .filters{display:flex; gap:8px; align-items:center; margin-bottom:18px; flex-wrap:wrap;}
+  .filters button{
+    font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600; padding:6px 13px; border-radius:99px;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink-soft); cursor:pointer;
+  }
+  .filters button.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .filters input[type="text"]{
+    font-family:'Inter',sans-serif; font-size:13px; padding:6px 12px; border-radius:8px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); min-width:220px;
+  }
+
+  .group{margin-bottom:30px;}
+  .group-head{
+    display:flex; align-items:baseline; gap:10px; padding-bottom:8px; margin-bottom:2px;
+    border-bottom:2px solid var(--ink);
+  }
+  .group-head h2{font-size:16px; font-weight:700; margin:0;}
+  .group-head .cnt{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-faint);}
+
+  .case{
+    display:grid; grid-template-columns: 90px 1fr 130px 190px; gap:14px; align-items:start;
+    padding:14px 4px; border-bottom:1px solid var(--line-soft);
+  }
+  .case:last-child{border-bottom:none;}
+  .case .id{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--ink-faint); padding-top:2px;}
+  .case .title{font-weight:600; font-size:14px; margin-bottom:5px;}
+  .case .steps{font-size:12.5px; color:var(--ink-soft); line-height:1.6; margin-bottom:5px;}
+  .case .steps b{color:var(--ink); font-weight:600;}
+  .case .expected{font-size:12.5px; color:var(--ink-soft); line-height:1.6; padding-left:10px; border-left:2px solid var(--accent-wash);}
+  .case .expected b{color:var(--accent-ink); font-weight:600;}
+  .case .known{
+    display:inline-block; margin-top:6px; font-size:11px; font-weight:700; color:var(--warn-ink);
+    background:var(--warn-wash); padding:2px 8px; border-radius:6px;
+  }
+  .pri{font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; text-align:center; align-self:start;}
+  .pri.P0{background:var(--crit-wash); color:var(--crit-ink);}
+  .pri.P1{background:var(--warn-wash); color:var(--warn-ink);}
+  .pri.P2{background:var(--none-wash); color:var(--ink-faint);}
+
+  .statusblock{display:flex; flex-direction:column; gap:6px;}
+  .statusbtn{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:6px;
+    cursor:pointer; border:1px solid transparent; text-align:center; user-select:none;
+  }
+  .statusbtn.none{background:var(--none-wash); color:var(--none-ink); border-color:var(--line);}
+  .statusbtn.pass{background:var(--good-wash); color:var(--good-ink);}
+  .statusbtn.fail{background:var(--crit-wash); color:var(--crit-ink);}
+  .statusbtn.blocked{background:var(--warn-wash); color:var(--warn-ink);}
+  .note{
+    font-family:'Inter',sans-serif; font-size:12px; padding:5px 8px; border-radius:6px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); width:100%;
+  }
+  .note::placeholder{color:var(--ink-faint);}
+
+  @media (max-width:760px){
+    .case{grid-template-columns:1fr; gap:8px;}
+    .pri{justify-self:start;}
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="00-index.html">← Board</a>
+    <h1>V1 — Auth &amp; Account Foundation</h1>
+    <div class="summary" id="summary"></div>
+  </div>
+
+  <div class="wrap">
+    <div class="intro">
+      Everything downstream (couple flows, vendor flows, admin) depends on accounts working correctly. Test this phase first, with both a fresh <b>couple</b> account and a fresh <b>vendor</b> account. Auth is <b>email or phone + password only</b> — there is no social login (Google/Facebook) and no OTP login in this platform, so don't hunt for those buttons; their absence is expected, not a bug.
+      <div class="precond">
+        <b>Before you start:</b> have at least 2 disposable test emails/phone numbers ready (you'll deliberately trigger duplicate-account and lockout scenarios, which will burn accounts). Use <code>+test1</code>-style email aliases if your provider supports it so you don't run out. Never test against real user data.
+      </div>
+    </div>
+
+    <div class="filters">
+      <span style="font-size:12.5px;color:var(--ink-faint);font-weight:600;">Priority:</span>
+      <button data-f="pri" data-v="all" class="active">All</button>
+      <button data-f="pri" data-v="P0">P0</button>
+      <button data-f="pri" data-v="P1">P1</button>
+      <button data-f="pri" data-v="P2">P2</button>
+      <span style="font-size:12.5px;color:var(--ink-faint);font-weight:600;margin-left:10px;">Status:</span>
+      <button data-f="status" data-v="all" class="active">All</button>
+      <button data-f="status" data-v="none">Not started</button>
+      <button data-f="status" data-v="fail">Fail</button>
+      <input type="text" id="search" placeholder="Search test cases…">
+    </div>
+
+    <div id="groups"></div>
+  </div>
+
+<script>
+const STORAGE_KEY = 'wedhub-qa-v1';
+
+const data = [
+{ group:'Couple Signup', cases:[
+  {id:'V1-001', pri:'P0', title:'Valid couple signup', steps:'Go to signup, choose Couple/End User role, enter valid unique email + password + name.', expected:'Account created, redirected appropriately (dashboard or verify-email prompt), no server error.'},
+  {id:'V1-002', pri:'P1', title:'Signup with invalid email format', steps:'Enter "notanemail" as the email field.', expected:'Client-side validation blocks submit with a clear error, no request sent to the server.'},
+  {id:'V1-003', pri:'P1', title:'Signup with weak/short password', steps:'Enter a 3-character password.', expected:'Blocked with a specific password-requirement message, not a generic error.'},
+  {id:'V1-004', pri:'P0', title:'Signup with already-registered email', steps:'Use an email that already has an account, submit signup.', expected:'Clear "email already in use" error — not a silent overwrite, not a 500.'},
+  {id:'V1-005', pri:'P1', title:'Signup with already-registered phone', steps:'Use a phone number already tied to another account.', expected:'Clear duplicate-phone error, since phone is a unique field.'},
+  {id:'V1-006', pri:'P1', title:'Signup with missing required field', steps:'Submit the form with the name field empty.', expected:'Blocked client-side with a field-specific message.'},
+  {id:'V1-007', pri:'P2', title:'XSS attempt in name field', steps:'Enter <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> as the display name and save.', expected:'Stored/rendered as literal text everywhere it displays (profile, admin user list) — script never executes.'},
+  {id:'V1-008', pri:'P1', title:'Signup role selection persists correctly', steps:'Choose "Couple" explicitly during the multi-step wizard.', expected:'Resulting account has role END_USER, not accidentally VENDOR.'},
+]},
+{ group:'Vendor Signup', cases:[
+  {id:'V1-009', pri:'P0', title:'Valid vendor signup', steps:'Go to signup, choose Vendor role, enter valid unique email + password + business name.', expected:'Account created with role VENDOR, a Vendor record created in DRAFT status, redirected into vendor onboarding.'},
+  {id:'V1-010', pri:'P1', title:'Vendor signup with empty business name', steps:'Submit the vendor signup step with the business-name field blank.', expected:'Blocked with a clear required-field message.'},
+  {id:'V1-011', pri:'P1', title:'Vendor signup with duplicate email already used by a couple account', steps:'Sign up as vendor using an email already registered as a couple account.', expected:'Blocked with the same "email already in use" error — one email cannot back two accounts regardless of role.'},
+]},
+{ group:'Login', cases:[
+  {id:'V1-012', pri:'P0', title:'Valid login via email', steps:'Log in with a known-good email + correct password.', expected:'Logged in, session cookie set, redirected to the correct role-based landing page.'},
+  {id:'V1-013', pri:'P0', title:'Valid login via phone', steps:'Log in using the phone number instead of email, same password.', expected:'Logged in successfully — the identifier field accepts either.'},
+  {id:'V1-014', pri:'P0', title:'Login with wrong password', steps:'Enter a valid identifier with an incorrect password.', expected:'Clear "invalid credentials" error. Message must NOT reveal whether the email/phone itself exists (no "password wrong, email correct" leak).'},
+  {id:'V1-015', pri:'P0', title:'Login with non-existent identifier', steps:'Enter an email/phone that has no account.', expected:'Same generic "invalid credentials" message as V1-014 — not a different message that would let an attacker enumerate valid accounts.'},
+  {id:'V1-016', pri:'P0', title:'Account lockout after 5 failed attempts', steps:'Deliberately enter the wrong password 5 times in a row for one account.', expected:'6th attempt (even with the CORRECT password) is rejected with a lockout message, roughly a 15-minute cooldown.'},
+  {id:'V1-017', pri:'P1', title:'Lockout expires correctly', steps:'After triggering V1-016, wait out the lockout window (or check if there\'s a way to verify the unlock time server-side) and retry with the correct password.', expected:'Login succeeds once the lockout window has passed. If waiting 15 real minutes isn\'t practical, at minimum confirm the lockout message states a duration and doesn\'t lock permanently.'},
+  {id:'V1-018', pri:'P0', title:'Login attempt on a suspended account', steps:'Have an admin suspend a test account, then try logging in as that user.', expected:'Login blocked with a clear "account suspended" message, not a generic error.'},
+  {id:'V1-019', pri:'P1', title:'Login attempt on a deactivated account', steps:'Deactivate a test account from account settings, then try logging back in.', expected:'Either blocked with a clear message, or (if deactivation is meant to be reversible via login) explicitly reactivates — confirm which behavior is intended and that it matches.'},
+  {id:'V1-020', pri:'P2', title:'SQL-injection-style input in login field', steps:'Enter <code>\' OR 1=1 --</code> as the identifier.', expected:'Treated as a literal string, rejected as invalid credentials — no server error, no bypass.'},
+]},
+{ group:'Logout & Session', cases:[
+  {id:'V1-021', pri:'P0', title:'Logout clears session', steps:'While logged in, click Logout.', expected:'Redirected to a logged-out state; session cookie cleared/invalidated.'},
+  {id:'V1-022', pri:'P0', title:'Protected page blocked after logout', steps:'After logging out, use the browser back button to return to a page like /vendor/dashboard or the couple account page.', expected:'Redirected to login, not shown cached protected content.'},
+  {id:'V1-023', pri:'P1', title:'Session persists across a normal page refresh', steps:'While logged in, hard-refresh the page.', expected:'Still logged in — no unexpected logout on refresh.'},
+  {id:'V1-024', pri:'P1', title:'Refresh token rotation keeps a long session alive', steps:'Stay logged in and active across a period longer than the access token\'s short lifetime (check .env for the configured expiry, or simply leave a tab open and interact after 30-60 minutes).', expected:'Session silently renews in the background — user is not forced to log in again mid-use.'},
+  {id:'V1-025', pri:'P2', title:'Fully expired refresh token forces re-login', steps:'If feasible, simulate a very old/expired session (e.g. manually clear/corrupt the refresh cookie, or wait out its full expiry window).', expected:'User is cleanly redirected to login, not stuck on a broken page or infinite loading state.'},
+]},
+{ group:'Forgot / Reset Password', cases:[
+  {id:'V1-026', pri:'P0', title:'Request reset for a valid account', steps:'Use "Forgot password" with a real registered email.', expected:'Confirmation message shown; a reset email is actually sent (verify via Resend/inbox) with a working link.'},
+  {id:'V1-027', pri:'P1', title:'Request reset for a non-existent email', steps:'Use "Forgot password" with an email that has no account.', expected:'Same generic confirmation message as V1-026 — must not reveal whether the account exists (no enumeration leak).'},
+  {id:'V1-028', pri:'P0', title:'Reset password with a valid token', steps:'Click the emailed reset link, set a new valid password.', expected:'Password updated; can log in with the new password immediately; old password no longer works.'},
+  {id:'V1-029', pri:'P1', title:'Reuse an already-used reset token', steps:'After completing V1-028, try opening the same reset link again and submitting another new password.', expected:'Rejected — "link already used/invalid," since reset tokens are single-use.'},
+  {id:'V1-030', pri:'P1', title:'Use an expired reset token', steps:'If feasible, wait out the token\'s expiry window (check the token TTL in code/config) then try the link.', expected:'Rejected with an "expired, please request a new one" message.'},
+  {id:'V1-031', pri:'P1', title:'Reset to a weak new password', steps:'On the reset form, enter a password that fails strength requirements.', expected:'Blocked client-side with the same password-requirement rules as signup.'},
+]},
+{ group:'Email Verification', cases:[
+  {id:'V1-032', pri:'P0', title:'Verify email with a valid token', steps:'After signup, click the verification link from the real email.', expected:'Account marked verified; verified-gated features (if any) unlock.'},
+  {id:'V1-033', pri:'P1', title:'Expired verification token', steps:'Wait out the token expiry, then click the link.', expected:'Clear "expired" message with an option to resend.'},
+  {id:'V1-034', pri:'P1', title:'Resend verification email', steps:'Trigger "resend verification" from an unverified account.', expected:'A new email arrives with a fresh working link; the old link is invalidated.'},
+  {id:'V1-035', pri:'P2', title:'Verify an already-verified account', steps:'Click a verification link a second time after already being verified.', expected:'Handled gracefully — "already verified" message, not an error page.'},
+]},
+{ group:'Role-Based Route Protection', cases:[
+  {id:'V1-036', pri:'P0', title:'Unauthenticated user blocked from vendor dashboard', steps:'While logged out, directly visit a vendor dashboard URL.', expected:'Redirected to login, not shown any vendor data.'},
+  {id:'V1-037', pri:'P0', title:'Unauthenticated user blocked from admin panel', steps:'While logged out, directly visit an admin URL.', expected:'Redirected to login (or a 403), never shown admin data or UI shell.'},
+  {id:'V1-038', pri:'P0', title:'Couple account blocked from vendor-only pages', steps:'Log in as a couple, then directly navigate to a vendor dashboard URL.', expected:'Blocked (redirect or 403) — role mismatch is enforced server-side, not just hidden in the UI.'},
+  {id:'V1-039', pri:'P0', title:'Vendor account blocked from admin panel', steps:'Log in as a vendor (non-admin), then directly navigate to an admin URL.', expected:'Blocked — vendor role alone must never grant admin access.'},
+  {id:'V1-040', pri:'P1', title:'Vendor account blocked from another vendor\'s "me" resources via URL tampering', steps:'Log in as Vendor A, note Vendor B\'s ID/slug from a public page, then try hitting a /vendors/me/... style endpoint or edit form while authenticated as A but referencing B\'s ID.', expected:'Blocked server-side — ownership must be resolved from the session, never trusted from a client-supplied ID.'},
+]},
+];
+
+// ---------- render ----------
+const groupsEl = document.getElementById('groups');
+let state = {};
+try{ state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }catch(e){ state = {}; }
+
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); renderSummary(); }
+
+function cycle(id){
+  const order = ['none','pass','fail','blocked'];
+  const cur = (state[id] && state[id].status) || 'none';
+  const next = order[(order.indexOf(cur)+1) % order.length];
+  state[id] = state[id] || {};
+  state[id].status = next;
+  save();
+  document.querySelectorAll('.statusbtn[data-id="'+id+'"]').forEach(btn=>{
+    btn.className = 'statusbtn ' + next;
+    btn.textContent = labelFor(next);
+  });
+}
+function labelFor(s){
+  return s==='none' ? 'Not started' : s==='pass' ? 'Pass' : s==='fail' ? 'Fail' : 'Blocked';
+}
+
+function renderSummary(){
+  const vals = Object.values(state);
+  const total = data.reduce((a,g)=>a+g.cases.length,0);
+  const count = s => vals.filter(v=>v && v.status===s).length;
+  const el = document.getElementById('summary');
+  el.innerHTML = `
+    <span class="chip pass">✓ ${count('pass')} pass</span>
+    <span class="chip fail">✕ ${count('fail')} fail</span>
+    <span class="chip blocked">◐ ${count('blocked')} blocked</span>
+    <span class="chip none">${total - count('pass') - count('fail') - count('blocked')} / ${total} left</span>
+  `;
+}
+
+function render(){
+  groupsEl.innerHTML = '';
+  data.forEach(g=>{
+    const gDiv = document.createElement('div');
+    gDiv.className = 'group';
+    gDiv.dataset.group = g.group;
+    gDiv.innerHTML = `<div class="group-head"><h2>${g.group}</h2><span class="cnt">${g.cases.length} cases</span></div>`;
+    g.cases.forEach(c=>{
+      const st = (state[c.id] && state[c.id].status) || 'none';
+      const note = (state[c.id] && state[c.id].note) || '';
+      const row = document.createElement('div');
+      row.className = 'case';
+      row.dataset.id = c.id;
+      row.dataset.pri = c.pri;
+      row.dataset.search = (c.title+' '+c.steps+' '+c.expected+' '+c.id).toLowerCase();
+      row.innerHTML = `
+        <div class="id">${c.id}</div>
+        <div>
+          <div class="title">${c.title}</div>
+          <div class="steps"><b>Steps:</b> ${c.steps}</div>
+          <div class="expected"><b>Expected:</b> ${c.expected}</div>
+          ${c.known ? `<div class="known">⚠ Known issue: ${c.known}</div>` : ''}
+        </div>
+        <div class="pri ${c.pri}">${c.pri}</div>
+        <div class="statusblock">
+          <div class="statusbtn ${st}" data-id="${c.id}">${labelFor(st)}</div>
+          <input type="text" class="note" data-id="${c.id}" placeholder="Note (esp. on Fail)" value="${note.replace(/"/g,'&quot;')}">
+        </div>
+      `;
+      gDiv.appendChild(row);
+    });
+    groupsEl.appendChild(gDiv);
+  });
+
+  document.querySelectorAll('.statusbtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>cycle(btn.dataset.id));
+  });
+  document.querySelectorAll('.note').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const id = inp.dataset.id;
+      state[id] = state[id] || {};
+      state[id].note = inp.value;
+      save();
+    });
+  });
+  applyFilters();
+}
+
+// ---------- filters ----------
+let activePri = 'all', activeStatus = 'all', searchTerm = '';
+document.querySelectorAll('.filters button[data-f="pri"]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.filters button[data-f="pri"]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); activePri = b.dataset.v; applyFilters();
+  });
+});
+document.querySelectorAll('.filters button[data-f="status"]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.filters button[data-f="status"]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); activeStatus = b.dataset.v; applyFilters();
+  });
+});
+document.getElementById('search').addEventListener('input', (e)=>{ searchTerm = e.target.value.toLowerCase(); applyFilters(); });
+
+function applyFilters(){
+  document.querySelectorAll('.case').forEach(row=>{
+    const id = row.dataset.id;
+    const st = (state[id] && state[id].status) || 'none';
+    let show = true;
+    if(activePri !== 'all' && row.dataset.pri !== activePri) show = false;
+    if(activeStatus !== 'all' && st !== activeStatus) show = false;
+    if(searchTerm && !row.dataset.search.includes(searchTerm)) show = false;
+    row.style.display = show ? 'grid' : 'none';
+  });
+  document.querySelectorAll('.group').forEach(g=>{
+    const visible = Array.from(g.querySelectorAll('.case')).some(r=>r.style.display !== 'none');
+    g.style.display = visible ? 'block' : 'none';
+  });
+}
+
+render();
+renderSummary();
+</script>
+</body>
+</html>

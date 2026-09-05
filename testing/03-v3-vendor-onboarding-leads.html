@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>V3 — Vendor Onboarding, Profile & Leads</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --paper:#f5f6f8; --surface:#ffffff; --ink:#1b1f27; --ink-soft:#565d6b; --ink-faint:#8b91a0;
+    --line:#e2e5ea; --line-soft:#ecedf1;
+    --accent:#0b5fff; --accent-ink:#0b5fff; --accent-wash:#e8f0ff;
+    --good:#12805c; --good-ink:#12805c; --good-wash:#e1f5ec;
+    --warn:#a15c00; --warn-ink:#a15c00; --warn-wash:#fdf0da;
+    --crit:#b23b3b; --crit-ink:#b23b3b; --crit-wash:#fbe9e9;
+    --none-wash:#eceef1; --none-ink:#8b91a0;
+    --shadow: 0 1px 2px rgba(20,20,30,.04), 0 8px 20px -10px rgba(20,20,30,.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+      --line:#2c303a; --line-soft:#23262e;
+      --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+      --good:#4ade95; --good-ink:#4ade95; --good-wash:#123326;
+      --warn:#e0b25c; --warn-ink:#e0b25c; --warn-wash:#3a2c10;
+      --crit:#f08a8a; --crit-ink:#f08a8a; --crit-wash:#3a1f1f;
+      --none-wash:#282b33; --none-ink:#767c8a;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+    --line:#2c303a; --line-soft:#23262e;
+    --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+    --good:#4ade95; --good-ink:#4ade95; --good-wash:#123326;
+    --warn:#e0b25c; --warn-ink:#e0b25c; --warn-wash:#3a2c10;
+    --crit:#f08a8a; --crit-ink:#f08a8a; --crit-wash:#3a1f1f;
+    --none-wash:#282b33; --none-ink:#767c8a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;}
+  a{color:var(--accent-ink);}
+  .topbar{
+    position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line);
+    padding:14px 28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  .back{font-size:13px; color:var(--ink-soft); text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;}
+  .back:hover{color:var(--accent-ink);}
+  .topbar h1{font-size:16px; font-weight:700; margin:0; flex:1; min-width:200px;}
+  .summary{display:flex; gap:10px; flex-wrap:wrap; font-family:'JetBrains Mono',monospace; font-size:12px;}
+  .chip{padding:4px 10px; border-radius:99px; display:flex; align-items:center; gap:5px;}
+  .chip.pass{background:var(--good-wash); color:var(--good-ink);}
+  .chip.fail{background:var(--crit-wash); color:var(--crit-ink);}
+  .chip.blocked{background:var(--warn-wash); color:var(--warn-ink);}
+  .chip.none{background:var(--none-wash); color:var(--none-ink);}
+  .wrap{max-width:1180px; margin:0 auto; padding:28px 28px 100px;}
+
+  .intro{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px 22px;
+    box-shadow:var(--shadow); margin-bottom:28px; font-size:13.5px; line-height:1.6; color:var(--ink-soft);
+  }
+  .intro b{color:var(--ink);}
+  .intro .precond{margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft);}
+  .intro .napp{margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft);}
+  .intro code{font-family:'JetBrains Mono',monospace; background:var(--line-soft); padding:1px 6px; border-radius:4px; font-size:12.5px;}
+
+  .filters{display:flex; gap:8px; align-items:center; margin-bottom:18px; flex-wrap:wrap;}
+  .filters button{
+    font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600; padding:6px 13px; border-radius:99px;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink-soft); cursor:pointer;
+  }
+  .filters button.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .filters input[type="text"]{
+    font-family:'Inter',sans-serif; font-size:13px; padding:6px 12px; border-radius:8px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); min-width:220px;
+  }
+
+  .group{margin-bottom:30px;}
+  .group-head{
+    display:flex; align-items:baseline; gap:10px; padding-bottom:8px; margin-bottom:2px;
+    border-bottom:2px solid var(--ink);
+  }
+  .group-head h2{font-size:16px; font-weight:700; margin:0;}
+  .group-head .cnt{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--ink-faint);}
+
+  .case{
+    display:grid; grid-template-columns: 90px 1fr 130px 190px; gap:14px; align-items:start;
+    padding:14px 4px; border-bottom:1px solid var(--line-soft);
+  }
+  .case:last-child{border-bottom:none;}
+  .case .id{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--ink-faint); padding-top:2px;}
+  .case .title{font-weight:600; font-size:14px; margin-bottom:5px;}
+  .case .steps{font-size:12.5px; color:var(--ink-soft); line-height:1.6; margin-bottom:5px;}
+  .case .steps b{color:var(--ink); font-weight:600;}
+  .case .expected{font-size:12.5px; color:var(--ink-soft); line-height:1.6; padding-left:10px; border-left:2px solid var(--accent-wash);}
+  .case .expected b{color:var(--accent-ink); font-weight:600;}
+  .case .known{
+    display:inline-block; margin-top:6px; font-size:11px; font-weight:700; color:var(--warn-ink);
+    background:var(--warn-wash); padding:2px 8px; border-radius:6px;
+  }
+  .pri{font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; text-align:center; align-self:start;}
+  .pri.P0{background:var(--crit-wash); color:var(--crit-ink);}
+  .pri.P1{background:var(--warn-wash); color:var(--warn-ink);}
+  .pri.P2{background:var(--none-wash); color:var(--ink-faint);}
+
+  .statusblock{display:flex; flex-direction:column; gap:6px;}
+  .statusbtn{
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:6px;
+    cursor:pointer; border:1px solid transparent; text-align:center; user-select:none;
+  }
+  .statusbtn.none{background:var(--none-wash); color:var(--none-ink); border-color:var(--line);}
+  .statusbtn.pass{background:var(--good-wash); color:var(--good-ink);}
+  .statusbtn.fail{background:var(--crit-wash); color:var(--crit-ink);}
+  .statusbtn.blocked{background:var(--warn-wash); color:var(--warn-ink);}
+  .note{
+    font-family:'Inter',sans-serif; font-size:12px; padding:5px 8px; border-radius:6px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); width:100%;
+  }
+  .note::placeholder{color:var(--ink-faint);}
+
+  @media (max-width:760px){
+    .case{grid-template-columns:1fr; gap:8px;}
+    .pri{justify-self:start;}
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back" href="00-index.html">← Board</a>
+    <h1>V3 — Vendor Onboarding, Profile &amp; Leads</h1>
+    <div class="summary" id="summary"></div>
+  </div>
+
+  <div class="wrap">
+    <div class="intro">
+      This phase covers everything a vendor does before they've connected any payment method: building their listing, getting approved, and working incoming leads. It requires coordination between a <b>vendor account</b> and an <b>admin account</b> (for the approval steps) — have both logged in, ideally in two different browser profiles/incognito windows so sessions don't collide.
+      <div class="precond">
+        <b>Before you start:</b> a fresh vendor account from V1 (still in DRAFT status), plus admin access. You'll also want a couple account from V2 that has already sent this vendor a real enquiry, so the Leads section has live data to test against.
+      </div>
+      <div class="napp">
+        <b>Not applicable — don't test these, they don't exist:</b> a real calendar/date-blocking booking system (availability is a free-text field only), any AI-assisted profile writing, automated spam-scoring beyond a manual flag.
+      </div>
+    </div>
+
+    <div class="filters">
+      <span style="font-size:12.5px;color:var(--ink-faint);font-weight:600;">Priority:</span>
+      <button data-f="pri" data-v="all" class="active">All</button>
+      <button data-f="pri" data-v="P0">P0</button>
+      <button data-f="pri" data-v="P1">P1</button>
+      <button data-f="pri" data-v="P2">P2</button>
+      <span style="font-size:12.5px;color:var(--ink-faint);font-weight:600;margin-left:10px;">Status:</span>
+      <button data-f="status" data-v="all" class="active">All</button>
+      <button data-f="status" data-v="none">Not started</button>
+      <button data-f="status" data-v="fail">Fail</button>
+      <input type="text" id="search" placeholder="Search test cases…">
+    </div>
+
+    <div id="groups"></div>
+  </div>
+
+<script>
+const STORAGE_KEY = 'wedhub-qa-v3';
+
+const data = [
+{ group:'Vendor Onboarding Wizard', cases:[
+  {id:'V3-001', pri:'P0', title:'Complete the full onboarding flow', steps:'From a fresh DRAFT vendor, work through business info → profile → categories → service areas → attributes → services → packages.', expected:'Every step saves and persists across a refresh mid-way; reaching the end enables submission.'},
+  {id:'V3-002', pri:'P0', title:'Select primary + secondary category', steps:'Assign one category as primary and at least one more as secondary.', expected:'Both save correctly; the vendor later appears in search under either category.'},
+  {id:'V3-003', pri:'P1', title:'Select multiple service areas across cities', steps:'Add 2+ service areas spanning different cities.', expected:'All save; the vendor appears in search for each of those cities.'},
+  {id:'V3-004', pri:'P1', title:'Category-specific attributes render per selected category', steps:'Change the primary category and check the attributes step.', expected:'The custom attribute fields shown match the newly selected category (e.g. switching from Photographer to Venue changes the fields entirely).'},
+  {id:'V3-005', pri:'P0', title:'Submit for approval below the completeness threshold', steps:'Try to submit with required fields (e.g. business name, category, city) intentionally left incomplete.', expected:'Blocked with a specific message about what\'s missing — not a silent failure.'},
+  {id:'V3-006', pri:'P0', title:'Submit for approval once complete', steps:'Fill all required fields to reach the completeness threshold, then submit.', expected:'Status moves from DRAFT to PENDING_VERIFICATION or PENDING_APPROVAL; vendor sees a clear "awaiting review" state.'},
+  {id:'V3-007', pri:'P1', title:'Profile completeness score updates live', steps:'Fill in fields one at a time and watch the completeness percentage.', expected:'Score increases incrementally and accurately as weighted fields (business name, description, category, city, pricing, packages, services, contact) are completed.'},
+]},
+{ group:'Admin Approval Flow', cases:[
+  {id:'V3-008', pri:'P0', title:'Admin sees the pending vendor in queue', steps:'As admin, open the vendor management list filtered to pending/awaiting review.', expected:'The submitted vendor appears with correct submitted data visible.'},
+  {id:'V3-009', pri:'P0', title:'Admin approves a vendor', steps:'Approve the pending vendor.', expected:'Vendor status becomes APPROVED; vendor is now publicly visible in search (cross-check against V2); vendor receives an approval notification.'},
+  {id:'V3-010', pri:'P0', title:'Admin rejects a vendor with a reason', steps:'Reject a different pending vendor, providing a required rejection reason.', expected:'Status becomes REJECTED; reason is recorded and visible to the vendor; vendor receives a rejection notification.'},
+  {id:'V3-011', pri:'P1', title:'Admin suspends an approved vendor', steps:'Suspend a currently APPROVED vendor.', expected:'Vendor immediately disappears from public search/profile access; vendor-side dashboard reflects the suspension.'},
+  {id:'V3-012', pri:'P1', title:'Admin restores a suspended vendor', steps:'Restore the vendor suspended in V3-011.', expected:'Returns to APPROVED and is publicly visible again.'},
+  {id:'V3-013', pri:'P2', title:'Admin assigns a verification level', steps:'Set a vendor\'s verification level to Identity Verified, then Business Verified, then Platform Verified.', expected:'Each level saves independently of approval status; the correct badge shows on the public profile at each level.'},
+  {id:'V3-014', pri:'P1', title:'Vendor status history audit trail', steps:'After several status changes, check the admin-visible status history for that vendor.', expected:'Every transition is logged with actor, timestamp, and (where applicable) reason — in correct chronological order.'},
+  {id:'V3-015', pri:'P2', title:'Admin-created vendor + invitation claim flow', steps:'As admin, create a vendor shell with just a business name and invite email, then have that email holder complete the claim/register flow.', expected:'The invited person ends up owning and able to edit that same vendor profile.'},
+]},
+{ group:'Profile Editor (post-approval)', cases:[
+  {id:'V3-016', pri:'P0', title:'Edit and save every field group', steps:'As an approved vendor, edit identity, classification, location, commercial, contact, and operational fields, then save.', expected:'All changes persist; public profile reflects updates.'},
+  {id:'V3-017', pri:'P1', title:'Set logo and cover image from uploaded media', steps:'Upload two images, set one as logo and the other as cover.', expected:'Both display correctly on the public profile in their respective placements.'},
+  {id:'V3-018', pri:'P1', title:'Attach and detach a service', steps:'Add a service from the catalog, then remove it.', expected:'Appears/disappears correctly on the public profile.'},
+  {id:'V3-019', pri:'P2', title:'Save with a partial network/API failure', steps:'If reproducible (e.g. throttle network in devtools), trigger a save that fails partway.', expected:'Clear error shown, no silently-half-saved state that confuses the vendor about what actually persisted.'},
+]},
+{ group:'Portfolio & Albums', cases:[
+  {id:'V3-020', pri:'P0', title:'Upload a valid portfolio image', steps:'Upload a JPEG/PNG to the portfolio.', expected:'Uploads, shows a processing state, then transitions to ready with a thumbnail generated — confirm this actually completes, not stuck in "processing."'},
+  {id:'V3-021', pri:'P1', title:'Upload an invalid file type', steps:'Try uploading a .exe or .pdf as a portfolio image.', expected:'Rejected client-side or server-side with a clear message — never silently accepted.'},
+  {id:'V3-022', pri:'P1', title:'Upload an oversized file', steps:'Try uploading an unusually large image file (e.g. 50MB+).', expected:'Rejected gracefully with a size-limit message, not a hung upload or crash.'},
+  {id:'V3-023', pri:'P0', title:'Free-tier portfolio photo limit (10 photos)', steps:'On a Free-tier vendor, upload up to 10 photos, then attempt an 11th.', expected:'11th upload is blocked or prompts an upgrade — confirm the cap is actually enforced, not just documented.'},
+  {id:'V3-024', pri:'P1', title:'Free-tier video limit (1 video)', steps:'On a Free-tier vendor, upload 1 video, then attempt a 2nd.', expected:'2nd video upload blocked or prompts upgrade.'},
+  {id:'V3-025', pri:'P1', title:'Create, rename, and delete an album', steps:'Create a new album, rename it, then delete it.', expected:'All three operations work and reflect correctly on the public profile.'},
+  {id:'V3-026', pri:'P1', title:'Public vs private album visibility', steps:'Set one album to private.', expected:'Private album does not appear on the public vendor profile (cross-check against V2-026).'},
+  {id:'V3-027', pri:'P2', title:'Delete a media item', steps:'Delete a single portfolio photo.', expected:'Removed from the album and no longer publicly visible.'},
+  {id:'V3-028', pri:'P2', title:'Reorder portfolio/album items', steps:'Drag to reorder photos within an album, if supported.', expected:'New order persists and reflects publicly.'},
+]},
+{ group:'Packages & Pricing', cases:[
+  {id:'V3-029', pri:'P0', title:'Create a package', steps:'Add a new package with name, price, currency, and a list of inclusions.', expected:'Saves and appears correctly on the public profile.'},
+  {id:'V3-030', pri:'P1', title:'Edit a package', steps:'Change the price and one inclusion on an existing package.', expected:'Updates reflect immediately on the public profile.'},
+  {id:'V3-031', pri:'P1', title:'Delete a package', steps:'Remove a package entirely.', expected:'No longer shown publicly; doesn\'t orphan any linked invoice data from past leads.'},
+  {id:'V3-032', pri:'P2', title:'Package with zero or negative price', steps:'Try entering 0 or a negative number as a package price.', expected:'Blocked with a validation message, or explicitly allowed for a legitimate "free consultation" case — confirm intended behavior either way.'},
+]},
+{ group:'Lead & Enquiry CRM', cases:[
+  {id:'V3-033', pri:'P0', title:'New lead appears on the vendor lead board', steps:'After a couple submits an enquiry (from V2-037), check the vendor\'s lead board.', expected:'New lead appears promptly with status NEW and correct couple contact info fully visible.'},
+  {id:'V3-034', pri:'P0', title:'Transition a lead through the full valid pipeline', steps:'Move a lead New → Contacted → Responded → Qualified → Meeting → Quoted → Won, one step at a time.', expected:'Each transition saves, is reflected in status history, and updates the couple-facing tracker (cross-check V2-045).'},
+  {id:'V3-035', pri:'P1', title:'Mark a lead Lost or Spam with a reason', steps:'Move a different lead to Lost or Spam, providing the reason field.', expected:'Saves correctly; reason is recorded.'},
+  {id:'V3-036', pri:'P1', title:'Vendor cannot reopen a terminal-status lead', steps:'Try changing the status of a Won/Lost/Spam/Closed lead back to an earlier state.', expected:'Blocked for the vendor — only admin can do this (cross-check in V5).'},
+  {id:'V3-037', pri:'P1', title:'Add an internal note to a lead', steps:'Add a note visible only on the vendor side.', expected:'Note saves and persists; confirm it is NOT visible anywhere on the couple\'s enquiry tracker.'},
+  {id:'V3-038', pri:'P1', title:'Filter the lead board by status', steps:'Use the status filter tabs to view only Won, then only New, etc.', expected:'List correctly narrows to just that status.'},
+  {id:'V3-039', pri:'P1', title:'Lead board search', steps:'Search leads by couple name or keyword, if supported.', expected:'Correctly narrows results.'},
+  {id:'V3-040', pri:'P1', title:'Lead detail view shows full history', steps:'Open a single lead\'s detail page.', expected:'Shows full contact info, wedding details from the enquiry, complete status history, and notes.'},
+  {id:'V3-041', pri:'P0', title:'Vendor lead analytics reflect real state', steps:'After creating/transitioning several leads, check the vendor analytics/dashboard numbers for leads received, response rate, conversion rate.', expected:'Numbers accurately match the actual leads and transitions performed — not stale or miscounted.'},
+]},
+{ group:'Vendor Notifications', cases:[
+  {id:'V3-042', pri:'P0', title:'Vendor receives a "new lead" notification', steps:'After V3-033, check the vendor\'s in-app notification bell and (if configured) email inbox.', expected:'Both an in-app notification and a real email arrive promptly.'},
+  {id:'V3-043', pri:'P1', title:'Mark a notification as read', steps:'Click a single unread notification.', expected:'Marked read; unread count decrements.'},
+  {id:'V3-044', pri:'P1', title:'Mark all notifications as read', steps:'Use "mark all as read."', expected:'All notifications flip to read state; unread badge clears to zero.'},
+  {id:'V3-045', pri:'P1', title:'Vendor receives approval/rejection notification', steps:'Cross-check against V3-009 and V3-010.', expected:'A notification arrives for both approval and rejection events.'},
+  {id:'V3-046', pri:'P1', title:'Opt out of a specific notification channel', steps:'In notification preferences, disable Email for a specific event type, then trigger that event again.', expected:'In-app notification still arrives (if not also disabled) but no email is sent for that event going forward.'},
+]},
+];
+
+// ---------- render ----------
+const groupsEl = document.getElementById('groups');
+let state = {};
+try{ state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }catch(e){ state = {}; }
+
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); renderSummary(); }
+
+function cycle(id){
+  const order = ['none','pass','fail','blocked'];
+  const cur = (state[id] && state[id].status) || 'none';
+  const next = order[(order.indexOf(cur)+1) % order.length];
+  state[id] = state[id] || {};
+  state[id].status = next;
+  save();
+  document.querySelectorAll('.statusbtn[data-id="'+id+'"]').forEach(btn=>{
+    btn.className = 'statusbtn ' + next;
+    btn.textContent = labelFor(next);
+  });
+}
+function labelFor(s){
+  return s==='none' ? 'Not started' : s==='pass' ? 'Pass' : s==='fail' ? 'Fail' : 'Blocked';
+}
+
+function renderSummary(){
+  const vals = Object.values(state);
+  const total = data.reduce((a,g)=>a+g.cases.length,0);
+  const count = s => vals.filter(v=>v && v.status===s).length;
+  const el = document.getElementById('summary');
+  el.innerHTML = `
+    <span class="chip pass">✓ ${count('pass')} pass</span>
+    <span class="chip fail">✕ ${count('fail')} fail</span>
+    <span class="chip blocked">◐ ${count('blocked')} blocked</span>
+    <span class="chip none">${total - count('pass') - count('fail') - count('blocked')} / ${total} left</span>
+  `;
+}
+
+function render(){
+  groupsEl.innerHTML = '';
+  data.forEach(g=>{
+    const gDiv = document.createElement('div');
+    gDiv.className = 'group';
+    gDiv.dataset.group = g.group;
+    gDiv.innerHTML = `<div class="group-head"><h2>${g.group}</h2><span class="cnt">${g.cases.length} cases</span></div>`;
+    g.cases.forEach(c=>{
+      const st = (state[c.id] && state[c.id].status) || 'none';
+      const note = (state[c.id] && state[c.id].note) || '';
+      const row = document.createElement('div');
+      row.className = 'case';
+      row.dataset.id = c.id;
+      row.dataset.pri = c.pri;
+      row.dataset.search = (c.title+' '+c.steps+' '+c.expected+' '+c.id).toLowerCase();
+      row.innerHTML = `
+        <div class="id">${c.id}</div>
+        <div>
+          <div class="title">${c.title}</div>
+          <div class="steps"><b>Steps:</b> ${c.steps}</div>
+          <div class="expected"><b>Expected:</b> ${c.expected}</div>
+          ${c.known ? `<div class="known">⚠ Known issue: ${c.known}</div>` : ''}
+        </div>
+        <div class="pri ${c.pri}">${c.pri}</div>
+        <div class="statusblock">
+          <div class="statusbtn ${st}" data-id="${c.id}">${labelFor(st)}</div>
+          <input type="text" class="note" data-id="${c.id}" placeholder="Note (esp. on Fail)" value="${note.replace(/"/g,'&quot;')}">
+        </div>
+      `;
+      gDiv.appendChild(row);
+    });
+    groupsEl.appendChild(gDiv);
+  });
+
+  document.querySelectorAll('.statusbtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>cycle(btn.dataset.id));
+  });
+  document.querySelectorAll('.note').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const id = inp.dataset.id;
+      state[id] = state[id] || {};
+      state[id].note = inp.value;
+      save();
+    });
+  });
+  applyFilters();
+}
+
+// ---------- filters ----------
+let activePri = 'all', activeStatus = 'all', searchTerm = '';
+document.querySelectorAll('.filters button[data-f="pri"]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.filters button[data-f="pri"]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); activePri = b.dataset.v; applyFilters();
+  });
+});
+document.querySelectorAll('.filters button[data-f="status"]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.filters button[data-f="status"]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); activeStatus = b.dataset.v; applyFilters();
+  });
+});
+document.getElementById('search').addEventListener('input', (e)=>{ searchTerm = e.target.value.toLowerCase(); applyFilters(); });
+
+function applyFilters(){
+  document.querySelectorAll('.case').forEach(row=>{
+    const id = row.dataset.id;
+    const st = (state[id] && state[id].status) || 'none';
+    let show = true;
+    if(activePri !== 'all' && row.dataset.pri !== activePri) show = false;
+    if(activeStatus !== 'all' && st !== activeStatus) show = false;
+    if(searchTerm && !row.dataset.search.includes(searchTerm)) show = false;
+    row.style.display = show ? 'grid' : 'none';
+  });
+  document.querySelectorAll('.group').forEach(g=>{
+    const visible = Array.from(g.querySelectorAll('.case')).some(r=>r.style.display !== 'none');
+    g.style.display = visible ? 'block' : 'none';
+  });
+}
+
+render();
+renderSummary();
+</script>
+</body>
+</html>

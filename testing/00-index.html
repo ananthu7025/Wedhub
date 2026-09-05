@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WedHub Test Board</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --paper:#f5f6f8; --surface:#ffffff; --ink:#1b1f27; --ink-soft:#565d6b; --ink-faint:#8b91a0;
+    --line:#e2e5ea; --line-soft:#ecedf1;
+    --accent:#0b5fff; --accent-ink:#0b5fff; --accent-wash:#e8f0ff;
+    --good:#12805c; --good-wash:#e1f5ec;
+    --warn:#a15c00; --warn-wash:#fdf0da;
+    --crit:#b23b3b; --crit-wash:#fbe9e9;
+    --shadow: 0 1px 2px rgba(20,20,30,.04), 0 8px 20px -10px rgba(20,20,30,.12);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+      --line:#2c303a; --line-soft:#23262e;
+      --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+      --good:#4ade95; --good-wash:#123326;
+      --warn:#e0b25c; --warn-wash:#3a2c10;
+      --crit:#f08a8a; --crit-wash:#3a1f1f;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14161b; --surface:#1c1f26; --ink:#eef1f6; --ink-soft:#aab0bd; --ink-faint:#767c8a;
+    --line:#2c303a; --line-soft:#23262e;
+    --accent:#5b9dff; --accent-ink:#8fbcff; --accent-wash:#1a2c4d;
+    --good:#4ade95; --good-wash:#123326;
+    --warn:#e0b25c; --warn-wash:#3a2c10;
+    --crit:#f08a8a; --crit-wash:#3a1f1f;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:980px; margin:0 auto; padding:48px 28px 100px;}
+  .eyebrow{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:12px;}
+  h1{font-size:clamp(28px,4vw,38px); font-weight:800; margin:0 0 12px; letter-spacing:-.01em; text-wrap:balance;}
+  .dek{font-size:15.5px; color:var(--ink-soft); max-width:70ch; line-height:1.65; margin:0 0 32px;}
+  .rules{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:22px 24px;
+    box-shadow:var(--shadow); margin-bottom:36px;
+  }
+  .rules h2{font-size:14px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); font-weight:700; margin:0 0 14px;}
+  .rules ol{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:10px; font-size:14px; line-height:1.6; color:var(--ink);}
+  .rules b{color:var(--accent-ink);}
+  .phases{display:flex; flex-direction:column; gap:14px;}
+  .phase{
+    display:grid; grid-template-columns:56px 1fr auto; align-items:center; gap:18px;
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:18px 22px;
+    text-decoration:none; color:inherit; box-shadow:var(--shadow); transition:transform .1s ease, border-color .1s ease;
+  }
+  .phase:hover{border-color:var(--accent); transform:translateY(-1px);}
+  .phase .num{
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:15px; color:var(--accent-ink);
+    background:var(--accent-wash); width:44px; height:44px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .phase .name{font-weight:700; font-size:16px; margin-bottom:3px;}
+  .phase .desc{font-size:13px; color:var(--ink-soft); line-height:1.5;}
+  .phase .prog{
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--ink-faint); text-align:right;
+    display:flex; flex-direction:column; align-items:flex-end; gap:6px; min-width:110px;
+  }
+  .bar{width:100px; height:6px; border-radius:99px; background:var(--line-soft); overflow:hidden;}
+  .bar-fill{height:100%; background:var(--good); border-radius:99px; width:0%;}
+  .legend{display:flex; gap:18px; flex-wrap:wrap; margin-top:32px; font-size:12.5px; color:var(--ink-soft);}
+  .legend .row{display:flex; align-items:center; gap:6px;}
+  .dot{width:9px; height:9px; border-radius:99px; display:inline-block;}
+  footer{margin-top:48px; padding-top:20px; border-top:1px solid var(--line); font-size:12px; color:var(--ink-faint); line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Manual QA Board · itsmyKalyanam / WedHub</div>
+  <h1>Manual Test Plan — 5 Phases</h1>
+  <p class="dek">A complete, hands-on test pass across the whole platform, ordered by dependency: each phase assumes the one before it works, so start at Phase 1 even if you're tempted to jump to the feature you care about most. Every test case lives in its own phase file below — open one, work top to bottom, check things off as you go. Progress is saved in this browser automatically.</p>
+
+  <div class="rules">
+    <h2>How to use this board</h2>
+    <ol>
+      <li>Work the phases <b>in order</b> — V2 assumes you already have a working couple account from V1, V3 assumes a working vendor account, V4 assumes an approved vendor with an active plan, V5 assumes everything before it works.</li>
+      <li>Each test case has a <b>priority</b>: <b>P0</b> = core flow, must pass before anything downstream is trustworthy. <b>P1</b> = real edge case, log a bug if it fails. <b>P2</b> = minor/cosmetic, note it but don't block on it.</li>
+      <li>Click a row's status pill to cycle <b>Not started → Pass → Fail → Blocked</b>. Add a one-line note on any Fail so you remember what broke.</li>
+      <li>When you find a real bug, log it in <b>BugsItemsDoc/</b> (per <span style="font-family:'JetBrains Mono',monospace;">PENDING-WORK.md</span>) with the Test ID (e.g. <span style="font-family:'JetBrains Mono',monospace;">V3-014</span>) so it's traceable back to this board.</li>
+      <li>A few test cases are marked <b>"Known issue — expect this to fail"</b> for bugs already on record (e.g. the admin store-payments metrics tile). Confirm the symptom matches the known bug; don't re-log it as new.</li>
+      <li>This board only opens as a local file — progress is saved per-browser via localStorage. If you switch browsers/machines, progress won't follow; that's expected for a local tool.</li>
+    </ol>
+  </div>
+
+  <div class="phases" id="phaseList"></div>
+
+  <div class="legend">
+    <div class="row"><span class="dot" style="background:var(--good)"></span> Pass</div>
+    <div class="row"><span class="dot" style="background:var(--crit)"></span> Fail</div>
+    <div class="row"><span class="dot" style="background:var(--warn)"></span> Blocked</div>
+    <div class="row"><span class="dot" style="background:var(--ink-faint)"></span> Not started</div>
+  </div>
+
+  <footer>
+    Test cases are grounded in the actual verified codebase state (Prisma schema, live API routes, both frontend apps) as audited in early September 2026 — not generic QA boilerplate. Where the platform genuinely doesn't have a feature (in-app chat, guest-list manager, social login, AI features), no test case is written for it — testing something that doesn't exist wastes your time, so those are called out instead as "not applicable" inside the relevant phase file.
+  </footer>
+</div>
+
+<script>
+  const phases = [
+    {n:1, id:'v1', file:'01-v1-auth-foundation.html', name:'Auth & Account Foundation', desc:'Signup, login, logout, password reset, email verification, session & route protection — for both couple and vendor roles.'},
+    {n:2, id:'v2', file:'02-v2-discovery-engagement.html', name:'Couple Discovery & Engagement', desc:'Homepage, search & filters, vendor profile pages, favorites/shortlists, compare, enquiries, reviews, wedding profile.'},
+    {n:3, id:'v3', file:'03-v3-vendor-onboarding-leads.html', name:'Vendor Onboarding, Profile & Leads', desc:'Vendor signup, profile builder, portfolio/albums, packages, admin approval flow, lead CRM, notifications.'},
+    {n:4, id:'v4', file:'04-v4-monetization.html', name:'Monetization', desc:'Subscription plans & Razorpay checkout, entitlement gating, GST invoicing, vendor mini-store, marketplace payments.'},
+    {n:5, id:'v5', file:'05-v5-wedsite-telegram-admin.html', name:'Wedding Website, Telegram, Admin & Edge Cases', desc:'₹49 wedding website builder, Telegram bot, full admin back-office, and cross-cutting security/mobile/edge-case sweep.'},
+  ];
+
+  function computeProgress(id){
+    try{
+      const raw = localStorage.getItem('wedhub-qa-'+id);
+      if(!raw) return {done:0, total:0, pct:0};
+      const data = JSON.parse(raw);
+      const vals = Object.values(data);
+      const total = vals.length;
+      const done = vals.filter(v => v && v.status && v.status !== 'none').length;
+      return {done, total, pct: total ? Math.round(done/total*100) : 0};
+    }catch(e){ return {done:0, total:0, pct:0}; }
+  }
+
+  const list = document.getElementById('phaseList');
+  phases.forEach(p=>{
+    const prog = computeProgress(p.id);
+    const a = document.createElement('a');
+    a.className = 'phase';
+    a.href = p.file;
+    a.innerHTML = `
+      <div class="num">V${p.n}</div>
+      <div>
+        <div class="name">${p.name}</div>
+        <div class="desc">${p.desc}</div>
+      </div>
+      <div class="prog">
+        <div>${prog.total ? prog.done+' / '+prog.total : 'open to start'}</div>
+        <div class="bar"><div class="bar-fill" style="width:${prog.pct}%"></div></div>
+      </div>
+    `;
+    list.appendChild(a);
+  });
+</script>
+</body>
+</html>
