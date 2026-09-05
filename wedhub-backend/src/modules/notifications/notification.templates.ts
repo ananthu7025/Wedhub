@@ -92,6 +92,10 @@ const TEMPLATES: Record<NotificationEventType, (data: TemplateData) => Notificat
     title: "Your enquiry was updated",
     body: `${data.businessName ?? "A vendor"} moved your enquiry to "${data.status ?? "a new status"}". Check your enquiries for details.`,
   }),
+  ACCOUNT_LINKED: () => ({
+    title: "Your account was linked to Google sign-in",
+    body: "Someone just signed in to your itsmyKalyanam account using Google for the first time. If this was you, no action is needed. If it wasn't, reset your password immediately.",
+  }),
 };
 
 export function renderNotification(eventType: NotificationEventType, data: TemplateData): NotificationContent {

@@ -1,4 +1,6 @@
+import { OAuth2Client } from "google-auth-library";
 import { logger } from "../../config/logger";
+import { env } from "../../config/env";
 import { AuthenticationError, ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { Role } from "../../common/enums/roles.enum";
 import * as notificationService from "../notifications/notification.service";
@@ -12,11 +14,15 @@ import {
 import * as authRepository from "./auth.repository";
 import type {
   AuthenticatedUserView,
+  GoogleLoginInput,
   LoginInput,
   RegisterInput,
   RequestContext,
   TokenPair,
 } from "./auth.types";
+
+const GOOGLE_PROVIDER = "GOOGLE";
+const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
 const MAX_FAILED_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
@@ -103,6 +109,10 @@ export async function login(
     );
   }
 
+  if (!user.passwordHash) {
+    throw new AuthenticationError("This account uses Google sign-in. Please continue with Google.");
+  }
+
   const passwordMatches = await comparePassword(input.password, user.passwordHash);
 
   if (!passwordMatches) {
@@ -124,6 +134,122 @@ export async function login(
 
   if (user.status === "SUSPENDED") {
     throw new AuthenticationError("This account has been suspended. Contact support for assistance.");
+  }
+
+  await authRepository.recordSuccessfulLogin(user.id);
+  const tokens = await issueTokenPair(user.id, user.role as Role, context);
+
+  return { user: toAuthenticatedUserView(user), tokens };
+}
+
+export async function loginWithGoogle(
+  input: GoogleLoginInput,
+  context: RequestContext,
+): Promise<{ user: AuthenticatedUserView; tokens: TokenPair }> {
+  if (!env.GOOGLE_CLIENT_ID) {
+    throw new AuthenticationError("Google sign-in is not configured");
+  }
+
+  let payload: { sub: string; email?: string; email_verified?: boolean } | undefined;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: input.idToken,
+      audience: env.GOOGLE_CLIENT_ID,
+    });
+    payload = ticket.getPayload();
+  } catch (err) {
+    logger.warn({ err }, "Google ID token verification failed");
+    throw new AuthenticationError("Invalid Google sign-in token");
+  }
+
+  if (!payload || !payload.email) {
+    throw new AuthenticationError("Invalid Google sign-in token");
+  }
+
+  // The one real safeguard against a Google account whose email ownership
+  // isn't actually confirmed (Google does allow email_verified: false in
+  // some edge/legacy cases) — checked before any lookup, so an unverified
+  // Google email can never reach or influence an existing WedHub account.
+  if (!payload.email_verified) {
+    throw new AuthenticationError("Your Google account's email is not verified");
+  }
+
+  const googleSub = payload.sub;
+  const googleEmail = payload.email;
+
+  const existingLink = await authRepository.findLinkedIdentity(GOOGLE_PROVIDER, googleSub);
+  let user: Awaited<ReturnType<typeof authRepository.findUserById>>;
+
+  if (existingLink) {
+    user = await authRepository.findUserById(existingLink.userId);
+    if (!user) {
+      throw new AuthenticationError("Invalid Google sign-in token");
+    }
+  } else {
+    const existingByEmail = await authRepository.findUserByEmail(googleEmail);
+
+    if (!existingByEmail) {
+      // Brand-new signup. role comes from which button was clicked (couple
+      // signup vs. vendor signup), never from anything Google's token
+      // itself asserts. The plain /login page omits role entirely — it has
+      // no signup-intent context — so a first-time Google identity there
+      // gets NotFoundError instead of being silently registered; the
+      // frontend catches that and redirects to /signup.
+      if (!input.role) {
+        throw new NotFoundError("No account found for this Google identity");
+      }
+
+      user = await authRepository.createUserWithLinkedIdentity({
+        email: googleEmail,
+        role: input.role,
+        provider: GOOGLE_PROVIDER,
+        providerAccountId: googleSub,
+      });
+
+      await notificationService.notify({
+        userId: user.id,
+        eventType: "REGISTRATION",
+        data: {},
+      });
+    } else {
+      // Collision with an existing password-based account — auto-link,
+      // but only after the same checks a plain password login would apply.
+      // A role check only applies when the caller asserted one (i.e. from
+      // /signup); a plain /login attempt has no role to conflict with and
+      // simply resolves to whatever role the existing account already has.
+      if (input.role && existingByEmail.role !== input.role) {
+        const existingRoleLabel = existingByEmail.role === Role.VENDOR ? "vendor" : "couple";
+        throw new ConflictError(
+          `An account with this email already exists as a ${existingRoleLabel}. Please sign in from the correct page.`,
+        );
+      }
+
+      if (existingByEmail.status === "DEACTIVATED") {
+        throw new AuthenticationError("This account has been deactivated");
+      }
+
+      if (existingByEmail.status === "SUSPENDED") {
+        throw new AuthenticationError("This account has been suspended. Contact support for assistance.");
+      }
+
+      await authRepository.linkIdentityToExistingUser({
+        userId: existingByEmail.id,
+        provider: GOOGLE_PROVIDER,
+        providerAccountId: googleSub,
+        email: googleEmail,
+        stampEmailVerified: !existingByEmail.emailVerifiedAt,
+      });
+
+      // Fire-and-forget tripwire: notify() never throws, matching the
+      // existing security-notification pattern used by forgotPassword().
+      await notificationService.notify({
+        userId: existingByEmail.id,
+        eventType: "ACCOUNT_LINKED",
+        data: {},
+      });
+
+      user = existingByEmail;
+    }
   }
 
   await authRepository.recordSuccessfulLogin(user.id);

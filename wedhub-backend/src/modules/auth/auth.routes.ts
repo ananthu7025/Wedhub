@@ -3,12 +3,14 @@ import { asyncHandler } from "../../common/utils/async-handler.util";
 import { validateBody } from "../../common/middleware/validate.middleware";
 import {
   forgotPasswordRateLimiter,
+  googleLoginRateLimiter,
   loginRateLimiter,
   registerRateLimiter,
 } from "../../common/middleware/rate-limit.middleware";
 import * as authController from "./auth.controller";
 import {
   forgotPasswordSchema,
+  googleLoginSchema,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
@@ -25,6 +27,13 @@ authRouter.post(
 );
 
 authRouter.post("/login", loginRateLimiter, validateBody(loginSchema), asyncHandler(authController.login));
+
+authRouter.post(
+  "/google",
+  googleLoginRateLimiter,
+  validateBody(googleLoginSchema),
+  asyncHandler(authController.google),
+);
 
 authRouter.post("/logout", asyncHandler(authController.logout));
 

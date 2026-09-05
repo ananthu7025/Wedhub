@@ -5,6 +5,7 @@ import { AuthenticationError, ValidationError } from "../../common/errors";
 import * as authService from "./auth.service";
 import type {
   ForgotPasswordBody,
+  GoogleLoginBody,
   LoginBody,
   RegisterBody,
   ResetPasswordBody,
@@ -46,6 +47,13 @@ export async function register(req: Request, res: Response): Promise<void> {
 export async function login(req: Request, res: Response): Promise<void> {
   const body = req.body as LoginBody;
   const result = await authService.login(body, requestContext(req));
+  setRefreshCookie(res, result.tokens);
+  res.json(successResponse({ user: result.user, accessToken: result.tokens.accessToken }));
+}
+
+export async function google(req: Request, res: Response): Promise<void> {
+  const body = req.body as GoogleLoginBody;
+  const result = await authService.loginWithGoogle(body, requestContext(req));
   setRefreshCookie(res, result.tokens);
   res.json(successResponse({ user: result.user, accessToken: result.tokens.accessToken }));
 }

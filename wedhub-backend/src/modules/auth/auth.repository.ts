@@ -1,4 +1,4 @@
-import type { User } from "@prisma/client";
+import type { LinkedIdentity, User } from "@prisma/client";
 import { prisma } from "../../config/database";
 import type { Role } from "../../common/enums/roles.enum";
 
@@ -33,6 +33,73 @@ export function createUser(input: {
       passwordHash: input.passwordHash,
       role: input.role,
     },
+  });
+}
+
+export function findLinkedIdentity(provider: string, providerAccountId: string): Promise<LinkedIdentity | null> {
+  return prisma.linkedIdentity.findUnique({
+    where: { provider_providerAccountId: { provider, providerAccountId } },
+  });
+}
+
+// Brand-new signup via an OAuth provider: no password is ever set
+// (passwordHash stays null — password login on this account cleanly
+// rejects it, see auth.service.ts), and emailVerifiedAt is stamped
+// immediately since the provider already proved ownership of the mailbox.
+// Both rows are created in one transaction so a user can never exist
+// without its LinkedIdentity (or vice versa).
+export function createUserWithLinkedIdentity(input: {
+  email: string;
+  role: Role;
+  provider: string;
+  providerAccountId: string;
+}): Promise<User> {
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        email: input.email,
+        role: input.role,
+        passwordHash: null,
+        emailVerifiedAt: new Date(),
+      },
+    });
+    await tx.linkedIdentity.create({
+      data: {
+        userId: user.id,
+        provider: input.provider,
+        providerAccountId: input.providerAccountId,
+        email: input.email,
+      },
+    });
+    return user;
+  });
+}
+
+// Links a new provider identity to an already-existing (password-based)
+// account, in the same transaction as stamping emailVerifiedAt if it
+// wasn't already set — the provider's verification stands in for it.
+export function linkIdentityToExistingUser(input: {
+  userId: string;
+  provider: string;
+  providerAccountId: string;
+  email: string;
+  stampEmailVerified: boolean;
+}): Promise<LinkedIdentity> {
+  return prisma.$transaction(async (tx) => {
+    if (input.stampEmailVerified) {
+      await tx.user.update({
+        where: { id: input.userId },
+        data: { emailVerifiedAt: new Date() },
+      });
+    }
+    return tx.linkedIdentity.create({
+      data: {
+        userId: input.userId,
+        provider: input.provider,
+        providerAccountId: input.providerAccountId,
+        email: input.email,
+      },
+    });
   });
 }
 

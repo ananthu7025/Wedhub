@@ -17,6 +17,12 @@ import type { NextConfig } from "next";
 //     origin below.
 //   - pub-7116e74b9a3d44a1ab03594911f56ad8.r2.dev — the real R2 public
 //     media bucket, same origin already allowed in images.remotePatterns.
+//   - accounts.google.com — Google Identity Services (GIS), loaded via
+//     <script src="https://accounts.google.com/gsi/client"> for the
+//     "Sign in with Google" button (GoogleSignInButton.tsx). GIS renders
+//     its button/One Tap UI in an iframe from accounts.google.com and
+//     posts the ID token back via postMessage — no redirect navigation,
+//     so no frame-ancestors/navigation exception is needed for it.
 // Google Fonts is NOT referenced here on purpose: the one font in use
 // (Plus_Jakarta_Sans, app/layout.tsx) goes through next/font/google, which
 // downloads and self-hosts the font file at build time — the browser never
@@ -41,13 +47,13 @@ const isDev = process.env.NODE_ENV !== "production";
 const cspDirectives = [
   "default-src 'self'",
   isDev
-    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com"
-    : "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://accounts.google.com/gsi/client"
+    : "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://accounts.google.com/gsi/client",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data: https://images.unsplash.com https://pub-7116e74b9a3d44a1ab03594911f56ad8.r2.dev",
   "font-src 'self' data:",
-  "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com",
-  "frame-src https://checkout.razorpay.com https://api.razorpay.com",
+  "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com",
+  "frame-src https://checkout.razorpay.com https://api.razorpay.com https://accounts.google.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

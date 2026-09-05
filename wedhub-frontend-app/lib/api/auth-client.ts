@@ -24,6 +24,13 @@ export function login(identifier: string, password: string) {
   return postJson<{ user: AuthenticatedUser }>("/api/auth/login", { identifier, password });
 }
 
+// role is omitted on the plain /login page (no signup-intent context there)
+// — a first-time Google identity in that case gets a NOT_FOUND error back
+// instead of being silently registered; see GoogleSignInButton.tsx.
+export function loginWithGoogle(idToken: string, role?: Extract<UserRole, "END_USER" | "VENDOR">) {
+  return postJson<{ user: AuthenticatedUser }>("/api/auth/google", { idToken, role });
+}
+
 export function register(email: string, password: string, role: Extract<UserRole, "END_USER" | "VENDOR">, phone?: string) {
   return postJson<{ user: AuthenticatedUser }>("/api/auth/register", { email, password, role, phone });
 }

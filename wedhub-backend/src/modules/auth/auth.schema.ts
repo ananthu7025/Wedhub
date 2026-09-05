@@ -18,6 +18,14 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const googleLoginSchema = z.object({
+  idToken: z.string().min(1, "Google ID token is required"),
+  // Optional: present only from /signup, where a role choice already
+  // exists; omitted from the plain /login page (see auth.types.ts's
+  // GoogleLoginInput doc comment).
+  role: z.enum([Role.END_USER, Role.VENDOR]).optional(),
+});
+
 export const verifyEmailSchema = z.object({
   token: z.string().min(1),
 });
@@ -33,6 +41,7 @@ export const resetPasswordSchema = z.object({
 
 export type RegisterBody = z.infer<typeof registerSchema>;
 export type LoginBody = z.infer<typeof loginSchema>;
+export type GoogleLoginBody = z.infer<typeof googleLoginSchema>;
 export type VerifyEmailBody = z.infer<typeof verifyEmailSchema>;
 export type ForgotPasswordBody = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordBody = z.infer<typeof resetPasswordSchema>;

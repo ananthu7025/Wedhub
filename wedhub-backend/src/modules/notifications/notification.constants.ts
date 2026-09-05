@@ -37,6 +37,11 @@ export const DEFAULT_CHANNELS: Record<NotificationEventType, NotificationChannel
   // choice for the equivalent "your thing moved forward" event on the
   // vendor side.
   LEAD_STATUS_UPDATED: ["EMAIL", "IN_APP"],
+  // Security tripwire on an unattended account (see ACCOUNT_LINKED in
+  // notification.templates.ts) — email-only, mirroring PASSWORD_RESET's
+  // reasoning: the point is to reach the owner's inbox even if they never
+  // open the app again after this happens.
+  ACCOUNT_LINKED: ["EMAIL"],
 };
 
 export const MAX_DELIVERY_ATTEMPTS = 3;

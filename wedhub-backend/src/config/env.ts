@@ -54,6 +54,13 @@ const envSchema = z.object({
 
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
   ADMIN_URL: z.string().url().default("http://localhost:3001"),
+
+  // Google Sign-In (Identity Services popup flow) — only the Client ID is
+  // needed server-side, to verify the `aud` claim on ID tokens the frontend
+  // obtains directly from Google. Optional so the rest of the app still
+  // boots in environments where this feature isn't configured yet; the
+  // /auth/google route itself rejects clearly if this is unset.
+  GOOGLE_CLIENT_ID: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

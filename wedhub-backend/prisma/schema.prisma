@@ -25,7 +25,7 @@ model User {
   id                  String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email               String     @unique
   phone               String?    @unique
-  passwordHash        String     @map("password_hash")
+  passwordHash        String?    @map("password_hash")
   role                UserRole   @default(END_USER)
   status              UserStatus @default(ACTIVE)
   emailVerifiedAt     DateTime?  @map("email_verified_at")
@@ -44,6 +44,7 @@ model User {
   refreshTokens            RefreshToken[]
   emailVerificationTokens  EmailVerificationToken[]
   passwordResetTokens      PasswordResetToken[]
+  linkedIdentities         LinkedIdentity[]
   vendor                   Vendor?
   vendorInvitationsSent    VendorInvitation[]       @relation("VendorInvitationsSent")
   vendorInvitationsClaimed VendorInvitation[]       @relation("VendorInvitationsClaimed")
@@ -222,6 +223,21 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+model LinkedIdentity {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  provider          String
+  providerAccountId String   @map("provider_account_id")
+  email             String
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("linked_identities")
+}
+
 enum AttributeDataType {
   BOOLEAN
   NUMBER
@@ -360,8 +376,8 @@ model Vendor {
   updatedAt           DateTime             @updatedAt @map("updated_at")
   deletedAt           DateTime?            @map("deleted_at")
 
-  owner            User?                  @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
-  city             Location?              @relation("VendorPrimaryCity", fields: [cityId], references: [id], onDelete: SetNull)
+  owner            User?                   @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  city             Location?               @relation("VendorPrimaryCity", fields: [cityId], references: [id], onDelete: SetNull)
   profile          VendorProfile?
   categories       VendorCategory[]
   serviceAreas     VendorServiceArea[]
@@ -659,18 +675,18 @@ model Media {
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
 
-  vendor                       Vendor?         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  uploader                     User?           @relation("MediaUploader", fields: [userId], references: [id], onDelete: Cascade)
-  review                       Review?         @relation("ReviewPhotos", fields: [reviewId], references: [id], onDelete: Cascade)
-  album                        Album?          @relation("AlbumMedia", fields: [albumId], references: [id], onDelete: SetNull)
-  weddingWebsite               WeddingWebsite? @relation("WeddingWebsiteGallery", fields: [weddingWebsiteId], references: [id], onDelete: Cascade)
-  userProfiles                 UserProfile[]   @relation("UserProfileAvatar")
-  vendorProfileLogos           VendorProfile[] @relation("VendorProfileLogo")
-  vendorProfileCovers          VendorProfile[] @relation("VendorProfileCover")
-  albumCoverFor                Album[]         @relation("AlbumCover")
+  vendor                       Vendor?                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  uploader                     User?                  @relation("MediaUploader", fields: [userId], references: [id], onDelete: Cascade)
+  review                       Review?                @relation("ReviewPhotos", fields: [reviewId], references: [id], onDelete: Cascade)
+  album                        Album?                 @relation("AlbumMedia", fields: [albumId], references: [id], onDelete: SetNull)
+  weddingWebsite               WeddingWebsite?        @relation("WeddingWebsiteGallery", fields: [weddingWebsiteId], references: [id], onDelete: Cascade)
+  userProfiles                 UserProfile[]          @relation("UserProfileAvatar")
+  vendorProfileLogos           VendorProfile[]        @relation("VendorProfileLogo")
+  vendorProfileCovers          VendorProfile[]        @relation("VendorProfileCover")
+  albumCoverFor                Album[]                @relation("AlbumCover")
   featuredMedia                FeaturedMedia?
-  weddingWebsiteCoverFor       WeddingWebsite?         @relation("WeddingWebsiteCover")
-  weddingWebsiteCouplePhotoFor WeddingWebsite?         @relation("WeddingWebsiteCouplePhoto")
+  weddingWebsiteCoverFor       WeddingWebsite?        @relation("WeddingWebsiteCover")
+  weddingWebsiteCouplePhotoFor WeddingWebsite?        @relation("WeddingWebsiteCouplePhoto")
   storeItemMedia               VendorStoreItemMedia[]
 
   @@index([vendorId])
@@ -1006,9 +1022,9 @@ model Lead {
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
-  enquiry       Enquiry             @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
-  vendor        Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  statusHistory LeadStatusHistory[]
+  enquiry        Enquiry             @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  vendor         Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  statusHistory  LeadStatusHistory[]
   notes          LeadNote[]
   vendorInvoices VendorInvoice[]
 
@@ -1426,6 +1442,11 @@ enum NotificationEventType {
   // NEW_MESSAGE are written from the vendor's inbox perspective). Fires on
   // every lead status transition, vendor- or admin-driven, per user decision.
   LEAD_STATUS_UPDATED
+  // Fires when a Google sign-in auto-links to an existing password-based
+  // account (see auth.service.ts::loginWithGoogle) — a security tripwire,
+  // not a blocking confirmation step, so the legitimate owner has something
+  // to notice if they didn't initiate the link themselves.
+  ACCOUNT_LINKED
 }
 
 // SMS/WhatsApp are explicitly "later" per product.md §22 — not modeled yet.
@@ -1801,65 +1822,65 @@ model VendorBillingProfile {
 }
 
 model VendorInvoice {
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId           String              @map("vendor_id") @db.Uuid
-  leadId             String?             @map("lead_id") @db.Uuid
-  invoiceNumber      String              @map("invoice_number")
-  status             VendorInvoiceStatus @default(DRAFT)
-  issueDate          DateTime            @map("issue_date") @db.Date
-  dueDate            DateTime?           @map("due_date") @db.Date
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId      String              @map("vendor_id") @db.Uuid
+  leadId        String?             @map("lead_id") @db.Uuid
+  invoiceNumber String              @map("invoice_number")
+  status        VendorInvoiceStatus @default(DRAFT)
+  issueDate     DateTime            @map("issue_date") @db.Date
+  dueDate       DateTime?           @map("due_date") @db.Date
 
   // Seller (Vendor) Snapshot at time of issue
-  sellerBusinessName String              @map("seller_business_name")
-  sellerLegalName    String?             @map("seller_legal_name")
-  sellerGstin        String?             @map("seller_gstin")
-  sellerPan          String?             @map("seller_pan")
-  sellerAddress      String?             @map("seller_address")
-  sellerCity         String?             @map("seller_city")
-  sellerState        String?             @map("seller_state")
-  sellerStateCode    String?             @map("seller_state_code")
-  sellerPhone        String?             @map("seller_phone")
-  sellerEmail        String?             @map("seller_email")
-  sellerLogoKey      String?             @map("seller_logo_key")
+  sellerBusinessName String  @map("seller_business_name")
+  sellerLegalName    String? @map("seller_legal_name")
+  sellerGstin        String? @map("seller_gstin")
+  sellerPan          String? @map("seller_pan")
+  sellerAddress      String? @map("seller_address")
+  sellerCity         String? @map("seller_city")
+  sellerState        String? @map("seller_state")
+  sellerStateCode    String? @map("seller_state_code")
+  sellerPhone        String? @map("seller_phone")
+  sellerEmail        String? @map("seller_email")
+  sellerLogoKey      String? @map("seller_logo_key")
 
   // Buyer (Client / Couple) Snapshot
-  clientName         String              @map("client_name")
-  clientPhone        String?             @map("client_phone")
-  clientEmail        String?             @map("client_email")
-  clientAddress      String?             @map("client_address")
-  clientCity         String?             @map("client_city")
-  clientState        String?             @map("client_state")
-  clientStateCode    String?             @map("client_state_code")
-  clientGstin        String?             @map("client_gstin")
-  placeOfSupply      String              @map("place_of_supply")
+  clientName      String  @map("client_name")
+  clientPhone     String? @map("client_phone")
+  clientEmail     String? @map("client_email")
+  clientAddress   String? @map("client_address")
+  clientCity      String? @map("client_city")
+  clientState     String? @map("client_state")
+  clientStateCode String? @map("client_state_code")
+  clientGstin     String? @map("client_gstin")
+  placeOfSupply   String  @map("place_of_supply")
 
   // Tax Mechanism & Financial Summary
-  isInterState       Boolean             @default(false) @map("is_inter_state")
-  currency           String              @default("INR")
-  subtotal           Decimal             @db.Decimal(12, 2)
-  totalDiscount      Decimal             @default(0) @map("total_discount") @db.Decimal(12, 2)
-  taxableAmount      Decimal             @map("taxable_amount") @db.Decimal(12, 2)
-  cgstAmount         Decimal             @default(0) @map("cgst_amount") @db.Decimal(12, 2)
-  sgstAmount         Decimal             @default(0) @map("sgst_amount") @db.Decimal(12, 2)
-  igstAmount         Decimal             @default(0) @map("igst_amount") @db.Decimal(12, 2)
-  totalTax           Decimal             @default(0) @map("total_tax") @db.Decimal(12, 2)
-  roundOffAmount     Decimal             @default(0) @map("round_off_amount") @db.Decimal(10, 2)
-  grandTotal         Decimal             @map("grand_total") @db.Decimal(12, 2)
-  amountInWords      String?             @map("amount_in_words")
-  paidAmount         Decimal             @default(0) @map("paid_amount") @db.Decimal(12, 2)
-  balanceDue         Decimal             @map("balance_due") @db.Decimal(12, 2)
+  isInterState   Boolean @default(false) @map("is_inter_state")
+  currency       String  @default("INR")
+  subtotal       Decimal @db.Decimal(12, 2)
+  totalDiscount  Decimal @default(0) @map("total_discount") @db.Decimal(12, 2)
+  taxableAmount  Decimal @map("taxable_amount") @db.Decimal(12, 2)
+  cgstAmount     Decimal @default(0) @map("cgst_amount") @db.Decimal(12, 2)
+  sgstAmount     Decimal @default(0) @map("sgst_amount") @db.Decimal(12, 2)
+  igstAmount     Decimal @default(0) @map("igst_amount") @db.Decimal(12, 2)
+  totalTax       Decimal @default(0) @map("total_tax") @db.Decimal(12, 2)
+  roundOffAmount Decimal @default(0) @map("round_off_amount") @db.Decimal(10, 2)
+  grandTotal     Decimal @map("grand_total") @db.Decimal(12, 2)
+  amountInWords  String? @map("amount_in_words")
+  paidAmount     Decimal @default(0) @map("paid_amount") @db.Decimal(12, 2)
+  balanceDue     Decimal @map("balance_due") @db.Decimal(12, 2)
 
   // Payment Instructions Snapshot
-  bankName           String?             @map("bank_name")
-  accountName        String?             @map("account_name")
-  accountNumber      String?             @map("account_number")
-  ifscCode           String?             @map("ifsc_code")
-  upiId              String?             @map("upi_id")
-  notes              String?
-  terms              String?
+  bankName      String? @map("bank_name")
+  accountName   String? @map("account_name")
+  accountNumber String? @map("account_number")
+  ifscCode      String? @map("ifsc_code")
+  upiId         String? @map("upi_id")
+  notes         String?
+  terms         String?
 
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   vendor     Vendor                  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   lead       Lead?                   @relation(fields: [leadId], references: [id], onDelete: SetNull)
@@ -1876,24 +1897,24 @@ model VendorInvoice {
 }
 
 model VendorInvoiceItem {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  invoiceId     String   @map("invoice_id") @db.Uuid
-  itemOrder     Int      @default(0) @map("item_order")
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId     String  @map("invoice_id") @db.Uuid
+  itemOrder     Int     @default(0) @map("item_order")
   description   String
-  sacCode       String?  @map("sac_code")
-  quantity      Decimal  @default(1) @db.Decimal(10, 2)
-  unit          String   @default("Session")
-  unitPrice     Decimal  @map("unit_price") @db.Decimal(12, 2)
-  discount      Decimal  @default(0) @db.Decimal(12, 2)
-  taxableAmount Decimal  @map("taxable_amount") @db.Decimal(12, 2)
-  gstRate       Decimal  @map("gst_rate") @db.Decimal(5, 2)
-  cgstRate      Decimal  @default(0) @map("cgst_rate") @db.Decimal(5, 2)
-  cgstAmount    Decimal  @default(0) @map("cgst_amount") @db.Decimal(12, 2)
-  sgstRate      Decimal  @default(0) @map("sgst_rate") @db.Decimal(5, 2)
-  sgstAmount    Decimal  @default(0) @map("sgst_amount") @db.Decimal(12, 2)
-  igstRate      Decimal  @default(0) @map("igst_rate") @db.Decimal(5, 2)
-  igstAmount    Decimal  @default(0) @map("igst_amount") @db.Decimal(12, 2)
-  totalAmount   Decimal  @map("total_amount") @db.Decimal(12, 2)
+  sacCode       String? @map("sac_code")
+  quantity      Decimal @default(1) @db.Decimal(10, 2)
+  unit          String  @default("Session")
+  unitPrice     Decimal @map("unit_price") @db.Decimal(12, 2)
+  discount      Decimal @default(0) @db.Decimal(12, 2)
+  taxableAmount Decimal @map("taxable_amount") @db.Decimal(12, 2)
+  gstRate       Decimal @map("gst_rate") @db.Decimal(5, 2)
+  cgstRate      Decimal @default(0) @map("cgst_rate") @db.Decimal(5, 2)
+  cgstAmount    Decimal @default(0) @map("cgst_amount") @db.Decimal(12, 2)
+  sgstRate      Decimal @default(0) @map("sgst_rate") @db.Decimal(5, 2)
+  sgstAmount    Decimal @default(0) @map("sgst_amount") @db.Decimal(12, 2)
+  igstRate      Decimal @default(0) @map("igst_rate") @db.Decimal(5, 2)
+  igstAmount    Decimal @default(0) @map("igst_amount") @db.Decimal(12, 2)
+  totalAmount   Decimal @map("total_amount") @db.Decimal(12, 2)
 
   invoice VendorInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
@@ -1973,18 +1994,18 @@ enum VendorPaymentAccountStatus {
 }
 
 model VendorPaymentAccount {
-  id                     String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId               String                     @unique @map("vendor_id") @db.Uuid
-  provider               String                     @default("razorpay")
-  razorpayAccountId      String?                    @unique @map("razorpay_account_id") // acc_xxxxxxxx
-  status                 VendorPaymentAccountStatus @default(NOT_CONNECTED)
-  legalBusinessName      String?                    @map("legal_business_name")
-  businessType           String?                    @map("business_type")
-  contactEmail           String?                    @map("contact_email")
-  contactPhone           String?                    @map("contact_phone")
-  bankName               String?                    @map("bank_name")
-  accountNumberMasked    String?                    @map("account_number_masked")
-  ifscCode               String?                    @map("ifsc_code")
+  id                            String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId                      String                     @unique @map("vendor_id") @db.Uuid
+  provider                      String                     @default("razorpay")
+  razorpayAccountId             String?                    @unique @map("razorpay_account_id") // acc_xxxxxxxx
+  status                        VendorPaymentAccountStatus @default(NOT_CONNECTED)
+  legalBusinessName             String?                    @map("legal_business_name")
+  businessType                  String?                    @map("business_type")
+  contactEmail                  String?                    @map("contact_email")
+  contactPhone                  String?                    @map("contact_phone")
+  bankName                      String?                    @map("bank_name")
+  accountNumberMasked           String?                    @map("account_number_masked")
+  ifscCode                      String?                    @map("ifsc_code")
   chargesEnabled                Boolean                    @default(false) @map("charges_enabled")
   payoutsEnabled                Boolean                    @default(false) @map("payouts_enabled")
   razorpayStakeholderId         String?                    @unique @map("razorpay_stakeholder_id")
@@ -2003,8 +2024,8 @@ model VendorPaymentAccount {
   createdAt                     DateTime                   @default(now()) @map("created_at")
   updatedAt                     DateTime                   @updatedAt @map("updated_at")
 
-  vendor                 Vendor                     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  orders                 VendorStoreOrder[]
+  vendor Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  orders VendorStoreOrder[]
 
   @@index([status])
   @@index([razorpayStakeholderId])
@@ -2013,50 +2034,50 @@ model VendorPaymentAccount {
 }
 
 model VendorStore {
-  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId           String             @unique @map("vendor_id") @db.Uuid
-  storeName          String             @map("store_name")
-  slug               String             @unique @map("slug")
-  tagline            String?            @map("tagline")
-  aboutStore         String?            @map("about_store") @db.Text
-  isEnabled          Boolean            @default(true) @map("is_enabled")
-  currency           String             @default("INR") @map("currency")
-  whatsappOrderPhone String?            @map("whatsapp_order_phone")
-  shippingPolicy     String?            @map("shipping_policy") @db.Text
-  returnPolicy       String?            @map("return_policy") @db.Text
-  minOrderValue      Decimal?           @map("min_order_value") @db.Decimal(10, 2)
-  nextOrderNumber    Int                @default(1) @map("next_order_number")
-  createdAt          DateTime           @default(now()) @map("created_at")
-  updatedAt          DateTime           @updatedAt @map("updated_at")
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId           String   @unique @map("vendor_id") @db.Uuid
+  storeName          String   @map("store_name")
+  slug               String   @unique @map("slug")
+  tagline            String?  @map("tagline")
+  aboutStore         String?  @map("about_store") @db.Text
+  isEnabled          Boolean  @default(true) @map("is_enabled")
+  currency           String   @default("INR") @map("currency")
+  whatsappOrderPhone String?  @map("whatsapp_order_phone")
+  shippingPolicy     String?  @map("shipping_policy") @db.Text
+  returnPolicy       String?  @map("return_policy") @db.Text
+  minOrderValue      Decimal? @map("min_order_value") @db.Decimal(10, 2)
+  nextOrderNumber    Int      @default(1) @map("next_order_number")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
-  vendor             Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  items              VendorStoreItem[]
-  orders             VendorStoreOrder[]
+  vendor Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  items  VendorStoreItem[]
+  orders VendorStoreOrder[]
 
   @@map("vendor_stores")
 }
 
 model VendorStoreItem {
-  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  storeId          String                 @map("store_id") @db.Uuid
-  title            String                 @map("title")
-  slug             String                 @map("slug")
-  description      String?                @map("description") @db.Text
-  itemType         StoreItemType          @default(PHYSICAL_PRODUCT) @map("item_type")
-  price            Decimal                @map("price") @db.Decimal(10, 2)
-  compareAtPrice   Decimal?               @map("compare_at_price") @db.Decimal(10, 2)
-  gstRate          Int                    @default(18) @map("gst_rate")
-  minOrderQuantity Int                    @default(1) @map("min_order_quantity")
-  stockQuantity    Int?                   @map("stock_quantity")
-  isAvailable      Boolean                @default(true) @map("is_available")
-  tags             String[]               @default([]) @map("tags")
-  sortOrder        Int                    @default(0) @map("sort_order")
-  createdAt        DateTime               @default(now()) @map("created_at")
-  updatedAt        DateTime               @updatedAt @map("updated_at")
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId          String        @map("store_id") @db.Uuid
+  title            String        @map("title")
+  slug             String        @map("slug")
+  description      String?       @map("description") @db.Text
+  itemType         StoreItemType @default(PHYSICAL_PRODUCT) @map("item_type")
+  price            Decimal       @map("price") @db.Decimal(10, 2)
+  compareAtPrice   Decimal?      @map("compare_at_price") @db.Decimal(10, 2)
+  gstRate          Int           @default(18) @map("gst_rate")
+  minOrderQuantity Int           @default(1) @map("min_order_quantity")
+  stockQuantity    Int?          @map("stock_quantity")
+  isAvailable      Boolean       @default(true) @map("is_available")
+  tags             String[]      @default([]) @map("tags")
+  sortOrder        Int           @default(0) @map("sort_order")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
 
-  store            VendorStore            @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  media            VendorStoreItemMedia[]
-  orderItems       VendorStoreOrderItem[]
+  store      VendorStore            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  media      VendorStoreItemMedia[]
+  orderItems VendorStoreOrderItem[]
 
   @@unique([storeId, slug])
   @@index([storeId, isAvailable])
@@ -2064,14 +2085,14 @@ model VendorStoreItem {
 }
 
 model VendorStoreItemMedia {
-  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  itemId    String          @map("item_id") @db.Uuid
-  mediaId   String          @map("media_id") @db.Uuid
-  sortOrder Int             @default(0) @map("sort_order")
-  createdAt DateTime        @default(now()) @map("created_at")
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId    String   @map("item_id") @db.Uuid
+  mediaId   String   @map("media_id") @db.Uuid
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  item      VendorStoreItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  media     Media           @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  item  VendorStoreItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  media Media           @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 
   @@unique([itemId, mediaId])
   @@index([itemId, sortOrder])
@@ -2079,49 +2100,49 @@ model VendorStoreItemMedia {
 }
 
 model VendorStoreOrder {
-  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderNumber            String                 @unique @map("order_number")
-  storeId                String                 @map("store_id") @db.Uuid
-  userId                 String?                @map("user_id") @db.Uuid
-  customerName           String                 @map("customer_name")
-  customerPhone          String                 @map("customer_phone")
-  customerEmail          String?                @map("customer_email")
-  shippingAddress        String?                @map("shipping_address") @db.Text
-  city                   String?                @map("city")
-  customerState          String?                @map("customer_state")
-  pincode                String?                @map("pincode")
-  eventDate              DateTime?              @map("event_date")
-  subtotal               Decimal                @default(0) @map("subtotal") @db.Decimal(10, 2)
-  discount               Decimal                @default(0) @map("discount") @db.Decimal(10, 2)
-  gstAmount              Decimal                @default(0) @map("gst_amount") @db.Decimal(10, 2)
-  totalAmount            Decimal                @map("total_amount") @db.Decimal(10, 2)
-  currency               String                 @default("INR") @map("currency")
-  status                 StoreOrderStatus       @default(PENDING_CONFIRMATION) @map("status")
-  orderChannel           String                 @default("WHATSAPP") @map("order_channel")
-  paymentStatus          StorePaymentStatus     @default(PENDING) @map("payment_status")
-  paymentProvider        String                 @default("razorpay") @map("payment_provider")
-  razorpayOrderId        String?                @unique @map("razorpay_order_id")
-  razorpayPaymentId      String?                @unique @map("razorpay_payment_id")
-  vendorPaymentAccountId String?                @map("vendor_payment_account_id") @db.Uuid
-  platformCommission     Decimal                @default(0) @map("platform_commission") @db.Decimal(10, 2)
-  gatewayFee             Decimal                @default(0) @map("gateway_fee") @db.Decimal(10, 2)
-  estimatedGatewayFee    Decimal                @default(0) @map("estimated_gateway_fee") @db.Decimal(10, 2)
-  actualGatewayFee       Decimal?               @map("actual_gateway_fee") @db.Decimal(10, 2)
-  vendorSettlementAmount Decimal?               @map("vendor_settlement_amount") @db.Decimal(10, 2)
-  paidAt                 DateTime?              @map("paid_at")
-  notes                  String?                @map("notes") @db.Text
-  invoiceId              String?                @unique @map("invoice_id") @db.Uuid
-  createdAt              DateTime               @default(now()) @map("created_at")
-  updatedAt              DateTime               @updatedAt @map("updated_at")
+  id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderNumber            String             @unique @map("order_number")
+  storeId                String             @map("store_id") @db.Uuid
+  userId                 String?            @map("user_id") @db.Uuid
+  customerName           String             @map("customer_name")
+  customerPhone          String             @map("customer_phone")
+  customerEmail          String?            @map("customer_email")
+  shippingAddress        String?            @map("shipping_address") @db.Text
+  city                   String?            @map("city")
+  customerState          String?            @map("customer_state")
+  pincode                String?            @map("pincode")
+  eventDate              DateTime?          @map("event_date")
+  subtotal               Decimal            @default(0) @map("subtotal") @db.Decimal(10, 2)
+  discount               Decimal            @default(0) @map("discount") @db.Decimal(10, 2)
+  gstAmount              Decimal            @default(0) @map("gst_amount") @db.Decimal(10, 2)
+  totalAmount            Decimal            @map("total_amount") @db.Decimal(10, 2)
+  currency               String             @default("INR") @map("currency")
+  status                 StoreOrderStatus   @default(PENDING_CONFIRMATION) @map("status")
+  orderChannel           String             @default("WHATSAPP") @map("order_channel")
+  paymentStatus          StorePaymentStatus @default(PENDING) @map("payment_status")
+  paymentProvider        String             @default("razorpay") @map("payment_provider")
+  razorpayOrderId        String?            @unique @map("razorpay_order_id")
+  razorpayPaymentId      String?            @unique @map("razorpay_payment_id")
+  vendorPaymentAccountId String?            @map("vendor_payment_account_id") @db.Uuid
+  platformCommission     Decimal            @default(0) @map("platform_commission") @db.Decimal(10, 2)
+  gatewayFee             Decimal            @default(0) @map("gateway_fee") @db.Decimal(10, 2)
+  estimatedGatewayFee    Decimal            @default(0) @map("estimated_gateway_fee") @db.Decimal(10, 2)
+  actualGatewayFee       Decimal?           @map("actual_gateway_fee") @db.Decimal(10, 2)
+  vendorSettlementAmount Decimal?           @map("vendor_settlement_amount") @db.Decimal(10, 2)
+  paidAt                 DateTime?          @map("paid_at")
+  notes                  String?            @map("notes") @db.Text
+  invoiceId              String?            @unique @map("invoice_id") @db.Uuid
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
 
-  store                  VendorStore            @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  invoice                VendorInvoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  vendorPaymentAccount   VendorPaymentAccount?  @relation(fields: [vendorPaymentAccountId], references: [id], onDelete: SetNull)
-  items                  VendorStoreOrderItem[]
-  refunds                VendorStoreOrderRefund[]
-  transfers              VendorStoreTransfer[]
-  paymentAttempts        VendorStorePaymentAttempt[]
-  settlements            VendorStoreSettlement[]
+  store                VendorStore                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  invoice              VendorInvoice?              @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  vendorPaymentAccount VendorPaymentAccount?       @relation(fields: [vendorPaymentAccountId], references: [id], onDelete: SetNull)
+  items                VendorStoreOrderItem[]
+  refunds              VendorStoreOrderRefund[]
+  transfers            VendorStoreTransfer[]
+  paymentAttempts      VendorStorePaymentAttempt[]
+  settlements          VendorStoreSettlement[]
 
   @@index([storeId, status])
   @@index([customerPhone])
@@ -2130,18 +2151,18 @@ model VendorStoreOrder {
 }
 
 model VendorStoreOrderItem {
-  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderId            String           @map("order_id") @db.Uuid
-  itemId             String?          @map("item_id") @db.Uuid
-  itemTitle          String           @map("item_title")
-  unitPrice          Decimal          @map("unit_price") @db.Decimal(10, 2)
-  gstRate            Int              @default(18) @map("gst_rate")
-  quantity           Int              @map("quantity")
-  totalPrice         Decimal          @map("total_price") @db.Decimal(10, 2)
-  customizationNotes String?          @map("customization_notes")
+  id                 String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId            String  @map("order_id") @db.Uuid
+  itemId             String? @map("item_id") @db.Uuid
+  itemTitle          String  @map("item_title")
+  unitPrice          Decimal @map("unit_price") @db.Decimal(10, 2)
+  gstRate            Int     @default(18) @map("gst_rate")
+  quantity           Int     @map("quantity")
+  totalPrice         Decimal @map("total_price") @db.Decimal(10, 2)
+  customizationNotes String? @map("customization_notes")
 
-  order              VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  item               VendorStoreItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  order VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item  VendorStoreItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
 
   @@map("vendor_store_order_items")
 }
@@ -2156,7 +2177,7 @@ model VendorStoreOrderRefund {
   reason           String?  @map("reason")
   createdAt        DateTime @default(now()) @map("created_at")
 
-  order            VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@map("vendor_store_order_refunds")
@@ -2192,8 +2213,8 @@ model VendorStoreTransfer {
   createdAt          DateTime            @default(now()) @map("created_at")
   updatedAt          DateTime            @updatedAt @map("updated_at")
 
-  order              VendorStoreOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  vendor             Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  order  VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendor Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([vendorId])
@@ -2220,7 +2241,7 @@ model VendorStorePaymentAttempt {
   capturedAt        DateTime?          @map("captured_at")
   failedAt          DateTime?          @map("failed_at")
 
-  order             VendorStoreOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
   @@index([razorpayOrderId])
@@ -2230,23 +2251,23 @@ model VendorStorePaymentAttempt {
 }
 
 model VendorStoreSettlement {
-  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId             String            @map("vendor_id") @db.Uuid
-  orderId              String?           @map("order_id") @db.Uuid
-  providerSettlementId String            @unique @map("provider_settlement_id") // setl_xxxxxxxx
-  recipientAccountId   String            @map("recipient_account_id") // acc_xxxxxxxx
-  amount               Decimal           @db.Decimal(10, 2)
-  fees                 Decimal           @default(0) @db.Decimal(10, 2)
-  tax                  Decimal           @default(0) @db.Decimal(10, 2)
-  utr                  String?           @map("utr")
-  status               String            @default("PROCESSED") // PENDING, PROCESSED, RECONCILED, FAILED
-  processedAt          DateTime?         @map("processed_at")
-  reconciledAt         DateTime?         @map("reconciled_at")
-  createdAt            DateTime          @default(now()) @map("created_at")
-  updatedAt            DateTime          @updatedAt @map("updated_at")
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId             String    @map("vendor_id") @db.Uuid
+  orderId              String?   @map("order_id") @db.Uuid
+  providerSettlementId String    @unique @map("provider_settlement_id") // setl_xxxxxxxx
+  recipientAccountId   String    @map("recipient_account_id") // acc_xxxxxxxx
+  amount               Decimal   @db.Decimal(10, 2)
+  fees                 Decimal   @default(0) @db.Decimal(10, 2)
+  tax                  Decimal   @default(0) @db.Decimal(10, 2)
+  utr                  String?   @map("utr")
+  status               String    @default("PROCESSED") // PENDING, PROCESSED, RECONCILED, FAILED
+  processedAt          DateTime? @map("processed_at")
+  reconciledAt         DateTime? @map("reconciled_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
-  vendor               Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  order                VendorStoreOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  vendor Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  order  VendorStoreOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
   @@index([vendorId])
   @@index([orderId])
@@ -2254,7 +2275,3 @@ model VendorStoreSettlement {
   @@index([status])
   @@map("vendor_store_settlements")
 }
-
-
-
-

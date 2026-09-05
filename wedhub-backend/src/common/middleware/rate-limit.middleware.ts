@@ -25,6 +25,12 @@ export const loginRateLimiter = createRateLimiter({
   message: "Too many login attempts. Please try again later.",
 });
 
+export const googleLoginRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.LOGIN_RATE_LIMIT_MAX ? Number(process.env.LOGIN_RATE_LIMIT_MAX) : 10,
+  message: "Too many sign-in attempts. Please try again later.",
+});
+
 export const forgotPasswordRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000,
   max: 5,

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { GoogleSignInButton } from "@/components/shared/GoogleSignInButton";
 import { login } from "@/lib/api/auth-client";
 import type { UserRole } from "@/lib/auth/types";
 import { formatApiError } from "@/lib/utils/error";
@@ -35,8 +36,12 @@ export function LoginForm() {
       return;
     }
 
+    goToDestination(result.data.user.role);
+  }
+
+  function goToDestination(role: UserRole) {
     const next = searchParams.get("next");
-    const destination = next ?? roleHomeRoute[result.data.user.role];
+    const destination = next ?? roleHomeRoute[role];
     router.push(destination);
     router.refresh();
   }
@@ -73,6 +78,14 @@ export function LoginForm() {
       <Button type="submit" variant="primary" block disabled={pending} className="mb-4">
         {pending ? "Logging in…" : "Log in"}
       </Button>
+
+      <div className="mb-4 flex items-center gap-3 text-[12px] text-text-grey">
+        <span className="h-px flex-1 bg-border" />
+        or
+        <span className="h-px flex-1 bg-border" />
+      </div>
+
+      <GoogleSignInButton onSuccess={(user) => goToDestination(user.role)} />
     </form>
   );
 }

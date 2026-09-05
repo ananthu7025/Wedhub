@@ -19,6 +19,9 @@ const EVENT_TYPES = [
   "FEATURED_CAMPAIGN_STARTED",
   "FEATURED_CAMPAIGN_ENDING",
   "LEAD_STATUS_UPDATED",
+  // ACCOUNT_LINKED is deliberately NOT preference-configurable — it's a
+  // security tripwire (see auth.service.ts::loginWithGoogle), and letting a
+  // user opt out would defeat the one purpose it exists for.
 ] as const;
 
 const CHANNELS = ["IN_APP", "EMAIL", "TELEGRAM"] as const;

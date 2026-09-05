@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { register, login } from "@/lib/api/auth-client";
 import { updateMyProfile } from "@/lib/api/users-client";
 import { createVendor } from "@/lib/api/vendor-onboarding-client";
+import { GoogleSignInButton } from "@/components/shared/GoogleSignInButton";
 import type { UserRole } from "@/lib/auth/types";
 import { formatApiError } from "@/lib/utils/error";
 
@@ -67,6 +68,14 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
     if (accountType === "VENDOR") {
       const result = await createVendor(businessName.trim());
       if (!result.success) {
+        // A returning vendor who re-authenticated via this page's Google
+        // button (rather than actually signing up) already has a vendor
+        // profile — send them to it instead of showing this as an error.
+        if (result.error?.code === "CONFLICT") {
+          router.push(roleHomeRoute.VENDOR);
+          router.refresh();
+          return;
+        }
         setError(formatApiError(result.error));
         setPending(false);
         return;
@@ -137,6 +146,14 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
         <Button type="submit" variant="primary" block disabled={pending}>
           {pending ? "Creating your account…" : "Continue"}
         </Button>
+
+        <div className="mb-4.5 mt-4.5 flex items-center gap-3 text-[12px] text-text-grey">
+          <span className="h-px flex-1 bg-border" />
+          or
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
+        <GoogleSignInButton role={accountType} onSuccess={() => setStep("profile")} />
       </form>
     );
   }
