@@ -88,11 +88,17 @@ export function GoogleSignInButton({
         void handleCredential(response);
       },
     });
+    // GIS's renderButton wants a fixed pixel width, not a percentage — it
+    // can't fluidly track its container the way the rest of this form does,
+    // so measure the real available width instead of guessing a constant
+    // (a hardcoded 360 overflowed the login form's actual ~344px content
+    // width and spilled past the email/password inputs and submit button).
+    const width = Math.min(containerRef.current.offsetWidth, 400);
     window.google.accounts.id.renderButton(containerRef.current, {
       type: "standard",
       theme: "outline",
       size: "large",
-      width: 360,
+      width,
       text: "continue_with",
     });
     // role is read fresh by the callback closure on every render, so it's
@@ -115,7 +121,7 @@ export function GoogleSignInButton({
       {error && (
         <div className="mb-3 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">{error}</div>
       )}
-      <div id={containerId} ref={containerRef} className="flex justify-center" />
+      <div id={containerId} ref={containerRef} className="flex justify-center overflow-hidden" />
       {pending && <p className="mt-2 text-center text-[13px] text-text-grey">Signing in…</p>}
     </div>
   );

@@ -85,7 +85,9 @@ export function LoginForm() {
         <span className="h-px flex-1 bg-border" />
       </div>
 
-      <GoogleSignInButton onSuccess={(user) => goToDestination(user.role)} />
+      <div className="mb-4">
+        <GoogleSignInButton onSuccess={(user) => goToDestination(user.role)} />
+      </div>
     </form>
   );
 }
