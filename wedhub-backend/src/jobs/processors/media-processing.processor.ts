@@ -7,8 +7,11 @@ import { downloadObject, uploadObject } from "../../integrations/storage/r2.clie
 import { omitUndefined } from "../../common/utils/object.util";
 import type { MediaProcessingJobData } from "../queues/media-processing.queue";
 
+// "large" (1600px) was previously generated here too, but its key was never
+// persisted on Media/referenced anywhere — pure wasted R2 storage and
+// processing time. Removed; re-add alongside a real consumer (e.g. a
+// wedding-website gallery lightbox) if one gets built.
 const VARIANTS = [
-  { name: "large", width: 1600 },
   { name: "medium", width: 800 },
   { name: "thumbnail", width: 300 },
 ] as const;
@@ -20,6 +23,7 @@ function variantObjectKey(originalKey: string, variant: string): string {
 }
 
 async function processImage(mediaId: string): Promise<void> {
+  const start = performance.now();
   const media = await prisma.media.findUniqueOrThrow({ where: { id: mediaId } });
 
   const original = await downloadObject(media.originalObjectKey);
@@ -60,7 +64,8 @@ async function processImage(mediaId: string): Promise<void> {
     },
   });
 
-  logger.info({ mediaId }, "Media processing completed");
+  const durationMs = Math.round(performance.now() - start);
+  logger.info({ mediaId, durationMs }, "Media processing completed");
 }
 
 export function startMediaProcessingWorker(): Worker<MediaProcessingJobData> {
@@ -77,7 +82,11 @@ export function startMediaProcessingWorker(): Worker<MediaProcessingJobData> {
         throw err;
       }
     },
-    { connection: createRedisConnection() },
+    // CPU-bound (Sharp resize/encode) — a deliberate, tuned value rather than
+    // BullMQ's default of 1. Kept modest since each job holds a full-size
+    // image buffer in memory across 2 variants; raise only after confirming
+    // real instance memory headroom.
+    { connection: createRedisConnection(), concurrency: 3 },
   );
 
   worker.on("failed", (job, err) => {
