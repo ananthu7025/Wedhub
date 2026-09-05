@@ -19,13 +19,18 @@ export function listMyMedia() {
 }
 
 export function listCategoriesSelf() {
-  return apiFetch<CategorySelf[]>("/categories", { skipAuth: true });
+  return apiFetch<CategorySelf[]>("/categories", { skipAuth: true, public: true, next: { revalidate: 3600 } });
 }
 
 export function getCategoryBySlugSelf(slug: string) {
-  return apiFetch<CategorySelf>(`/categories/${slug}`, { skipAuth: true });
+  return apiFetch<CategorySelf>(`/categories/${slug}`, { skipAuth: true, public: true, next: { revalidate: 3600 } });
 }
 
 export function listLocationsSelf(type?: "COUNTRY" | "STATE" | "CITY" | "AREA", parentId?: string) {
-  return apiFetch<LocationSelf[]>("/locations", { query: { type, parentId }, skipAuth: true });
+  return apiFetch<LocationSelf[]>("/locations", {
+    query: { type, parentId },
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 3600 },
+  });
 }

@@ -13,7 +13,11 @@ import type {
  */
 
 export function listWeddingWebsiteTemplates() {
-  return apiFetch<WeddingWebsiteTemplateOption[]>("/wedding-websites/templates", { skipAuth: true });
+  return apiFetch<WeddingWebsiteTemplateOption[]>("/wedding-websites/templates", {
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 3600 },
+  });
 }
 
 export function getWeddingWebsitePreview(token: string) {
@@ -21,11 +25,19 @@ export function getWeddingWebsitePreview(token: string) {
 }
 
 export function getPublishedWeddingWebsite(slug: string) {
-  return apiFetch<WeddingWebsitePublicView>(`/wedding-websites/published/${slug}`, { skipAuth: true });
+  return apiFetch<WeddingWebsitePublicView>(`/wedding-websites/published/${slug}`, {
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 300 },
+  });
 }
 
 export function listPublishedWeddingWebsiteSlugs() {
-  return apiFetch<WeddingWebsitePublishedSlug[]>("/wedding-websites/published", { skipAuth: true });
+  return apiFetch<WeddingWebsitePublishedSlug[]>("/wedding-websites/published", {
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 3600 },
+  });
 }
 
 export function listMyWeddingWebsites() {

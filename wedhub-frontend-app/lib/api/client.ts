@@ -11,6 +11,15 @@ interface RequestOptions {
   query?: Record<string, string | number | boolean | undefined>;
   /** Skip attaching the session cookie — for public endpoints called during unauthenticated flows. */
   skipAuth?: boolean;
+  /**
+   * Marks a call as hitting a route with no IP-keyed rate limiter, so it's
+   * safe to skip relaying X-Forwarded-For (see apiFetch's comment below).
+   * Skipping that relay is what makes the call eligible for static/cached
+   * rendering — independent of skipAuth, since some skipAuth calls (e.g.
+   * search) DO hit a rate-limited route and must keep relaying the real IP.
+   * Only set this on calls confirmed to hit an unrate-limited backend route.
+   */
+  public?: boolean;
   cache?: RequestCache;
   next?: NextFetchRequestConfig;
 }
@@ -36,7 +45,7 @@ export async function apiFetch<T, M = Record<string, unknown>>(
   path: string,
   options: RequestOptions = {},
 ): Promise<{ data: T; meta?: M }> {
-  const { method = "GET", body, query, skipAuth = false, cache, next } = options;
+  const { method = "GET", body, query, skipAuth = false, public: isPublic = false, cache, next } = options;
 
   const requestHeaders: Record<string, string> = {};
   if (body !== undefined) requestHeaders["Content-Type"] = "application/json";
@@ -51,8 +60,13 @@ export async function apiFetch<T, M = Record<string, unknown>>(
   // without this every visitor would share one IP-keyed rate-limit budget
   // on the backend. Relay the real visitor IP Nginx put in X-Forwarded-For
   // (same fix as the Client Component proxy at app/api/[...path]/route.ts).
-  const incomingForwardedFor = (await headers()).get("x-forwarded-for");
-  if (incomingForwardedFor) requestHeaders["X-Forwarded-For"] = incomingForwardedFor;
+  // Calling headers() forces the calling route to render dynamically, so
+  // this is skipped entirely for `public: true` calls — routes confirmed to
+  // have no IP-keyed rate limiter, where the relay serves no purpose anyway.
+  if (!isPublic) {
+    const incomingForwardedFor = (await headers()).get("x-forwarded-for");
+    if (incomingForwardedFor) requestHeaders["X-Forwarded-For"] = incomingForwardedFor;
+  }
 
   const response = await fetch(buildUrl(path, query), {
     method,

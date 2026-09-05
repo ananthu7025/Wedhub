@@ -49,22 +49,24 @@ export function searchVendors(params: SearchVendorsParams) {
 }
 
 export function getVendorBySlug(slug: string) {
-  return apiFetch<VendorDetail>(`/vendors/${slug}`, { skipAuth: true });
+  return apiFetch<VendorDetail>(`/vendors/${slug}`, { skipAuth: true, public: true, next: { revalidate: 300 } });
 }
 
 export function getVendorAlbums(slug: string) {
-  return apiFetch<VendorAlbum[]>(`/vendors/${slug}/albums`, { skipAuth: true });
+  return apiFetch<VendorAlbum[]>(`/vendors/${slug}/albums`, { skipAuth: true, public: true, next: { revalidate: 300 } });
 }
 
 export function getVendorReviews(vendorId: string, page = 1, limit = 20) {
   return apiFetch<VendorReview[], PaginationMeta>(`/vendors/${vendorId}/reviews`, {
     query: { page, limit },
     skipAuth: true,
+    public: true,
+    next: { revalidate: 300 },
   });
 }
 
 export function listCategories() {
-  return apiFetch<Category[]>("/categories", { skipAuth: true });
+  return apiFetch<Category[]>("/categories", { skipAuth: true, public: true, next: { revalidate: 3600 } });
 }
 
 // Real, admin-curated categories for the public homepage's category
@@ -72,14 +74,22 @@ export function listCategories() {
 // startingPriceLabel (added 2026-09-03, see frontenddocs/10-risks-and-
 // open-questions.md Open Question 21).
 export function listFeaturedCategories() {
-  return apiFetch<FeaturedCategory[]>("/categories/featured/homepage", { skipAuth: true });
+  return apiFetch<FeaturedCategory[]>("/categories/featured/homepage", {
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 300 },
+  });
 }
 
 // Real, admin-curated wedding stories for the public homepage's "Real
 // Wedding Stories" section (Arch Phase 17, added 2026-09-04) — replaces
 // the previously-hardcoded REAL_WEDDING_STORIES array.
 export function listFeaturedWeddingStories() {
-  return apiFetch<WeddingStory[]>("/wedding-stories/featured/homepage", { skipAuth: true });
+  return apiFetch<WeddingStory[]>("/wedding-stories/featured/homepage", {
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 300 },
+  });
 }
 
 export function listAllWeddingStories(params?: {
@@ -99,39 +109,58 @@ export function listAllWeddingStories(params?: {
   if (params?.sort) query.set("sort", params.sort);
 
   const qs = query.toString();
-  return apiFetch<WeddingStoriesListResponse>(`/wedding-stories${qs ? `?${qs}` : ""}`, { skipAuth: true });
+  return apiFetch<WeddingStoriesListResponse>(`/wedding-stories${qs ? `?${qs}` : ""}`, {
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 300 },
+  });
 }
 
 export function getPublicWeddingStory(id: string) {
-  return apiFetch<WeddingStory>(`/wedding-stories/${id}`, { skipAuth: true });
+  return apiFetch<WeddingStory>(`/wedding-stories/${id}`, { skipAuth: true, public: true, next: { revalidate: 300 } });
 }
 
 // Real, admin-curated gallery media for the public homepage's "Gallery
 // Inspiration" section (Arch Phase 17, added 2026-09-04) — replaces the
 // previously-hardcoded GALLERY_ITEMS array.
 export function listFeaturedGalleryMedia() {
-  return apiFetch<FeaturedMediaItem[]>("/gallery/featured/homepage", { skipAuth: true });
+  return apiFetch<FeaturedMediaItem[]>("/gallery/featured/homepage", {
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 300 },
+  });
 }
 
 // Real, admin-curated popular-search cards for the public homepage's
 // "Popular Searches" section (Arch Phase 17, added 2026-09-04) — replaces
 // the previously-hardcoded POPULAR_SEARCH_CARDS array.
 export function listFeaturedPopularSearchCards() {
-  return apiFetch<PopularSearchCard[]>("/popular-searches/featured/homepage", { skipAuth: true });
+  return apiFetch<PopularSearchCard[]>("/popular-searches/featured/homepage", {
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 300 },
+  });
 }
 
 export function getCategoryBySlug(slug: string) {
-  return apiFetch<Category>(`/categories/${slug}`, { skipAuth: true });
+  return apiFetch<Category>(`/categories/${slug}`, { skipAuth: true, public: true, next: { revalidate: 3600 } });
 }
 
 export function listLocations(type?: LocationType, parentId?: string) {
-  return apiFetch<Location[]>("/locations", { query: { type, parentId }, skipAuth: true });
+  return apiFetch<Location[]>("/locations", {
+    query: { type, parentId },
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 3600 },
+  });
 }
 
 export function listFeaturedListings(placementType: FeaturedListing["placementType"], limit = 8) {
   return apiFetch<FeaturedListing[], PaginationMeta>("/featured-listings", {
     query: { placementType, limit },
     skipAuth: true,
+    public: true,
+    next: { revalidate: 300 },
   });
 }
 
@@ -139,20 +168,25 @@ export function listFeaturedListings(placementType: FeaturedListing["placementTy
 // Phase 17) — backs /vendors/[category], /vendors/[category]/[city], and
 // /vendors/city/[city]'s generateMetadata + on-page copy.
 export function getSeoPage(categoryId: string | undefined, cityId: string | undefined) {
-  return apiFetch<SeoPageData>("/seo/page", { query: { categoryId, cityId }, skipAuth: true });
+  return apiFetch<SeoPageData>("/seo/page", {
+    query: { categoryId, cityId },
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 3600 },
+  });
 }
 
 // Every indexable Category/City/Category+City combination — backs
 // app/sitemap.ts.
 export function listSeoCombinations() {
-  return apiFetch<SeoCombination[]>("/seo/combinations", { skipAuth: true });
+  return apiFetch<SeoCombination[]>("/seo/combinations", { skipAuth: true, public: true, next: { revalidate: 3600 } });
 }
 
 // Real, admin-curated blog posts for the public homepage's "Latest Blogs &
 // Advice" section (Arch Phase 17, added 2026-09-04) — replaces the
 // previously-hardcoded LATEST_BLOGS array.
 export function listFeaturedBlogPosts() {
-  return apiFetch<BlogPost[]>("/blog/featured/homepage", { skipAuth: true });
+  return apiFetch<BlogPost[]>("/blog/featured/homepage", { skipAuth: true, public: true, next: { revalidate: 300 } });
 }
 
 // Published blog posts, paginated, most-recent-first — backs /blog and
@@ -161,6 +195,8 @@ export function listBlogPosts(params: { page?: number; limit?: number } = {}) {
   return apiFetch<BlogPost[], PaginationMeta>("/blog", {
     query: { page: params.page ?? 1, limit: params.limit ?? 20 },
     skipAuth: true,
+    public: true,
+    next: { revalidate: 300 },
   });
 }
 
@@ -168,5 +204,5 @@ export function listBlogPosts(params: { page?: number; limit?: number } = {}) {
 // ApiRequestError status 404) for a draft/nonexistent slug, same pattern
 // as getSeoPage's 404 handling in category/[categorySlug]/page.tsx.
 export function getBlogPostBySlug(slug: string) {
-  return apiFetch<BlogPost>(`/blog/${slug}`, { skipAuth: true });
+  return apiFetch<BlogPost>(`/blog/${slug}`, { skipAuth: true, public: true, next: { revalidate: 300 } });
 }

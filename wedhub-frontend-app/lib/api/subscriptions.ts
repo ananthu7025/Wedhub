@@ -9,7 +9,7 @@ import type { Invoice, Payment, Subscription, SubscriptionPlan } from "./subscri
  */
 
 export function listPlans() {
-  return apiFetch<SubscriptionPlan[]>("/plans", { skipAuth: true });
+  return apiFetch<SubscriptionPlan[]>("/plans", { skipAuth: true, public: true, next: { revalidate: 3600 } });
 }
 
 export function getMySubscription() {
