@@ -29,8 +29,15 @@ interface SearchPageProps {
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
 
-  // Architectural Guard: Without a category or search query or city, redirect to /vendors directory
-  if (!params.categoryId && !params.keyword?.trim() && !params.cityId) {
+  // Architectural Guard: Without any active filter, redirect to /vendors directory
+  if (
+    !params.categoryId &&
+    !params.keyword?.trim() &&
+    !params.cityId &&
+    !params.priceMin &&
+    !params.priceMax &&
+    !params.verified
+  ) {
     redirect("/vendors");
   }
 

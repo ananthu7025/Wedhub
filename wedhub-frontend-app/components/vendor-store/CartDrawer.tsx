@@ -64,7 +64,7 @@ export function CartDrawer({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [orderConfirmed, setOrderConfirmed] = useState<{
     orderNumber: string;
-    whatsappUrl: string;
+    whatsappUrl?: string;
     paymentMethod: "ONLINE" | "WHATSAPP";
     paymentId?: string;
   } | null>(null);
@@ -292,22 +292,24 @@ export function CartDrawer({
 
               <p className="mt-3 text-xs text-text-grey leading-relaxed">
                 {orderConfirmed.paymentMethod === "ONLINE"
-                  ? `Payment of ₹${grandTotal.toLocaleString("en-IN")} has been verified and settled directly to ${storeName}. You can notify them on WhatsApp for delivery updates.`
+                  ? `Payment of ₹${grandTotal.toLocaleString("en-IN")} has been verified and settled directly to ${storeName}.`
                   : `A WhatsApp chat with ${storeName} was opened to send your item details directly.`}
               </p>
 
               <div className="mt-6 flex flex-col gap-2">
-                <a
-                  href={orderConfirmed.whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full rounded-lg bg-emerald-600 py-3 text-xs font-bold text-white hover:bg-emerald-700 flex items-center justify-center gap-2 shadow-sm transition-all"
-                >
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                    <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.176L2 22l4.982-1.396C8.423 21.49 10.155 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18.2c-1.67 0-3.23-.52-4.52-1.41l-.32-.22-2.96.83.83-2.89-.23-.33C3.84 14.88 3.3 13.48 3.3 12c0-4.8 3.9-8.7 8.7-8.7s8.7 3.9 8.7 8.7-3.9 8.7-8.7 8.7z" />
-                  </svg>
-                  {orderConfirmed.paymentMethod === "ONLINE" ? "Message Vendor on WhatsApp" : "Re-open WhatsApp Chat"}
-                </a>
+                {orderConfirmed.whatsappUrl && (
+                  <a
+                    href={orderConfirmed.whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full rounded-lg bg-emerald-600 py-3 text-xs font-bold text-white hover:bg-emerald-700 flex items-center justify-center gap-2 shadow-sm transition-all"
+                  >
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.176L2 22l4.982-1.396C8.423 21.49 10.155 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18.2c-1.67 0-3.23-.52-4.52-1.41l-.32-.22-2.96.83.83-2.89-.23-.33C3.84 14.88 3.3 13.48 3.3 12c0-4.8 3.9-8.7 8.7-8.7s8.7 3.9 8.7 8.7-3.9 8.7-8.7 8.7z" />
+                    </svg>
+                    Re-open WhatsApp Chat
+                  </a>
+                )}
                 <button
                   type="button"
                   onClick={() => {

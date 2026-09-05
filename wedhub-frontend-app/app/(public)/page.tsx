@@ -54,7 +54,7 @@ interface DisplayWeddingStory {
 const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   {
     key: "sample-1",
-    href: "/real-weddings/sample-1",
+    href: "/search",
     coupleName: "Ananya & Rohan",
     location: "Palace Grounds, Bengaluru",
     tag: "South Indian Traditional · 120 Photos",
@@ -63,7 +63,7 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   },
   {
     key: "sample-2",
-    href: "/real-weddings/sample-2",
+    href: "/search",
     coupleName: "Pooja & Kabir",
     location: "City Palace, Jaipur",
     tag: "Royal Heritage Wedding · 85 Photos",
@@ -72,7 +72,7 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   },
   {
     key: "sample-3",
-    href: "/real-weddings/sample-3",
+    href: "/search",
     coupleName: "Meera & Siddharth",
     location: "Heritage Village, Goa",
     tag: "Beachside Destination · 95 Photos",
@@ -81,7 +81,7 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   },
   {
     key: "sample-4",
-    href: "/real-weddings/sample-4",
+    href: "/search",
     coupleName: "Kavya & Arjun",
     location: "Backwater Resort, Alleppey",
     tag: "Kerala Christian Wedding · 140 Photos",
@@ -90,7 +90,7 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   },
   {
     key: "sample-5",
-    href: "/real-weddings/sample-5",
+    href: "/search",
     coupleName: "Ishaan & Diya",
     location: "The Leela, Udaipur",
     tag: "Lakeside Luxury Wedding · 200 Photos",
@@ -99,7 +99,7 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   },
   {
     key: "sample-6",
-    href: "/real-weddings/sample-6",
+    href: "/search",
     coupleName: "Nikhil & Sara",
     location: "Heritage Haveli, Jodhpur",
     tag: "Rajasthani Fusion · 110 Photos",
@@ -112,15 +112,20 @@ const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
 // WEDDING_STORIES_SLOTS — see the "fixed display count" decision this
 // implements. Once real.length >= WEDDING_STORIES_SLOTS, zero samples show.
 function fillWeddingStorySlots(realStories: RealWeddingStory[]): DisplayWeddingStory[] {
-  const real: DisplayWeddingStory[] = realStories.slice(0, WEDDING_STORIES_SLOTS).map((story) => ({
-    key: story.id,
-    href: `/real-weddings/${story.id}`,
-    coupleName: story.coupleName,
-    location: story.location,
-    tag: story.tag,
-    snippet: story.snippet,
-    imageUrl: getPublicMediaUrl(story.album.coverMedia.optimizedObjectKey ?? story.album.coverMedia.originalObjectKey),
-  }));
+  const real: DisplayWeddingStory[] = realStories.slice(0, WEDDING_STORIES_SLOTS).map((story) => {
+    const coverKey = story.album.coverMedia?.optimizedObjectKey ?? story.album.coverMedia?.originalObjectKey;
+    return {
+      key: story.id,
+      href: `/real-weddings/${story.id}`,
+      coupleName: story.coupleName,
+      location: story.location,
+      tag: story.tag,
+      snippet: story.snippet,
+      imageUrl: coverKey
+        ? getPublicMediaUrl(coverKey)
+        : "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&q=80",
+    };
+  });
   const remaining = WEDDING_STORIES_SLOTS - real.length;
   return remaining > 0 ? [...real, ...SAMPLE_WEDDING_STORIES.slice(0, remaining)] : real;
 }

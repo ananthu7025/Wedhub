@@ -81,12 +81,13 @@ export function verifyStoreOrderPayment(
 
 export interface AdminStorePaymentMetrics {
   totalGmv: number;
-  totalSettledToVendors: number;
-  totalPlatformCommission: number;
-  totalGatewayFees: number;
-  totalRefunded: number;
   totalPaidOrders: number;
-  activeConnectedVendors: number;
+  totalFailedOrders: number;
+  totalRefundsAmount: number;
+  totalPlatformCommission: number;
+  totalAccounts: number;
+  activeAccountsCount: number;
+  pendingAccountsCount: number;
 }
 
 export function getAdminPaymentAccounts() {
@@ -99,8 +100,4 @@ export function getAdminStoreOrders(filters?: { status?: string; paymentStatus?:
   if (filters?.paymentStatus) params.set("paymentStatus", filters.paymentStatus);
   const qs = params.toString() ? `?${params.toString()}` : "";
   return call<VendorStoreOrder[]>(`/admin/store-payments/orders${qs}`, "GET");
-}
-
-export function getAdminStorePaymentMetrics() {
-  return call<AdminStorePaymentMetrics>("/admin/store-payments/metrics", "GET");
 }

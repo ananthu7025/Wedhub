@@ -244,7 +244,7 @@ export interface PublicCreateOrderInput {
 export interface PublicCreateOrderResponse {
   orderId: string;
   orderNumber: string;
-  whatsappUrl: string;
+  whatsappUrl?: string;
   totalAmount: number;
   paymentMethod: "ONLINE" | "WHATSAPP";
   razorpayOrderId?: string;

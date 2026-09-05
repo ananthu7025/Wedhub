@@ -200,5 +200,5 @@ export function listAdminStoreOrders(params: { status?: string; paymentStatus?: 
 }
 
 export function getAdminStorePaymentMetrics() {
-  return apiFetch<import("./vendor-payments-client").AdminStorePaymentMetrics>("/admin/store-payments/metrics");
+  return apiFetch<import("./vendor-payments-client").AdminStorePaymentMetrics>("/admin/store-payments/overview");
 }

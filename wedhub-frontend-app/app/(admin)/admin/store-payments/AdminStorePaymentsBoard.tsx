@@ -68,13 +68,13 @@ export function AdminStorePaymentsBoard({
 
         <div className="rounded-2xl border border-border bg-white p-5 shadow-xs">
           <div className="text-xs font-semibold text-text-grey uppercase tracking-wider">
-            Settled to Vendors
+            Total Refunded
           </div>
-          <div className="mt-2 text-2xl font-black text-emerald-600">
-            ₹{(initialMetrics?.totalSettledToVendors ?? 0).toLocaleString("en-IN")}
+          <div className="mt-2 text-2xl font-black text-red-600">
+            ₹{(initialMetrics?.totalRefundsAmount ?? 0).toLocaleString("en-IN")}
           </div>
-          <div className="mt-1 text-[11px] text-emerald-700 font-semibold">
-            Directly to linked bank accounts
+          <div className="mt-1 text-[11px] text-red-700 font-semibold">
+            Across all marketplace orders
           </div>
         </div>
 
@@ -83,10 +83,10 @@ export function AdminStorePaymentsBoard({
             Active Connected Vendors
           </div>
           <div className="mt-2 text-2xl font-black text-purple-600">
-            {initialMetrics?.activeConnectedVendors ?? 0}
+            {initialMetrics?.activeAccountsCount ?? 0}
           </div>
           <div className="mt-1 text-[11px] text-purple-700">
-            Enabled for direct checkout
+            Enabled for direct checkout, of {initialMetrics?.totalAccounts ?? 0} total
           </div>
         </div>
 
@@ -95,7 +95,7 @@ export function AdminStorePaymentsBoard({
             Platform Commission
           </div>
           <div className="mt-2 text-2xl font-black text-brand-primary">
-            ₹0
+            ₹{(initialMetrics?.totalPlatformCommission ?? 0).toLocaleString("en-IN")}
           </div>
           <div className="mt-1 text-[11px] text-brand-primary font-bold">
             Zero-commission policy
