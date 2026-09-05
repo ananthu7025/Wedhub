@@ -134,6 +134,26 @@ export function upsertVendorProfile(vendorId: string, data: Record<string, unkno
   });
 }
 
+export function upsertProfileTx(
+  vendorId: string,
+  cityId: string | undefined,
+  profileData: Record<string, unknown>,
+) {
+  const profileFields = omitUndefined(profileData);
+  const writes = [];
+  if (cityId !== undefined) {
+    writes.push(prisma.vendor.update({ where: { id: vendorId }, data: { cityId } }));
+  }
+  writes.push(
+    prisma.vendorProfile.upsert({
+      where: { vendorId },
+      create: { vendorId, ...profileFields },
+      update: profileFields,
+    }),
+  );
+  return prisma.$transaction(writes);
+}
+
 // Ownership+readiness check for setting VendorProfile.logoMediaId/coverMediaId
 // (PUT /vendors/me/profile) — Media itself belongs to the media module, but
 // this is a same-database Prisma read, not a cross-module service call.
@@ -172,26 +192,34 @@ export function replaceVendorServiceAreas(vendorId: string, locationIds: string[
   ]);
 }
 
-export function findAttributeById(attributeId: string) {
-  return prisma.categoryAttribute.findUnique({ where: { id: attributeId } });
+export function findAttributesByIds(attributeIds: string[]) {
+  return prisma.categoryAttribute.findMany({ where: { id: { in: attributeIds } } });
 }
 
-export function upsertAttributeValue(
-  vendorId: string,
-  attributeId: string,
-  data: {
-    valueText: string | undefined;
-    valueNumber: number | undefined;
-    valueBoolean: boolean | undefined;
-    valueOptions: string[] | undefined;
-  },
-) {
-  const fields = omitUndefined(data);
-  return prisma.vendorAttributeValue.upsert({
-    where: { vendorId_attributeId: { vendorId, attributeId } },
-    create: { vendorId, attributeId, ...fields },
-    update: { valueText: null, valueNumber: null, valueBoolean: null, valueOptions: [], ...fields },
-  });
+export interface AttributeValueRow {
+  attributeId: string;
+  valueText: string | undefined;
+  valueNumber: number | undefined;
+  valueBoolean: boolean | undefined;
+  valueOptions: string[] | undefined;
+}
+
+export function replaceAttributeValues(vendorId: string, rows: AttributeValueRow[]) {
+  return prisma.$transaction([
+    prisma.vendorAttributeValue.deleteMany({ where: { vendorId } }),
+    prisma.vendorAttributeValue.createMany({
+      data: rows.map((row) => ({
+        vendorId,
+        attributeId: row.attributeId,
+        ...omitUndefined({
+          valueText: row.valueText,
+          valueNumber: row.valueNumber,
+          valueBoolean: row.valueBoolean,
+          valueOptions: row.valueOptions,
+        }),
+      })),
+    }),
+  ]);
 }
 
 export function findServiceById(serviceId: string) {

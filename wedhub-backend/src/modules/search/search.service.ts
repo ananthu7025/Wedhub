@@ -44,7 +44,7 @@ export async function searchVendors(
   const { rows, total } = await searchRepository.searchVendors(filters, query.sort);
   const ranked = query.sort === "recommended" ? rankVendors(rows) : rows;
 
-  await logSearch({ query, loggedInUserId, resultCount: total });
+  void logSearch({ query, loggedInUserId, resultCount: total });
 
   return { vendors: ranked.map(toPublicVendorSummary), total };
 }
@@ -55,28 +55,31 @@ async function logSearch(input: {
   resultCount: number;
 }): Promise<void> {
   const { query, loggedInUserId, resultCount } = input;
-  try {
-    await prisma.searchLog.create({
-      data: {
-        userId: loggedInUserId ?? null,
-        keyword: query.keyword ?? null,
-        categoryId: query.categoryId ?? null,
-        cityId: query.cityId ?? null,
-        sort: query.sort,
-        resultCount,
-        filters: {
-          serviceAreaId: query.serviceAreaId ?? null,
-          priceMin: query.priceMin ?? null,
-          priceMax: query.priceMax ?? null,
-          verified: query.verified ?? null,
-          attr: query.attr ?? null,
+
+  const writeSearchLog = async () => {
+    try {
+      await prisma.searchLog.create({
+        data: {
+          userId: loggedInUserId ?? null,
+          keyword: query.keyword ?? null,
+          categoryId: query.categoryId ?? null,
+          cityId: query.cityId ?? null,
+          sort: query.sort,
+          resultCount,
+          filters: {
+            serviceAreaId: query.serviceAreaId ?? null,
+            priceMin: query.priceMin ?? null,
+            priceMax: query.priceMax ?? null,
+            verified: query.verified ?? null,
+            attr: query.attr ?? null,
+          },
         },
-      },
-    });
-  } catch {
-    // Search analytics must never break a search response — logging failure
-    // is swallowed (and would show up in Postgres/Prisma error logs anyway).
-  }
+      });
+    } catch {
+      // Search analytics must never break a search response — logging failure
+      // is swallowed (and would show up in Postgres/Prisma error logs anyway).
+    }
+  };
 
   // Arch Phase 18 Stage A: a thin, duplicate event pointer into the unified
   // AnalyticsEvent stream alongside SearchLog's richer dedicated row above.
@@ -84,9 +87,12 @@ async function logSearch(input: {
   // (keyword/filters breakdown); this lets a later full-funnel query walk
   // one table (visitor -> search -> vendor view -> enquiry -> lead) instead
   // of UNIONing AnalyticsEvent with SearchLog on shape-incompatible columns.
-  await logAnalyticsEvent({
-    userId: loggedInUserId,
-    eventType: "search_performed",
-    metadata: { keyword: query.keyword ?? null, categoryId: query.categoryId ?? null, cityId: query.cityId ?? null, resultCount },
-  });
+  await Promise.all([
+    writeSearchLog(),
+    logAnalyticsEvent({
+      userId: loggedInUserId,
+      eventType: "search_performed",
+      metadata: { keyword: query.keyword ?? null, categoryId: query.categoryId ?? null, cityId: query.cityId ?? null, resultCount },
+    }),
+  ]);
 }

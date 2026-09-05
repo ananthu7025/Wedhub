@@ -121,40 +121,41 @@ export async function searchVendors(
   const offset = (filters.page - 1) * filters.limit;
   const orderBy = SORT_CLAUSES[sort] ?? SORT_CLAUSES.relevance;
 
-  const rows = await prisma.$queryRaw<VendorSearchRow[]>(Prisma.sql`
-    SELECT * FROM (
-      SELECT
-        v.id,
-        v.business_name AS "businessName",
-        v.slug,
-        v.status,
-        v.verification_level AS "verificationLevel",
-        v.profile_completeness AS "profileCompleteness",
-        v.city_id AS "cityId",
-        vp.short_description AS "shortDescription",
-        vp.starting_price AS "startingPrice",
-        vp.currency,
-        COALESCE(logo.optimized_object_key, logo.original_object_key) AS "logoObjectKey",
-        v.created_at AS "createdAt",
-        (${similarity})::float AS similarity,
-        ${categoryMatch} AS "categoryMatch",
-        ${cityMatch} AS "cityMatch"
+  const [rows, totalResult] = await Promise.all([
+    prisma.$queryRaw<VendorSearchRow[]>(Prisma.sql`
+      SELECT * FROM (
+        SELECT
+          v.id,
+          v.business_name AS "businessName",
+          v.slug,
+          v.status,
+          v.verification_level AS "verificationLevel",
+          v.profile_completeness AS "profileCompleteness",
+          v.city_id AS "cityId",
+          vp.short_description AS "shortDescription",
+          vp.starting_price AS "startingPrice",
+          vp.currency,
+          COALESCE(logo.optimized_object_key, logo.original_object_key) AS "logoObjectKey",
+          v.created_at AS "createdAt",
+          (${similarity})::float AS similarity,
+          ${categoryMatch} AS "categoryMatch",
+          ${cityMatch} AS "cityMatch"
+        FROM vendors v
+        LEFT JOIN vendor_profiles vp ON vp.vendor_id = v.id
+        LEFT JOIN media logo ON logo.id = vp.logo_media_id AND logo.status = 'READY'
+        WHERE ${where}
+      ) ranked
+      ORDER BY ${orderBy}
+      LIMIT ${filters.limit}
+      OFFSET ${offset}
+    `),
+    prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
+      SELECT COUNT(*)::bigint AS count
       FROM vendors v
       LEFT JOIN vendor_profiles vp ON vp.vendor_id = v.id
-      LEFT JOIN media logo ON logo.id = vp.logo_media_id AND logo.status = 'READY'
       WHERE ${where}
-    ) ranked
-    ORDER BY ${orderBy}
-    LIMIT ${filters.limit}
-    OFFSET ${offset}
-  `);
-
-  const totalResult = await prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
-    SELECT COUNT(*)::bigint AS count
-    FROM vendors v
-    LEFT JOIN vendor_profiles vp ON vp.vendor_id = v.id
-    WHERE ${where}
-  `);
+    `),
+  ]);
 
   return { rows, total: Number(totalResult[0]?.count ?? 0) };
 }

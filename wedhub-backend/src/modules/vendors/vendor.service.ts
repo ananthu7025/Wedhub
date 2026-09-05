@@ -69,16 +69,18 @@ async function assertOwnReadyMediaOrNull(vendorId: string, mediaId: string | nul
 export async function upsertProfile(vendorId: string, input: UpsertVendorProfileInput) {
   const { cityId, logoMediaId, coverMediaId, ...profileFields } = input;
 
-  if (cityId !== undefined) {
-    await vendorRepository.updateVendor(vendorId, { businessName: undefined, cityId });
-  }
-
   await Promise.all([
     assertOwnReadyMediaOrNull(vendorId, logoMediaId),
     assertOwnReadyMediaOrNull(vendorId, coverMediaId),
   ]);
 
-  const profile = await vendorRepository.upsertVendorProfile(vendorId, { ...profileFields, logoMediaId, coverMediaId });
+  const results = await vendorRepository.upsertProfileTx(vendorId, cityId, {
+    ...profileFields,
+    logoMediaId,
+    coverMediaId,
+  });
+  const profile = results[results.length - 1];
+
   await recalculateCompleteness(vendorId);
   return profile;
 }
@@ -126,18 +128,17 @@ export async function setServiceAreas(vendorId: string, input: SetServiceAreasIn
 }
 
 export async function setAttributeValues(vendorId: string, values: AttributeValueInput[]) {
-  for (const entry of values) {
-    const attribute = await vendorRepository.findAttributeById(entry.attributeId);
+  const attributes = await vendorRepository.findAttributesByIds(values.map((v) => v.attributeId));
+  const attributeById = new Map(attributes.map((attribute) => [attribute.id, attribute]));
+
+  const rows = values.map((entry) => {
+    const attribute = attributeById.get(entry.attributeId);
     if (!attribute) {
       throw new ValidationError(`Attribute ${entry.attributeId} does not exist`);
     }
 
-    const write: {
-      valueText: string | undefined;
-      valueNumber: number | undefined;
-      valueBoolean: boolean | undefined;
-      valueOptions: string[] | undefined;
-    } = {
+    const write: vendorRepository.AttributeValueRow = {
+      attributeId: entry.attributeId,
       valueText: undefined,
       valueNumber: undefined,
       valueBoolean: undefined,
@@ -189,9 +190,10 @@ export async function setAttributeValues(vendorId: string, values: AttributeValu
       }
     }
 
-    await vendorRepository.upsertAttributeValue(vendorId, entry.attributeId, write);
-  }
+    return write;
+  });
 
+  await vendorRepository.replaceAttributeValues(vendorId, rows);
   await recalculateCompleteness(vendorId);
   return vendorRepository.findVendorById(vendorId);
 }

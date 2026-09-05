@@ -99,8 +99,28 @@ Both `docs/` (00-20) and `frontenddocs/` (00-14) now have sequential, collision-
 
 ## 6. Open threads not yet started
 
-- The 8 pending code fixes in §2 above (the actual next task).
+- ~~The 8 pending code fixes in §2 above~~ — **7 of 8 done, see §7.** Item 8 (Implementation Log re-verification) remains open.
 - Arch Phase 19 Stages B+ (input/auth validation audit, file-upload/webhook security, secret rotation, password policy, session revocation, admin MFA, abuse detection, SQL review, error redaction) — large, not scoped in detail yet.
-- Everything in `docs/17-review-feedback-tasklist-backend.md` and `frontenddocs/13-review-feedback-tasklist-frontend.md` beyond what overlaps with §2.
+- Everything in `docs/17-review-feedback-tasklist-backend.md` and `frontenddocs/13-review-feedback-tasklist-frontend.md` beyond what overlapped with §2 (now fixed, see §7) — the rest of both task lists is still queued.
 - `server.md`'s credential — flagged, not moved to a real secrets manager.
-- Point-by-point re-verification of `docs/18`'s 29-item "Implementation Log" (currently only spot-checked, not fully verified).
+- Point-by-point re-verification of `docs/18`'s 29-item "Implementation Log" (currently only spot-checked, not fully verified) — this is §2 item 8, still open.
+- The doc-cleanup batch in §4 and the code-fix batch in §7 are each still **uncommitted** — two separate units of work, not yet committed as of this update. Check `git status` before assuming either is on `main`.
+
+## 7. Follow-up session (2026-09-05, later) — 7 of 8 pending fixes done
+
+Picked up directly from §2/§3 above. Each of the 3 HIGH + 5 MEDIUM items was independently re-confirmed against the current code (not just trusted from this doc) before fixing — see the plan file this session worked from for the exact evidence. Item 8 (Implementation Log re-verification) was explicitly left out of scope — it's a documentation audit, not a code fix.
+
+**Fixed:**
+1. **Admin payment metrics** — the frontend was calling a nonexistent `/admin/store-payments/metrics`; the live code path (`lib/api/admin.ts`'s `getAdminStorePaymentMetrics`, actually used by `app/(admin)/admin/store-payments/page.tsx`) now calls the real `/admin/store-payments/overview` route. The `AdminStorePaymentMetrics` type and `AdminStorePaymentsBoard.tsx`'s metric tiles were rewritten to the backend's real field names (`totalRefundsAmount`, `activeAccountsCount`/`totalAccounts`, `totalPlatformCommission`) instead of the invented `totalSettledToVendors`/`totalGatewayFees`/`activeConnectedVendors`, which the backend has never computed. The truly-dead duplicate `getAdminStorePaymentMetrics()` in `lib/api/vendor-payments-client.ts` was deleted (confirmed via grep that `page.tsx` only ever imported the `admin.ts` version; the `vendor-payments-client.ts` version had zero callers, only its type was reused).
+2. **`whatsappUrl`** — now `whatsappUrl?: string` on `PublicCreateOrderResponse` (`lib/api/vendor-store.types.ts`) and on `CartDrawer.tsx`'s local confirmation state. The "Message Vendor on WhatsApp" button now only renders `{orderConfirmed.whatsappUrl && (...)}`; the confirmation copy for the ONLINE path no longer promises a WhatsApp notify option it can't deliver.
+3. **`/search` redirect** — the guard in `app/(public)/search/page.tsx` now also checks `priceMin`/`priceMax`/`verified` before redirecting to `/vendors`, so a filter-only URL (e.g. `?priceMin=5000`) no longer loses its filter.
+4. **Dead `vendorPaymentRouter`** — confirmed via grep of `routes/index.ts` and all of `src/` that it was never mounted anywhere (the live routes really were duplicated onto `vendor-store.routes.ts`, which imports `vendor-payment.controller`/`.schema` directly). Deleted `vendor-payment.routes.ts` and removed its re-export from the module's `index.ts` (which itself turned out to have zero importers anywhere — the reconcile controller reaches the service via a direct dynamic `import()`, bypassing the barrel entirely).
+5. **Unguarded `coverMedia`** — `app/(public)/page.tsx`'s `fillWeddingStorySlots` now computes `coverKey = story.album.coverMedia?.optimizedObjectKey ?? story.album.coverMedia?.originalObjectKey` and falls back to the same Unsplash placeholder URL the `/real-weddings` pages already use when there's no cover — mirrors `RealWeddingsView.tsx`/`real-weddings/[id]/page.tsx`'s exact idiom rather than inventing a new one.
+6. **Sample story cards** — all 6 `SAMPLE_WEDDING_STORIES` entries now `href: "/search"` instead of the fake `/real-weddings/sample-N` IDs that 404'd.
+7. **Orphaned components** — `app/(public)/search/CityAvatarRow.tsx` and `SortSelect.tsx` deleted (re-confirmed zero references immediately before deleting).
+
+**Verification done:** `npx tsc --noEmit` clean on both `wedhub-backend/` and `wedhub-frontend-app/` after all 7 fixes. No live checkout round-trip was possible (no Razorpay sandbox credentials in this environment) — verification is static (types, dead-code, logic) only, same limitation as before.
+
+**Not committed.** Per this doc's own git discipline (§5), nothing was staged or committed without being asked. The 11 changed/deleted files from this pass are separate from the still-uncommitted §4 doc-cleanup batch — if asked to commit, treat these as two distinct units of work, not one combined commit.
+
+**Still open:** §2 item 8 (Implementation Log re-verification), everything in Arch Phase 19 Stages B+, and the remainder of both review-feedback task lists beyond what overlapped with the 7 items above.
