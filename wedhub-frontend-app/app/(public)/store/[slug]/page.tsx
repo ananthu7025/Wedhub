@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { fetchPublicStore, fetchPublicStoreItems } from "@/lib/api/vendor-store";
 import { ApiRequestError } from "@/lib/api/types";
 import { PublicStorefrontView } from "./PublicStorefrontView";
@@ -28,14 +27,11 @@ export async function generateMetadata({
   try {
     const store = await loadStore(slug);
     return {
-      title: `${store.storeName} | WedHub Official Store`,
-      description:
-        store.tagline ||
-        store.aboutStore ||
-        `Browse and order wedding products directly from ${store.storeName} on WedHub.`,
+      title: store.storeName,
+      description: store.tagline || store.aboutStore || `Shop online at ${store.storeName}.`,
     };
   } catch {
-    return { title: "Store Not Found | WedHub" };
+    return { title: "Store Not Found" };
   }
 }
 
@@ -45,11 +41,8 @@ export default async function PublicStorePage({ params }: StorePageProps) {
   const { data: items } = await fetchPublicStoreItems(slug);
 
   return (
-    <>
-      <PublicTopbar />
-      <main>
-        <PublicStorefrontView store={store} items={items} />
-      </main>
-    </>
+    <main>
+      <PublicStorefrontView store={store} items={items} />
+    </main>
   );
 }

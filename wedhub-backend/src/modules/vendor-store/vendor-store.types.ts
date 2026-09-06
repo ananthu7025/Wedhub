@@ -1,6 +1,6 @@
-import type { StoreItemType, StoreOrderStatus, StorePaymentStatus } from "@prisma/client";
+import type { StoreAccentColor, StoreItemType, StoreOrderStatus, StorePaymentStatus } from "@prisma/client";
 
-export type { StoreItemType, StoreOrderStatus, StorePaymentStatus };
+export type { StoreAccentColor, StoreItemType, StoreOrderStatus, StorePaymentStatus };
 
 
 export interface UpsertStoreProfileInput {
@@ -12,6 +12,7 @@ export interface UpsertStoreProfileInput {
   shippingPolicy?: string | null | undefined;
   returnPolicy?: string | null | undefined;
   minOrderValue?: number | null | undefined;
+  accentColor?: StoreAccentColor | undefined;
 }
 
 export interface CreateStoreItemInput {

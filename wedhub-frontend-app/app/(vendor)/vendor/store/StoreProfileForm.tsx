@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { updateMyStoreProfile } from "@/lib/api/vendor-store-client";
-import type { VendorStoreProfile } from "@/lib/api/vendor-store.types";
+import type { StoreAccentColor, VendorStoreProfile } from "@/lib/api/vendor-store.types";
+import { STORE_ACCENT_COLOR_LABELS, STORE_THEMES } from "@/components/vendor-store/store-theme";
+
+const ACCENT_COLOR_OPTIONS: StoreAccentColor[] = ["CRIMSON", "EMERALD", "NAVY", "AMBER", "PLUM", "SLATE"];
 
 export function StoreProfileForm({
   initialProfile,
@@ -26,6 +29,9 @@ export function StoreProfileForm({
   const [minOrderValue, setMinOrderValue] = useState<number | string>(
     initialProfile.minOrderValue ?? "",
   );
+  const [accentColor, setAccentColor] = useState<StoreAccentColor>(
+    initialProfile.accentColor ?? "CRIMSON",
+  );
 
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -48,6 +54,7 @@ export function StoreProfileForm({
       shippingPolicy: shippingPolicy.trim() || null,
       returnPolicy: returnPolicy.trim() || null,
       minOrderValue: minValNum,
+      accentColor,
     });
 
     setSaving(false);
@@ -176,6 +183,41 @@ export function StoreProfileForm({
               maxLength={5000}
               className="w-full rounded-lg border border-border px-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
             />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-xs font-semibold text-text-grey mb-2">
+              Store Accent Color
+            </label>
+            <div className="flex flex-wrap gap-3">
+              {ACCENT_COLOR_OPTIONS.map((option) => {
+                const theme = STORE_THEMES[option];
+                const isSelected = accentColor === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setAccentColor(option)}
+                    title={STORE_ACCENT_COLOR_LABELS[option]}
+                    className={`flex flex-col items-center gap-1.5 rounded-lg border-2 p-2 transition-colors ${
+                      isSelected ? "border-text-dark" : "border-transparent hover:border-border"
+                    }`}
+                  >
+                    <span
+                      className={`h-8 w-8 rounded-full ${theme.accentBgClass} ${
+                        isSelected ? "ring-2 ring-offset-2 ring-text-dark" : ""
+                      }`}
+                    />
+                    <span className="text-[11px] font-medium text-text-grey">
+                      {STORE_ACCENT_COLOR_LABELS[option]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[11px] text-text-grey">
+              Used for buttons, links, and checkout on your public storefront.
+            </p>
           </div>
         </div>
       </div>

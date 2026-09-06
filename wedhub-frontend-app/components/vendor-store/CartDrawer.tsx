@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { createPublicStoreOrder } from "@/lib/api/vendor-store-client";
 import { verifyStoreOrderPayment } from "@/lib/api/vendor-payments-client";
-import type { VendorStoreItem } from "@/lib/api/vendor-store.types";
+import type { StoreAccentColor, VendorStoreItem } from "@/lib/api/vendor-store.types";
+import { themeForStore } from "./store-theme";
 
 export interface CartItem {
   item: VendorStoreItem;
@@ -31,6 +32,7 @@ export function CartDrawer({
   storeName,
   minOrderValue,
   isOnlinePaymentEnabled = false,
+  accentColor = "CRIMSON",
   cart,
   onUpdateQuantity,
   onRemoveItem,
@@ -42,11 +44,13 @@ export function CartDrawer({
   storeName: string;
   minOrderValue?: number | null;
   isOnlinePaymentEnabled?: boolean;
+  accentColor?: StoreAccentColor;
   cart: CartItem[];
   onUpdateQuantity: (itemId: string, quantity: number) => void;
   onRemoveItem: (itemId: string) => void;
   onClearCart: () => void;
 }) {
+  const theme = themeForStore(accentColor);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -189,7 +193,7 @@ export function CartDrawer({
           email: customerEmail.trim(),
         },
         theme: {
-          color: "#E11D48",
+          color: theme.accentHex,
         },
         handler: (async (response) => {
           try {
@@ -251,7 +255,7 @@ export function CartDrawer({
           {/* Drawer Header */}
           <div className="flex items-center justify-between border-b border-border p-4">
             <div className="flex items-center gap-2">
-              <svg className="h-5 w-5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`h-5 w-5 ${theme.accentTextClass}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               <h2 className="text-base font-bold text-text-dark">
@@ -283,7 +287,7 @@ export function CartDrawer({
               <p className="mt-2 text-xs text-text-grey">
                 Your order has been registered under order number:
               </p>
-              <div className="mt-2 text-base font-mono font-bold text-brand-primary bg-surface-input py-2 px-4 rounded-lg inline-block">
+              <div className={`mt-2 text-base font-mono font-bold bg-surface-input py-2 px-4 rounded-lg inline-block ${theme.accentTextClass}`}>
                 #{orderConfirmed.orderNumber}
               </div>
 
@@ -387,7 +391,7 @@ export function CartDrawer({
                         </div>
 
                         <div className="flex items-center justify-between mt-1">
-                          <span className="text-xs font-semibold text-brand-primary">
+                          <span className={`text-xs font-semibold ${theme.accentTextClass}`}>
                             ₹{Math.round(itemTotal).toLocaleString("en-IN")}
                           </span>
                           <div className="flex items-center border border-border rounded-md bg-white">
@@ -434,7 +438,7 @@ export function CartDrawer({
                 )}
                 <div className="border-t border-border pt-1.5 flex justify-between font-bold text-text-dark text-sm">
                   <span>Total Amount</span>
-                  <span className="text-brand-primary">₹{grandTotal.toLocaleString("en-IN")}</span>
+                  <span className={theme.accentTextClass}>₹{grandTotal.toLocaleString("en-IN")}</span>
                 </div>
                 {belowMinOrder && (
                   <div className="mt-1 text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
@@ -459,12 +463,12 @@ export function CartDrawer({
                       !isOnlinePaymentEnabled
                         ? "opacity-50 border-dashed border-border bg-surface-card cursor-not-allowed"
                         : paymentMethod === "ONLINE"
-                        ? "border-brand-primary bg-brand-primary/5 text-text-dark ring-1 ring-brand-primary shadow-xs"
-                        : "border-border bg-surface-card text-text-grey hover:border-brand-primary/50"
+                        ? `${theme.accentBorderClass} ${theme.accentSoftBgClass} text-text-dark ring-1 ${theme.accentRingClass} shadow-xs`
+                        : `border-border bg-surface-card text-text-grey ${theme.accentHoverBorderClass}`
                     }`}
                   >
                     <div className="flex items-center gap-1.5 mb-1">
-                      <svg className={`w-4 h-4 ${paymentMethod === "ONLINE" ? "text-brand-primary" : "text-text-grey"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-4 h-4 ${paymentMethod === "ONLINE" ? theme.accentTextClass : "text-text-grey"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
                       <span className="text-xs font-bold">Online Payment</span>
@@ -526,7 +530,7 @@ export function CartDrawer({
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     placeholder="e.g. Rahul Sharma"
-                    className="w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:border-brand-primary focus:outline-none"
+                    className={`w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:outline-none ${theme.accentFocusBorderClass}`}
                   />
                 </div>
 
@@ -541,7 +545,7 @@ export function CartDrawer({
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
                       placeholder="+91 98765 43210"
-                      className="w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:border-brand-primary focus:outline-none"
+                      className={`w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:outline-none ${theme.accentFocusBorderClass}`}
                     />
                   </div>
                   <div>
@@ -554,7 +558,7 @@ export function CartDrawer({
                       value={customerEmail}
                       onChange={(e) => setCustomerEmail(e.target.value)}
                       placeholder="rahul@example.com"
-                      className="w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:border-brand-primary focus:outline-none"
+                      className={`w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:outline-none ${theme.accentFocusBorderClass}`}
                     />
                   </div>
                 </div>
@@ -568,7 +572,7 @@ export function CartDrawer({
                     value={shippingAddress}
                     onChange={(e) => setShippingAddress(e.target.value)}
                     placeholder="House/Apartment, Street Name"
-                    className="w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:border-brand-primary focus:outline-none"
+                    className={`w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:outline-none ${theme.accentFocusBorderClass}`}
                   />
                 </div>
 
@@ -580,7 +584,7 @@ export function CartDrawer({
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="Kochi"
-                      className="w-full rounded-lg border border-border px-2.5 py-1.5 text-xs focus:border-brand-primary focus:outline-none"
+                      className={`w-full rounded-lg border border-border px-2.5 py-1.5 text-xs focus:outline-none ${theme.accentFocusBorderClass}`}
                     />
                   </div>
                   <div>
@@ -590,7 +594,7 @@ export function CartDrawer({
                       value={customerState}
                       onChange={(e) => setCustomerState(e.target.value)}
                       placeholder="Kerala"
-                      className="w-full rounded-lg border border-border px-2.5 py-1.5 text-xs focus:border-brand-primary focus:outline-none"
+                      className={`w-full rounded-lg border border-border px-2.5 py-1.5 text-xs focus:outline-none ${theme.accentFocusBorderClass}`}
                     />
                   </div>
                   <div>
@@ -600,7 +604,7 @@ export function CartDrawer({
                       value={pincode}
                       onChange={(e) => setPincode(e.target.value)}
                       placeholder="682011"
-                      className="w-full rounded-lg border border-border px-2.5 py-1.5 text-xs focus:border-brand-primary focus:outline-none"
+                      className={`w-full rounded-lg border border-border px-2.5 py-1.5 text-xs focus:outline-none ${theme.accentFocusBorderClass}`}
                     />
                   </div>
                 </div>
@@ -613,7 +617,7 @@ export function CartDrawer({
                     type="date"
                     value={eventDate}
                     onChange={(e) => setEventDate(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:border-brand-primary focus:outline-none"
+                    className={`w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:outline-none ${theme.accentFocusBorderClass}`}
                   />
                 </div>
 
@@ -626,7 +630,7 @@ export function CartDrawer({
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Color preferences, delivery timing, special instructions..."
-                    className="w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:border-brand-primary focus:outline-none"
+                    className={`w-full rounded-lg border border-border px-3 py-1.5 text-xs focus:outline-none ${theme.accentFocusBorderClass}`}
                   />
                 </div>
 
@@ -635,7 +639,7 @@ export function CartDrawer({
                     <button
                       type="submit"
                       disabled={submitting || belowMinOrder || cart.length === 0}
-                      className="w-full rounded-lg bg-brand-primary py-3 text-sm font-bold text-white hover:bg-brand-primary/90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-md"
+                      className={`w-full rounded-lg py-3 text-sm font-bold text-white disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-md ${theme.accentBgClass} ${theme.accentBgHoverClass}`}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />

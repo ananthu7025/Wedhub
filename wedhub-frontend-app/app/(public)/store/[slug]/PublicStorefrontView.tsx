@@ -9,6 +9,8 @@ import type {
 } from "@/lib/api/vendor-store.types";
 import { PublicItemCard } from "./PublicItemCard";
 import { CartDrawer, type CartItem } from "@/components/vendor-store/CartDrawer";
+import { StorefrontFooter } from "./StorefrontFooter";
+import { themeForStore } from "@/components/vendor-store/store-theme";
 
 export function PublicStorefrontView({
   store,
@@ -22,6 +24,7 @@ export function PublicStorefrontView({
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [showPolicies, setShowPolicies] = useState(false);
+  const theme = themeForStore(store.accentColor);
 
   const filteredItems = items.filter((item) => {
     if (selectedType !== "ALL" && item.itemType !== selectedType) return false;
@@ -84,7 +87,7 @@ export function PublicStorefrontView({
             />
           </div>
         ) : (
-          <div className="h-32 md:h-48 w-full bg-gradient-to-r from-brand-primary/15 via-purple-100/40 to-pink-100/30" />
+          <div className={`h-32 md:h-48 w-full ${theme.accentBgClass} opacity-10`} />
         )}
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -98,7 +101,7 @@ export function PublicStorefrontView({
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="h-full w-full flex items-center justify-center bg-brand-primary text-white text-2xl font-bold">
+                  <div className={`h-full w-full flex items-center justify-center ${theme.accentBgClass} text-white text-2xl font-bold`}>
                     {store.storeName.slice(0, 2).toUpperCase()}
                   </div>
                 )}
@@ -122,13 +125,22 @@ export function PublicStorefrontView({
                   {store.vendor.address && <span>📍 {store.vendor.address}</span>}
                   <Link
                     href={`/vendors/${store.vendor.slug}`}
-                    className="text-brand-primary font-bold hover:underline"
+                    className={`font-bold hover:underline ${theme.accentTextClass}`}
                   >
                     View Vendor Portfolio & Reviews →
                   </Link>
                 </div>
               </div>
             </div>
+
+            {/* Minimal platform credit — the rest of this page is the
+                vendor's own branded storefront, not itsmyKalyanam chrome. */}
+            <Link
+              href="/"
+              className="absolute right-4 top-2 hidden text-[10px] text-text-grey/70 hover:text-text-grey md:block"
+            >
+              Powered by itsmyKalyanam
+            </Link>
 
             {/* Header Right Actions */}
             <div className="flex items-center gap-2 self-start md:self-auto">
@@ -148,7 +160,7 @@ export function PublicStorefrontView({
               <button
                 type="button"
                 onClick={() => setCartOpen(true)}
-                className="rounded-lg bg-brand-primary px-4 py-2 text-xs font-bold text-white hover:bg-brand-primary-hover transition-colors flex items-center gap-2 shadow-xs"
+                className={`rounded-lg px-4 py-2 text-xs font-bold text-white transition-colors flex items-center gap-2 shadow-xs ${theme.accentBgClass} ${theme.accentBgHoverClass}`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
@@ -225,7 +237,7 @@ export function PublicStorefrontView({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search store items…"
-              className="w-full rounded-full border border-border bg-white pl-9 pr-3 py-2 text-xs focus:border-brand-primary focus:outline-none"
+              className={`w-full rounded-full border border-border bg-white pl-9 pr-3 py-2 text-xs focus:outline-none ${theme.accentFocusBorderClass}`}
             />
           </div>
         </div>
@@ -250,11 +262,14 @@ export function PublicStorefrontView({
                 key={item.id}
                 item={item}
                 onAddToCart={handleAddToCart}
+                accentColor={store.accentColor}
               />
             ))}
           </div>
         )}
       </div>
+
+      <StorefrontFooter store={store} theme={theme} />
 
       {/* Floating Bottom Cart Bar (if items in cart) */}
       {cartTotalCount > 0 && (
@@ -291,6 +306,7 @@ export function PublicStorefrontView({
         storeName={store.storeName}
         minOrderValue={store.minOrderValue}
         isOnlinePaymentEnabled={store.isOnlinePaymentEnabled}
+        accentColor={store.accentColor}
         cart={cart}
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}

@@ -2072,22 +2072,36 @@ model VendorPaymentAccount {
   @@map("vendor_payment_accounts")
 }
 
+// Vendor-selectable storefront accent color — a closed preset set backed by
+// existing design tokens (see wedhub-frontend-app/components/vendor-store/
+// store-theme.ts), never free-form hex, mirroring WeddingWebsiteTemplate's
+// enum-plus-THEMES-map pattern.
+enum StoreAccentColor {
+  CRIMSON
+  EMERALD
+  NAVY
+  AMBER
+  PLUM
+  SLATE
+}
+
 model VendorStore {
-  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId           String   @unique @map("vendor_id") @db.Uuid
-  storeName          String   @map("store_name")
-  slug               String   @unique @map("slug")
-  tagline            String?  @map("tagline")
-  aboutStore         String?  @map("about_store") @db.Text
-  isEnabled          Boolean  @default(true) @map("is_enabled")
-  currency           String   @default("INR") @map("currency")
-  whatsappOrderPhone String?  @map("whatsapp_order_phone")
-  shippingPolicy     String?  @map("shipping_policy") @db.Text
-  returnPolicy       String?  @map("return_policy") @db.Text
-  minOrderValue      Decimal? @map("min_order_value") @db.Decimal(10, 2)
-  nextOrderNumber    Int      @default(1) @map("next_order_number")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId           String           @unique @map("vendor_id") @db.Uuid
+  storeName          String           @map("store_name")
+  slug               String           @unique @map("slug")
+  tagline            String?          @map("tagline")
+  aboutStore         String?          @map("about_store") @db.Text
+  isEnabled          Boolean          @default(true) @map("is_enabled")
+  currency           String           @default("INR") @map("currency")
+  whatsappOrderPhone String?          @map("whatsapp_order_phone")
+  shippingPolicy     String?          @map("shipping_policy") @db.Text
+  returnPolicy       String?          @map("return_policy") @db.Text
+  minOrderValue      Decimal?         @map("min_order_value") @db.Decimal(10, 2)
+  nextOrderNumber    Int              @default(1) @map("next_order_number")
+  accentColor        StoreAccentColor @default(CRIMSON) @map("accent_color")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
 
   vendor Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   items  VendorStoreItem[]

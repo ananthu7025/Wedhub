@@ -42,6 +42,7 @@ export async function getVendorStoreProfile(userId: string) {
       shippingPolicy: null,
       returnPolicy: null,
       minOrderValue: null,
+      accentColor: "CRIMSON" as const,
       isEligible,
       itemCount: 0,
       orderCount: 0,
@@ -61,6 +62,7 @@ export async function getVendorStoreProfile(userId: string) {
     shippingPolicy: existingStore.shippingPolicy,
     returnPolicy: existingStore.returnPolicy,
     minOrderValue: existingStore.minOrderValue ? Number(existingStore.minOrderValue) : null,
+    accentColor: existingStore.accentColor,
     isEligible,
     itemCount: existingStore._count.items,
     orderCount: existingStore._count.orders,
@@ -88,6 +90,7 @@ export async function updateVendorStoreProfile(userId: string, input: UpsertStor
       shippingPolicy: input.shippingPolicy,
       returnPolicy: input.returnPolicy,
       minOrderValue: input.minOrderValue,
+      accentColor: input.accentColor,
     },
     vendor.businessName,
     vendor.slug,
@@ -347,6 +350,7 @@ export async function getPublicStoreBySlug(slug: string) {
     shippingPolicy: store.shippingPolicy,
     returnPolicy: store.returnPolicy,
     minOrderValue: store.minOrderValue ? Number(store.minOrderValue) : null,
+    accentColor: store.accentColor,
     isOnlinePaymentEnabled,
     vendor: {
       businessName: store.vendor.businessName,
@@ -354,6 +358,8 @@ export async function getPublicStoreBySlug(slug: string) {
       address: store.vendor.profile?.address ?? null,
       email: store.vendor.profile?.email ?? null,
       phone: store.vendor.profile?.phone ?? null,
+      website: store.vendor.profile?.website ?? null,
+      socialLinks: (store.vendor.profile?.socialLinks as Record<string, string> | null) ?? null,
       logoUrl: store.vendor.profile?.logoMedia?.thumbnailObjectKey
         ? getPublicUrl(store.vendor.profile.logoMedia.thumbnailObjectKey)
         : store.vendor.profile?.logoMedia?.originalObjectKey

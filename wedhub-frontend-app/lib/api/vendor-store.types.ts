@@ -12,6 +12,14 @@ export type StoreOrderStatus =
   | "COMPLETED"
   | "CANCELLED";
 
+export type StoreAccentColor =
+  | "CRIMSON"
+  | "EMERALD"
+  | "NAVY"
+  | "AMBER"
+  | "PLUM"
+  | "SLATE";
+
 export interface UpsertStoreProfileInput {
   storeName?: string;
   tagline?: string | null;
@@ -21,6 +29,7 @@ export interface UpsertStoreProfileInput {
   shippingPolicy?: string | null;
   returnPolicy?: string | null;
   minOrderValue?: number | null;
+  accentColor?: StoreAccentColor;
 }
 
 export interface CreateStoreItemInput {
@@ -93,6 +102,7 @@ export interface VendorStoreProfile {
   shippingPolicy: string | null;
   returnPolicy: string | null;
   minOrderValue: number | null;
+  accentColor: StoreAccentColor;
   isEligible: boolean;
   itemCount: number;
   orderCount: number;
@@ -272,6 +282,7 @@ export interface PublicStoreData {
   shippingPolicy: string | null;
   returnPolicy: string | null;
   minOrderValue: number | null;
+  accentColor: StoreAccentColor;
   isOnlinePaymentEnabled?: boolean;
   vendor: {
     id: string;
@@ -280,6 +291,8 @@ export interface PublicStoreData {
     phone?: string | null;
     email?: string | null;
     address?: string | null;
+    website?: string | null;
+    socialLinks?: Record<string, string> | null;
     logoUrl?: string | null;
     coverUrl?: string | null;
   };

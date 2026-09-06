@@ -32,6 +32,7 @@ export default async function VendorStorePage() {
       shippingPolicy: null,
       returnPolicy: null,
       minOrderValue: null,
+      accentColor: "CRIMSON" as const,
       isEligible: true,
       itemCount: 0,
       orderCount: 0,

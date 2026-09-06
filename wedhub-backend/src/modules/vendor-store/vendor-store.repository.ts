@@ -1,5 +1,5 @@
 import { prisma } from "../../config/database";
-import { Prisma, type StoreItemType, type StoreOrderStatus, type StorePaymentStatus } from "@prisma/client";
+import { Prisma, type StoreAccentColor, type StoreItemType, type StoreOrderStatus, type StorePaymentStatus } from "@prisma/client";
 import { omitUndefined } from "../../common/utils/object.util";
 import { ValidationError } from "../../common/errors";
 import { isValidPaymentStatusTransition } from "../vendor-payments/vendor-payment.types";
@@ -42,6 +42,8 @@ export function findVendorStoreBySlug(slug: string) {
               address: true,
               phone: true,
               email: true,
+              website: true,
+              socialLinks: true,
               logoMediaId: true,
               coverMediaId: true,
               logoMedia: {
@@ -91,6 +93,7 @@ export async function upsertVendorStore(
     shippingPolicy?: string | null | undefined;
     returnPolicy?: string | null | undefined;
     minOrderValue?: number | null | undefined;
+    accentColor?: StoreAccentColor | undefined;
   },
   defaultName: string,
   defaultSlug: string,

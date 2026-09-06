@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import type { VendorStoreItem } from "@/lib/api/vendor-store.types";
+import type { StoreAccentColor, VendorStoreItem } from "@/lib/api/vendor-store.types";
+import { themeForStore } from "@/components/vendor-store/store-theme";
 
 export function PublicItemCard({
   item,
   onAddToCart,
+  accentColor = "CRIMSON",
 }: {
   item: VendorStoreItem;
   onAddToCart: (item: VendorStoreItem, quantity: number) => void;
+  accentColor?: StoreAccentColor;
 }) {
+  const theme = themeForStore(accentColor);
   const [quantity, setQuantity] = useState(item.minOrderQuantity || 1);
   const [justAdded, setJustAdded] = useState(false);
 
@@ -119,7 +123,7 @@ export function PublicItemCard({
             className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 ${
               justAdded
                 ? "bg-emerald-600 text-white"
-                : "bg-brand-primary text-white hover:bg-brand-primary-hover shadow-xs"
+                : `text-white shadow-xs ${theme.accentBgClass} ${theme.accentBgHoverClass}`
             }`}
           >
             {justAdded ? (

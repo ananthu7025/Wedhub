@@ -30,6 +30,15 @@ export const gstRateEnum = z.union([
   z.literal(28),
 ]);
 
+export const storeAccentColorEnum = z.enum([
+  "CRIMSON",
+  "EMERALD",
+  "NAVY",
+  "AMBER",
+  "PLUM",
+  "SLATE",
+]);
+
 export const upsertStoreProfileSchema = z.object({
   storeName: z.string().min(1).max(150).optional(),
   tagline: z.string().max(300).nullable().optional(),
@@ -39,6 +48,7 @@ export const upsertStoreProfileSchema = z.object({
   shippingPolicy: z.string().max(3000).nullable().optional(),
   returnPolicy: z.string().max(3000).nullable().optional(),
   minOrderValue: z.coerce.number().min(0).nullable().optional(),
+  accentColor: storeAccentColorEnum.optional(),
 });
 
 export const createStoreItemSchema = z.object({
