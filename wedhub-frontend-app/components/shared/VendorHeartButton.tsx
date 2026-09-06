@@ -17,11 +17,14 @@ export function VendorHeartButton({
   initialFavorited = false,
   isAuthenticated,
   className,
+  onToggle,
 }: {
   vendorId: string;
   initialFavorited?: boolean;
   isAuthenticated: boolean;
   className?: string;
+  /** Fired after a successful add/remove, with the new favorited state — lets a shortlist-style list drop the card immediately instead of waiting on a refetch. */
+  onToggle?: (favorited: boolean) => void;
 }) {
   const router = useRouter();
   const [favorited, setFavorited] = useState(initialFavorited);
@@ -45,6 +48,8 @@ export function VendorHeartButton({
       const result = next ? await addFavorite(vendorId) : await removeFavorite(vendorId);
       if (!result.success) {
         setFavorited(!next);
+      } else {
+        onToggle?.(next);
       }
     } catch {
       setFavorited(!next);

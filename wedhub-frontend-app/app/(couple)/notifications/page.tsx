@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { CoupleShell } from "@/components/shared/CoupleShell";
+import { PublicTopbar, CoupleBottomNav } from "@/components/shared/PublicTopbar";
+import { PublicFooter } from "@/components/shared/PublicFooter";
 import { listMyNotifications } from "@/lib/api/account";
 import { NotificationsList } from "@/components/shared/NotificationsList";
 
@@ -11,10 +12,13 @@ export default async function NotificationsPage() {
   const { data: notifications } = await listMyNotifications(false, 1, 50);
 
   return (
-    <CoupleShell activeHref="/notifications">
+    <>
+      <PublicTopbar activeHref="/notifications" />
       <div className="mx-auto max-w-[640px] px-6 py-8">
         <NotificationsList initialNotifications={notifications} />
       </div>
-    </CoupleShell>
+      <PublicFooter />
+      <CoupleBottomNav activeHref="/notifications" />
+    </>
   );
 }

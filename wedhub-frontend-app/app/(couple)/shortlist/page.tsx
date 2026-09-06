@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { CoupleShell } from "@/components/shared/CoupleShell";
+import { PublicTopbar, CoupleBottomNav } from "@/components/shared/PublicTopbar";
+import { PublicFooter } from "@/components/shared/PublicFooter";
 import { listMyShortlists } from "@/lib/api/shortlists";
 import { ShortlistGrid } from "./ShortlistGrid";
 
@@ -16,7 +17,8 @@ export default async function ShortlistPage() {
   const items = favorites?.items ?? [];
 
   return (
-    <CoupleShell activeHref="/shortlist">
+    <>
+      <PublicTopbar activeHref="/shortlist" />
       <div className="mx-auto max-w-[1200px] px-10 py-7 max-[900px]:px-4">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Your shortlist</h1>
@@ -27,6 +29,8 @@ export default async function ShortlistPage() {
 
         <ShortlistGrid items={items} />
       </div>
-    </CoupleShell>
+      <PublicFooter />
+      <CoupleBottomNav activeHref="/shortlist" />
+    </>
   );
 }

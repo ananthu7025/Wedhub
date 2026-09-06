@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { CoupleShell } from "@/components/shared/CoupleShell";
+import { PublicTopbar, CoupleBottomNav } from "@/components/shared/PublicTopbar";
+import { PublicFooter } from "@/components/shared/PublicFooter";
 import { WeddingWebsiteWizard } from "@/components/wedding-website/WeddingWebsiteWizard";
 import { listMyWeddingWebsites, listWeddingWebsiteTemplates } from "@/lib/api/wedding-website";
 
@@ -22,10 +23,13 @@ export default async function WeddingWebsitePage() {
   const mostRecent = drafts[0] ?? null;
 
   return (
-    <CoupleShell activeHref="/wedding-website">
+    <>
+      <PublicTopbar activeHref="/wedding-website" />
       <div className="mx-auto max-w-[900px] px-10 py-7 max-[900px]:px-4">
         <WeddingWebsiteWizard initialDraft={mostRecent} templates={templates} dashboardHref="/wedding-website" />
       </div>
-    </CoupleShell>
+      <PublicFooter />
+      <CoupleBottomNav activeHref="/wedding-website" />
+    </>
   );
 }

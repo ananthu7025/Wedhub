@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CoupleShell } from "@/components/shared/CoupleShell";
+import { PublicTopbar, CoupleBottomNav } from "@/components/shared/PublicTopbar";
+import { PublicFooter } from "@/components/shared/PublicFooter";
 import { compareVendors } from "@/lib/api/shortlists";
 import { ApiRequestError } from "@/lib/api/types";
 import { Badge } from "@/components/ui/Badge";
@@ -41,7 +42,8 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
   }
 
   return (
-    <CoupleShell activeHref="/shortlist">
+    <>
+      <PublicTopbar activeHref="/shortlist" />
       <div className="mx-auto max-w-[1200px] px-10 py-7 max-[900px]:px-4">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -135,6 +137,8 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
           </div>
         )}
       </div>
-    </CoupleShell>
+      <PublicFooter />
+      <CoupleBottomNav activeHref="/shortlist" />
+    </>
   );
 }

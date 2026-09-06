@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { removeFavorite } from "@/lib/api/shortlists-client";
+import { VendorCard } from "@/components/shared/VendorCard";
 import type { ShortlistItem } from "@/lib/api/shortlists.types";
 
 const MAX_COMPARE = 5;
 
 /**
  * Client Component for the interactive parts of /shortlist — checkbox
- * selection feeding "Compare selected", and the heart un-favorite action.
+ * selection feeding "Compare selected", and the heart un-favorite action
+ * (delegated to VendorCard's own VendorHeartButton via onFavoriteToggle,
+ * rather than a separate remove button, so shortlisting/un-shortlisting
+ * looks and behaves identically here and in search results).
  * Comparison requires 2-5 vendors of the same primary category (backend
  * validates this — see frontenddocs/10-risks-and-open-questions.md); we
  * surface the backend's rejection message rather than re-implementing the
@@ -36,17 +39,13 @@ export function ShortlistGrid({ items }: { items: ShortlistItem[] }) {
     });
   }
 
-  async function handleRemove(vendorId: string) {
+  function handleUnfavorite(vendorId: string) {
     setVisibleItems((prev) => prev.filter((item) => item.vendorId !== vendorId));
     setSelected((prev) => {
       const next = new Set(prev);
       next.delete(vendorId);
       return next;
     });
-    const result = await removeFavorite(vendorId);
-    if (!result.success) {
-      router.refresh();
-    }
   }
 
   function goToCompare() {
@@ -84,55 +83,33 @@ export function ShortlistGrid({ items }: { items: ShortlistItem[] }) {
       </div>
 
       <div className="grid grid-cols-4 gap-5 max-[900px]:grid-cols-2">
-        {visibleItems.map((item) => {
-          const price = item.vendor.profile?.startingPrice;
-          const currency = item.vendor.profile?.currency;
-          return (
-            <div key={item.vendorId} className="overflow-hidden rounded-xl border border-border bg-white">
-              <div className="relative aspect-4/3 bg-surface-input">
-                <button
-                  type="button"
-                  onClick={() => handleRemove(item.vendorId)}
-                  aria-label="Remove from shortlist"
-                  className="absolute top-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-brand-primary"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 21s-6.7-4.35-9.3-8.1C.8 10.1 1.4 6.6 4.2 5a5 5 0 017.8 1.3A5 5 0 0119.8 5c2.8 1.6 3.4 5.1 1.5 7.9C18.7 16.65 12 21 12 21z" />
-                  </svg>
-                </button>
-                {item.vendor.profile === null && (
-                  <div className="flex h-full w-full items-center justify-center text-sm text-text-grey">No photo yet</div>
-                )}
-              </div>
-              <div className="p-3.5">
-                <label className="mb-2 flex items-center gap-1.5 text-[13px]">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(item.vendorId)}
-                    onChange={() => toggleSelected(item.vendorId)}
-                    className="accent-brand-primary"
-                  />
-                  Compare
-                </label>
-                <div className="mb-0.5 truncate text-sm font-bold">{item.vendor.businessName}</div>
-                {price && (
-                  <div className="mb-2.5 text-xs text-text-grey">
-                    {currency === "INR" ? "₹" : (currency ?? "")}
-                    {Number(price).toLocaleString("en-IN")} onwards
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Link
-                    href={`/vendors/${item.vendor.slug}`}
-                    className="flex-1 rounded-md border border-border bg-white py-1.5 text-center text-[13px] font-bold no-underline text-text-dark"
-                  >
-                    View
-                  </Link>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {visibleItems.map((item) => (
+          <div key={item.vendorId} className="relative">
+            <VendorCard
+              vendorId={item.vendorId}
+              slug={item.vendor.slug}
+              businessName={item.vendor.businessName}
+              logoUrl={null}
+              shortDescription={item.vendor.profile?.shortDescription ?? null}
+              startingPrice={item.vendor.profile?.startingPrice ?? null}
+              currency={item.vendor.profile?.currency ?? null}
+              isAuthenticated
+              listContext="shortlist"
+              onFavoriteToggle={(favorited) => {
+                if (!favorited) handleUnfavorite(item.vendorId);
+              }}
+            />
+            <label className="absolute bottom-3 left-3.5 z-10 flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-1 text-[13px] shadow-sm">
+              <input
+                type="checkbox"
+                checked={selected.has(item.vendorId)}
+                onChange={() => toggleSelected(item.vendorId)}
+                className="accent-brand-primary"
+              />
+              Compare
+            </label>
+          </div>
+        ))}
       </div>
     </>
   );

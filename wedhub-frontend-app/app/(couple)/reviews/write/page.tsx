@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CoupleShell } from "@/components/shared/CoupleShell";
+import { PublicTopbar, CoupleBottomNav } from "@/components/shared/PublicTopbar";
+import { PublicFooter } from "@/components/shared/PublicFooter";
 import { getVendorBySlug } from "@/lib/api/catalog";
 import { ApiRequestError } from "@/lib/api/types";
 import { ReviewForm } from "./ReviewForm";
@@ -18,7 +19,8 @@ export default async function WriteReviewPage({ searchParams }: WriteReviewPageP
 
   if (!vendorSlug) {
     return (
-      <CoupleShell activeHref="/enquiries">
+      <>
+        <PublicTopbar activeHref="/enquiries" />
         <div className="mx-auto max-w-[560px] px-6 py-14 text-center">
           <h1 className="mb-2 text-xl font-bold">No vendor selected</h1>
           <p className="mb-5 text-sm text-text-grey">Write a review from your enquiries list or a vendor&apos;s profile.</p>
@@ -26,7 +28,9 @@ export default async function WriteReviewPage({ searchParams }: WriteReviewPageP
             Go to my enquiries
           </Link>
         </div>
-      </CoupleShell>
+        <PublicFooter />
+        <CoupleBottomNav activeHref="/enquiries" />
+      </>
     );
   }
 
@@ -37,17 +41,21 @@ export default async function WriteReviewPage({ searchParams }: WriteReviewPageP
   } catch (error) {
     const message = error instanceof ApiRequestError ? error.message : "Vendor not found";
     return (
-      <CoupleShell activeHref="/enquiries">
+      <>
+        <PublicTopbar activeHref="/enquiries" />
         <div className="mx-auto max-w-[560px] px-6 py-14 text-center">
           <h1 className="mb-2 text-xl font-bold">Couldn&apos;t load this vendor</h1>
           <p className="text-sm text-text-grey">{message}</p>
         </div>
-      </CoupleShell>
+        <PublicFooter />
+        <CoupleBottomNav activeHref="/enquiries" />
+      </>
     );
   }
 
   return (
-    <CoupleShell activeHref="/enquiries">
+    <>
+      <PublicTopbar activeHref="/enquiries" />
       <div className="mx-auto max-w-[560px] px-6 py-8">
         <Link href="/enquiries" className="mb-3 inline-block text-[13px] font-semibold text-text-grey no-underline">
           ← Back to enquiries
@@ -69,6 +77,8 @@ export default async function WriteReviewPage({ searchParams }: WriteReviewPageP
           <ReviewForm vendorId={vendor.id} services={vendor.services.map((s) => ({ id: s.serviceId, name: s.service.name }))} />
         </div>
       </div>
-    </CoupleShell>
+      <PublicFooter />
+      <CoupleBottomNav activeHref="/enquiries" />
+    </>
   );
 }

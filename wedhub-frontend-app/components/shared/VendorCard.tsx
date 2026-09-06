@@ -41,6 +41,7 @@ export function VendorCard({
   featured = false,
   isAuthenticated = false,
   listContext,
+  onFavoriteToggle,
 }: {
   vendorId?: string;
   slug: string;
@@ -53,6 +54,8 @@ export function VendorCard({
   isAuthenticated?: boolean;
   /** Where this card is being rendered — carried as event metadata so impressions/clicks from search results, featured listings, and carousels can be told apart later. */
   listContext?: string;
+  /** Forwarded to VendorHeartButton — lets a shortlist-style list drop the card immediately on unfavorite. */
+  onFavoriteToggle?: (favorited: boolean) => void;
 }) {
   const impressionFired = useRef(false);
 
@@ -86,7 +89,13 @@ export function VendorCard({
           </span>
         )}
         {vendorId && (
-          <VendorHeartButton vendorId={vendorId} isAuthenticated={isAuthenticated} className="absolute top-2.5 right-2.5" />
+          <VendorHeartButton
+            vendorId={vendorId}
+            isAuthenticated={isAuthenticated}
+            initialFavorited={onFavoriteToggle ? true : undefined}
+            onToggle={onFavoriteToggle}
+            className="absolute top-2.5 right-2.5"
+          />
         )}
       </div>
       <div className="p-3.5">

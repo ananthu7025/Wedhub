@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CoupleShell } from "@/components/shared/CoupleShell";
+import { PublicTopbar, CoupleBottomNav } from "@/components/shared/PublicTopbar";
+import { PublicFooter } from "@/components/shared/PublicFooter";
 import { LeadStatusTrack, statusBadge } from "@/components/shared/LeadStatusTrack";
 import { Badge } from "@/components/ui/Badge";
 import { listMyEnquiries } from "@/lib/api/account";
@@ -70,7 +71,8 @@ export default async function EnquiriesPage({ searchParams }: EnquiriesPageProps
   const now = getServerNow();
 
   return (
-    <CoupleShell activeHref="/enquiries">
+    <>
+      <PublicTopbar activeHref="/enquiries" />
       <div className="mx-auto max-w-[900px] px-10 py-7 max-[900px]:px-4">
         <div className="mb-5">
           <h1 className="text-2xl font-bold">My enquiries</h1>
@@ -152,6 +154,8 @@ export default async function EnquiriesPage({ searchParams }: EnquiriesPageProps
           </div>
         )}
       </div>
-    </CoupleShell>
+      <PublicFooter />
+      <CoupleBottomNav activeHref="/enquiries" />
+    </>
   );
 }

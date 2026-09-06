@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { CoupleShell } from "@/components/shared/CoupleShell";
+import { PublicTopbar, CoupleBottomNav } from "@/components/shared/PublicTopbar";
+import { PublicFooter } from "@/components/shared/PublicFooter";
 import { getMe } from "@/lib/api/account";
 import { listMyNotificationPreferences } from "@/lib/api/notification-preferences";
 import { AccountActions, AccountDetailsForm, NotificationPreferencesForm, WeddingDetailsForm } from "./AccountForms";
@@ -14,7 +15,8 @@ export default async function AccountPage() {
   const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
-    <CoupleShell activeHref="/account">
+    <>
+      <PublicTopbar activeHref="/account" />
       <div className="mx-auto max-w-[640px] px-6 py-8">
         <div className="mb-7 flex items-center gap-4.5">
           <div className="flex h-18 w-18 items-center justify-center rounded-full bg-brand-ink-soft text-xl font-bold text-white">
@@ -46,6 +48,8 @@ export default async function AccountPage() {
           <AccountActions />
         </section>
       </div>
-    </CoupleShell>
+      <PublicFooter />
+      <CoupleBottomNav activeHref="/account" />
+    </>
   );
 }
