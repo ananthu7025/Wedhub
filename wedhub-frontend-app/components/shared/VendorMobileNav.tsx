@@ -9,6 +9,7 @@ interface VendorMobileNavProps {
   vendorName: string;
   vendorSlug?: string;
   unreadCount?: number;
+  hasStoreEligibleCategory?: boolean;
 }
 
 const PRIMARY_BOTTOM_TABS = [
@@ -177,9 +178,18 @@ export function VendorMobileNav({
   vendorName,
   vendorSlug,
   unreadCount = 0,
+  hasStoreEligibleCategory = false,
 }: VendorMobileNavProps) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Mirrors VendorShell's desktop nav filter — same "Store" link, same
+  // hasStoreEligibleCategory gate, just applied to this drawer's separate
+  // SECONDARY_SECTIONS copy of the link.
+  const visibleSections = SECONDARY_SECTIONS.map((section) => ({
+    ...section,
+    links: section.links.filter((link) => link.href !== "/vendor/store" || hasStoreEligibleCategory),
+  }));
 
   // Check if current route is one of the 4 primary tabs
   const isPrimaryTab = PRIMARY_BOTTOM_TABS.some((tab) => pathname === tab.href || pathname.startsWith(tab.href + "/"));
@@ -336,7 +346,7 @@ export function VendorMobileNav({
 
             {/* Categorized Links */}
             <div className="space-y-4">
-              {SECONDARY_SECTIONS.map((section) => (
+              {visibleSections.map((section) => (
                 <div key={section.title}>
                   <h4 className="px-1 mb-1.5 text-[11px] font-bold uppercase tracking-wider text-text-muted">
                     {section.title}

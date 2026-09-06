@@ -109,14 +109,20 @@ export function ProfileEditor({
 
   const primaryCategoryChanged = vendor.status === "APPROVED" && primaryCategoryId !== primaryCategory?.id;
 
-  async function handleSave(event: React.FormEvent) {
-    event.preventDefault();
+  // Returns whether the save succeeded, so SubmitBar can save pending
+  // changes first and only proceed to actually submit if that save went
+  // through — previously "Submit for review" validated against whatever
+  // was last saved, silently ignoring any edit made since, with only a
+  // small caption ("Save your changes first if you've made any") warning
+  // about it.
+  async function handleSave(event?: React.FormEvent): Promise<boolean> {
+    event?.preventDefault();
 
     if (primaryCategoryChanged && !categoryChangeWarningAcked) {
       const confirmed = window.confirm(
         "Changing your primary category will require your listing to be re-reviewed by an admin before it's publicly visible again. Continue?",
       );
-      if (!confirmed) return;
+      if (!confirmed) return false;
       setCategoryChangeWarningAcked(true);
     }
 
@@ -128,19 +134,19 @@ export function ProfileEditor({
     if (tagList.length > 20 || tagList.some((t) => t.length > 50)) {
       setStatus("error");
       setError("Tags: up to 20 tags, 50 characters each.");
-      return;
+      return false;
     }
     if (languageList.length > 20 || languageList.some((l) => l.length > 50)) {
       setStatus("error");
       setError("Languages: up to 20 languages, 50 characters each.");
-      return;
+      return false;
     }
 
     const trimmedPhone = phone.trim();
     if (trimmedPhone && trimmedPhone.length < 6) {
       setStatus("error");
       setError("Phone number must be at least 6 characters.");
-      return;
+      return false;
     }
 
     setStatus("saving");
@@ -173,7 +179,7 @@ export function ProfileEditor({
     if (!profileResult.success) {
       setStatus("error");
       setError(formatApiError(profileResult.error));
-      return;
+      return false;
     }
 
     const categoriesResult = await setMyCategories({
@@ -183,14 +189,14 @@ export function ProfileEditor({
     if (!categoriesResult.success) {
       setStatus("error");
       setError(formatApiError(categoriesResult.error));
-      return;
+      return false;
     }
 
     const serviceAreasResult = await setMyServiceAreas({ locationIds: Array.from(serviceAreaIds) });
     if (!serviceAreasResult.success) {
       setStatus("error");
       setError(formatApiError(serviceAreasResult.error));
-      return;
+      return false;
     }
 
     // No bulk "set services" endpoint exists — attach/detach are individual
@@ -202,7 +208,7 @@ export function ProfileEditor({
       if (!result.success) {
         setStatus("error");
         setError(formatApiError(result.error));
-        return;
+        return false;
       }
     }
     for (const serviceId of toDetach) {
@@ -210,7 +216,7 @@ export function ProfileEditor({
       if (!result.success) {
         setStatus("error");
         setError(formatApiError(result.error));
-        return;
+        return false;
       }
     }
 
@@ -220,11 +226,12 @@ export function ProfileEditor({
     if (!attributesResult.success) {
       setStatus("error");
       setError(formatApiError(attributesResult.error));
-      return;
+      return false;
     }
 
     setStatus("saved");
     router.refresh();
+    return true;
   }
 
   const selectedCategory = categories.find((c) => c.id === primaryCategoryId) ?? null;
@@ -533,7 +540,7 @@ export function ProfileEditor({
             </section>
           )}
 
-          <SubmitBar vendorStatus={vendor.status} />
+          <SubmitBar vendorStatus={vendor.status} onSaveChanges={() => handleSave()} />
         </div>
       </div>
     </form>

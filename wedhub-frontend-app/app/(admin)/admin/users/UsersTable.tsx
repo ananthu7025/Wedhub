@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
+import { RowActionsMenu } from "@/components/ui/RowActionsMenu";
 import { restoreAdminUser, suspendAdminUser } from "@/lib/api/admin-client";
 import type { AdminUserListItem, UserStatus } from "@/lib/api/admin.types";
 import { formatApiError } from "@/lib/utils/error";
@@ -73,6 +74,15 @@ export function UsersTable({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const triggerRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  // Same stale-state-from-props bug as VendorsTable.tsx: initialUsers only
+  // seeds state on first mount, so clicking a status tab (new URL, new
+  // server fetch, same mounted component) never updated the visible list
+  // even though `total` (read straight from props) updated correctly.
+  useEffect(() => {
+    setUsers(initialUsers);
+  }, [initialUsers]);
 
   async function handleSuspend(id: string) {
     const rawReason = prompt("Reason for suspension:");
@@ -176,40 +186,46 @@ export function UsersTable({
                       <Badge variant={statusBadgeVariant(user.status)}>{statusLabel(user.status)}</Badge>
                     </td>
                     <td className="px-4 py-3">{formatDate(user.createdAt)}</td>
-                    <td className="relative px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right">
                       <button
+                        ref={(el) => {
+                          if (el) triggerRefs.current.set(user.id, el);
+                          else triggerRefs.current.delete(user.id);
+                        }}
                         onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
                         disabled={pending === user.id}
                         className="rounded-md border border-border bg-white px-3 py-1.5 text-[13px] font-bold text-text-dark hover:bg-surface-input disabled:opacity-60"
                       >
                         Actions ▾
                       </button>
-                      {openMenuId === user.id && (
-                        <div className="absolute right-4 top-11 z-20 min-w-[170px] overflow-hidden rounded-md border border-border bg-white shadow-lg">
-                          <Link
-                            href={`/admin/users/${user.id}`}
-                            className="block px-3.5 py-2.5 text-[13px] font-semibold text-text-dark no-underline hover:bg-surface-input"
+                      <RowActionsMenu
+                        open={openMenuId === user.id}
+                        onClose={() => setOpenMenuId(null)}
+                        triggerElement={triggerRefs.current.get(user.id) ?? null}
+                      >
+                        <Link
+                          href={`/admin/users/${user.id}`}
+                          className="block px-3.5 py-2.5 text-[13px] font-semibold text-text-dark no-underline hover:bg-surface-input"
+                        >
+                          View profile
+                        </Link>
+                        {user.status === "ACTIVE" && (
+                          <button
+                            onClick={() => handleSuspend(user.id)}
+                            className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-red hover:bg-surface-input"
                           >
-                            View profile
-                          </Link>
-                          {user.status === "ACTIVE" && (
-                            <button
-                              onClick={() => handleSuspend(user.id)}
-                              className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-red hover:bg-surface-input"
-                            >
-                              Suspend
-                            </button>
-                          )}
-                          {user.status === "SUSPENDED" && (
-                            <button
-                              onClick={() => handleRestore(user.id)}
-                              className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-text-dark hover:bg-surface-input"
-                            >
-                              Restore
-                            </button>
-                          )}
-                        </div>
-                      )}
+                            Suspend
+                          </button>
+                        )}
+                        {user.status === "SUSPENDED" && (
+                          <button
+                            onClick={() => handleRestore(user.id)}
+                            className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-text-dark hover:bg-surface-input"
+                          >
+                            Restore
+                          </button>
+                        )}
+                      </RowActionsMenu>
                     </td>
                   </tr>
                 );

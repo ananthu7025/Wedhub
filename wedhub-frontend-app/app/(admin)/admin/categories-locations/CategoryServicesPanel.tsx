@@ -85,80 +85,100 @@ export function CategoryServicesPanel({
   }
 
   return (
-    <div className="border-t border-dashed border-neutral-grey-20 bg-surface-input px-5 py-3.5">
-      <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-xs font-bold text-text-dark">
-          Services ({services.length}) — offerings vendors in this category can select on their profile
-        </h4>
+    <div className="rounded-xl border border-border bg-white p-5">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-bold">Services ({services.length})</h3>
+          <p className="mt-0.5 text-xs text-text-grey">Offerings vendors in this category can select on their profile</p>
+        </div>
         {!adding && (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="text-xs font-bold text-brand-primary hover:underline"
+            className="shrink-0 rounded-md border border-border px-3 py-1.5 text-xs font-bold text-brand-primary hover:bg-surface-input"
           >
             + Add service
           </button>
         )}
       </div>
 
-      {error && <div className="mb-2 rounded-md bg-red-10 p-2 text-[11px] text-red-70">{error}</div>}
+      {error && <div className="mb-3 rounded-md bg-red-10 p-2.5 text-[11px] text-red-70">{error}</div>}
 
-      {services.length === 0 && !adding && <p className="text-xs text-text-grey">No services yet.</p>}
-
-      <div className="flex flex-col gap-2">
-        {services.map((service) =>
-          editingId === service.id ? (
-            <ServiceForm
-              key={service.id}
-              initial={service}
-              saving={pendingId === service.id}
-              onCancel={() => setEditingId(null)}
-              onSubmit={(values) => handleUpdate(service, values)}
-            />
-          ) : (
-            <div
-              key={service.id}
-              className={`flex items-center justify-between gap-3 rounded-md border border-border bg-white px-3 py-2 ${!service.isActive ? "opacity-60" : ""}`}
-            >
-              <div className="text-xs">
-                <span className="font-bold">{service.name}</span>
-                {service.description && <span className="text-text-grey"> — {service.description}</span>}
-                {!service.isActive && <span className="text-text-grey"> · inactive</span>}
-              </div>
-              <div className="flex flex-shrink-0 gap-3">
-                <button
-                  type="button"
-                  disabled={pendingId === service.id}
-                  onClick={() => setEditingId(service.id)}
-                  className="text-[11px] font-bold text-brand-primary hover:underline disabled:opacity-60"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  disabled={pendingId === service.id}
-                  onClick={() => handleToggleActive(service)}
-                  className="text-[11px] font-bold text-text-dark hover:underline disabled:opacity-60"
-                >
-                  {service.isActive ? "Deactivate" : "Activate"}
-                </button>
-                <button
-                  type="button"
-                  disabled={pendingId === service.id}
-                  onClick={() => handleDelete(service)}
-                  className="text-[11px] font-bold text-red hover:underline disabled:opacity-60"
-                >
-                  {pendingId === service.id ? "…" : "Delete"}
-                </button>
-              </div>
-            </div>
-          ),
-        )}
-
-        {adding && (
+      {adding && (
+        <div className="mb-3">
           <ServiceForm saving={pendingId === "new"} onCancel={() => setAdding(false)} onSubmit={handleCreate} />
-        )}
-      </div>
+        </div>
+      )}
+
+      {services.length === 0 && !adding ? (
+        <p className="text-xs text-text-grey">No services yet.</p>
+      ) : (
+        services.length > 0 && (
+          <div className="overflow-x-auto rounded-md border border-border">
+            <table className="w-full min-w-[480px] text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-border bg-surface-input text-xs text-text-grey">
+                  <th className="px-3 py-2 font-semibold">Name</th>
+                  <th className="px-3 py-2 font-semibold">Description (optional)</th>
+                  <th className="px-3 py-2 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {services.map((service) =>
+                  editingId === service.id ? (
+                    <tr key={service.id} className="border-b border-neutral-grey-20 last:border-b-0">
+                      <td colSpan={3} className="p-3">
+                        <ServiceForm
+                          initial={service}
+                          saving={pendingId === service.id}
+                          onCancel={() => setEditingId(null)}
+                          onSubmit={(values) => handleUpdate(service, values)}
+                        />
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={service.id} className={`border-b border-neutral-grey-20 last:border-b-0 ${!service.isActive ? "opacity-60" : ""}`}>
+                      <td className="px-3 py-2.5 font-bold">
+                        {service.name}
+                        {!service.isActive && <span className="ml-1.5 font-normal text-text-grey">· inactive</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-text-grey">{service.description ?? "—"}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            disabled={pendingId === service.id}
+                            onClick={() => setEditingId(service.id)}
+                            className="text-[12px] font-bold text-brand-primary hover:underline disabled:opacity-60"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={pendingId === service.id}
+                            onClick={() => handleToggleActive(service)}
+                            className="text-[12px] font-bold text-text-dark hover:underline disabled:opacity-60"
+                          >
+                            {service.isActive ? "Deactivate" : "Activate"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={pendingId === service.id}
+                            onClick={() => handleDelete(service)}
+                            className="text-[12px] font-bold text-red hover:underline disabled:opacity-60"
+                          >
+                            {pendingId === service.id ? "…" : "Delete"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
+        )
+      )}
     </div>
   );
 }

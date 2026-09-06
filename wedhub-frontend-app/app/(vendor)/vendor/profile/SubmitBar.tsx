@@ -13,10 +13,20 @@ import { formatApiError } from "@/lib/utils/error";
  * (missing required fields) come back as details.missing, an array of the
  * exact label strings from vendor.completeness.ts's REQUIRED_FOR_SUBMISSION_LABELS
  * — surfaced verbatim rather than re-deriving them client-side.
+ *
+ * Runs ProfileEditor's own save (onSaveChanges) first — previously this
+ * validated against whatever was last saved, silently ignoring any edit
+ * made since, with only a small caption warning the vendor to save first.
  */
-export function SubmitBar({ vendorStatus }: { vendorStatus: VendorStatus }) {
+export function SubmitBar({
+  vendorStatus,
+  onSaveChanges,
+}: {
+  vendorStatus: VendorStatus;
+  onSaveChanges: () => Promise<boolean>;
+}) {
   const router = useRouter();
-  const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "saving" | "submitting" | "error">("idle");
   const [missing, setMissing] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -25,10 +35,18 @@ export function SubmitBar({ vendorStatus }: { vendorStatus: VendorStatus }) {
   }
 
   async function handleSubmit() {
-    setStatus("submitting");
     setErrorMessage("");
     setMissing([]);
 
+    setStatus("saving");
+    const saved = await onSaveChanges();
+    if (!saved) {
+      setStatus("error");
+      setErrorMessage("Couldn't save your changes — fix the error above and try again.");
+      return;
+    }
+
+    setStatus("submitting");
     try {
       const result = await submitMyVendor();
       if (!result.success) {
@@ -71,12 +89,12 @@ export function SubmitBar({ vendorStatus }: { vendorStatus: VendorStatus }) {
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={status === "submitting"}
+        disabled={status === "saving" || status === "submitting"}
         className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
       >
-        {status === "submitting" ? "Submitting…" : "Submit for review"}
+        {status === "saving" ? "Saving…" : status === "submitting" ? "Submitting…" : "Submit for review"}
       </button>
-      <p className="mt-2.5 text-xs text-text-grey">Save your changes first if you&apos;ve made any.</p>
+      <p className="mt-2.5 text-xs text-text-grey">Any unsaved changes are saved automatically before submitting.</p>
     </div>
   );
 }

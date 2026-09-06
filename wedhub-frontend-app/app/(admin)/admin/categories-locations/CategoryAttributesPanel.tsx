@@ -88,76 +88,104 @@ export function CategoryAttributesPanel({
   }
 
   return (
-    <div className="border-t border-dashed border-neutral-grey-20 bg-surface-input px-5 py-3.5">
-      <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-xs font-bold text-text-dark">
-          Attributes ({attributes.length}) — vendor profile fields &amp; search filters for this category
-        </h4>
+    <div className="rounded-xl border border-border bg-white p-5">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-bold">Attributes ({attributes.length})</h3>
+          <p className="mt-0.5 text-xs text-text-grey">Vendor profile fields &amp; search filters for this category</p>
+        </div>
         {!adding && (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="text-xs font-bold text-brand-primary hover:underline"
+            className="shrink-0 rounded-md border border-border px-3 py-1.5 text-xs font-bold text-brand-primary hover:bg-surface-input"
           >
             + Add attribute
           </button>
         )}
       </div>
 
-      {error && <div className="mb-2 rounded-md bg-red-10 p-2 text-[11px] text-red-70">{error}</div>}
+      {error && <div className="mb-3 rounded-md bg-red-10 p-2.5 text-[11px] text-red-70">{error}</div>}
 
-      {attributes.length === 0 && !adding && <p className="text-xs text-text-grey">No attributes yet.</p>}
-
-      <div className="flex flex-col gap-2">
-        {attributes.map((attribute) =>
-          editingId === attribute.id ? (
-            <AttributeForm
-              key={attribute.id}
-              initial={attribute}
-              lockDataType
-              lockKey
-              saving={pendingId === attribute.id}
-              onCancel={() => setEditingId(null)}
-              onSubmit={(values) => handleUpdate(attribute, values)}
-            />
-          ) : (
-            <div key={attribute.id} className="flex items-center justify-between gap-3 rounded-md border border-border bg-white px-3 py-2">
-              <div className="text-xs">
-                <span className="font-bold">{attribute.label}</span>{" "}
-                <code className="rounded bg-surface-input px-1 py-0.5 text-[10px] text-text-grey">{attribute.key}</code>{" "}
-                <span className="text-text-grey">
-                  · {attribute.dataType}
-                  {attribute.options && attribute.options.length > 0 && ` [${attribute.options.join(", ")}]`}
-                  {attribute.isFilterable && " · filterable"}
-                  {attribute.isComparable && " · comparable"}
-                </span>
-              </div>
-              <div className="flex flex-shrink-0 gap-3">
-                <button
-                  type="button"
-                  disabled={pendingId === attribute.id}
-                  onClick={() => setEditingId(attribute.id)}
-                  className="text-[11px] font-bold text-brand-primary hover:underline disabled:opacity-60"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  disabled={pendingId === attribute.id}
-                  onClick={() => handleDelete(attribute)}
-                  className="text-[11px] font-bold text-red hover:underline disabled:opacity-60"
-                >
-                  {pendingId === attribute.id ? "…" : "Delete"}
-                </button>
-              </div>
-            </div>
-          ),
-        )}
-
-        {adding && (
+      {adding && (
+        <div className="mb-3">
           <AttributeForm saving={pendingId === "new"} onCancel={() => setAdding(false)} onSubmit={handleCreate} />
-        )}
-      </div>
+        </div>
+      )}
+
+      {attributes.length === 0 && !adding ? (
+        <p className="text-xs text-text-grey">No attributes yet.</p>
+      ) : (
+        attributes.length > 0 && (
+          <div className="overflow-x-auto rounded-md border border-border">
+            <table className="w-full min-w-[560px] text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-border bg-surface-input text-xs text-text-grey">
+                  <th className="px-3 py-2 font-semibold">Key</th>
+                  <th className="px-3 py-2 font-semibold">Label</th>
+                  <th className="px-3 py-2 font-semibold">Type</th>
+                  <th className="px-3 py-2 text-center font-semibold">Searchable</th>
+                  <th className="px-3 py-2 text-center font-semibold">Comparison</th>
+                  <th className="px-3 py-2 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attributes.map((attribute) =>
+                  editingId === attribute.id ? (
+                    <tr key={attribute.id} className="border-b border-neutral-grey-20 last:border-b-0">
+                      <td colSpan={6} className="p-3">
+                        <AttributeForm
+                          initial={attribute}
+                          lockDataType
+                          lockKey
+                          saving={pendingId === attribute.id}
+                          onCancel={() => setEditingId(null)}
+                          onSubmit={(values) => handleUpdate(attribute, values)}
+                        />
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={attribute.id} className="border-b border-neutral-grey-20 last:border-b-0">
+                      <td className="px-3 py-2.5">
+                        <code className="rounded bg-surface-input px-1 py-0.5 text-[11px] text-text-grey">{attribute.key}</code>
+                      </td>
+                      <td className="px-3 py-2.5 font-bold">
+                        {attribute.label}
+                        {attribute.options && attribute.options.length > 0 && (
+                          <div className="mt-0.5 text-[11px] font-normal text-text-grey">{attribute.options.join(", ")}</div>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-text-grey">{attribute.dataType}</td>
+                      <td className="px-3 py-2.5 text-center">{attribute.isFilterable ? "✓" : "—"}</td>
+                      <td className="px-3 py-2.5 text-center">{attribute.isComparable ? "✓" : "—"}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            disabled={pendingId === attribute.id}
+                            onClick={() => setEditingId(attribute.id)}
+                            className="text-[12px] font-bold text-brand-primary hover:underline disabled:opacity-60"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={pendingId === attribute.id}
+                            onClick={() => handleDelete(attribute)}
+                            className="text-[12px] font-bold text-red hover:underline disabled:opacity-60"
+                          >
+                            {pendingId === attribute.id ? "…" : "Delete"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
+        )
+      )}
     </div>
   );
 }

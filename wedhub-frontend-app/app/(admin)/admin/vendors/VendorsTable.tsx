@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
+import { RowActionsMenu } from "@/components/ui/RowActionsMenu";
 import { approveAdminVendor, restoreAdminVendor, suspendAdminVendor } from "@/lib/api/admin-client";
 import type { AdminVendorListItem } from "@/lib/api/admin.types";
 import type { VendorStatus } from "@/lib/api/vendor-self.types";
@@ -67,6 +68,18 @@ export function VendorsTable({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const triggerRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  // initialVendors only seeds state on first mount — clicking a status
+  // tab changes the URL and re-renders this same mounted component with a
+  // new initialVendors prop (a new server fetch), which never touched
+  // `vendors` on its own, so the table kept showing whatever filter was
+  // active on first load while `total` (read straight from props, not
+  // state) updated correctly. Re-sync whenever the server gives us a new
+  // list for the newly selected filter.
+  useEffect(() => {
+    setVendors(initialVendors);
+  }, [initialVendors]);
 
   async function handleApprove(id: string) {
     setPending(id);
@@ -192,48 +205,54 @@ export function VendorsTable({
                     </Badge>
                   </td>
                   <td className="px-4 py-3">{formatDate(vendor.submittedAt)}</td>
-                  <td className="relative px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right">
                     <button
+                      ref={(el) => {
+                        if (el) triggerRefs.current.set(vendor.id, el);
+                        else triggerRefs.current.delete(vendor.id);
+                      }}
                       onClick={() => setOpenMenuId(openMenuId === vendor.id ? null : vendor.id)}
                       disabled={pending === vendor.id}
                       className="rounded-md border border-border bg-white px-3 py-1.5 text-[13px] font-bold text-text-dark hover:bg-surface-input disabled:opacity-60"
                     >
                       Actions ▾
                     </button>
-                    {openMenuId === vendor.id && (
-                      <div className="absolute right-4 top-11 z-20 min-w-[170px] overflow-hidden rounded-md border border-border bg-white shadow-lg">
-                        <Link
-                          href={`/admin/vendors/${vendor.id}`}
-                          className="block px-3.5 py-2.5 text-[13px] font-semibold text-text-dark no-underline hover:bg-surface-input"
+                    <RowActionsMenu
+                      open={openMenuId === vendor.id}
+                      onClose={() => setOpenMenuId(null)}
+                      triggerElement={triggerRefs.current.get(vendor.id) ?? null}
+                    >
+                      <Link
+                        href={`/admin/vendors/${vendor.id}`}
+                        className="block px-3.5 py-2.5 text-[13px] font-semibold text-text-dark no-underline hover:bg-surface-input"
+                      >
+                        View
+                      </Link>
+                      {vendor.status === "PENDING_APPROVAL" && (
+                        <button
+                          onClick={() => handleApprove(vendor.id)}
+                          className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-text-dark hover:bg-surface-input"
                         >
-                          View
-                        </Link>
-                        {vendor.status === "PENDING_APPROVAL" && (
-                          <button
-                            onClick={() => handleApprove(vendor.id)}
-                            className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-text-dark hover:bg-surface-input"
-                          >
-                            Approve
-                          </button>
-                        )}
-                        {vendor.status === "APPROVED" && (
-                          <button
-                            onClick={() => handleSuspend(vendor.id)}
-                            className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-red hover:bg-surface-input"
-                          >
-                            Suspend
-                          </button>
-                        )}
-                        {vendor.status === "SUSPENDED" && (
-                          <button
-                            onClick={() => handleRestore(vendor.id)}
-                            className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-text-dark hover:bg-surface-input"
-                          >
-                            Restore
-                          </button>
-                        )}
-                      </div>
-                    )}
+                          Approve
+                        </button>
+                      )}
+                      {vendor.status === "APPROVED" && (
+                        <button
+                          onClick={() => handleSuspend(vendor.id)}
+                          className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-red hover:bg-surface-input"
+                        >
+                          Suspend
+                        </button>
+                      )}
+                      {vendor.status === "SUSPENDED" && (
+                        <button
+                          onClick={() => handleRestore(vendor.id)}
+                          className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-text-dark hover:bg-surface-input"
+                        >
+                          Restore
+                        </button>
+                      )}
+                    </RowActionsMenu>
                   </td>
                 </tr>
               ))}

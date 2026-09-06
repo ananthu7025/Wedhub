@@ -36,6 +36,9 @@ const navLinks = [
   {
     href: "/vendor/store",
     label: "Store",
+    // Only shown when hasStoreEligibleCategory is true — see VendorShell's
+    // filter below. Kept in this array (not removed) so the filter is a
+    // single, obvious line rather than a second, easy-to-forget list.
     icon: (
       <>
         <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
@@ -100,16 +103,30 @@ export async function VendorShell({
   vendorSlug?: string;
 }) {
   const initials = vendorName.slice(0, 2).toUpperCase();
-  const [unreadCount, resolvedSlug] = await Promise.all([
+  const [unreadCount, vendorResult] = await Promise.all([
     getMyUnreadNotificationCount()
       .then((r) => r.data.count)
       .catch(() => 0),
-    vendorSlug
-      ? Promise.resolve(vendorSlug)
-      : getMyVendor()
-          .then((r) => r.data.slug)
-          .catch(() => undefined),
+    // Always fetched now (previously only as a slug fallback) — status and
+    // categories are needed to gate the share-portfolio button and the
+    // Store nav link below, not just to resolve a slug.
+    getMyVendor().catch(() => undefined),
   ]);
+
+  const resolvedSlug = vendorSlug ?? vendorResult?.data.slug;
+  // A DRAFT/PENDING/REJECTED vendor's public /portfolio/[slug] page already
+  // 404s (the backend's public GET /vendors/:slug only ever returns
+  // APPROVED vendors) — showing a "share your portfolio" button before
+  // that point just hands out a broken link.
+  const isApproved = vendorResult?.data.status === "APPROVED";
+  // Mirrors the backend's own store-eligibility check (vendor-store.service.ts:
+  // category.hasStoreEnabled && category.isActive on any of the vendor's
+  // categories) — same principle as the public portfolio page's Online
+  // Store link.
+  const hasStoreEligibleCategory = Boolean(
+    vendorResult?.data.categories.some((vc) => vc.category.hasStoreEnabled),
+  );
+  const visibleNavLinks = navLinks.filter((link) => link.href !== "/vendor/store" || hasStoreEligibleCategory);
 
   return (
     <div className="flex min-h-screen w-full max-w-full overflow-x-hidden">
@@ -117,7 +134,7 @@ export async function VendorShell({
       <aside className="hidden lg:flex w-[240px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
         <BrandLogo variant="dark" href="/vendor/dashboard" className="mb-5 px-1" />
 
-        {navLinks.map((link) => (
+        {visibleNavLinks.map((link) => (
           <Link
             key={link.href}
             href={link.href}
@@ -140,7 +157,7 @@ export async function VendorShell({
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         {/* Desktop Header (hidden on screens < 1024px) */}
         <header className="hidden lg:flex h-16 items-center justify-end gap-3 border-b border-border bg-white px-6">
-          {resolvedSlug && (
+          {resolvedSlug && isApproved && (
             <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
           )}
 
@@ -170,7 +187,7 @@ export async function VendorShell({
             <BrandLogo variant="dark" href="/vendor/dashboard" />
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {resolvedSlug && (
+            {resolvedSlug && isApproved && (
               <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
             )}
             <Link
@@ -203,6 +220,7 @@ export async function VendorShell({
         vendorName={vendorName}
         vendorSlug={resolvedSlug}
         unreadCount={unreadCount}
+        hasStoreEligibleCategory={hasStoreEligibleCategory}
       />
     </div>
   );

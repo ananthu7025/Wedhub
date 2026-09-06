@@ -102,6 +102,7 @@ export interface CategorySelf {
   slug: string;
   description: string | null;
   parentId: string | null;
+  hasStoreEnabled?: boolean;
   attributes: CategoryAttributeSelf[];
   services: ServiceSelf[];
   children?: CategorySelf[];

@@ -40,6 +40,15 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
   const profile = vendor.profile;
   const phone = profile?.phone;
   const businessName = vendor.businessName;
+  // Store link only makes sense if at least one of the vendor's categories
+  // actually supports it — mirrors the eligibility half of the backend's
+  // own gate (vendor-store.service.ts: category.hasStoreEnabled &&
+  // category.isActive), which the public /store/[slug] page 404s on
+  // otherwise. VendorDetail has no vendor-level store.isEnabled field to
+  // check here, so this can't be a perfect match — a vendor whose category
+  // supports a store but who has personally disabled their own store would
+  // still see this link and land on that page's existing 404 handling.
+  const hasStoreEligibleCategory = vendor.categories.some((vc) => vc.category.hasStoreEnabled && vc.category.isActive);
 
   useEffect(() => {
     trackEvent({
@@ -271,13 +280,15 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
             );
           })}
 
-          <Link
-            href={`/store/${vendor.slug}`}
-            className="flex items-center gap-1.5 border-b-2 border-transparent py-3.5 px-3 text-xs sm:text-sm font-bold text-brand-primary hover:text-brand-primary-hover whitespace-nowrap transition-colors ml-auto"
-          >
-            <StoreIcon className="h-4 w-4" />
-            <span>Online Store</span>
-          </Link>
+          {hasStoreEligibleCategory && (
+            <Link
+              href={`/store/${vendor.slug}`}
+              className="flex items-center gap-1.5 border-b-2 border-transparent py-3.5 px-3 text-xs sm:text-sm font-bold text-brand-primary hover:text-brand-primary-hover whitespace-nowrap transition-colors ml-auto"
+            >
+              <StoreIcon className="h-4 w-4" />
+              <span>Online Store</span>
+            </Link>
+          )}
         </nav>
       </div>
 

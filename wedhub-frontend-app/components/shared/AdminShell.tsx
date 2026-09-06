@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminLogoutButton } from "./AdminLogoutButton";
+import { AdminMobileNav } from "./AdminMobileNav";
 import { BrandLogo } from "./BrandLogo";
 
 /**
@@ -7,15 +8,22 @@ import { BrandLogo } from "./BrandLogo";
  * .app-shell/.sidebar pattern (section-labeled groups, unlike VendorShell's
  * flat list). All sections now link to real routes as of Frontend Arch
  * Phase 10 (Monetization/Roles & permissions/Audit log/Platform).
+ *
+ * Mobile layout (2026-09-07): desktop sidebar/header hidden below lg:,
+ * replaced by AdminMobileNav's sticky header + hamburger-triggered
+ * slide-over drawer over the same `sections` data — previously this shell
+ * had no mobile handling at all (a fixed 250px sidebar always rendered),
+ * squeezing every admin page's content into an unusably narrow sliver on
+ * a phone.
  */
 
-interface NavItem {
+export interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
 }
 
-interface NavSection {
+export interface NavSection {
   label: string | null;
   items: NavItem[];
 }
@@ -38,16 +46,6 @@ const sections: NavSection[] = [
         href: "/admin/vendors",
         label: "All vendors",
         icon: <><path d="M3 21V8l9-5 9 5v13" /><path d="M9 21v-6h6v6" /></>,
-      },
-      {
-        href: "/admin/vendors?status=PENDING_APPROVAL",
-        label: "Pending approval",
-        icon: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></>,
-      },
-      {
-        href: "/admin/vendors/create",
-        label: "Create vendor",
-        icon: <path d="M12 5v14M5 12h14" />,
       },
     ],
   },
@@ -86,12 +84,12 @@ const sections: NavSection[] = [
     items: [
       {
         href: "/admin/subscriptions",
-        label: "Subscriptions & payments",
+        label: "Subscriptions",
         icon: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></>,
       },
       {
         href: "/admin/store-payments",
-        label: "Marketplace settlements",
+        label: "Marketplace",
         icon: <><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></>,
       },
     ],
@@ -150,13 +148,11 @@ const sections: NavSection[] = [
 
 export function AdminShell({ children, activeHref }: { children: React.ReactNode; activeHref: string }) {
   return (
-    <div className="flex min-h-screen">
-      <aside className="flex w-[250px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden">
+      {/* Desktop sidebar (hidden below 1024px) */}
+      <aside className="hidden lg:flex w-[250px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
         <div className="mb-5 flex items-center justify-between px-1">
           <BrandLogo variant="dark" href="/admin/dashboard" />
-          <span className="rounded bg-neutral-grey-20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-text-grey">
-            Admin
-          </span>
         </div>
 
         {sections.map((section) => (
@@ -186,11 +182,16 @@ export function AdminShell({ children, activeHref }: { children: React.ReactNode
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-end gap-4 border-b border-border bg-white px-6">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
+        {/* Desktop header (hidden below 1024px) */}
+        <header className="hidden lg:flex h-16 items-center justify-end gap-4 border-b border-border bg-white px-6">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-primary text-xs font-bold text-white">AD</div>
         </header>
-        <main className="flex-1 bg-surface-page p-6">{children}</main>
+
+        {/* Mobile sticky header + hamburger-triggered drawer (below 1024px) */}
+        <AdminMobileNav sections={sections} />
+
+        <main className="flex-1 min-w-0 bg-surface-page p-3 sm:p-5 lg:p-6">{children}</main>
       </div>
     </div>
   );
