@@ -26,3 +26,16 @@ export const updateFeaturedMediaSchema = z.object({
 
 export type CreateFeaturedMediaBody = z.infer<typeof createFeaturedMediaSchema>;
 export type UpdateFeaturedMediaBody = z.infer<typeof updateFeaturedMediaSchema>;
+
+export const createGalleryCategorySchema = z.object({
+  name: z.string().min(1).max(150),
+});
+
+export const updateGalleryCategorySchema = z.object({
+  name: z.string().min(1).max(150).optional(),
+  sortOrder: z.coerce.number().int().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type CreateGalleryCategoryBody = z.infer<typeof createGalleryCategorySchema>;
+export type UpdateGalleryCategoryBody = z.infer<typeof updateGalleryCategorySchema>;

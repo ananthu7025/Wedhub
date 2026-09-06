@@ -1,7 +1,13 @@
 import type { Request, Response } from "express";
 import { paginatedResponse, successResponse } from "../../common/utils/api-response.util";
 import * as featuredMediaService from "./featured-media.service";
-import type { CreateFeaturedMediaBody, ListFeaturedQuery, UpdateFeaturedMediaBody } from "./featured-media.schema";
+import type {
+  CreateFeaturedMediaBody,
+  CreateGalleryCategoryBody,
+  ListFeaturedQuery,
+  UpdateFeaturedMediaBody,
+  UpdateGalleryCategoryBody,
+} from "./featured-media.schema";
 
 // Public — backs both the homepage's "Gallery Inspiration" teaser and the
 // standalone /gallery browse page with real, admin-curated media.
@@ -44,5 +50,27 @@ export async function update(req: Request, res: Response): Promise<void> {
 
 export async function remove(req: Request, res: Response): Promise<void> {
   await featuredMediaService.deleteFeaturedMedia(req.params.id as string);
+  res.json(successResponse({ deleted: true }));
+}
+
+export async function listAllGalleryCategories(_req: Request, res: Response): Promise<void> {
+  const categories = await featuredMediaService.listAllGalleryCategoriesForAdmin();
+  res.json(successResponse(categories));
+}
+
+export async function createGalleryCategory(req: Request, res: Response): Promise<void> {
+  const body = req.body as CreateGalleryCategoryBody;
+  const category = await featuredMediaService.createGalleryCategory(body);
+  res.status(201).json(successResponse(category));
+}
+
+export async function updateGalleryCategory(req: Request, res: Response): Promise<void> {
+  const body = req.body as UpdateGalleryCategoryBody;
+  const category = await featuredMediaService.updateGalleryCategory(req.params.id as string, body);
+  res.json(successResponse(category));
+}
+
+export async function deleteGalleryCategory(req: Request, res: Response): Promise<void> {
+  await featuredMediaService.deleteGalleryCategory(req.params.id as string);
   res.json(successResponse({ deleted: true }));
 }

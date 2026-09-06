@@ -262,6 +262,18 @@ export interface AdminUpdateServiceBody {
   isActive?: boolean;
 }
 
+// ---- POST /admin/gallery-categories (ADMIN) ----
+export interface AdminCreateGalleryCategoryBody {
+  name: string;
+}
+
+// ---- PATCH /admin/gallery-categories/:id (ADMIN) ----
+export interface AdminUpdateGalleryCategoryBody {
+  name?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
 // ---- POST /locations (ADMIN) ----
 export interface AdminCreateLocationBody {
   type: LocationType;

@@ -1,1 +1,1 @@
-export { featuredMediaRouter, featuredMediaAdminRouter } from "./featured-media.routes";
+export { featuredMediaRouter, featuredMediaAdminRouter, galleryCategoriesAdminRouter } from "./featured-media.routes";

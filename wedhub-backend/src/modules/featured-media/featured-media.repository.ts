@@ -59,6 +59,36 @@ export function findActiveGalleryCategories() {
   });
 }
 
+export function findAllGalleryCategoriesForAdmin() {
+  return prisma.galleryCategory.findMany({ orderBy: { sortOrder: "asc" } });
+}
+
+export function findGalleryCategoryById(id: string) {
+  return prisma.galleryCategory.findUnique({ where: { id } });
+}
+
+export function findGalleryCategoryBySlug(slug: string) {
+  return prisma.galleryCategory.findUnique({ where: { slug } });
+}
+
+export function createGalleryCategory(data: { name: string; slug: string }) {
+  return prisma.galleryCategory.create({ data });
+}
+
+export interface GalleryCategoryUpdateFields {
+  name: string | undefined;
+  sortOrder: number | undefined;
+  isActive: boolean | undefined;
+}
+
+export function updateGalleryCategory(id: string, data: GalleryCategoryUpdateFields) {
+  return prisma.galleryCategory.update({ where: { id }, data: omitUndefined(data) });
+}
+
+export function deleteGalleryCategory(id: string) {
+  return prisma.galleryCategory.delete({ where: { id } });
+}
+
 export function findAllForAdmin() {
   return prisma.featuredMedia.findMany({
     orderBy: { sortOrder: "asc" },

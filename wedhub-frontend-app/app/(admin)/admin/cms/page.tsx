@@ -12,7 +12,7 @@ import {
 } from "@/lib/api/admin";
 import { listGalleryCategories } from "@/lib/api/catalog";
 import { WeddingStoriesBoard } from "./WeddingStoriesBoard";
-import { FeaturedMediaBoard } from "./FeaturedMediaBoard";
+import { GalleryInspirationSection } from "./GalleryInspirationSection";
 import { PopularSearchCardsBoard } from "./PopularSearchCardsBoard";
 import { BlogPostsBoard } from "./BlogPostsBoard";
 
@@ -79,18 +79,12 @@ export default async function AdminCmsPage() {
         <WeddingStoriesBoard initialStories={weddingStories} albums={albums} vendors={vendors} />
       </div>
 
-      <div className="mb-6 rounded-xl border border-border bg-white p-6">
-        <h3 className="mb-1 text-base font-bold">Gallery Inspiration</h3>
-        <p className="mb-4 text-[13px] text-text-grey">
-          Real, approved vendor portfolio photos featured on the homepage gallery.
-        </p>
-        <FeaturedMediaBoard
-          initialFeatured={featuredMedia}
-          approvedMedia={approvedMedia}
-          vendors={vendors}
-          galleryCategories={galleryCategories}
-        />
-      </div>
+      <GalleryInspirationSection
+        initialGalleryCategories={galleryCategories}
+        initialFeatured={featuredMedia}
+        approvedMedia={approvedMedia}
+        vendors={vendors}
+      />
 
       <div className="mb-6 rounded-xl border border-border bg-white p-6">
         <h3 className="mb-1 text-base font-bold">Popular Searches</h3>

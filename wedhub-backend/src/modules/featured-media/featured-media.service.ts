@@ -1,6 +1,13 @@
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
+import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
 import * as featuredMediaRepository from "./featured-media.repository";
-import type { CreateFeaturedMediaBody, ListFeaturedQuery, UpdateFeaturedMediaBody } from "./featured-media.schema";
+import type {
+  CreateFeaturedMediaBody,
+  CreateGalleryCategoryBody,
+  ListFeaturedQuery,
+  UpdateFeaturedMediaBody,
+  UpdateGalleryCategoryBody,
+} from "./featured-media.schema";
 
 // Backs the homepage teaser (page=1, small limit) AND the standalone
 // /gallery browse page (paginated, optionally filtered to one
@@ -70,4 +77,37 @@ export async function deleteFeaturedMedia(id: string): Promise<void> {
 
 function isUniqueConstraintViolation(err: unknown): boolean {
   return typeof err === "object" && err !== null && "code" in err && err.code === "P2002";
+}
+
+export function listAllGalleryCategoriesForAdmin() {
+  return featuredMediaRepository.findAllGalleryCategoriesForAdmin();
+}
+
+export async function createGalleryCategory(input: CreateGalleryCategoryBody) {
+  const slug = await generateUniqueSlug(slugify(input.name), async (candidate) =>
+    Boolean(await featuredMediaRepository.findGalleryCategoryBySlug(candidate)),
+  );
+
+  return featuredMediaRepository.createGalleryCategory({ name: input.name, slug });
+}
+
+export async function updateGalleryCategory(id: string, input: UpdateGalleryCategoryBody) {
+  const existing = await featuredMediaRepository.findGalleryCategoryById(id);
+  if (!existing) {
+    throw new NotFoundError("Gallery category not found");
+  }
+
+  return featuredMediaRepository.updateGalleryCategory(id, {
+    name: input.name,
+    sortOrder: input.sortOrder,
+    isActive: input.isActive,
+  });
+}
+
+export async function deleteGalleryCategory(id: string): Promise<void> {
+  const existing = await featuredMediaRepository.findGalleryCategoryById(id);
+  if (!existing) {
+    throw new NotFoundError("Gallery category not found");
+  }
+  await featuredMediaRepository.deleteGalleryCategory(id);
 }

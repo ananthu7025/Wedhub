@@ -23,6 +23,14 @@ import type { NextConfig } from "next";
 //     its button/One Tap UI in an iframe from accounts.google.com and
 //     posts the ID token back via postMessage — no redirect navigation,
 //     so no frame-ancestors/navigation exception is needed for it.
+//   - *.r2.cloudflarestorage.com — media uploads (vendor logo/cover,
+//     portfolio photos, category images, gallery inspiration, etc.) go
+//     straight from the browser to a presigned R2 PutObject URL
+//     (wedhub-backend/src/integrations/storage/r2.client.ts's endpoint is
+//     `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`) — never
+//     proxied through the API — so connect-src must allow it or every
+//     upload fails with a CSP-blocked fetch. Wildcarded because the
+//     account-id subdomain differs per R2 account/environment.
 // Google Fonts is NOT referenced here on purpose: the one font in use
 // (Plus_Jakarta_Sans, app/layout.tsx) goes through next/font/google, which
 // downloads and self-hosts the font file at build time — the browser never
@@ -52,7 +60,7 @@ const cspDirectives = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data: https://images.unsplash.com https://pub-7116e74b9a3d44a1ab03594911f56ad8.r2.dev",
   "font-src 'self' data:",
-  "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com",
+  "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com https://*.r2.cloudflarestorage.com",
   "frame-src https://checkout.razorpay.com https://api.razorpay.com https://accounts.google.com",
   "object-src 'none'",
   "base-uri 'self'",

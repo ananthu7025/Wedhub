@@ -14,6 +14,7 @@ import type {
   AdminCreateCategoryBody,
   AdminCreateCouponBody,
   AdminCreateFeaturedMediaBody,
+  AdminCreateGalleryCategoryBody,
   AdminCreateImageUploadRequestBody,
   AdminCreateInspirationImageUploadRequestBody,
   AdminCreateInvitationBody,
@@ -46,6 +47,7 @@ import type {
   AdminUpdateBlogPostBody,
   AdminUpdateCategoryBody,
   AdminUpdateFeaturedMediaBody,
+  AdminUpdateGalleryCategoryBody,
   AdminUpdateLeadStatusBody,
   AdminUpdateLocationBody,
   AdminUpdatePlanBody,
@@ -60,7 +62,7 @@ import type {
   AdminVendorUploadRequestResult,
   AdminWeddingStory,
 } from "./admin.types";
-import type { Category, CategoryAttribute, Location, LocationType, Service } from "./vendors.types";
+import type { Category, CategoryAttribute, GalleryCategory, Location, LocationType, Service } from "./vendors.types";
 
 /**
  * Client-side calls through the generic authenticated proxy for the admin
@@ -153,6 +155,18 @@ export function updateAdminService(categoryId: string, serviceId: string, body: 
 
 export function deleteAdminService(categoryId: string, serviceId: string) {
   return call<{ deleted: true }>(`/categories/${categoryId}/services/${serviceId}`, "DELETE");
+}
+
+export function createAdminGalleryCategory(body: AdminCreateGalleryCategoryBody) {
+  return call<GalleryCategory>("/admin/gallery-categories", "POST", body);
+}
+
+export function updateAdminGalleryCategory(id: string, body: AdminUpdateGalleryCategoryBody) {
+  return call<GalleryCategory>(`/admin/gallery-categories/${id}`, "PATCH", body);
+}
+
+export function deleteAdminGalleryCategory(id: string) {
+  return call<{ deleted: true }>(`/admin/gallery-categories/${id}`, "DELETE");
 }
 
 export function listAdminLocationsClient(type: LocationType, parentId: string) {
