@@ -138,3 +138,66 @@ export function deleteCategoryByName(name: string): void {
     { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
   );
 }
+
+/**
+ * Creates a store-enabled category (Category.hasStoreEnabled, see
+ * prisma/schema.prisma) and assigns it to the given vendor as their primary
+ * category, via psql. Vendor-store eligibility (checkVendorStoreEligibility,
+ * wedhub-backend/src/modules/vendor-store/vendor-store.repository.ts) is
+ * gated on the vendor having at least one active category with this flag
+ * set — there is no self-service UI for a vendor to assign their own
+ * category (that's an admin/onboarding-wizard concern orthogonal to the
+ * store feature under test here), so this is done directly, the same way
+ * approveVendor() substitutes for a not-yet-scripted admin-review UI.
+ * Returns the created category's id for cleanup.
+ */
+export function enableStoreForVendorCategory(vendorId: string, categoryName: string): string {
+  const slug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const insertCategorySql =
+    `INSERT INTO categories (id, name, slug, has_store_enabled, is_active, created_at, updated_at) ` +
+    `VALUES (gen_random_uuid(), '${categoryName}', '${slug}', true, true, now(), now()) RETURNING id;`;
+  const out = execFileSync(
+    "psql",
+    ["-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev", "-t", "-A", "-c", insertCategorySql],
+    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
+  )
+    .toString()
+    .trim();
+  const categoryId = out.split("\n")[0]!.trim();
+
+  execFileSync(
+    "psql",
+    [
+      "-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev",
+      "-c",
+      `INSERT INTO vendor_categories (vendor_id, category_id, is_primary, created_at) VALUES ('${vendorId}', '${categoryId}', true, now());`,
+    ],
+    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
+  );
+
+  return categoryId;
+}
+
+/**
+ * Directly activates a vendor's VendorPaymentAccount row so the storefront's
+ * canVendorAcceptOnlinePayments() gate (vendor-payment.service.ts) passes —
+ * used AFTER the vendor has submitted the real bank-connect form through
+ * the UI (which always lands the account in PENDING_VERIFICATION, since
+ * real Razorpay KYC/penny-drop verification cannot complete instantly even
+ * in test mode). This substitutes only for Razorpay's own KYC review time,
+ * not for any part of WedHub's own UI — every other step of vendor
+ * onboarding in the e2e spec goes through the real dashboard.
+ */
+export function activateVendorPaymentAccountForTest(vendorId: string): void {
+  execFileSync(
+    "psql",
+    [
+      "-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev",
+      "-c",
+      `UPDATE vendor_payment_accounts SET status = 'ACTIVE', charges_enabled = true, payouts_enabled = true, ` +
+        `bank_verification_status = 'VERIFIED', route_activation_status = 'activated', transfer_eligible_at = now() - interval '1 hour' ` +
+        `WHERE vendor_id = '${vendorId}';`,
+    ],
+    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
+  );
+}

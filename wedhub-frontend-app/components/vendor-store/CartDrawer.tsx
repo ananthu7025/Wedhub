@@ -67,6 +67,7 @@ export function CartDrawer({
     whatsappUrl?: string;
     paymentMethod: "ONLINE" | "WHATSAPP";
     paymentId?: string;
+    totalAmount: number;
   } | null>(null);
 
   useEffect(() => {
@@ -149,7 +150,7 @@ export function CartDrawer({
       return;
     }
 
-    const { orderId, orderNumber, whatsappUrl, razorpayOrderId, keyId } = res.data;
+    const { orderId, orderNumber, whatsappUrl, razorpayOrderId, keyId, totalAmount: confirmedTotalAmount } = res.data;
 
     // If ONLINE payment selected and gateway order returned:
     if (paymentMethod === "ONLINE" && razorpayOrderId && keyId) {
@@ -205,6 +206,7 @@ export function CartDrawer({
                 whatsappUrl,
                 paymentMethod: "ONLINE",
                 paymentId: response.razorpay_payment_id,
+                totalAmount: confirmedTotalAmount,
               });
               onClearCart();
             } else {
@@ -237,6 +239,7 @@ export function CartDrawer({
       orderNumber,
       whatsappUrl,
       paymentMethod: "WHATSAPP",
+      totalAmount: confirmedTotalAmount,
     });
     onClearCart();
   }
@@ -292,7 +295,7 @@ export function CartDrawer({
 
               <p className="mt-3 text-xs text-text-grey leading-relaxed">
                 {orderConfirmed.paymentMethod === "ONLINE"
-                  ? `Payment of ₹${grandTotal.toLocaleString("en-IN")} has been verified and settled directly to ${storeName}.`
+                  ? `Payment of ₹${orderConfirmed.totalAmount.toLocaleString("en-IN")} has been verified and settled directly to ${storeName}.`
                   : `A WhatsApp chat with ${storeName} was opened to send your item details directly.`}
               </p>
 

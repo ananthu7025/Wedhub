@@ -19,7 +19,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
-    "test:integration": "vitest run tests/integration",
+    "test:integration": "node --env-file=.env node_modules/vitest/vitest.mjs run tests/integration",
     "test:e2e": "vitest run tests/e2e",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",

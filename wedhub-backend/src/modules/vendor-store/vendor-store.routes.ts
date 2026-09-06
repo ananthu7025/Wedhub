@@ -63,6 +63,10 @@ vendorStoreRouter.post(
   "/me/payment-account/kyc-link",
   asyncHandler(paymentController.createKycLink),
 );
+vendorStoreRouter.post(
+  "/me/payment-account/sync",
+  asyncHandler(paymentController.syncPaymentAccount),
+);
 vendorStoreRouter.get("/me/payments/summary", asyncHandler(paymentController.getPaymentSummary));
 vendorStoreRouter.get("/me/payment-summary", asyncHandler(paymentController.getPaymentSummary));
 vendorStoreRouter.post(

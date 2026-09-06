@@ -1,4 +1,5 @@
 import * as adminPaymentsRepo from "./admin-store-payments.repository";
+import { cleanupStalePendingOrders } from "../vendor-store/vendor-store.repository";
 
 export async function getMarketplaceOverview() {
   return adminPaymentsRepo.getMarketplacePaymentsOverview();
@@ -57,7 +58,7 @@ export async function listAllStoreOrders(filters?: { status?: string; paymentSta
 }
 
 export async function cleanupAbandonedOrders(olderThanMinutes: number = 60) {
-  const result = await adminPaymentsRepo.cleanupStalePendingOrders(olderThanMinutes);
+  const result = await cleanupStalePendingOrders(olderThanMinutes);
   return {
     cancelledOrdersCount: result.count,
     olderThanMinutes,

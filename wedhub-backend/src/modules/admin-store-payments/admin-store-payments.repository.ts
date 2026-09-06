@@ -93,45 +93,4 @@ export function listAllStoreOrders(filters?: { status?: string; paymentStatus?: 
   });
 }
 
-export async function cleanupStalePendingOrders(olderThanMinutes: number = 60) {
-  const threshold = new Date(Date.now() - olderThanMinutes * 60 * 1000);
-  const staleOrders = await prisma.vendorStoreOrder.findMany({
-    where: {
-      orderChannel: "ONLINE",
-      paymentStatus: "PENDING",
-      createdAt: { lt: threshold },
-    },
-    select: { id: true },
-  });
-
-  if (staleOrders.length === 0) {
-    return { count: 0 };
-  }
-
-  const orderIds = staleOrders.map((o) => o.id);
-
-  await prisma.vendorStorePaymentAttempt.updateMany({
-    where: {
-      orderId: { in: orderIds },
-      status: "PENDING",
-    },
-    data: {
-      status: "FAILED",
-      failureCode: "SESSION_EXPIRED",
-      failureReason: "Checkout session expired after inactivity",
-      failedAt: new Date(),
-    },
-  });
-
-  return prisma.vendorStoreOrder.updateMany({
-    where: {
-      id: { in: orderIds },
-    },
-    data: {
-      paymentStatus: "CANCELLED",
-      status: "CANCELLED",
-      notes: "Order cancelled automatically due to payment session timeout.",
-    },
-  });
-}
 

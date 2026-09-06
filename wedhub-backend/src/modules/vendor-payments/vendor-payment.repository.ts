@@ -1,6 +1,8 @@
 import { prisma } from "../../config/database";
-import { Prisma, type VendorPaymentAccountStatus, type StorePaymentStatus } from "@prisma/client";
+import { Prisma, type VendorPaymentAccountStatus, type StorePaymentStatus, type StoreTransferStatus } from "@prisma/client";
 import { NotFoundError, ValidationError } from "../../common/errors";
+import { isValidPaymentStatusTransition, isValidTransferStatusTransition } from "./vendor-payment.types";
+import { logger } from "../../config/logger";
 
 export function findPaymentAccountByVendorId(vendorId: string) {
   return prisma.vendorPaymentAccount.findUnique({
@@ -86,20 +88,8 @@ export function upsertPaymentAccount(
 
 export function updatePaymentAccountStatus(
   vendorId: string,
-  statusOrData:
-    | VendorPaymentAccountStatus
-    | {
-        status?: VendorPaymentAccountStatus;
-        chargesEnabled?: boolean;
-        payoutsEnabled?: boolean;
-        razorpayAccountStatus?: string | null;
-        routeActivationStatus?: string | null;
-        bankVerificationStatus?: string;
-        linkedAccountCreatedAt?: Date | null;
-        transferEligibleAt?: Date | null;
-        lastProviderSyncAt?: Date | null;
-      },
-  capabilities?: {
+  data: {
+    status?: VendorPaymentAccountStatus;
     chargesEnabled?: boolean;
     payoutsEnabled?: boolean;
     razorpayAccountStatus?: string | null;
@@ -110,22 +100,18 @@ export function updatePaymentAccountStatus(
     lastProviderSyncAt?: Date | null;
   },
 ) {
-  const isObject = typeof statusOrData === "object";
-  const status = isObject ? statusOrData.status : statusOrData;
-  const caps = isObject ? statusOrData : capabilities;
-
   return prisma.vendorPaymentAccount.update({
     where: { vendorId },
     data: {
-      ...(status ? { status } : {}),
-      ...(caps?.chargesEnabled !== undefined ? { chargesEnabled: caps.chargesEnabled } : {}),
-      ...(caps?.payoutsEnabled !== undefined ? { payoutsEnabled: caps.payoutsEnabled } : {}),
-      ...(caps?.razorpayAccountStatus !== undefined ? { razorpayAccountStatus: caps.razorpayAccountStatus } : {}),
-      ...(caps?.routeActivationStatus !== undefined ? { routeActivationStatus: caps.routeActivationStatus } : {}),
-      ...(caps?.bankVerificationStatus !== undefined ? { bankVerificationStatus: caps.bankVerificationStatus } : {}),
-      ...(caps?.linkedAccountCreatedAt !== undefined ? { linkedAccountCreatedAt: caps.linkedAccountCreatedAt } : {}),
-      ...(caps?.transferEligibleAt !== undefined ? { transferEligibleAt: caps.transferEligibleAt } : {}),
-      ...(caps?.lastProviderSyncAt !== undefined ? { lastProviderSyncAt: caps.lastProviderSyncAt } : {}),
+      ...(data.status ? { status: data.status } : {}),
+      ...(data.chargesEnabled !== undefined ? { chargesEnabled: data.chargesEnabled } : {}),
+      ...(data.payoutsEnabled !== undefined ? { payoutsEnabled: data.payoutsEnabled } : {}),
+      ...(data.razorpayAccountStatus !== undefined ? { razorpayAccountStatus: data.razorpayAccountStatus } : {}),
+      ...(data.routeActivationStatus !== undefined ? { routeActivationStatus: data.routeActivationStatus } : {}),
+      ...(data.bankVerificationStatus !== undefined ? { bankVerificationStatus: data.bankVerificationStatus } : {}),
+      ...(data.linkedAccountCreatedAt !== undefined ? { linkedAccountCreatedAt: data.linkedAccountCreatedAt } : {}),
+      ...(data.transferEligibleAt !== undefined ? { transferEligibleAt: data.transferEligibleAt } : {}),
+      ...(data.lastProviderSyncAt !== undefined ? { lastProviderSyncAt: data.lastProviderSyncAt } : {}),
     },
   });
 }
@@ -189,6 +175,21 @@ export async function markOrderPaymentCaptured(
   },
 ) {
   return prisma.$transaction(async (tx) => {
+    const existing = await tx.vendorStoreOrder.findUnique({
+      where: { id: orderId },
+      select: { paymentStatus: true },
+    });
+    if (existing && !isValidPaymentStatusTransition(existing.paymentStatus, "CAPTURED")) {
+      // Webhooks can redeliver/reorder events — skip rather than throw so a
+      // late/duplicate delivery against an already-refunded or cancelled
+      // order doesn't 500 and get endlessly retried by the gateway.
+      logger.warn(
+        { orderId, from: existing.paymentStatus, to: "CAPTURED" },
+        "Ignoring invalid payment status transition",
+      );
+      return tx.vendorStoreOrder.findUniqueOrThrow({ where: { id: orderId }, include: { items: true } });
+    }
+
     const updatePayload: Prisma.VendorStoreOrderUpdateInput = {
       paymentStatus: "CAPTURED",
       status: "CONFIRMED",
@@ -209,27 +210,20 @@ export async function markOrderPaymentCaptured(
       },
     });
 
+    // Stock is already reserved atomically at order-creation time (see
+    // createStoreOrderAtomicTx) — this is a read-only safety-net check, not
+    // a second decrement, so a concurrent-oversell scenario (which the
+    // atomic reservation should already prevent) is still flagged if it
+    // somehow occurs rather than silently going negative.
     let isOversold = false;
-
-    // Atomically decrement stock inventory for purchased items
     for (const lineItem of updatedOrder.items) {
       if (!lineItem.itemId) continue;
       const storeItem = await tx.vendorStoreItem.findUnique({
         where: { id: lineItem.itemId },
+        select: { stockQuantity: true },
       });
-
-      if (storeItem && storeItem.stockQuantity !== null) {
-        if (storeItem.stockQuantity < lineItem.quantity) {
-          isOversold = true;
-        }
-        const remainingStock = Math.max(0, storeItem.stockQuantity - lineItem.quantity);
-        await tx.vendorStoreItem.update({
-          where: { id: lineItem.itemId },
-          data: {
-            stockQuantity: remainingStock,
-            isAvailable: remainingStock > 0,
-          },
-        });
+      if (storeItem && storeItem.stockQuantity !== null && storeItem.stockQuantity < 0) {
+        isOversold = true;
       }
     }
 
@@ -247,7 +241,13 @@ export async function markOrderPaymentCaptured(
   });
 }
 
-export function markOrderPaymentFailed(orderId: string) {
+export async function markOrderPaymentFailed(orderId: string) {
+  const existing = await prisma.vendorStoreOrder.findUnique({ where: { id: orderId }, select: { paymentStatus: true } });
+  if (existing && !isValidPaymentStatusTransition(existing.paymentStatus, "FAILED")) {
+    logger.warn({ orderId, from: existing.paymentStatus, to: "FAILED" }, "Ignoring invalid payment status transition");
+    return prisma.vendorStoreOrder.findUniqueOrThrow({ where: { id: orderId } });
+  }
+
   return prisma.vendorStoreOrder.update({
     where: { id: orderId },
     data: {
@@ -282,6 +282,15 @@ export async function createOrderRefundTx(
       );
     }
 
+    const isFull = currentTotalRefunded + data.amount >= orderTotal;
+    const newPaymentStatus: StorePaymentStatus = isFull ? "REFUNDED" : "PARTIALLY_REFUNDED";
+
+    if (!isValidPaymentStatusTransition(existingOrder.paymentStatus, newPaymentStatus)) {
+      throw new ValidationError(
+        `Cannot refund an order in payment status ${existingOrder.paymentStatus}.`,
+      );
+    }
+
     const refund = await tx.vendorStoreOrderRefund.create({
       data: {
         orderId,
@@ -291,9 +300,6 @@ export async function createOrderRefundTx(
         status: "PROCESSED",
       },
     });
-
-    const isFull = currentTotalRefunded + data.amount >= orderTotal;
-    const newPaymentStatus: StorePaymentStatus = isFull ? "REFUNDED" : "PARTIALLY_REFUNDED";
 
     const updatedOrder = await tx.vendorStoreOrder.update({
       where: { id: orderId },
@@ -410,7 +416,7 @@ export function createStoreTransferRecord(data: {
   });
 }
 
-export function updateStoreTransferStatus(
+export async function updateStoreTransferStatus(
   providerTransferId: string,
   data: {
     status: "CREATED" | "PENDING" | "PROCESSED" | "FAILED" | "REVERSED" | "PARTIALLY_REVERSED";
@@ -421,6 +427,15 @@ export function updateStoreTransferStatus(
     reversedAt?: Date | null;
   },
 ) {
+  const existing = await prisma.vendorStoreTransfer.findUnique({ where: { providerTransferId } });
+  if (existing && !isValidTransferStatusTransition(existing.status, data.status as StoreTransferStatus)) {
+    logger.warn(
+      { providerTransferId, from: existing.status, to: data.status },
+      "Ignoring invalid transfer status transition",
+    );
+    return existing;
+  }
+
   const fields: Prisma.VendorStoreTransferUpdateInput = {
     status: data.status,
   };
@@ -461,6 +476,13 @@ export async function recordOrUpdateStoreTransfer(
   });
 
   if (existingByTransferId) {
+    if (!isValidTransferStatusTransition(existingByTransferId.status, data.status as StoreTransferStatus)) {
+      logger.warn(
+        { providerTransferId, from: existingByTransferId.status, to: data.status },
+        "Ignoring invalid transfer status transition",
+      );
+      return existingByTransferId;
+    }
     return prisma.vendorStoreTransfer.update({
       where: { id: existingByTransferId.id },
       data: {
@@ -485,6 +507,13 @@ export async function recordOrUpdateStoreTransfer(
     });
 
     if (existingByOrder) {
+      if (!isValidTransferStatusTransition(existingByOrder.status, data.status as StoreTransferStatus)) {
+        logger.warn(
+          { providerTransferId, orderId: data.orderId, from: existingByOrder.status, to: data.status },
+          "Ignoring invalid transfer status transition",
+        );
+        return existingByOrder;
+      }
       return prisma.vendorStoreTransfer.update({
         where: { id: existingByOrder.id },
         data: {
@@ -552,19 +581,9 @@ export function recordPaymentAttempt(data: {
 }
 
 export async function updatePaymentAttempt(
-  orderIdOrPaymentId: string,
-  maybeOrderIdOrData:
-    | string
-    | {
-        razorpayPaymentId?: string | null;
-        status: StorePaymentStatus;
-        failureCode?: string | null;
-        failureReason?: string | null;
-        authorizedAt?: Date | null;
-        capturedAt?: Date | null;
-        failedAt?: Date | null;
-      },
-  maybeData?: {
+  orderId: string,
+  secondaryId: string,
+  data: {
     razorpayPaymentId?: string | null;
     status: StorePaymentStatus;
     failureCode?: string | null;
@@ -574,22 +593,15 @@ export async function updatePaymentAttempt(
     failedAt?: Date | null;
   },
 ) {
-  const secondaryId = typeof maybeOrderIdOrData === "string" ? maybeOrderIdOrData : undefined;
-  const data = typeof maybeOrderIdOrData === "object" ? maybeOrderIdOrData : maybeData!;
-
   const attempt = await prisma.vendorStorePaymentAttempt.findFirst({
     where: {
       OR: [
-        { razorpayPaymentId: orderIdOrPaymentId },
-        { razorpayOrderId: orderIdOrPaymentId },
-        { orderId: orderIdOrPaymentId },
-        ...(secondaryId
-          ? [
-              { razorpayOrderId: secondaryId },
-              { razorpayPaymentId: secondaryId },
-              { orderId: secondaryId },
-            ]
-          : []),
+        { razorpayPaymentId: orderId },
+        { razorpayOrderId: orderId },
+        { orderId: orderId },
+        { razorpayOrderId: secondaryId },
+        { razorpayPaymentId: secondaryId },
+        { orderId: secondaryId },
       ],
     },
     orderBy: { attemptNumber: "desc" },
@@ -611,22 +623,8 @@ export async function updatePaymentAttempt(
 }
 
 export async function recordOrUpdateStoreSettlement(
-  settlementIdOrData:
-    | string
-    | {
-        providerSettlementId: string;
-        recipientAccountId: string;
-        vendorId?: string;
-        orderId?: string | null;
-        amount: number;
-        fees?: number;
-        tax?: number;
-        utr?: string | null;
-        status?: string;
-        processedAt?: Date | null;
-        reconciledAt?: Date | null;
-      },
-  maybeData?: {
+  providerSettlementId: string,
+  data: {
     recipientAccountId?: string | undefined;
     vendorId?: string | undefined;
     orderId?: string | null | undefined;
@@ -639,10 +637,6 @@ export async function recordOrUpdateStoreSettlement(
     reconciledAt?: Date | null | undefined;
   },
 ) {
-  const providerSettlementId =
-    typeof settlementIdOrData === "string" ? settlementIdOrData : settlementIdOrData.providerSettlementId;
-  const data = typeof settlementIdOrData === "object" ? settlementIdOrData : maybeData!;
-
   const recipientAccountId = data.recipientAccountId || "";
   const vendorId = data.vendorId || "";
 

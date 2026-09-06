@@ -2,7 +2,6 @@ import { NotFoundError, ValidationError } from "../../common/errors";
 import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
 import { getPublicUrl } from "../../integrations/storage/r2.client";
 import { getOwnedVendorOrThrow } from "../vendors/vendor.policy";
-import { prisma } from "../../config/database";
 import * as storeRepository from "./vendor-store.repository";
 import * as vendorInvoiceService from "../vendor-invoices/vendor-invoice.service";
 import * as vendorPaymentService from "../vendor-payments/vendor-payment.service";
@@ -416,25 +415,10 @@ export async function createPublicStoreOrder(slug: string, input: PublicCreateOr
       );
     }
 
-    if (item.stockQuantity !== null) {
-      const pendingCheckouts = await prisma.vendorStoreOrderItem.findMany({
-        where: {
-          itemId: item.id,
-          order: {
-            paymentStatus: "PENDING",
-            createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) },
-          },
-        },
-        select: { quantity: true },
-      });
-      const reservedQuantity = pendingCheckouts.reduce((sum, r) => sum + r.quantity, 0);
-      const availableUnits = item.stockQuantity - reservedQuantity;
-      if (availableUnits < requestedItem.quantity) {
-        throw new ValidationError(
-          `"${item.title}" is currently out of stock or reserved by another checkout session (${Math.max(0, availableUnits)} available).`,
-        );
-      }
-    }
+    // Stock availability is enforced atomically inside
+    // createStoreOrderAtomicTx (an atomic conditional decrement per line
+    // item, race-free under concurrent checkouts) — no separate soft-hold
+    // read is needed or reliable here.
 
     const unitPrice = Number(item.price);
     const lineTotal = Number((unitPrice * requestedItem.quantity).toFixed(2));
@@ -523,17 +507,11 @@ export async function createPublicStoreOrder(slug: string, input: PublicCreateOr
         financials.vendorSettlementAmount,
       );
     } catch (err) {
-      await prisma.vendorStoreOrder.update({
-        where: { id: order.id },
-        data: { paymentStatus: "FAILED", status: "CANCELLED" },
-      });
+      await storeRepository.markOrderRazorpayFailed(order.id);
       throw err;
     }
 
-    await prisma.vendorStoreOrder.update({
-      where: { id: order.id },
-      data: { razorpayOrderId: rzpOrderInfo.razorpayOrderId },
-    });
+    await storeRepository.attachRazorpayOrderId(order.id, rzpOrderInfo.razorpayOrderId);
 
     return {
       orderNumber: order.orderNumber,

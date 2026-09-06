@@ -2,6 +2,7 @@ import { prisma } from "../../config/database";
 import { Prisma, type StoreItemType, type StoreOrderStatus, type StorePaymentStatus } from "@prisma/client";
 import { omitUndefined } from "../../common/utils/object.util";
 import { ValidationError } from "../../common/errors";
+import { isValidPaymentStatusTransition } from "../vendor-payments/vendor-payment.types";
 
 export async function checkVendorStoreEligibility(vendorId: string): Promise<boolean> {
   const vendorCategories = await prisma.vendorCategory.findMany({
@@ -299,15 +300,44 @@ export async function createStoreOrderAtomicTx(
   }>,
 ) {
   return prisma.$transaction(async (tx) => {
-    // Verify inventory availability before order creation
+    // Atomically reserve stock for every line item. The WHERE guard
+    // (stockQuantity IS NULL OR stockQuantity >= quantity) and the
+    // decrement are evaluated by Postgres as a single row operation, so two
+    // concurrent transactions checking out the same last unit cannot both
+    // pass — whichever commits first wins the row, the second's updateMany
+    // affects 0 rows and throws. This replaces a previous read-then-throw
+    // check that raced under concurrent checkouts.
     for (const oi of orderItems) {
-      const storeItem = await tx.vendorStoreItem.findUnique({
+      // Unlimited-stock items (stockQuantity === null) skip the decrement
+      // entirely — Prisma's `decrement` cannot be applied to a null field,
+      // and there is nothing to reserve for a made-to-order item.
+      const limitedStock = await tx.vendorStoreItem.findUnique({
         where: { id: oi.itemId },
+        select: { stockQuantity: true },
       });
-      if (storeItem && storeItem.stockQuantity !== null && storeItem.stockQuantity < oi.quantity) {
+      if (!limitedStock) {
+        throw new ValidationError(`Item "${oi.itemTitle}" is no longer available.`);
+      }
+      if (limitedStock.stockQuantity === null) continue;
+
+      const result = await tx.vendorStoreItem.updateMany({
+        where: { id: oi.itemId, stockQuantity: { gte: oi.quantity } },
+        data: { stockQuantity: { decrement: oi.quantity } },
+      });
+
+      if (result.count === 0) {
+        const storeItem = await tx.vendorStoreItem.findUnique({ where: { id: oi.itemId } });
         throw new ValidationError(
-          `Item "${oi.itemTitle}" has only ${storeItem.stockQuantity} in stock. Please adjust quantity.`,
+          `Item "${oi.itemTitle}" has only ${storeItem?.stockQuantity ?? 0} in stock. Please adjust quantity.`,
         );
+      }
+
+      const afterDecrement = await tx.vendorStoreItem.findUnique({
+        where: { id: oi.itemId },
+        select: { stockQuantity: true },
+      });
+      if (afterDecrement?.stockQuantity === 0) {
+        await tx.vendorStoreItem.update({ where: { id: oi.itemId }, data: { isAvailable: false } });
       }
     }
 
@@ -371,6 +401,56 @@ export async function createStoreOrderAtomicTx(
   });
 }
 
+/**
+ * Reverses the stock reserved by createStoreOrderAtomicTx for an order that
+ * never completed (Razorpay order-creation failure, or a stale/timed-out
+ * checkout). Stock is decremented at order-creation time (not at payment
+ * capture), so every path that cancels an order before payment must restore
+ * it here or inventory permanently leaks.
+ */
+export async function restoreStockForOrder(orderId: string) {
+  const order = await prisma.vendorStoreOrder.findUnique({
+    where: { id: orderId },
+    select: { items: { select: { itemId: true, quantity: true } } },
+  });
+  if (!order) return;
+
+  await prisma.$transaction(
+    order.items
+      .filter((oi) => oi.itemId)
+      .map((oi) =>
+        prisma.vendorStoreItem.updateMany({
+          where: { id: oi.itemId! },
+          data: { stockQuantity: { increment: oi.quantity }, isAvailable: true },
+        }),
+      ),
+  );
+}
+
+/**
+ * Marks an ONLINE order FAILED/CANCELLED after Razorpay order-creation
+ * throws, restoring the stock reserved for it. Guarded on the order still
+ * being PENDING so a retried/duplicate call can't stomp a state a webhook
+ * has already advanced past.
+ */
+export async function markOrderRazorpayFailed(orderId: string) {
+  const result = await prisma.vendorStoreOrder.updateMany({
+    where: { id: orderId, paymentStatus: "PENDING" },
+    data: { paymentStatus: "FAILED", status: "CANCELLED" },
+  });
+  if (result.count > 0) {
+    await restoreStockForOrder(orderId);
+  }
+  return result;
+}
+
+/** Attaches the Razorpay order id once gateway order-creation succeeds. */
+export function attachRazorpayOrderId(orderId: string, razorpayOrderId: string) {
+  return prisma.vendorStoreOrder.updateMany({
+    where: { id: orderId, paymentStatus: "PENDING" },
+    data: { razorpayOrderId },
+  });
+}
 
 export function findStoreOrders(storeId: string, status?: StoreOrderStatus) {
   return prisma.vendorStoreOrder.findMany({
@@ -414,13 +494,22 @@ export function findStoreOrderById(id: string) {
   });
 }
 
-export function updateStoreOrderStatus(
+export async function updateStoreOrderStatus(
   id: string,
   data: {
     status?: StoreOrderStatus | undefined;
     paymentStatus?: StorePaymentStatus | undefined;
   },
 ) {
+  if (data.paymentStatus !== undefined) {
+    const current = await prisma.vendorStoreOrder.findUnique({ where: { id }, select: { paymentStatus: true } });
+    if (current && !isValidPaymentStatusTransition(current.paymentStatus, data.paymentStatus)) {
+      throw new ValidationError(
+        `Cannot change payment status from ${current.paymentStatus} to ${data.paymentStatus}.`,
+      );
+    }
+  }
+
   const updateData: Prisma.VendorStoreOrderUpdateInput = {};
   if (data.status !== undefined) updateData.status = data.status;
   if (data.paymentStatus !== undefined) updateData.paymentStatus = data.paymentStatus;
@@ -442,6 +531,15 @@ export function linkOrderInvoice(orderId: string, invoiceId: string) {
   });
 }
 
+/**
+ * Cancels ONLINE orders whose checkout session has been PENDING too long,
+ * restoring the stock reserved for each (stock is decremented atomically at
+ * order-creation time — see createStoreOrderAtomicTx — so an abandoned
+ * checkout must give it back or inventory permanently leaks). This is the
+ * single canonical implementation — vendor-store domain owns
+ * VendorStoreOrder, so admin-store-payments imports and calls this rather
+ * than keeping its own copy.
+ */
 export async function cleanupStalePendingOrders(olderThanMinutes: number = 60) {
   const threshold = new Date(Date.now() - olderThanMinutes * 60 * 1000);
   const staleOrders = await prisma.vendorStoreOrder.findMany({
@@ -472,7 +570,7 @@ export async function cleanupStalePendingOrders(olderThanMinutes: number = 60) {
     },
   });
 
-  return prisma.vendorStoreOrder.updateMany({
+  const result = await prisma.vendorStoreOrder.updateMany({
     where: {
       id: { in: orderIds },
     },
@@ -482,4 +580,10 @@ export async function cleanupStalePendingOrders(olderThanMinutes: number = 60) {
       notes: "Order cancelled automatically due to payment session timeout.",
     },
   });
+
+  for (const orderId of orderIds) {
+    await restoreStockForOrder(orderId);
+  }
+
+  return result;
 }

@@ -300,10 +300,18 @@ export async function createStorePaymentOrder(
   const vendorSettlement = settlementAmount ?? calculateOrderFinancials(totalAmount).vendorSettlementAmount;
   const transferAmountInPaise = Math.round(vendorSettlement * 100);
 
-  // Split transfers configuration for Razorpay Route (requires minimum 100 paise = ₹1.00)
+  // Split transfers configuration for Razorpay Route (requires minimum 100 paise = ₹1.00).
+  // acc_sim_/acc_test_ are this codebase's own fallback ids for a vendor
+  // whose real Razorpay linked-account creation failed (e.g. Route not yet
+  // enabled/permitted on this account) — see onboardVendorPaymentAccount's
+  // catch block. Neither is a real Razorpay account id, so sending either
+  // as a transfers[].account target gets rejected by Razorpay's real API
+  // ("Access Denied" / "The account must be 18 characters") instead of
+  // just falling back to a plain (non-split) payment as intended.
   const transfers =
     vendorPaymentAccount.razorpayAccountId &&
     !vendorPaymentAccount.razorpayAccountId.startsWith("acc_sim_") &&
+    !vendorPaymentAccount.razorpayAccountId.startsWith("acc_test_") &&
     transferAmountInPaise >= 100
       ? [
           {
