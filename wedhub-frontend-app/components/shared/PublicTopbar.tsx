@@ -1,26 +1,35 @@
 import Link from "next/link";
 import { getOptionalSession } from "@/lib/auth/dal";
 import { listCategories } from "@/lib/api/catalog";
-import { getMyUnreadNotificationCount } from "@/lib/api/account";
+import { getMe, getMyUnreadNotificationCount } from "@/lib/api/account";
 import { BrandLogo } from "@/components/shared/BrandLogo";
 
 interface PublicTopbarProps {
   variant?: "brand" | "white";
   /**
-   * Marks the active item among the couple-only nav links (Shortlist/My
-   * Enquiries/Wedding Website) that appear once a session exists — same
-   * shell as the logged-out header, just with more links, so a couple's
-   * journey never leaves the public brand chrome. Pass "/notifications"
+   * Marks the active item among coupleNavLinks — the marketing nav
+   * (Venues/Vendors/Photos/...) is swapped out entirely for those once a
+   * session exists, so a couple's journey stays on the brand header
+   * without browsing links irrelevant to their task. Pass "/notifications"
    * too so the bell can highlight itself.
    */
   activeHref?: string;
 }
 
 const coupleNavLinks = [
+  { href: "/", label: "Home" },
+  { href: "/search", label: "Find Vendors" },
   { href: "/shortlist", label: "Shortlist" },
   { href: "/enquiries", label: "My Enquiries" },
   { href: "/wedding-website", label: "Wedding Website" },
 ];
+
+/** "AB" from "Ananthu G" / falls back to the email's first two letters when no name is set yet. */
+function initialsFrom(firstName: string | null, lastName: string | null, email: string): string {
+  const name = [firstName, lastName].filter(Boolean).join(" ").trim();
+  if (name) return name.slice(0, 2).toUpperCase();
+  return email.slice(0, 2).toUpperCase();
+}
 
 const coupleBottomNavLinks = [
   { href: "/", label: "Home", icon: <path d="M3 9.5L12 3l9 6.5V21a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1z" /> },
@@ -43,12 +52,21 @@ const coupleBottomNavLinks = [
 ];
 
 export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopbarProps) {
+  // listCategories() is revalidated hourly (see catalog.ts), so fetching it
+  // unconditionally here costs logged-in couples nothing extra in practice
+  // — simpler than threading a conditional through Promise.all's tuple type.
   const [session, { data: categories }] = await Promise.all([getOptionalSession(), listCategories()]);
-  const unreadCount = session
-    ? await getMyUnreadNotificationCount()
-        .then((r) => r.data.count)
-        .catch(() => 0)
-    : 0;
+  const [unreadCount, me] = session
+    ? await Promise.all([
+        getMyUnreadNotificationCount()
+          .then((r) => r.data.count)
+          .catch(() => 0),
+        getMe()
+          .then((r) => r.data)
+          .catch(() => null),
+      ])
+    : [0, null];
+  const initials = me ? initialsFrom(me.profile?.firstName ?? null, me.profile?.lastName ?? null, me.email) : "";
 
   const isBrand = variant === "brand";
   // "Venues" nav link needs a real Category.id, not a hardcoded string —
@@ -66,15 +84,17 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span>India&apos;s Favourite Wedding Planning Platform</span>
           </div>
-          <div className="flex items-center gap-5 font-medium">
-            <Link href="/reviews/write" className="flex items-center gap-1 text-white/90 transition-colors hover:text-white hover:underline">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-              </svg>
-              Write A Review
-            </Link>
-            <span className="text-white/40">|</span>
-          </div>
+          {!session && (
+            <div className="flex items-center gap-5 font-medium">
+              <Link href="/reviews/write" className="flex items-center gap-1 text-white/90 transition-colors hover:text-white hover:underline">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                Write A Review
+              </Link>
+              <span className="text-white/40">|</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -91,43 +111,7 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
 
           {/* Desktop Nav Links */}
           <nav className="hidden items-center gap-1 lg:flex">
-            <Link
-              href={venuesLink}
-              className="rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 transition-all hover:bg-white/15 hover:text-white"
-            >
-              Venues
-            </Link>
-            <Link
-              href="/vendors"
-              className="rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 transition-all hover:bg-white/15 hover:text-white"
-            >
-              Vendors
-            </Link>
-            <a
-              href="#gallery-inspiration"
-              className="rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 transition-all hover:bg-white/15 hover:text-white"
-            >
-              Photos
-            </a>
-            <Link
-              href="/real-weddings"
-              className="rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 transition-all hover:bg-white/15 hover:text-white"
-            >
-              Real Weddings
-            </Link>
-            <a
-              href="#wedding-blogs"
-              className="rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 transition-all hover:bg-white/15 hover:text-white"
-            >
-              Blog
-            </a>
-            <Link
-              href="/search"
-              className="rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 transition-all hover:bg-white/15 hover:text-white"
-            >
-              E-Invites
-            </Link>
-            {session &&
+            {session ? (
               coupleNavLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -138,7 +122,17 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
                 >
                   {link.label}
                 </Link>
-              ))}
+              ))
+            ) : (
+              <>
+                <Link
+                  href="/vendors"
+                  className="rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 transition-all hover:bg-white/15 hover:text-white"
+                >
+                  Vendors
+                </Link>
+              </>
+            )}
           </nav>
         </div>
 
@@ -156,23 +150,25 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
             </svg>
           </Link>
 
-          {/* Write a review (tablet / desktop) */}
-          <Link
-            href="/reviews/write"
-            className="hidden items-center gap-1.5 rounded-full border border-white/40 bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white transition-all hover:bg-white hover:text-[#e00b41] sm:inline-flex"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            Review a Vendor
-          </Link>
+          {/* Write a review (tablet / desktop) — logged-out visitors only; couples get it from their enquiries list instead */}
+          {!session && (
+            <Link
+              href="/reviews/write"
+              className="hidden items-center gap-1.5 rounded-full border border-white/40 bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white transition-all hover:bg-white hover:text-[#e00b41] sm:inline-flex"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              Review a Vendor
+            </Link>
+          )}
 
           {session ? (
             <div className="flex items-center gap-2">
               <Link
                 href="/notifications"
                 aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
-                className="relative hidden h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 sm:flex"
+                className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -181,17 +177,11 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
                 {unreadCount > 0 && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#e00b41]" />}
               </Link>
               <Link
-                href="/shortlist"
-                className="hidden rounded-full bg-white/15 px-3.5 py-1.5 text-xs font-bold text-white transition-colors hover:bg-white/25 sm:inline-block lg:hidden"
-              >
-                Shortlist
-              </Link>
-              <Link
                 href="/account"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-white font-bold text-[#e00b41] shadow-sm ring-2 ring-white/40 transition-transform hover:scale-105"
                 title="My Account"
               >
-                {session.userId.slice(0, 2).toUpperCase()}
+                {initials}
               </Link>
             </div>
           ) : (
@@ -213,25 +203,27 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
         </div>
       </header>
 
-      {/* Mobile Category Quick Scroll */}
+      {/* Mobile Category Quick Scroll — replaced by the couple's own links when logged in, since the primary mobile nav for them is CoupleBottomNav below anyway */}
       <div className="flex overflow-x-auto border-t border-white/15 bg-[#c2185b] px-3 py-1.5 text-xs font-medium text-white/90 whitespace-nowrap lg:hidden">
-        <Link href={venuesLink} className="px-2.5 py-1 hover:text-white">Venues</Link>
-        <span className="opacity-30">•</span>
-        <Link href="/vendors" className="px-2.5 py-1 hover:text-white">Vendors</Link>
-        <span className="opacity-30">•</span>
-        <a href="#gallery-inspiration" className="px-2.5 py-1 hover:text-white">Photos</a>
-        <span className="opacity-30">•</span>
-        <Link href="/real-weddings" className="px-2.5 py-1 hover:text-white">Real Weddings</Link>
-        <span className="opacity-30">•</span>
-        <a href="#wedding-blogs" className="px-2.5 py-1 hover:text-white">Blog</a>
-        <span className="opacity-30">•</span>
-        <Link href="/reviews/write" className="px-2.5 py-1 hover:text-white">Write Review</Link>
-        {session && (
+        {session ? (
           <>
-            <span className="opacity-30">•</span>
             <Link href="/enquiries" className="px-2.5 py-1 hover:text-white">My Enquiries</Link>
             <span className="opacity-30">•</span>
             <Link href="/wedding-website" className="px-2.5 py-1 hover:text-white">Wedding Website</Link>
+          </>
+        ) : (
+          <>
+            <Link href={venuesLink} className="px-2.5 py-1 hover:text-white">Venues</Link>
+            <span className="opacity-30">•</span>
+            <Link href="/vendors" className="px-2.5 py-1 hover:text-white">Vendors</Link>
+            <span className="opacity-30">•</span>
+            <a href="#gallery-inspiration" className="px-2.5 py-1 hover:text-white">Photos</a>
+            <span className="opacity-30">•</span>
+            <Link href="/real-weddings" className="px-2.5 py-1 hover:text-white">Real Weddings</Link>
+            <span className="opacity-30">•</span>
+            <a href="#wedding-blogs" className="px-2.5 py-1 hover:text-white">Blog</a>
+            <span className="opacity-30">•</span>
+            <Link href="/reviews/write" className="px-2.5 py-1 hover:text-white">Write Review</Link>
           </>
         )}
       </div>
