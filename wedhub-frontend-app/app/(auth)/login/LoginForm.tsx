@@ -40,7 +40,7 @@ export function LoginForm() {
   }
 
   function goToDestination(role: UserRole) {
-    const next = searchParams.get("next");
+    const next = searchParams.get("next") || searchParams.get("redirect");
     const destination = next ?? roleHomeRoute[role];
     router.push(destination);
     router.refresh();

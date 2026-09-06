@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { register, login } from "@/lib/api/auth-client";
@@ -27,6 +27,7 @@ const roleHomeRoute: Record<UserRole, string> = {
 // get a distinct, separately-linked flow.
 export function SignupWizard({ accountType }: { accountType: AccountType }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -97,7 +98,8 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
   }
 
   function goToDashboard() {
-    router.push(roleHomeRoute[accountType]);
+    const next = searchParams.get("next") || searchParams.get("redirect");
+    router.push(next ?? roleHomeRoute[accountType]);
     router.refresh();
   }
 

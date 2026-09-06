@@ -621,6 +621,12 @@ enum MediaType {
   BLOG_COVER_IMAGE
   // Arch Phase 29 — Product & rental item photos subject to moderation and worker WebP variants
   STORE_ITEM_PHOTO
+  // Admin-only, platform-owned image (no vendorId/userId) — a standalone
+  // Gallery Inspiration photo with no owning vendor, tagged with a
+  // GalleryCategory instead. Same shape as CATEGORY_IMAGE/
+  // POPULAR_SEARCH_IMAGE/BLOG_COVER_IMAGE above but kept as its own value
+  // so admin-media's per-mediaType confirm checks stay unambiguous.
+  INSPIRATION_PHOTO
 }
 
 enum MediaStatus {
@@ -747,17 +753,44 @@ model WeddingStory {
 // Arch Phase 17 — backs the public homepage's "Gallery Inspiration"
 // section (GalleryInspiration.tsx's hardcoded GALLERY_ITEMS). An admin
 // curates specific, already-real, already-public vendor Media rows for
-// homepage display — no new image upload path, no fabricated photos.
+// homepage display. Vendor linkage is no longer required as of the
+// INSPIRATION_PHOTO addition — an admin can instead upload a standalone
+// photo with no owning vendor, tagged with a GalleryCategory below since
+// there's no vendor category to derive a label from in that case.
 model FeaturedMedia {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  mediaId       String   @unique @map("media_id") @db.Uuid
-  titleOverride String?  @map("title_override")
-  sortOrder     Int      @default(0) @map("sort_order")
-  createdAt     DateTime @default(now()) @map("created_at")
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mediaId           String   @unique @map("media_id") @db.Uuid
+  galleryCategoryId String?  @map("gallery_category_id") @db.Uuid
+  titleOverride     String?  @map("title_override")
+  sortOrder         Int      @default(0) @map("sort_order")
+  createdAt         DateTime @default(now()) @map("created_at")
 
-  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  media           Media            @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  galleryCategory GalleryCategory? @relation(fields: [galleryCategoryId], references: [id], onDelete: SetNull)
 
+  @@index([galleryCategoryId])
   @@map("featured_media")
+}
+
+// Standalone taxonomy for Gallery Inspiration content, independent of the
+// vendor-facing Category model — needed because an INSPIRATION_PHOTO
+// FeaturedMedia row has no vendor to derive a category label from.
+// WedMeGood-style groupings (Outfit, Jewellery & Accessories, Mehndi,
+// Decor & Ideas, Wedding Card Designs, Wedding Photography, Groom Wear,
+// Bridal Makeup & Hair) — seeded once in the migration, editable later if
+// an admin-facing CRUD screen is ever added.
+model GalleryCategory {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  slug      String   @unique
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  featuredMedia FeaturedMedia[]
+
+  @@map("gallery_categories")
 }
 
 enum SeoPageType {

@@ -263,19 +263,35 @@ export interface PopularSearchCard {
 // Backs the public homepage's "Gallery Inspiration" section — real,
 // admin-curated selections of real vendor portfolio media, replacing the
 // previously-hardcoded GALLERY_ITEMS array in GalleryInspiration.tsx.
+// media.vendor is null for a standalone INSPIRATION_PHOTO item (no owning
+// vendor) — galleryCategory is the primary category source in that case,
+// with the vendor-category derivation as a fallback for older
+// vendor-featured rows that predate this field (see GalleryInspiration.tsx's
+// itemCategory()).
 export interface FeaturedMediaItem {
   id: string;
   mediaId: string;
+  galleryCategory: { id: string; name: string; slug: string } | null;
   titleOverride: string | null;
   sortOrder: number;
   media: VendorProfileMedia & {
     altText: string | null;
     vendor: {
       id: string;
+      slug: string;
       businessName: string;
       categories: Array<{ isPrimary: boolean; category: { id: string; name: string } }>;
-    };
+    } | null;
   };
+}
+
+// ---- GET /gallery/categories ----
+export interface GalleryCategory {
+  id: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  isActive: boolean;
 }
 
 // ---- GET /vendors/:vendorId/reviews ----

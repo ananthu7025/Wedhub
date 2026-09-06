@@ -117,10 +117,10 @@ export function PublicFooter() {
             <ul className="space-y-2 text-xs text-text-grey list-none p-0 m-0">
               <li><Link href="/real-weddings" className="hover:text-brand-primary hover:underline">Real Wedding Stories</Link></li>
               <li><a href="#wedding-blogs" className="hover:text-brand-primary hover:underline">Latest Wedding Blog</a></li>
-              <li><a href="#gallery-inspiration" className="hover:text-brand-primary hover:underline">Bridal Lehenga Trends</a></li>
-              <li><a href="#gallery-inspiration" className="hover:text-brand-primary hover:underline">Mandap &amp; Decor Ideas</a></li>
-              <li><a href="#gallery-inspiration" className="hover:text-brand-primary hover:underline">Pre-Wedding Shoots</a></li>
-              <li><a href="#gallery-inspiration" className="hover:text-brand-primary hover:underline">Bridal Mehndi Designs</a></li>
+              <li><Link href="/gallery?category=outfit" className="hover:text-brand-primary hover:underline">Bridal Lehenga Trends</Link></li>
+              <li><Link href="/gallery?category=decor-ideas" className="hover:text-brand-primary hover:underline">Mandap &amp; Decor Ideas</Link></li>
+              <li><Link href="/gallery?category=wedding-photography" className="hover:text-brand-primary hover:underline">Pre-Wedding Shoots</Link></li>
+              <li><Link href="/gallery?category=mehndi" className="hover:text-brand-primary hover:underline">Bridal Mehndi Designs</Link></li>
             </ul>
           </div>
 
@@ -136,15 +136,15 @@ export function PublicFooter() {
           </div>
 
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-jet-black mb-3">Popular Cities</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-jet-black mb-3">Popular Districts</h4>
             <ul className="space-y-2 text-xs text-text-grey list-none p-0 m-0">
-              <li><Link href="/search?keyword=Bengaluru" className="hover:text-brand-primary hover:underline">Bengaluru</Link></li>
-              <li><Link href="/search?keyword=Delhi" className="hover:text-brand-primary hover:underline">Delhi NCR</Link></li>
-              <li><Link href="/search?keyword=Mumbai" className="hover:text-brand-primary hover:underline">Mumbai</Link></li>
-              <li><Link href="/search?keyword=Hyderabad" className="hover:text-brand-primary hover:underline">Hyderabad</Link></li>
-              <li><Link href="/search?keyword=Chennai" className="hover:text-brand-primary hover:underline">Chennai</Link></li>
-              <li><Link href="/search?keyword=Goa" className="hover:text-brand-primary hover:underline">Goa</Link></li>
-              <li><Link href="/search?keyword=Jaipur" className="hover:text-brand-primary hover:underline">Jaipur &amp; Udaipur</Link></li>
+              <li><Link href="/search?keyword=Thiruvananthapuram" className="hover:text-brand-primary hover:underline">Thiruvananthapuram</Link></li>
+              <li><Link href="/search?keyword=Kochi" className="hover:text-brand-primary hover:underline">Kochi</Link></li>
+              <li><Link href="/search?keyword=Kozhikode" className="hover:text-brand-primary hover:underline">Kozhikode</Link></li>
+              <li><Link href="/search?keyword=Thrissur" className="hover:text-brand-primary hover:underline">Thrissur</Link></li>
+              <li><Link href="/search?keyword=Kollam" className="hover:text-brand-primary hover:underline">Kollam</Link></li>
+              <li><Link href="/search?keyword=Kannur" className="hover:text-brand-primary hover:underline">Kannur</Link></li>
+              <li><Link href="/search?keyword=Malappuram" className="hover:text-brand-primary hover:underline">Malappuram</Link></li>
             </ul>
           </div>
 

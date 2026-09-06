@@ -10,6 +10,7 @@ import {
   listAdminVendors,
   listAdminWeddingStories,
 } from "@/lib/api/admin";
+import { listGalleryCategories } from "@/lib/api/catalog";
 import { WeddingStoriesBoard } from "./WeddingStoriesBoard";
 import { FeaturedMediaBoard } from "./FeaturedMediaBoard";
 import { PopularSearchCardsBoard } from "./PopularSearchCardsBoard";
@@ -51,6 +52,7 @@ export default async function AdminCmsPage() {
     { data: popularSearchCards },
     { data: blogPosts },
     { data: vendors },
+    { data: galleryCategories },
   ] = await Promise.all([
     listAdminPublicAlbums(),
     listAdminApprovedMedia(),
@@ -59,6 +61,7 @@ export default async function AdminCmsPage() {
     listAdminPopularSearchCards(),
     listAdminBlogPosts(),
     listAdminVendors({ status: "APPROVED", limit: 100 }),
+    listGalleryCategories(),
   ]);
 
   return (
@@ -81,7 +84,12 @@ export default async function AdminCmsPage() {
         <p className="mb-4 text-[13px] text-text-grey">
           Real, approved vendor portfolio photos featured on the homepage gallery.
         </p>
-        <FeaturedMediaBoard initialFeatured={featuredMedia} approvedMedia={approvedMedia} vendors={vendors} />
+        <FeaturedMediaBoard
+          initialFeatured={featuredMedia}
+          approvedMedia={approvedMedia}
+          vendors={vendors}
+          galleryCategories={galleryCategories}
+        />
       </div>
 
       <div className="mb-6 rounded-xl border border-border bg-white p-6">

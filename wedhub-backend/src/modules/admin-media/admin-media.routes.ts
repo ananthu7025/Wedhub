@@ -9,6 +9,7 @@ import {
   createAdminImageUploadRequestSchema,
   createAdminVendorUploadRequestSchema,
   createBlogCoverImageUploadRequestSchema,
+  createInspirationImageUploadRequestSchema,
   createPopularSearchImageUploadRequestSchema,
 } from "./admin-media.schema";
 
@@ -63,4 +64,19 @@ adminMediaRouter.post(
 adminMediaRouter.post(
   "/blog-cover-image-upload-requests/:id/confirm",
   asyncHandler(adminMediaController.confirmBlogCoverImageUpload),
+);
+
+// Admin uploading a real image for a standalone Gallery Inspiration photo
+// (no owning vendor) — same platform-owned shape as the routes above,
+// tagged INSPIRATION_PHOTO instead of CATEGORY_IMAGE/POPULAR_SEARCH_IMAGE/
+// BLOG_COVER_IMAGE.
+adminMediaRouter.post(
+  "/inspiration-image-upload-requests",
+  validateBody(createInspirationImageUploadRequestSchema),
+  asyncHandler(adminMediaController.createInspirationImageUploadRequest),
+);
+
+adminMediaRouter.post(
+  "/inspiration-image-upload-requests/:id/confirm",
+  asyncHandler(adminMediaController.confirmInspirationImageUpload),
 );

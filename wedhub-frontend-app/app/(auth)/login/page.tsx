@@ -16,10 +16,17 @@ const roleHomeRoute: Record<string, string> = {
   ADMIN: "/admin/dashboard",
 };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ next?: string; redirect?: string }>;
+}) {
   const session = await getOptionalSession();
+  const sp = searchParams ? await searchParams : undefined;
+  const target = sp?.next || sp?.redirect;
+
   if (session) {
-    redirect(roleHomeRoute[session.role] ?? "/");
+    redirect(target ?? roleHomeRoute[session.role] ?? "/");
   }
 
   return (
@@ -50,7 +57,10 @@ export default async function LoginPage() {
           <h1 className="mb-2 text-center text-[30px] font-bold text-brand-ink-soft">Welcome back</h1>
           <p className="mb-7 text-center text-sm text-text-grey">
             New to itsmyKalyanam?
-            <Link href="/signup" className="ml-1 font-bold text-brand-primary no-underline">
+            <Link
+              href={target ? `/signup?next=${encodeURIComponent(target)}` : "/signup"}
+              className="ml-1 font-bold text-brand-primary no-underline"
+            >
               Create an account
             </Link>
           </p>

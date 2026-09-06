@@ -166,17 +166,17 @@ export async function VendorShell({
 
         {/* Mobile Sticky Top Header (visible only on < 1024px) */}
         <header className="sticky top-0 z-30 flex h-14 sm:h-16 items-center justify-between border-b border-border bg-white/95 backdrop-blur-md px-3 sm:px-4 lg:hidden">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0 min-w-0">
             <BrandLogo variant="dark" href="/vendor/dashboard" />
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {resolvedSlug && (
               <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
             )}
             <Link
               href="/vendor/notifications"
               aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
-              className={`relative flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full ${
+              className={`relative flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full shrink-0 ${
                 activeHref === "/vendor/notifications" ? "bg-brand-primary-soft text-brand-primary" : "text-text-grey hover:bg-surface-input"
               }`}
             >
@@ -188,7 +188,7 @@ export async function VendorShell({
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red ring-2 ring-white" />
               )}
             </Link>
-            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-brand-ink-soft text-xs font-bold text-white shadow-xs">
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-brand-ink-soft text-xs font-bold text-white shadow-xs shrink-0">
               {initials}
             </div>
           </div>

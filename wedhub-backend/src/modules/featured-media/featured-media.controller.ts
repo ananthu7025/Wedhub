@@ -1,18 +1,33 @@
 import type { Request, Response } from "express";
-import { successResponse } from "../../common/utils/api-response.util";
+import { paginatedResponse, successResponse } from "../../common/utils/api-response.util";
 import * as featuredMediaService from "./featured-media.service";
-import type { CreateFeaturedMediaBody, UpdateFeaturedMediaBody } from "./featured-media.schema";
+import type { CreateFeaturedMediaBody, ListFeaturedQuery, UpdateFeaturedMediaBody } from "./featured-media.schema";
 
-// Public — backs the homepage's "Gallery Inspiration" section with real,
-// admin-curated vendor media.
-export async function listFeatured(_req: Request, res: Response): Promise<void> {
-  const items = await featuredMediaService.listFeatured();
-  res.json(successResponse(items));
+// Public — backs both the homepage's "Gallery Inspiration" teaser and the
+// standalone /gallery browse page with real, admin-curated media.
+export async function listFeatured(req: Request, res: Response): Promise<void> {
+  const query = req.validatedQuery as ListFeaturedQuery;
+  const { items, total } = await featuredMediaService.listFeatured(query);
+  res.json(
+    paginatedResponse(items, {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.ceil(total / query.limit),
+    }),
+  );
 }
 
 export async function listAll(_req: Request, res: Response): Promise<void> {
   const items = await featuredMediaService.listAllForAdmin();
   res.json(successResponse(items));
+}
+
+// Public — lets the admin CMS's category picker and the Home page both
+// read the same reference list.
+export async function listGalleryCategories(_req: Request, res: Response): Promise<void> {
+  const categories = await featuredMediaService.listGalleryCategories();
+  res.json(successResponse(categories));
 }
 
 export async function create(req: Request, res: Response): Promise<void> {

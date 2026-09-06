@@ -38,6 +38,27 @@ export function createUnattachedBlogCoverImage(data: { originalObjectKey: string
   });
 }
 
+// Same shape as createUnattachedImage above, but tagged INSPIRATION_PHOTO —
+// backs a standalone Gallery Inspiration photo with no owning vendor (see
+// MediaType enum comment). The caller (featured-media module) attaches a
+// GalleryCategory to the resulting FeaturedMedia row, not here. Unlike its
+// CATEGORY_IMAGE/POPULAR_SEARCH_IMAGE/BLOG_COVER_IMAGE siblings, this row
+// gets fed straight into FeaturedMedia.mediaId — and createFeaturedMedia
+// requires moderationStatus === APPROVED — so it's set explicitly here
+// (defaults to PENDING otherwise), same as createVendorMedia below: admin-
+// sourced content doesn't need an admin to moderate itself.
+export function createUnattachedInspirationImage(data: { originalObjectKey: string; mimeType: string; fileSize: number }) {
+  return prisma.media.create({
+    data: {
+      mediaType: "INSPIRATION_PHOTO",
+      originalObjectKey: data.originalObjectKey,
+      mimeType: data.mimeType,
+      fileSize: data.fileSize,
+      moderationStatus: "APPROVED",
+    },
+  });
+}
+
 export function findImageById(id: string) {
   return prisma.media.findUnique({ where: { id } });
 }

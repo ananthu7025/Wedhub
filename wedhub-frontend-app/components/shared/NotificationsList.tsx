@@ -82,8 +82,8 @@ export function NotificationsList({ initialNotifications }: { initialNotificatio
                 </svg>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="mb-0.5 text-[13px] font-bold">{notification.title}</p>
-                <p className="text-[13px] leading-snug text-text-grey">{notification.body}</p>
+                <p className="mb-0.5 text-[13px] font-bold break-words">{notification.title}</p>
+                <p className="text-[13px] leading-snug text-text-grey break-words [overflow-wrap:anywhere]">{notification.body}</p>
                 <p className="mt-1.5 text-[11px] text-paynes-grey-30">{formatRelativeTime(notification.createdAt)}</p>
               </div>
             </button>

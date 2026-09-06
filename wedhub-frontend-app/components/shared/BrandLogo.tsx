@@ -20,12 +20,12 @@ export function BrandLogo({ variant = "white", className = "", showWordmark = tr
   const textColor = isWhite ? "text-white" : "text-jet-black";
 
   return (
-    <Link href={href} className={`flex items-center gap-2.5 no-underline ${className}`} aria-label="itsmyKalyanam Home">
+    <Link href={href} className={`flex items-center gap-2 sm:gap-2.5 no-underline shrink-0 ${className}`} aria-label="itsmyKalyanam Home">
       {/* Circular ik Emblem Icon */}
-      <span className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full shadow-sm ring-2 ring-white/30 overflow-hidden ${iconBg} transition-transform hover:scale-105`}>
+      <span className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full shadow-sm ring-2 ring-white/30 overflow-hidden shrink-0 ${iconBg} transition-transform hover:scale-105`}>
         <svg
           viewBox="70 95 260 240"
-          className="h-7 w-7 sm:h-8 sm:w-8 fill-current"
+          className="h-6 w-6 sm:h-8 sm:w-8 fill-current shrink-0"
           xmlns="http://www.w3.org/2000/svg"
         >
           <g transform="translate(0.000000,600.000000) scale(0.100000,-0.100000)" stroke="none">
@@ -135,10 +135,10 @@ l23 0 0 -208z m160 -140 c0 -5 13 -24 29 -43 325 -388 351 -416 421 -474 35
 
       {/* itsmyKalyanam Wordmark from SVG */}
       {showWordmark && (
-        <span className={`flex items-center flex-shrink-0 ${textColor}`}>
+        <span className={`flex items-center shrink-0 ${textColor}`}>
           <svg
             viewBox="40 340 328 55"
-            className="h-5 sm:h-6 w-auto fill-current tracking-tight flex-shrink-0"
+            className="h-4.5 sm:h-6 w-auto fill-current tracking-tight shrink-0"
             xmlns="http://www.w3.org/2000/svg"
             aria-label="itsmyKalyanam"
           >

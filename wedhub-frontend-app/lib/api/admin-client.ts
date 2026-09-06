@@ -15,6 +15,7 @@ import type {
   AdminCreateCouponBody,
   AdminCreateFeaturedMediaBody,
   AdminCreateImageUploadRequestBody,
+  AdminCreateInspirationImageUploadRequestBody,
   AdminCreateInvitationBody,
   AdminCreateLocationBody,
   AdminCreatePlanBody,
@@ -26,6 +27,8 @@ import type {
   AdminFeaturedMedia,
   AdminImageConfirmResult,
   AdminImageUploadRequestResult,
+  AdminInspirationImageConfirmResult,
+  AdminInspirationImageUploadRequestResult,
   AdminLeadStatusUpdateResult,
   AdminModerateReviewBody,
   AdminPlan,
@@ -220,6 +223,25 @@ export function createAdminBlogCoverImageUploadRequest(body: AdminCreateBlogCove
 export function confirmAdminBlogCoverImageUpload(mediaId: string) {
   return call<AdminBlogCoverImageConfirmResult>(
     `/admin/media-uploads/blog-cover-image-upload-requests/${mediaId}/confirm`,
+    "POST",
+  );
+}
+
+// Same real R2 presign -> PUT -> confirm flow as the popular-search/
+// blog-cover pairs above, for a standalone Gallery Inspiration photo with
+// no owning vendor — INSPIRATION_PHOTO instead of POPULAR_SEARCH_IMAGE/
+// BLOG_COVER_IMAGE, see admin.types.ts's header comment.
+export function createAdminInspirationImageUploadRequest(body: AdminCreateInspirationImageUploadRequestBody) {
+  return call<AdminInspirationImageUploadRequestResult>(
+    "/admin/media-uploads/inspiration-image-upload-requests",
+    "POST",
+    body,
+  );
+}
+
+export function confirmAdminInspirationImageUpload(mediaId: string) {
+  return call<AdminInspirationImageConfirmResult>(
+    `/admin/media-uploads/inspiration-image-upload-requests/${mediaId}/confirm`,
     "POST",
   );
 }

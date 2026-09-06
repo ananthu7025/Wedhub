@@ -1,15 +1,20 @@
 import { Router } from "express";
 import { asyncHandler } from "../../common/utils/async-handler.util";
-import { validateBody } from "../../common/middleware/validate.middleware";
+import { validateBody, validateQuery } from "../../common/middleware/validate.middleware";
 import { authenticateMiddleware } from "../../common/middleware/authenticate.middleware";
 import { authorize } from "../../common/middleware/authorize.middleware";
 import { Role } from "../../common/enums/roles.enum";
 import * as featuredMediaController from "./featured-media.controller";
-import { createFeaturedMediaSchema, updateFeaturedMediaSchema } from "./featured-media.schema";
+import { createFeaturedMediaSchema, listFeaturedQuerySchema, updateFeaturedMediaSchema } from "./featured-media.schema";
 
 export const featuredMediaRouter = Router();
 
-featuredMediaRouter.get("/featured/homepage", asyncHandler(featuredMediaController.listFeatured));
+featuredMediaRouter.get(
+  "/featured/homepage",
+  validateQuery(listFeaturedQuerySchema),
+  asyncHandler(featuredMediaController.listFeatured),
+);
+featuredMediaRouter.get("/categories", asyncHandler(featuredMediaController.listGalleryCategories));
 
 export const featuredMediaAdminRouter = Router();
 featuredMediaAdminRouter.use(authenticateMiddleware, authorize(Role.ADMIN));

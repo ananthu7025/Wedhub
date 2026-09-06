@@ -703,9 +703,14 @@ export interface AdminUpdateWeddingStoryBody {
 }
 
 // ---- /admin/featured-media ----
+// media.vendor is null for a standalone INSPIRATION_PHOTO item (no owning
+// vendor, uploaded directly via InspirationPhotoUploader) — galleryCategory
+// is required to label those, and optional (falls back to the vendor's
+// primary category) for vendor-backed items.
 export interface AdminFeaturedMedia {
   id: string;
   mediaId: string;
+  galleryCategory: { id: string; name: string; slug: string } | null;
   titleOverride: string | null;
   sortOrder: number;
   media: {
@@ -718,17 +723,19 @@ export interface AdminFeaturedMedia {
       id: string;
       businessName: string;
       categories: Array<{ isPrimary: boolean; category: { id: string; name: string } }>;
-    };
+    } | null;
   };
 }
 
 export interface AdminCreateFeaturedMediaBody {
   mediaId: string;
+  galleryCategoryId?: string;
   titleOverride?: string;
   sortOrder?: number;
 }
 
 export interface AdminUpdateFeaturedMediaBody {
+  galleryCategoryId?: string | null;
   titleOverride?: string | null;
   sortOrder?: number;
 }
@@ -847,6 +854,29 @@ export interface AdminBlogCoverImageUploadRequestResult {
 }
 
 export interface AdminBlogCoverImageConfirmResult {
+  id: string;
+  status: string;
+  url: string | null;
+}
+
+// ---- POST /admin/media-uploads/inspiration-image-upload-requests, /:id/confirm ----
+// Same presign/confirm shape as the popular-search/blog-cover pairs above,
+// but tagged INSPIRATION_PHOTO instead — backs a standalone Gallery
+// Inspiration photo with no owning vendor (see FeaturedMediaBoard.tsx's
+// InspirationPhotoUploader).
+export interface AdminCreateInspirationImageUploadRequestBody {
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+}
+
+export interface AdminInspirationImageUploadRequestResult {
+  mediaId: string;
+  uploadUrl: string;
+  objectKey: string;
+}
+
+export interface AdminInspirationImageConfirmResult {
   id: string;
   status: string;
   url: string | null;

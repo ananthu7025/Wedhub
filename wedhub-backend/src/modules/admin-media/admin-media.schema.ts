@@ -49,4 +49,17 @@ export const createBlogCoverImageUploadRequestSchema = z.object({
 
 export type CreateBlogCoverImageUploadRequestBody = z.infer<typeof createBlogCoverImageUploadRequestSchema>;
 
+// Admin-only, platform-owned image for a standalone Gallery Inspiration
+// photo (no owning vendor) — same shape as the others above, kept as its
+// own schema/route pair since it produces an INSPIRATION_PHOTO rather than
+// CATEGORY_IMAGE/POPULAR_SEARCH_IMAGE/BLOG_COVER_IMAGE (see MediaType enum
+// comment in schema.prisma).
+export const createInspirationImageUploadRequestSchema = z.object({
+  filename: z.string().min(1).max(255),
+  mimeType: z.enum(IMAGE_MIME_TYPES as [string, ...string[]]),
+  fileSize: z.coerce.number().int().positive(),
+});
+
+export type CreateInspirationImageUploadRequestBody = z.infer<typeof createInspirationImageUploadRequestSchema>;
+
 export { IMAGE_MIME_TYPES };

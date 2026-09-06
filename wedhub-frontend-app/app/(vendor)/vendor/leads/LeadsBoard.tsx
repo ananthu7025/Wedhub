@@ -258,49 +258,63 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
                     </Link>
                   </div>
 
-                  <div className="mb-4.5 grid grid-cols-2 gap-3.5 text-[13px]">
-                    <div>
+                  <div className="mb-4.5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-[13px]">
+                    <div className="min-w-0">
                       <span className="mb-0.5 block text-text-grey">Phone</span>
-                      <span className="font-semibold">{detail.enquiry.contactPhone ?? "—"}</span>
+                      {detail.enquiry.contactPhone ? (
+                        <a
+                          href={`tel:${detail.enquiry.contactPhone}`}
+                          className="font-semibold text-text-dark hover:text-brand-primary transition-colors"
+                        >
+                          {detail.enquiry.contactPhone}
+                        </a>
+                      ) : (
+                        <span className="font-semibold text-text-grey">—</span>
+                      )}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span className="mb-0.5 block text-text-grey">Email</span>
-                      <span className="font-semibold">{detail.enquiry.contactEmail}</span>
+                      <a
+                        href={`mailto:${detail.enquiry.contactEmail}`}
+                        className="font-semibold text-text-dark hover:text-brand-primary break-all transition-colors block"
+                      >
+                        {detail.enquiry.contactEmail}
+                      </a>
                     </div>
                   </div>
 
                   <div className="mb-4.5 grid grid-cols-2 gap-3.5 text-[13px]">
-                    <div>
+                    <div className="min-w-0">
                       <span className="mb-0.5 block text-text-grey">Wedding date</span>
                       <span className="font-semibold">{formatDate(detail.enquiry.weddingDate)}</span>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span className="mb-0.5 block text-text-grey">Budget</span>
                       <span className="font-semibold">
                         {detail.enquiry.budget ? `₹${Number(detail.enquiry.budget).toLocaleString("en-IN")}` : "Not specified"}
                       </span>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span className="mb-0.5 block text-text-grey">Guest count</span>
                       <span className="font-semibold">{detail.enquiry.guestCount ?? "—"}</span>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span className="mb-0.5 block text-text-grey">Location</span>
-                      <span className="font-semibold">{detail.enquiry.weddingLocation ?? "—"}</span>
+                      <span className="font-semibold break-words">{detail.enquiry.weddingLocation ?? "—"}</span>
                     </div>
                   </div>
 
                   {detail.enquiry.message && (
                     <div>
                       <span className="mb-1 block text-[13px] text-text-grey">Original enquiry message</span>
-                      <div className="rounded-md bg-surface-input p-3.5 text-[13px] italic leading-relaxed text-text-body">
+                      <div className="rounded-md bg-surface-input p-3.5 text-[13px] italic leading-relaxed text-text-body break-words">
                         &ldquo;{detail.enquiry.message}&rdquo;
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="rounded-xl border border-border bg-white p-6">
+                <div className="rounded-xl border border-border bg-white p-4 sm:p-6">
                   <h3 className="mb-3.5 text-base font-bold">Update status</h3>
                   {isTerminal && (
                     <p className="mb-3 text-[13px] text-text-grey">
@@ -343,7 +357,7 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
                   )}
                 </div>
 
-                <div className="rounded-xl border border-border bg-white p-6">
+                <div className="rounded-xl border border-border bg-white p-4 sm:p-6">
                   <div className="mb-3.5 flex items-center gap-2">
                     <h3 className="text-base font-bold">Internal notes</h3>
                     <span className="text-xs text-text-grey">(not visible to couple)</span>

@@ -5,6 +5,7 @@ import type {
   CreateAdminImageUploadRequestBody,
   CreateAdminVendorUploadRequestBody,
   CreateBlogCoverImageUploadRequestBody,
+  CreateInspirationImageUploadRequestBody,
   CreatePopularSearchImageUploadRequestBody,
 } from "./admin-media.schema";
 
@@ -49,5 +50,16 @@ export async function createBlogCoverImageUploadRequest(req: Request, res: Respo
 
 export async function confirmBlogCoverImageUpload(req: Request, res: Response): Promise<void> {
   const media = await adminMediaService.confirmBlogCoverImageUpload(req.params.id as string);
+  res.json(successResponse(media));
+}
+
+export async function createInspirationImageUploadRequest(req: Request, res: Response): Promise<void> {
+  const body = req.body as CreateInspirationImageUploadRequestBody;
+  const result = await adminMediaService.createInspirationUploadRequest(body);
+  res.status(201).json(successResponse(result));
+}
+
+export async function confirmInspirationImageUpload(req: Request, res: Response): Promise<void> {
+  const media = await adminMediaService.confirmInspirationUpload(req.params.id as string);
   res.json(successResponse(media));
 }

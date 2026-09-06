@@ -426,7 +426,7 @@ async function BlogSection() {
 
 /** Streamed independently in its own <Suspense> boundary — see the HomePage's Suspense wiring above. */
 async function GallerySection() {
-  const { data: galleryMedia } = await listFeaturedGalleryMedia();
+  const { data: galleryMedia } = await listFeaturedGalleryMedia({ page: 1, limit: 6 });
   return <GalleryInspiration items={galleryMedia} />;
 }
 

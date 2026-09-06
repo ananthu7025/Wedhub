@@ -1,16 +1,26 @@
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import * as featuredMediaRepository from "./featured-media.repository";
-import type { CreateFeaturedMediaBody, UpdateFeaturedMediaBody } from "./featured-media.schema";
+import type { CreateFeaturedMediaBody, ListFeaturedQuery, UpdateFeaturedMediaBody } from "./featured-media.schema";
 
-// Backs the public homepage's "Gallery Inspiration" section — real,
-// admin-curated selections of real vendor portfolio media instead of a
-// hardcoded frontend array.
-export function listFeatured() {
-  return featuredMediaRepository.findFeatured();
+// Backs the homepage teaser (page=1, small limit) AND the standalone
+// /gallery browse page (paginated, optionally filtered to one
+// GalleryCategory via its slug) with the same real, admin-curated data —
+// no more hardcoded frontend array.
+export async function listFeatured(filter: ListFeaturedQuery) {
+  const gallerySlug = filter.category;
+  const [items, total] = await Promise.all([
+    featuredMediaRepository.findFeatured({ page: filter.page, limit: filter.limit, gallerySlug }),
+    featuredMediaRepository.countFeatured({ gallerySlug }),
+  ]);
+  return { items, total };
 }
 
 export function listAllForAdmin() {
   return featuredMediaRepository.findAllForAdmin();
+}
+
+export function listGalleryCategories() {
+  return featuredMediaRepository.findActiveGalleryCategories();
 }
 
 export async function createFeaturedMedia(input: CreateFeaturedMediaBody) {
@@ -25,6 +35,7 @@ export async function createFeaturedMedia(input: CreateFeaturedMediaBody) {
   try {
     return await featuredMediaRepository.createFeaturedMedia({
       mediaId: input.mediaId,
+      galleryCategoryId: input.galleryCategoryId,
       titleOverride: input.titleOverride,
       sortOrder: input.sortOrder,
     });
@@ -43,6 +54,7 @@ export async function updateFeaturedMedia(id: string, input: UpdateFeaturedMedia
   }
 
   return featuredMediaRepository.updateFeaturedMedia(id, {
+    galleryCategoryId: input.galleryCategoryId,
     titleOverride: input.titleOverride,
     sortOrder: input.sortOrder,
   });

@@ -130,7 +130,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
         </div>
 
         <div className="mt-8 grid grid-cols-[1fr_340px] gap-7 max-[900px]:grid-cols-1">
-          <main>
+          <main className="max-[900px]:order-2">
             {vendor.profile?.description && (
               <section className="mb-9">
                 <h2 className="mb-4 text-lg font-bold">About</h2>
@@ -233,8 +233,8 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
             </section>
           </main>
 
-          <aside>
-            <div className="sticky top-[90px] rounded-xl border border-border bg-white p-6 shadow-[var(--shadow-card)]">
+          <aside className="max-[900px]:order-1">
+            <div className="sticky top-[90px] max-[900px]:static rounded-xl border border-border bg-white p-6 shadow-[var(--shadow-card)]">
               {vendor.profile?.startingPrice && (
                 <p className="mb-1 text-xl font-bold">
                   {vendor.profile.currency === "INR" ? "₹" : vendor.profile.currency}

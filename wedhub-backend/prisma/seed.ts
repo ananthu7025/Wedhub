@@ -41,6 +41,21 @@ const SYSTEM_ROLES: Array<{ name: string; description: string; permissions: "all
   },
 ];
 
+// Standalone Gallery Inspiration taxonomy (GalleryCategory model) — kept
+// separate from WEDDING_CATEGORIES/Category above since INSPIRATION_PHOTO
+// FeaturedMedia rows have no vendor to derive a Category from. WedMeGood's
+// "Photos" mega-menu groupings.
+const GALLERY_CATEGORIES: string[] = [
+  "Outfit",
+  "Jewellery & Accessories",
+  "Mehndi",
+  "Decor & Ideas",
+  "Wedding Card Designs",
+  "Wedding Photography",
+  "Groom Wear",
+  "Bridal Makeup & Hair",
+];
+
 const WEDDING_CATEGORIES: string[] = [
   "Photography",
   "Videography",
@@ -181,6 +196,18 @@ async function seedCategories(): Promise<void> {
   }
 
   console.info(`Seeded ${WEDDING_CATEGORIES.length} categories.`);
+}
+
+async function seedGalleryCategories(): Promise<void> {
+  for (const [index, name] of GALLERY_CATEGORIES.entries()) {
+    await prisma.galleryCategory.upsert({
+      where: { slug: slugify(name) },
+      update: { name, sortOrder: index },
+      create: { name, slug: slugify(name), sortOrder: index },
+    });
+  }
+
+  console.info(`Seeded ${GALLERY_CATEGORIES.length} gallery categories.`);
 }
 
 async function seedHomepageFeaturedCategories(): Promise<void> {
@@ -423,6 +450,7 @@ async function main(): Promise<void> {
   console.info(`Seeded ${permissionRecords.length} permissions and ${SYSTEM_ROLES.length} roles.`);
 
   await seedCategories();
+  await seedGalleryCategories();
   await seedHomepageFeaturedCategories();
   await seedServices();
   await seedLocations();

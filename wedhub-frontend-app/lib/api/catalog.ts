@@ -6,6 +6,7 @@ import type {
   FeaturedCategory,
   FeaturedListing,
   FeaturedMediaItem,
+  GalleryCategory,
   Location,
   LocationType,
   PopularSearchCard,
@@ -121,14 +122,25 @@ export function getPublicWeddingStory(id: string) {
 }
 
 // Real, admin-curated gallery media for the public homepage's "Gallery
-// Inspiration" section (Arch Phase 17, added 2026-09-04) — replaces the
-// previously-hardcoded GALLERY_ITEMS array.
-export function listFeaturedGalleryMedia() {
-  return apiFetch<FeaturedMediaItem[]>("/gallery/featured/homepage", {
+// Inspiration" teaser AND the standalone /gallery browse page (Arch Phase
+// 17, added 2026-09-04; paginated + category-filterable added later for
+// /gallery) — replaces the previously-hardcoded GALLERY_ITEMS array.
+// `category` is a GalleryCategory.slug, not its id.
+export function listFeaturedGalleryMedia(params: { page?: number; limit?: number; category?: string } = {}) {
+  return apiFetch<FeaturedMediaItem[], PaginationMeta>("/gallery/featured/homepage", {
+    query: { page: params.page, limit: params.limit, category: params.category },
     skipAuth: true,
     public: true,
     next: { revalidate: 300 },
   });
+}
+
+// Standalone Gallery Inspiration taxonomy, independent of the vendor
+// Category model — lets a vendor-less INSPIRATION_PHOTO item carry a real
+// category label, and lets GalleryInspiration.tsx render one section per
+// active category even when it currently holds zero featured photos.
+export function listGalleryCategories() {
+  return apiFetch<GalleryCategory[]>("/gallery/categories", { skipAuth: true, public: true, next: { revalidate: 3600 } });
 }
 
 // Real, admin-curated popular-search cards for the public homepage's

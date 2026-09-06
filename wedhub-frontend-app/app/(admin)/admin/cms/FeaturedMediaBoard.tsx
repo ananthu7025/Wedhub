@@ -8,8 +8,10 @@ import {
   updateAdminFeaturedMedia,
 } from "@/lib/api/admin-client";
 import type { AdminApprovedMedia, AdminFeaturedMedia, AdminVendorListItem } from "@/lib/api/admin.types";
+import type { GalleryCategory } from "@/lib/api/vendors.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { formatApiError } from "@/lib/utils/error";
+import { InspirationPhotoUploader } from "./InspirationPhotoUploader";
 import { VendorPhotoUploader } from "./VendorPhotoUploader";
 
 function mediaThumbUrl(media: { optimizedObjectKey: string | null; thumbnailObjectKey: string | null; originalObjectKey: string }): string {
@@ -20,10 +22,12 @@ export function FeaturedMediaBoard({
   initialFeatured,
   approvedMedia,
   vendors,
+  galleryCategories,
 }: {
   initialFeatured: AdminFeaturedMedia[];
   approvedMedia: AdminApprovedMedia[];
   vendors: AdminVendorListItem[];
+  galleryCategories: GalleryCategory[];
 }) {
   const [featured, setFeatured] = useState(initialFeatured);
   const [picking, setPicking] = useState(false);
@@ -33,10 +37,10 @@ export function FeaturedMediaBoard({
   const featuredMediaIds = new Set(featured.map((f) => f.mediaId));
   const pickableMedia = approvedMedia.filter((m) => !featuredMediaIds.has(m.id));
 
-  async function handleFeature(mediaId: string) {
+  async function handleFeature(mediaId: string, galleryCategoryId?: string) {
     setPendingId(mediaId);
     setError(null);
-    const result = await createAdminFeaturedMedia({ mediaId });
+    const result = await createAdminFeaturedMedia({ mediaId, galleryCategoryId });
     setPendingId(null);
     if (!result.success) {
       setError(formatApiError(result.error));
@@ -49,6 +53,18 @@ export function FeaturedMediaBoard({
     setPendingId(item.id);
     setError(null);
     const result = await updateAdminFeaturedMedia(item.id, { titleOverride: titleOverride.trim() || null });
+    setPendingId(null);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    setFeatured((prev) => prev.map((f) => (f.id === item.id ? result.data : f)));
+  }
+
+  async function handleCategoryChange(item: AdminFeaturedMedia, galleryCategoryId: string) {
+    setPendingId(item.id);
+    setError(null);
+    const result = await updateAdminFeaturedMedia(item.id, { galleryCategoryId: galleryCategoryId || null });
     setPendingId(null);
     if (!result.success) {
       setError(formatApiError(result.error));
@@ -96,13 +112,27 @@ export function FeaturedMediaBoard({
                 if (e.target.value !== (item.titleOverride ?? "")) handleTitleChange(item, e.target.value);
               }}
               maxLength={200}
-              placeholder={item.media.vendor.businessName}
+              placeholder={item.media.vendor?.businessName ?? "Standalone photo"}
               disabled={pendingId === item.id}
               className="w-full rounded-md border border-border px-1.5 py-1 text-[11px] disabled:opacity-60"
             />
-            <p className="truncate text-[10px] text-text-grey">
-              {item.media.vendor.categories.find((c) => c.isPrimary)?.category.name ?? item.media.vendor.businessName}
-            </p>
+            <select
+              value={item.galleryCategory?.id ?? ""}
+              onChange={(e) => handleCategoryChange(item, e.target.value)}
+              disabled={pendingId === item.id}
+              className="w-full rounded-md border border-border px-1.5 py-1 text-[10px] disabled:opacity-60"
+            >
+              <option value="">
+                {item.media.vendor
+                  ? (item.media.vendor.categories.find((c) => c.isPrimary)?.category.name ?? item.media.vendor.businessName)
+                  : "No category"}
+              </option>
+              {galleryCategories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
           </div>
         ))}
       </div>
@@ -110,7 +140,7 @@ export function FeaturedMediaBoard({
       {picking ? (
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-bold text-text-dark">Pick a real, approved vendor photo to feature</span>
+            <span className="text-xs font-bold text-text-dark">Pick a vendor photo, or upload a standalone one below</span>
             <button type="button" onClick={() => setPicking(false)} className="text-[11px] font-bold text-text-grey hover:underline">
               Close
             </button>
@@ -136,11 +166,20 @@ export function FeaturedMediaBoard({
               ))}
             </div>
           )}
-          <div className="rounded-md border border-dashed border-border p-3">
+          <div className="mb-3 rounded-md border border-dashed border-border p-3">
             <p className="mb-2 text-[11px] font-semibold text-text-grey">
               No usable photo? Upload one directly for a vendor — it&apos;ll be auto-approved and featured immediately.
             </p>
             <VendorPhotoUploader vendors={vendors} onUploaded={(media) => handleFeature(media.id)} />
+          </div>
+          <div className="rounded-md border border-dashed border-border p-3">
+            <p className="mb-2 text-[11px] font-semibold text-text-grey">
+              Or upload a standalone inspiration photo with no vendor — tag it with a category instead.
+            </p>
+            <InspirationPhotoUploader
+              categories={galleryCategories}
+              onUploaded={(media) => handleFeature(media.id, media.galleryCategoryId)}
+            />
           </div>
         </div>
       ) : (
