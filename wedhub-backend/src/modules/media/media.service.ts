@@ -82,6 +82,12 @@ export async function confirmUpload(vendorId: string, mediaId: string) {
   }
 
   await mediaRepository.updateMediaStatus(mediaId, "PROCESSING");
+  // Auto-approve the vendor's own upload — there is no admin moderation
+  // queue UI that ever clears MediaModerationStatus.PENDING today, so
+  // leaving the default in place would make every vendor upload
+  // permanently invisible on their own public portfolio. Admin can still
+  // set REJECTED/HIDDEN after the fact via moderateMedia below.
+  await mediaRepository.setModerationStatus(mediaId, "APPROVED");
   await enqueueMediaProcessing(mediaId);
 
   return mediaRepository.findMediaById(mediaId);

@@ -212,7 +212,6 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
                     {profile?.yearsExperience != null && (
                       <div className="text-neutral-500">{profile.yearsExperience}+ years experience</div>
                     )}
-                    {isVerified && <div className="text-neutral-500">Verified Vendor</div>}
                   </div>
                 </div>
               </div>

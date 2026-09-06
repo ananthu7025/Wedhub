@@ -18,6 +18,16 @@ import { formatApiError } from "@/lib/utils/error";
 
 const POLL_INTERVAL_MS = 3000;
 const SETTLED_STATUSES = new Set(["READY", "FAILED", "INACTIVE", "DELETED"]);
+// Processing normally settles in seconds; if a PENDING/PROCESSING row is
+// still around after this long, the background worker most likely never
+// picked it up (e.g. it restarted mid-job) rather than the file being
+// unusually slow to process — treat it as stuck rather than polling
+// forever, since nothing will ever flip its status without a retry.
+const STUCK_THRESHOLD_MS = 2 * 60 * 1000;
+
+function isStuck(item: MediaItem): boolean {
+  return !SETTLED_STATUSES.has(item.status) && Date.now() - new Date(item.createdAt).getTime() > STUCK_THRESHOLD_MS;
+}
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime"];
 const MAX_FILE_SIZE_MB = 50;
@@ -53,7 +63,7 @@ export function PortfolioManager({
   const [coverMediaId, setCoverMediaId] = useState(currentCoverMediaId);
   const [activeMediaId, setActiveMediaId] = useState<string | null>(null);
 
-  const hasUnsettledMedia = media.some((m) => !SETTLED_STATUSES.has(m.status));
+  const hasUnsettledMedia = media.some((m) => !SETTLED_STATUSES.has(m.status) && !isStuck(m));
 
   // Real async worker (sharp-based resize/thumbnail generation) settles a
   // PENDING/PROCESSING item to READY (or FAILED) some time after confirm —
@@ -314,8 +324,16 @@ export function PortfolioManager({
               )}
               {item.status !== "READY" ? (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-text-grey">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-brand-primary" />
-                  <span className="text-[11px] font-bold capitalize">{item.status.toLowerCase()}</span>
+                  {isStuck(item) ? (
+                    <>
+                      <span className="text-[11px] font-bold text-red">Stuck — delete and re-upload</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-brand-primary" />
+                      <span className="text-[11px] font-bold capitalize">{item.status.toLowerCase()}</span>
+                    </>
+                  )}
                 </div>
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element

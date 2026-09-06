@@ -52,6 +52,25 @@ export function listPublicVendorAlbums(vendorId: string) {
   });
 }
 
+// The vendor dashboard's Portfolio manager (PortfolioManager.tsx) uploads
+// PORTFOLIO/VIDEO media directly, with no album-picker UI — it never sets
+// Media.albumId. Without this, that media would never appear on the
+// public portfolio page at all, since listPublicVendorAlbums only walks
+// Album.media. Scoped to albumId: null so a photo the vendor DID organize
+// into a public album isn't double-counted here too.
+export function listPublicVendorPortfolioMedia(vendorId: string) {
+  return prisma.media.findMany({
+    where: {
+      vendorId,
+      albumId: null,
+      mediaType: { in: ["PORTFOLIO", "VIDEO"] },
+      status: "READY",
+      moderationStatus: "APPROVED",
+    },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+}
+
 export interface AlbumUpdateFields {
   name: string | undefined;
   description: string | undefined;

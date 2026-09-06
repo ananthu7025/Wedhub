@@ -109,9 +109,6 @@ export function PublicStorefrontView({
                   <h1 className="text-xl md:text-2xl font-bold text-text-dark">
                     {store.storeName}
                   </h1>
-                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
-                    ✓ Verified Vendor Store
-                  </span>
                 </div>
 
                 {store.tagline && (

@@ -12,8 +12,33 @@ export function listOwnAlbums(vendorId: string) {
   return albumRepository.listVendorAlbums(vendorId);
 }
 
-export function listPublicAlbums(vendorId: string) {
-  return albumRepository.listPublicVendorAlbums(vendorId);
+// Folds in the vendor's un-albumed PORTFOLIO/VIDEO uploads as a synthetic
+// leading "Portfolio" album so VendorPortfolioGallery.tsx (which flattens
+// albums[].media) shows them without any frontend shape change — those
+// uploads have no real Album row (see album.repository.ts's
+// listPublicVendorPortfolioMedia), so a literal, non-DB id is used here.
+export async function listPublicAlbums(vendorId: string) {
+  const [albums, portfolioMedia] = await Promise.all([
+    albumRepository.listPublicVendorAlbums(vendorId),
+    albumRepository.listPublicVendorPortfolioMedia(vendorId),
+  ]);
+
+  if (portfolioMedia.length === 0) {
+    return albums;
+  }
+
+  const portfolioAlbum = {
+    id: "portfolio",
+    vendorId,
+    name: "Portfolio",
+    description: null,
+    coverMediaId: null,
+    visibility: "PUBLIC" as const,
+    sortOrder: -1,
+    media: portfolioMedia,
+  };
+
+  return [portfolioAlbum, ...albums];
 }
 
 export async function updateAlbum(
