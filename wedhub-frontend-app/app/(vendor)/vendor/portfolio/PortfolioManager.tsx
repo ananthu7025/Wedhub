@@ -51,6 +51,7 @@ export function PortfolioManager({
   const [uploads, setUploads] = useState<UploadingItem[]>([]);
   const [logoMediaId, setLogoMediaId] = useState(currentLogoMediaId);
   const [coverMediaId, setCoverMediaId] = useState(currentCoverMediaId);
+  const [activeMediaId, setActiveMediaId] = useState<string | null>(null);
 
   const hasUnsettledMedia = media.some((m) => !SETTLED_STATUSES.has(m.status));
 
@@ -226,24 +227,24 @@ export function PortfolioManager({
           e.preventDefault();
           handleFilesSelected(e.dataTransfer.files);
         }}
-        className="mb-7 flex cursor-pointer flex-col items-center gap-2.5 rounded-xl border-2 border-dashed border-border bg-white p-10 text-center hover:border-brand-primary hover:bg-surface-input"
+        className="mb-5 sm:mb-7 flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border bg-white p-5 sm:p-10 text-center hover:border-brand-primary hover:bg-surface-input transition-colors"
       >
-        <div className="mb-1 flex h-11 w-11 items-center justify-center rounded-full bg-brand-primary-soft text-brand-primary">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <div className="mb-1 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-brand-primary-soft text-brand-primary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
             <path d="M17 8l-5-5-5 5" />
             <path d="M12 3v12" />
           </svg>
         </div>
-        <p className="text-sm font-bold">Drag and drop photos or videos here, or click to browse</p>
-        <p className="text-xs text-text-grey">JPG, PNG, MP4 up to {MAX_FILE_SIZE_MB}MB</p>
+        <p className="text-xs sm:text-sm font-bold">Drag and drop photos or videos here, or click to browse</p>
+        <p className="text-[11px] sm:text-xs text-text-grey">JPG, PNG, MP4 up to {MAX_FILE_SIZE_MB}MB</p>
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             fileInputRef.current?.click();
           }}
-          className="mt-1 rounded-md bg-brand-primary px-4 py-2 text-[13px] font-bold text-white"
+          className="mt-1 rounded-md bg-brand-primary px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-[13px] font-bold text-white shadow-xs"
         >
           Choose files
         </button>
@@ -257,7 +258,7 @@ export function PortfolioManager({
         />
       </div>
 
-      <div className="grid grid-cols-4 gap-3.5 max-[1100px]:grid-cols-3 max-[900px]:grid-cols-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-3.5">
         {uploads.map((upload) => (
           <div key={upload.tempId} className="relative aspect-square overflow-hidden rounded-xl bg-surface-input shadow-[var(--shadow-card)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -265,19 +266,19 @@ export function PortfolioManager({
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 text-white">
               {upload.progress === "error" ? (
                 <>
-                  <span className="px-3 text-center text-xs font-bold">{upload.error ?? "Upload failed"}</span>
-                  <div className="flex gap-2">
+                  <span className="px-2 text-center text-xs font-bold">{upload.error ?? "Upload failed"}</span>
+                  <div className="flex gap-1.5 sm:gap-2">
                     <button
                       type="button"
                       onClick={() => handleRetryUpload(upload.tempId)}
-                      className="rounded-md bg-white/90 px-2.5 py-1 text-[11px] font-bold text-text-dark hover:bg-white"
+                      className="rounded-md bg-white/90 px-2 py-1 text-[11px] font-bold text-text-dark hover:bg-white"
                     >
                       Retry
                     </button>
                     <button
                       type="button"
                       onClick={() => handleRemoveUpload(upload.tempId)}
-                      className="rounded-md bg-white/90 px-2.5 py-1 text-[11px] font-bold text-text-dark hover:bg-white"
+                      className="rounded-md bg-white/90 px-2 py-1 text-[11px] font-bold text-text-dark hover:bg-white"
                     >
                       Remove
                     </button>
@@ -285,7 +286,7 @@ export function PortfolioManager({
                 </>
               ) : (
                 <>
-                  <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-white/30 border-t-white" />
+                  <div className="h-7 w-7 sm:h-8 sm:w-8 animate-spin rounded-full border-[3px] border-white/30 border-t-white" />
                   <span className="text-xs font-bold capitalize">{upload.progress}…</span>
                 </>
               )}
@@ -298,11 +299,16 @@ export function PortfolioManager({
           const isVideo = item.mediaType === "VIDEO" || item.mimeType.startsWith("video/");
           const isLogo = logoMediaId === item.id;
           const isCover = coverMediaId === item.id;
+          const isSelected = activeMediaId === item.id;
 
           return (
-            <div key={item.id} className="group relative aspect-square overflow-hidden rounded-xl bg-surface-input shadow-[var(--shadow-card)]">
+            <div
+              key={item.id}
+              onClick={() => setActiveMediaId(isSelected ? null : item.id)}
+              className="group relative aspect-square overflow-hidden rounded-xl bg-surface-input shadow-[var(--shadow-card)] cursor-pointer select-none"
+            >
               {(isLogo || isCover) && (
-                <span className="absolute top-2 left-2 z-10 rounded-full bg-brand-primary px-2.5 py-1 text-[11px] font-bold text-white">
+                <span className="absolute top-2 left-2 z-10 rounded-full bg-brand-primary px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-[11px] font-bold text-white shadow-xs">
                   {isLogo && isCover ? "Logo · Cover" : isLogo ? "Logo" : "Cover"}
                 </span>
               )}
@@ -316,20 +322,26 @@ export function PortfolioManager({
                 <img src={getPublicMediaUrl(key)} alt={item.altText ?? ""} className="h-full w-full object-cover" />
               )}
               {isVideo && (
-                <span className="absolute right-2 bottom-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <span className="absolute right-2 bottom-2 z-10 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-black/60 text-white">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8 5v14l11-7z" />
                   </svg>
                 </span>
               )}
 
-              <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/55 opacity-0 transition-opacity group-hover:opacity-100">
+              {/* Action overlay (visible on hover for desktop, or on tap for mobile) */}
+              <div
+                className={`absolute inset-0 flex items-center justify-center gap-1.5 sm:gap-2 bg-black/60 transition-opacity ${
+                  isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                }`}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <button
                   type="button"
                   title="Move left/up"
                   disabled={index === 0}
                   onClick={() => handleMove(item.id, "up")}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-text-dark disabled:opacity-40"
+                  className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 text-text-dark disabled:opacity-40"
                 >
                   ←
                 </button>
@@ -338,9 +350,9 @@ export function PortfolioManager({
                     type="button"
                     title="Set as logo"
                     onClick={() => handleSetAsLogo(item.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-text-dark"
+                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 text-text-dark"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                     </svg>
                   </button>
@@ -350,7 +362,7 @@ export function PortfolioManager({
                     type="button"
                     title="Set as cover"
                     onClick={() => handleSetAsCover(item.id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-[10px] font-bold text-text-dark"
+                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 text-[9px] sm:text-[10px] font-bold text-text-dark"
                   >
                     COV
                   </button>
@@ -359,9 +371,9 @@ export function PortfolioManager({
                   type="button"
                   title="Delete"
                   onClick={() => handleDelete(item.id)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-red hover:bg-red-10"
+                  className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 text-red hover:bg-red-10"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 6h18" />
                     <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z" />
                   </svg>
@@ -371,7 +383,7 @@ export function PortfolioManager({
                   title="Move right/down"
                   disabled={index === media.length - 1}
                   onClick={() => handleMove(item.id, "down")}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-text-dark disabled:opacity-40"
+                  className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 text-text-dark disabled:opacity-40"
                 >
                   →
                 </button>

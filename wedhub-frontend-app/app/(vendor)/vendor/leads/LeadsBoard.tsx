@@ -73,11 +73,13 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
   const [noteDraft, setNoteDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<"list" | "detail">("list");
 
   async function selectLead(id: string) {
     setSelectedId(id);
     setDetail(null);
     setError(null);
+    setMobileView("detail");
     setLoadingDetail(true);
     const result = await getMyLeadClient(id);
     setLoadingDetail(false);
@@ -98,7 +100,7 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
       setError(formatApiError(result.error));
       return;
     }
-    setDetail({ ...detail, ...result.data, notes: detail.notes, statusHistory: detail.statusHistory });
+    setDetail(result.data);
     setLeads((prev) => prev.map((l) => (l.id === detail.id ? { ...l, status: result.data.status } : l)));
     setStatusReason("");
   }
@@ -113,8 +115,7 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
       setError(formatApiError(result.error));
       return;
     }
-    const note: LeadNote = result.data;
-    setDetail({ ...detail, notes: [note, ...detail.notes] });
+    setDetail({ ...detail, notes: [result.data, ...detail.notes] });
     setNoteDraft("");
   }
 
@@ -138,15 +139,18 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
 
   return (
     <div>
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold">Leads</h1>
-        <p className="text-sm text-text-grey">Enquiries from couples looking for your services</p>
+      <div className="mb-4 sm:mb-5">
+        <h1 className="text-xl sm:text-2xl font-bold">Leads</h1>
+        <p className="text-xs sm:text-sm text-text-grey">Enquiries from couples looking for your services</p>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="mb-4 sm:mb-5 flex overflow-x-auto no-scrollbar gap-2 pb-1">
         <button
-          onClick={() => setFilterStatus("ALL")}
-          className={`rounded-full px-4 py-2 text-[13px] font-bold ${
+          onClick={() => {
+            setFilterStatus("ALL");
+            setMobileView("list");
+          }}
+          className={`shrink-0 rounded-full px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-[13px] font-bold ${
             filterStatus === "ALL" ? "bg-jet-black-90 text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
           }`}
         >
@@ -155,8 +159,11 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
         {ALL_LEAD_STATUSES.filter((s) => counts[s] > 0).map((status) => (
           <button
             key={status}
-            onClick={() => setFilterStatus(status)}
-            className={`rounded-full px-4 py-2 text-[13px] font-bold ${
+            onClick={() => {
+              setFilterStatus(status);
+              setMobileView("list");
+            }}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-[13px] font-bold ${
               filterStatus === status ? "bg-jet-black-90 text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
             }`}
           >
@@ -173,21 +180,25 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-[400px_1fr] gap-5 max-[1100px]:grid-cols-1">
-          <div className="max-h-[calc(100vh-230px)] overflow-y-auto rounded-xl border border-border bg-white max-[1100px]:max-h-[420px]">
+        <div className="grid grid-cols-1 md:grid-cols-[360px_1fr] lg:grid-cols-[400px_1fr] gap-5">
+          <div
+            className={`max-h-[calc(100vh-230px)] overflow-y-auto rounded-xl border border-border bg-white ${
+              mobileView === "detail" ? "hidden md:block" : "block"
+            }`}
+          >
             {visibleLeads.map((lead) => (
               <button
                 key={lead.id}
                 onClick={() => selectLead(lead.id)}
-                className={`block w-full border-b border-neutral-grey-20 px-4.5 py-3.5 text-left last:border-b-0 ${
-                  selectedId === lead.id ? "border-l-[3px] border-l-brand-primary bg-brand-primary-soft pl-4" : "hover:bg-anti-flash-white-30"
+                className={`block w-full border-b border-neutral-grey-20 px-4 py-3.5 text-left last:border-b-0 ${
+                  selectedId === lead.id ? "border-l-[3px] border-l-brand-primary bg-brand-primary-soft pl-3.5" : "hover:bg-anti-flash-white-30"
                 }`}
               >
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold">{lead.enquiry.contactName}</span>
+                  <span className="text-sm font-bold truncate">{lead.enquiry.contactName}</span>
                   <Badge variant={statusBadgeVariant(lead.status)}>{formatStatusLabel(lead.status)}</Badge>
                 </div>
-                <p className="my-0.5 text-xs text-text-grey">
+                <p className="my-0.5 text-xs text-text-grey truncate">
                   Wedding: {formatDate(lead.enquiry.weddingDate)}
                   {lead.enquiry.budget && ` · Budget ₹${Number(lead.enquiry.budget).toLocaleString("en-IN")}`}
                 </p>
@@ -199,7 +210,19 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
             ))}
           </div>
 
-          <div className="flex flex-col gap-5">
+          <div
+            className={`flex flex-col gap-4 sm:gap-5 ${
+              mobileView === "list" ? "hidden md:flex" : "flex"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => setMobileView("list")}
+              className="md:hidden flex items-center gap-1.5 text-xs font-bold text-brand-primary bg-brand-primary-soft/50 px-3 py-1.5 rounded-full w-fit hover:bg-brand-primary-soft"
+            >
+              ← Back to all leads
+            </button>
+
             {loadingDetail && (
               <div className="rounded-xl border border-border bg-white p-6 text-sm text-text-grey">Loading…</div>
             )}
@@ -208,7 +231,7 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
               <>
                 {error && <div className="rounded-md bg-red-10 p-3 text-[13px] text-red-70">{error}</div>}
 
-                <div className="rounded-xl border border-border bg-white p-6">
+                <div className="rounded-xl border border-border bg-white p-4 sm:p-6">
                   <div className="mb-4.5 flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2.5">

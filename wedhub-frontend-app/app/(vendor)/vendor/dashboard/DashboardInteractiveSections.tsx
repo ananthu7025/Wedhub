@@ -162,8 +162,58 @@ export function DashboardInteractiveSections({
             </Link>
           </div>
 
-          {/* Table Container */}
-          <div className="overflow-x-auto">
+          {/* Mobile Card List (visible on sm:hidden) */}
+          <div className="flex flex-col gap-2.5 sm:hidden">
+            {displayedLeads.length === 0 ? (
+              <div className="py-6 text-center text-text-grey">
+                <p className="font-semibold text-text-dark text-xs">No leads recorded in this view</p>
+                <Link
+                  href="/vendor/profile"
+                  className="mt-2.5 inline-block rounded-full bg-surface-input px-3.5 py-1 text-xs font-bold text-text-dark"
+                >
+                  Complete Profile to Get Leads
+                </Link>
+              </div>
+            ) : (
+              displayedLeads.map((lead) => (
+                <div
+                  key={lead.id}
+                  className="rounded-xl border border-border bg-surface-page p-3 text-xs transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-bold text-text-dark text-sm truncate">
+                        {lead.enquiry?.contactName || "Prospective Couple"}
+                      </p>
+                      <p className="text-[11px] text-text-grey mt-0.5 truncate">
+                        {lead.enquiry?.weddingLocation || "Location not specified"}
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-bold text-brand-primary text-xs bg-brand-primary-soft/40 px-2 py-0.5 rounded-md">
+                      {formatBudget(lead.enquiry?.budget)}
+                    </span>
+                  </div>
+                  <div className="mt-2.5 flex items-center justify-between border-t border-border/70 pt-2 text-[11px]">
+                    <span className="text-text-muted">
+                      {formatDate(lead.enquiry?.weddingDate || lead.createdAt)}
+                    </span>
+                    <Link
+                      href="/vendor/leads"
+                      className="flex items-center gap-1 font-bold text-emerald-70 hover:underline"
+                    >
+                      <span>View details</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table Container (hidden on sm:hidden) */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-border text-[11px] font-semibold tracking-wider text-text-muted">
@@ -294,8 +344,52 @@ export function DashboardInteractiveSections({
             </div>
           )}
 
-          {/* Active Prospects Table */}
-          <div className="overflow-x-auto">
+          {/* Mobile Active Prospects Cards (visible on sm:hidden) */}
+          <div className="flex flex-col gap-2.5 sm:hidden">
+            {activeProspects.length === 0 ? (
+              <p className="py-3 text-center text-xs text-text-grey">
+                No active prospects currently. Complete your packages to start receiving leads!
+              </p>
+            ) : (
+              activeProspects.slice(0, 4).map((lead) => (
+                <div
+                  key={`mp-${lead.id}`}
+                  className="rounded-xl border border-border bg-surface-page p-3 text-xs"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-bold text-text-dark text-sm truncate">
+                        {lead.enquiry?.contactName || "Prospective Couple"}
+                      </p>
+                      <p className="text-[11px] text-text-grey mt-0.5 truncate">
+                        {lead.enquiry?.weddingLocation || "Not specified"}
+                      </p>
+                    </div>
+                    <Badge variant={statusBadgeVariant(lead.status)}>
+                      {formatStatusLabel(lead.status)}
+                    </Badge>
+                  </div>
+                  <div className="mt-2.5 flex items-center justify-between border-t border-border/70 pt-2 text-[11px]">
+                    <span className="font-semibold text-text-body">
+                      {formatBudget(lead.enquiry?.budget)}
+                    </span>
+                    <Link
+                      href="/vendor/leads"
+                      className="flex items-center gap-1 font-bold text-emerald-70 hover:underline"
+                    >
+                      <span>Manage</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Active Prospects Table (hidden on sm:hidden) */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-border text-[11px] font-semibold tracking-wider text-text-muted">

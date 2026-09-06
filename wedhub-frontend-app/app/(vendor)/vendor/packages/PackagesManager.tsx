@@ -53,33 +53,33 @@ export function PackagesManager({
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
         <div>
-          <h1 className="text-2xl font-bold">Packages &amp; Pricing</h1>
-          <p className="text-sm text-text-grey">Create and manage the packages couples see when they view your profile.</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Packages &amp; Pricing</h1>
+          <p className="text-xs sm:text-sm text-text-grey">Create and manage the packages couples see when they view your profile.</p>
         </div>
         <button
           type="button"
           onClick={openAddModal}
-          className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white"
+          className="w-full sm:w-auto inline-flex justify-center items-center rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white shadow-xs"
         >
           + Add package
         </button>
       </div>
 
       {packages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-white px-6 py-18 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-white px-5 py-14 sm:py-18 text-center">
           <h3 className="mb-1.5 text-[15px] font-bold">No packages yet</h3>
-          <p className="mb-4 max-w-[320px] text-[13px] text-text-grey">
+          <p className="mb-4 max-w-[320px] text-xs sm:text-[13px] text-text-grey">
             Add a package so couples know what you offer and what it costs.
           </p>
-          <button type="button" onClick={openAddModal} className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white">
+          <button type="button" onClick={openAddModal} className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white shadow-xs">
             + Add package
           </button>
         </div>
       ) : (
         packages.map((pkg) => (
-          <div key={pkg.id} className="mb-4.5 rounded-xl border border-border bg-white p-6">
+          <div key={pkg.id} className="mb-4 rounded-xl border border-border bg-white p-4 sm:p-6 shadow-xs">
             <div className="mb-1.5 flex items-start justify-between gap-4">
               <div>
                 <p className="text-[17px] font-bold">{pkg.name}</p>

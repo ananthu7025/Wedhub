@@ -55,33 +55,33 @@ export function AnalyticsBoard({
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Analytics</h1>
-        <p className="text-sm text-text-grey">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold">Analytics</h1>
+        <p className="text-xs sm:text-sm text-text-grey">
           Track how your profile is performing over the last {profileAnalytics.windowDays} days.
         </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-5 gap-4 max-[1100px]:grid-cols-3 max-[768px]:grid-cols-2 max-[500px]:grid-cols-1">
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">Profile & Portfolio views</p>
-          <p className="text-2xl font-bold">{profileAnalytics.profileViews}</p>
+      <div className="mb-5 sm:mb-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="rounded-xl border border-border bg-white p-3.5 sm:p-5 shadow-xs">
+          <p className="mb-1 text-[11px] sm:text-xs font-semibold text-text-grey truncate">Profile & Portfolio views</p>
+          <p className="text-xl sm:text-2xl font-bold text-text-dark">{profileAnalytics.profileViews}</p>
         </div>
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">WhatsApp Inquiries</p>
-          <p className="text-2xl font-bold text-[#1da851]">{profileAnalytics.whatsappClicks ?? 0}</p>
+        <div className="rounded-xl border border-border bg-white p-3.5 sm:p-5 shadow-xs">
+          <p className="mb-1 text-[11px] sm:text-xs font-semibold text-text-grey truncate">WhatsApp Inquiries</p>
+          <p className="text-xl sm:text-2xl font-bold text-[#1da851]">{profileAnalytics.whatsappClicks ?? 0}</p>
         </div>
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">Leads received</p>
-          <p className="text-2xl font-bold">{leadAnalytics.leadsReceived}</p>
+        <div className="rounded-xl border border-border bg-white p-3.5 sm:p-5 shadow-xs">
+          <p className="mb-1 text-[11px] sm:text-xs font-semibold text-text-grey truncate">Leads received</p>
+          <p className="text-xl sm:text-2xl font-bold text-text-dark">{leadAnalytics.leadsReceived}</p>
         </div>
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">Response rate</p>
-          <p className="text-2xl font-bold">{formatPercent(leadAnalytics.responseRate)}</p>
+        <div className="rounded-xl border border-border bg-white p-3.5 sm:p-5 shadow-xs">
+          <p className="mb-1 text-[11px] sm:text-xs font-semibold text-text-grey truncate">Response rate</p>
+          <p className="text-xl sm:text-2xl font-bold text-text-dark">{formatPercent(leadAnalytics.responseRate)}</p>
         </div>
-        <div className="rounded-xl border border-border bg-white p-5">
-          <p className="mb-1 text-xs font-semibold text-text-grey">Conversion rate</p>
-          <p className="text-2xl font-bold">{formatPercent(leadAnalytics.conversionRate)}</p>
+        <div className="rounded-xl border border-border bg-white p-3.5 sm:p-5 shadow-xs col-span-2 sm:col-span-1">
+          <p className="mb-1 text-[11px] sm:text-xs font-semibold text-text-grey truncate">Conversion rate</p>
+          <p className="text-xl sm:text-2xl font-bold text-text-dark">{formatPercent(leadAnalytics.conversionRate)}</p>
         </div>
       </div>
 

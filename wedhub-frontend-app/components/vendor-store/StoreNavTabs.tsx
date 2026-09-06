@@ -35,7 +35,7 @@ export function StoreNavTabs({
   ];
 
   return (
-    <div className="flex border-b border-border mb-6">
+    <div className="flex border-b border-border mb-6 overflow-x-auto no-scrollbar whitespace-nowrap">
       {tabs.map((tab) => {
         const isActive = tab.exact
           ? pathname === tab.href

@@ -136,14 +136,14 @@ export function SettingsBoard({
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-sm text-text-grey">Manage your business account and notifications.</p>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold">Settings</h1>
+        <p className="text-xs sm:text-sm text-text-grey">Manage your business account and notifications.</p>
       </div>
 
       {saveError && <div className="mb-4 rounded-md bg-red-10 p-3 text-[13px] text-red-70">{saveError}</div>}
 
-      <form onSubmit={handleSaveBusiness} className="mb-5 rounded-xl border border-border bg-white p-6">
+      <form onSubmit={handleSaveBusiness} className="mb-5 rounded-xl border border-border bg-white p-4 sm:p-6 shadow-xs">
         <h3 className="mb-4 text-base font-bold">Business account info</h3>
         <div className="mb-4 grid grid-cols-2 gap-4 max-[700px]:grid-cols-1">
           <label className="block">
@@ -196,7 +196,7 @@ export function SettingsBoard({
         <button
           type="submit"
           disabled={savingBusiness}
-          className="rounded-md bg-brand-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+          className="w-full sm:w-auto rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white shadow-xs disabled:opacity-60"
         >
           {savingBusiness ? "Saving…" : businessSaved ? "Saved ✓" : "Save changes"}
         </button>

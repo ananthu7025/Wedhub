@@ -98,19 +98,19 @@ export default async function VendorDashboardPage() {
 
   return (
     <VendorShell activeHref="/vendor/dashboard" vendorName={vendor.businessName} vendorSlug={vendor.slug}>
-      <div className="space-y-6">
+      <div className="space-y-5 sm:space-y-6">
         {/* Top Header Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
           <div className="flex items-center gap-3">
             {/* Vendor Scenic Avatar Icon */}
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-10 text-emerald-70 shadow-sm">
+            <div className="flex h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0 items-center justify-center rounded-full bg-emerald-10 text-emerald-70 shadow-sm">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M14 9l-6 6M10 9l-2 2M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                 <circle cx="12" cy="12" r="3" />
               </svg>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-text-dark">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text-dark truncate">
                 {greeting} <span className="font-semibold text-text-grey">{displayName}</span>
               </h1>
             </div>
@@ -118,7 +118,7 @@ export default async function VendorDashboardPage() {
 
           <Link
             href="/vendor/portfolio"
-            className="flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-xs font-bold text-text-dark shadow-sm transition-all hover:bg-surface-input"
+            className="inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs font-bold text-text-dark shadow-xs transition-all hover:bg-surface-input"
           >
             <span>Add New Album</span>
             <span className="text-base font-normal leading-none text-text-grey">+</span>
@@ -127,7 +127,7 @@ export default async function VendorDashboardPage() {
 
         {/* Email Verification Alert */}
         {emailUnverified && (
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-30 bg-amber-10 p-4 shadow-sm">
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-30 bg-amber-10 p-3.5 sm:p-4 shadow-sm">
             <span className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-amber-70 text-xs font-bold text-white">
               !
             </span>
@@ -144,7 +144,7 @@ export default async function VendorDashboardPage() {
         )}
 
         {/* Top 4 Hero Metric Cards with Sparklines */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
           {/* Card 1: Total Customer Views */}
           <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
             <div>
@@ -295,13 +295,13 @@ export default async function VendorDashboardPage() {
 
         {/* Pro Plan Analytics Banner */}
         {analytics?.level !== "advanced" && (
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-surface-page px-5 py-3.5 text-xs text-text-grey shadow-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-border bg-surface-page p-4 sm:px-5 sm:py-3.5 text-xs text-text-grey shadow-xs">
             <span>
               Daily view breakdown and an extended 90-day analytics window are available on <strong>Pro and Premium plans</strong>.
             </span>
             <Link
               href="/vendor/subscription"
-              className="flex-shrink-0 rounded-md bg-text-dark px-4 py-1.5 font-bold text-white transition-colors hover:bg-neutral-grey-70"
+              className="w-full sm:w-auto text-center flex-shrink-0 rounded-md bg-text-dark px-4 py-2 sm:py-1.5 font-bold text-white transition-colors hover:bg-neutral-grey-70"
             >
               Upgrade Plan →
             </Link>

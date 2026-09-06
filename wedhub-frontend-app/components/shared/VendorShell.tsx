@@ -4,22 +4,16 @@ import { getMyVendor } from "@/lib/api/vendor-self";
 import { BrandLogo } from "./BrandLogo";
 import { VendorLogoutButton } from "./VendorLogoutButton";
 import { SharePortfolioButton } from "@/components/vendor/SharePortfolioButton";
+import { VendorMobileNav } from "./VendorMobileNav";
 
 /**
  * Sidebar shell for all (vendor) routes, matching
- * wedhub-frontend/vendor/*.html's .app-shell/.sidebar pattern. All nine
- * mockup nav items now link to real routes as of Frontend Arch Phase 7
- * (Dashboard/Profile/Portfolio/Packages from Phase 5, Leads/Reviews from
- * Phase 6, Subscription/Analytics/Settings from Phase 7) — Stage 3 is
- * fully built out, no more "coming soon" placeholders.
+ * wedhub-frontend/vendor/*.html's .app-shell/.sidebar pattern.
  *
- * Header notification bell added 2026-09-03 — previously this shell had no
- * notification entry point at all, despite NEW_LEAD being a real
- * notification event every vendor receives. Async Server Component now,
- * fetching its own unread count for the same reason as CoupleShell.
- *
- * Share Portfolio CTA added 2026-09-04 — provides vendors instant 1-click
- * access to copy, share on WhatsApp, and preview their live digital portfolio.
+ * Mobile layout overhaul:
+ * - On desktop (>=1024px): 240px static sidebar + topbar.
+ * - On mobile/tablet (<1024px): Clean sticky mobile header + native-app-style
+ *   bottom navigation bar + slide-over drawer for all subpages and settings.
  */
 
 const navLinks = [
@@ -119,7 +113,8 @@ export async function VendorShell({
 
   return (
     <div className="flex min-h-screen w-full max-w-full overflow-x-hidden">
-      <aside className="flex w-[240px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
+      {/* Desktop Sidebar (hidden on screens < 1024px) */}
+      <aside className="hidden lg:flex w-[240px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
         <BrandLogo variant="dark" href="/vendor/dashboard" className="mb-5 px-1" />
 
         {navLinks.map((link) => (
@@ -143,7 +138,8 @@ export async function VendorShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
-        <header className="flex h-16 items-center justify-end gap-3 border-b border-border bg-white px-6">
+        {/* Desktop Header (hidden on screens < 1024px) */}
+        <header className="hidden lg:flex h-16 items-center justify-end gap-3 border-b border-border bg-white px-6">
           {resolvedSlug && (
             <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
           )}
@@ -167,8 +163,47 @@ export async function VendorShell({
             {initials}
           </div>
         </header>
-        <main className="flex-1 min-w-0 bg-surface-page p-4 sm:p-6">{children}</main>
+
+        {/* Mobile Sticky Top Header (visible only on < 1024px) */}
+        <header className="sticky top-0 z-30 flex h-14 sm:h-16 items-center justify-between border-b border-border bg-white/95 backdrop-blur-md px-3 sm:px-4 lg:hidden">
+          <div className="flex items-center gap-2">
+            <BrandLogo variant="dark" href="/vendor/dashboard" />
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {resolvedSlug && (
+              <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
+            )}
+            <Link
+              href="/vendor/notifications"
+              aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
+              className={`relative flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full ${
+                activeHref === "/vendor/notifications" ? "bg-brand-primary-soft text-brand-primary" : "text-text-grey hover:bg-surface-input"
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 01-3.46 0" />
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red ring-2 ring-white" />
+              )}
+            </Link>
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-brand-ink-soft text-xs font-bold text-white shadow-xs">
+              {initials}
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content with safe-area bottom padding for the mobile bottom nav */}
+        <main className="flex-1 min-w-0 bg-surface-page p-3 sm:p-5 lg:p-6 pb-24 lg:pb-6">{children}</main>
       </div>
+
+      {/* Mobile Bottom Navigation Bar & Slide-Over Drawer */}
+      <VendorMobileNav
+        vendorName={vendorName}
+        vendorSlug={resolvedSlug}
+        unreadCount={unreadCount}
+      />
     </div>
   );
 }

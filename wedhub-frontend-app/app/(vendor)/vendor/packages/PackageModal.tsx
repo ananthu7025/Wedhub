@@ -52,8 +52,8 @@ export function PackageModal({
   }
 
   return (
-    <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-[480px] overflow-y-auto rounded-2xl bg-white p-7" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3.5 sm:p-4" onClick={onClose}>
+      <div className="max-h-[90vh] w-full max-w-[480px] overflow-y-auto rounded-2xl bg-white p-5 sm:p-7 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <button type="button" onClick={onClose} aria-label="Close" className="float-right border-none bg-transparent text-lg text-text-grey">
           ✕
         </button>

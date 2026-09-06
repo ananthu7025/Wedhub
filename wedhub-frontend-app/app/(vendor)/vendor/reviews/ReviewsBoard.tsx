@@ -89,22 +89,22 @@ export function ReviewsBoard({
 
   return (
     <div>
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold">Reviews</h1>
-        <p className="text-sm text-text-grey">See what couples are saying about {vendorName}</p>
+      <div className="mb-4 sm:mb-5">
+        <h1 className="text-xl sm:text-2xl font-bold">Reviews</h1>
+        <p className="text-xs sm:text-sm text-text-grey">See what couples are saying about {vendorName}</p>
       </div>
 
-      <div className="mb-5 rounded-xl border border-border bg-white p-6">
-        <div className="flex flex-col items-start gap-5 max-[700px]:flex-col sm:flex-row sm:items-center">
-          <div className="text-[44px] font-bold">{Number(averageRating).toFixed(1)}</div>
-          <div className="flex-1">
+      <div className="mb-4 sm:mb-5 rounded-xl border border-border bg-white p-4 sm:p-6 shadow-xs">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+          <div className="text-4xl sm:text-[44px] font-bold text-text-dark">{Number(averageRating).toFixed(1)}</div>
+          <div className="flex-1 w-full sm:w-auto">
             {histogram.map(({ star, count }) => (
               <div key={star} className="mb-1 flex items-center gap-2 text-xs">
-                <span className="w-6">{star}★</span>
+                <span className="w-6 shrink-0">{star}★</span>
                 <div className="h-1.5 flex-1 overflow-hidden rounded bg-surface-input">
                   <div className="h-full bg-[#f0a202]" style={{ width: `${(count / maxCount) * 100}%` }} />
                 </div>
-                <span className="text-text-grey">{count}</span>
+                <span className="w-6 text-right text-text-grey shrink-0">{count}</span>
               </div>
             ))}
           </div>
@@ -116,7 +116,7 @@ export function ReviewsBoard({
 
       {error && <div className="mb-4 rounded-md bg-red-10 p-3 text-[13px] text-red-70">{error}</div>}
 
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="mb-5 flex overflow-x-auto no-scrollbar gap-2 pb-1">
         {(
           [
             ["ALL", `All (${reviews.length})`],
@@ -129,7 +129,7 @@ export function ReviewsBoard({
           <button
             key={String(value)}
             onClick={() => setTab(value)}
-            className={`rounded-full px-4 py-2 text-[13px] font-bold ${
+            className={`shrink-0 rounded-full px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-[13px] font-bold ${
               tab === value ? "bg-jet-black-90 text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
             }`}
           >

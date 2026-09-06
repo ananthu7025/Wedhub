@@ -189,92 +189,92 @@ export function InvoicesBoard({
       )}
 
       {/* KPI Cards Strip */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {/* Total Invoiced */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-grey">
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
               Total Invoiced
             </span>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 shrink-0">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </span>
           </div>
-          <div className="mt-3 text-2xl font-extrabold text-text-dark">
+          <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-text-dark truncate">
             {formatINR(metrics?.totalInvoiced ?? 0)}
           </div>
-          <div className="mt-1 text-xs text-text-grey">
+          <div className="mt-1 text-[11px] sm:text-xs text-text-grey truncate">
             {metrics?.counts.all ?? 0} total invoices
           </div>
         </div>
 
         {/* Received */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-grey">
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
               Collected
             </span>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+            <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </span>
           </div>
-          <div className="mt-3 text-2xl font-extrabold text-emerald-600">
+          <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-emerald-600 truncate">
             {formatINR(metrics?.totalReceived ?? 0)}
           </div>
-          <div className="mt-1 text-xs text-text-grey">
+          <div className="mt-1 text-[11px] sm:text-xs text-text-grey truncate">
             {metrics?.counts.paid ?? 0} fully settled
           </div>
         </div>
 
         {/* Outstanding */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-grey">
-              Outstanding Balance
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
+              Outstanding
             </span>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+            <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 shrink-0">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </span>
           </div>
-          <div className="mt-3 text-2xl font-extrabold text-amber-600">
+          <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-amber-600 truncate">
             {formatINR(metrics?.outstandingBalance ?? 0)}
           </div>
-          <div className="mt-1 text-xs text-text-grey">
+          <div className="mt-1 text-[11px] sm:text-xs text-text-grey truncate">
             Pending collection
           </div>
         </div>
 
         {/* Overdue */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-grey">
+            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
               Overdue
             </span>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+            <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 shrink-0">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </span>
           </div>
-          <div className="mt-3 text-2xl font-extrabold text-rose-600">
+          <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-rose-600 truncate">
             {formatINR(metrics?.overdueAmount ?? 0)}
           </div>
-          <div className="mt-1 text-xs text-rose-500 font-medium">
-            Past payment due date
+          <div className="mt-1 text-[11px] sm:text-xs text-rose-500 font-medium truncate">
+            Past payment due
           </div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3.5 rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         {/* Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap pb-0.5">
           {(
             [
               { key: "ALL", label: "All", count: metrics?.counts.all },
@@ -368,7 +368,111 @@ export function InvoicesBoard({
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <>
+          {/* Mobile Invoices Card List */}
+          <div className="flex flex-col gap-3 sm:hidden">
+            {filteredInvoices.map((inv) => {
+              const overdue = isOverdue(inv);
+              const isBusy = busyInvoiceId === inv.id;
+
+              return (
+                <div
+                  key={`m-${inv.id}`}
+                  className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <Link
+                        href={`/vendor/invoices/${inv.id}`}
+                        className="font-mono text-xs font-bold text-brand-primary hover:underline"
+                      >
+                        {inv.invoiceNumber}
+                      </Link>
+                      {inv.isInterState && (
+                        <span className="ml-1.5 inline-block rounded bg-indigo-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-indigo-700">
+                          IGST
+                        </span>
+                      )}
+                      <p className="mt-1 font-bold text-text-dark text-sm">{inv.clientName}</p>
+                      <p className="text-[11px] text-text-grey">{inv.clientPhone || inv.clientEmail || "—"}</p>
+                    </div>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                        inv.status === "DRAFT"
+                          ? "bg-gray-100 text-gray-700"
+                          : inv.status === "ISSUED"
+                          ? overdue
+                            ? "bg-rose-100 text-rose-800 border border-rose-200"
+                            : "bg-blue-50 text-blue-700 border border-blue-200"
+                          : inv.status === "PAID"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-red-50 text-red-600 border border-red-200"
+                      }`}
+                    >
+                      {inv.status === "ISSUED" && overdue ? "OVERDUE" : inv.status}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 pt-3 text-xs">
+                    <div>
+                      <span className="text-[11px] text-text-grey">Total Amount</span>
+                      <p className="font-extrabold text-text-dark">{formatINR(inv.grandTotal)}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[11px] text-text-grey">Balance Due</span>
+                      <p
+                        className={`font-extrabold ${
+                          inv.balanceDue > 0
+                            ? overdue
+                              ? "text-rose-600"
+                              : "text-amber-600"
+                            : "text-emerald-600"
+                        }`}
+                      >
+                        {formatINR(inv.balanceDue)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 flex items-center justify-between border-t border-gray-100 pt-2.5 text-xs">
+                    <span className="text-[11px] text-text-muted">
+                      {inv.dueDate ? `Due ${formatDate(inv.dueDate)}` : `Issued ${formatDate(inv.issueDate)}`}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/vendor/invoices/${inv.id}`}
+                        className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-text-dark"
+                      >
+                        View
+                      </Link>
+                      {inv.status === "DRAFT" && (
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => handleIssue(inv.id)}
+                          className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                        >
+                          Issue
+                        </button>
+                      )}
+                      {inv.status !== "DRAFT" && (
+                        <Link
+                          href={`/vendor/invoices/${inv.id}/print`}
+                          target="_blank"
+                          className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-text-dark"
+                        >
+                          PDF
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden sm:block overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-gray-100 bg-gray-50/75 text-[11px] font-bold uppercase tracking-wider text-text-grey">
@@ -563,6 +667,7 @@ export function InvoicesBoard({
             </table>
           </div>
         </div>
+        </>
       )}
     </div>
   );

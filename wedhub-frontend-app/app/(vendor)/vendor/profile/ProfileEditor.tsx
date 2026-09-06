@@ -231,17 +231,17 @@ export function ProfileEditor({
 
   return (
     <form onSubmit={handleSave}>
-      <div className="sticky top-0 z-40 mb-6 flex flex-wrap items-start justify-between gap-4 bg-surface-page pt-1">
+      <div className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 bg-surface-page pt-1 sm:sticky sm:top-0 sm:z-20">
         <div>
-          <h1 className="text-2xl font-bold">Edit profile</h1>
-          <p className="text-sm text-text-grey">This information is shown to couples on your public vendor page.</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Edit profile</h1>
+          <p className="text-xs sm:text-sm text-text-grey">This information is shown to couples on your public vendor page.</p>
         </div>
         <div className="flex items-center gap-3">
           {status === "error" && <span className="text-[13px] text-red">{error}</span>}
           <button
             type="submit"
             disabled={status === "saving"}
-            className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            className="w-full sm:w-auto rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white shadow-xs disabled:opacity-60"
           >
             {status === "saving" ? "Saving…" : status === "saved" ? "Saved ✓" : "Save changes"}
           </button>
@@ -249,12 +249,12 @@ export function ProfileEditor({
       </div>
 
       <div className="grid grid-cols-[220px_1fr] gap-7 max-[1000px]:grid-cols-1">
-        <nav className="sticky top-24 flex h-fit flex-col gap-0.5 max-[1000px]:static max-[1000px]:flex-row max-[1000px]:overflow-x-auto">
+        <nav className="sticky top-24 flex h-fit flex-col gap-0.5 max-[1000px]:static max-[1000px]:flex-row max-[1000px]:overflow-x-auto no-scrollbar whitespace-nowrap pb-2">
           {SECTIONS.map((section) => (
             <a
               key={section.id}
               href={`#${section.id}`}
-              className="rounded-md border-l-2 border-transparent px-3.5 py-2.5 text-[13px] font-semibold text-text-grey no-underline hover:bg-surface-input hover:text-text-dark"
+              className="shrink-0 rounded-md border-l-2 border-transparent px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-[13px] font-semibold text-text-grey no-underline hover:bg-surface-input hover:text-text-dark"
             >
               {section.label}
             </a>
