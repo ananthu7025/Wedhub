@@ -77,9 +77,9 @@ export function SearchFilterBar({
       ref={barRef}
       className="sticky top-[66px] z-40 w-full border-b border-gray-200 bg-white shadow-xs overflow-visible"
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8 text-xs sm:text-sm overflow-visible">
+      <div className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-4 py-2 sm:justify-between sm:gap-3 sm:overflow-visible sm:px-6 sm:py-2.5 lg:px-8 text-xs sm:text-sm">
         {/* Left Filters Group */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 overflow-visible">
+        <div className="flex flex-none items-center gap-2 sm:flex-wrap sm:gap-3 overflow-visible">
           {/* Category Dropdown */}
           <div className="relative inline-block text-left">
             <button
