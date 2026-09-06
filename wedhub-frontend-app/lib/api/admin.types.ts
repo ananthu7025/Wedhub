@@ -249,6 +249,19 @@ export interface AdminUpdateAttributeBody {
   sortOrder?: number;
 }
 
+// ---- POST /categories/:id/services (ADMIN) ----
+export interface AdminCreateServiceBody {
+  name: string;
+  description?: string;
+}
+
+// ---- PATCH /categories/:id/services/:serviceId (ADMIN) ----
+export interface AdminUpdateServiceBody {
+  name?: string;
+  description?: string | null;
+  isActive?: boolean;
+}
+
 // ---- POST /locations (ADMIN) ----
 export interface AdminCreateLocationBody {
   type: LocationType;

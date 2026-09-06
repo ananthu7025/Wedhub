@@ -58,6 +58,15 @@ export interface CategoryAttribute {
   sortOrder: number;
 }
 
+export interface Service {
+  id: string;
+  categoryId: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  isActive: boolean;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -72,6 +81,7 @@ export interface Category {
   homepageSortOrder: number;
   startingPriceLabel: string | null;
   attributes: CategoryAttribute[];
+  services: Service[];
   children?: Category[];
 }
 

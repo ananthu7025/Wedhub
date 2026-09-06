@@ -4,8 +4,10 @@ import * as categoriesRepository from "./categories.repository";
 import type {
   CreateAttributeInput,
   CreateCategoryInput,
+  CreateServiceInput,
   UpdateAttributeInput,
   UpdateCategoryInput,
+  UpdateServiceInput,
 } from "./categories.types";
 
 export function listCategories() {
@@ -107,6 +109,44 @@ export async function deleteAttribute(attributeId: string): Promise<void> {
     throw new NotFoundError("Attribute not found");
   }
   await categoriesRepository.deleteAttribute(attributeId);
+}
+
+export async function createService(categoryId: string, input: CreateServiceInput) {
+  const category = await categoriesRepository.findCategoryById(categoryId);
+  if (!category) {
+    throw new NotFoundError("Category not found");
+  }
+
+  const slug = await generateUniqueSlug(slugify(input.name), async (candidate) =>
+    Boolean(await categoriesRepository.findServiceBySlug(categoryId, candidate)),
+  );
+
+  return categoriesRepository.createService(categoryId, {
+    name: input.name,
+    slug,
+    description: input.description,
+  });
+}
+
+export async function updateService(serviceId: string, input: UpdateServiceInput) {
+  const existing = await categoriesRepository.findServiceById(serviceId);
+  if (!existing) {
+    throw new NotFoundError("Service not found");
+  }
+
+  return categoriesRepository.updateService(serviceId, {
+    name: input.name,
+    description: input.description,
+    isActive: input.isActive,
+  });
+}
+
+export async function deleteService(serviceId: string): Promise<void> {
+  const existing = await categoriesRepository.findServiceById(serviceId);
+  if (!existing) {
+    throw new NotFoundError("Service not found");
+  }
+  await categoriesRepository.deleteService(serviceId);
 }
 
 function isUniqueConstraintViolation(err: unknown): boolean {

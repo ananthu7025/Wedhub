@@ -146,23 +146,24 @@ export default async function VendorDashboardPage() {
         {/* Top 4 Hero Metric Cards with Sparklines */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
           {/* Card 1: Total Customer Views */}
-          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md">
             <div>
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-text-grey">Customer Views</span>
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-10 px-2 py-0.5 text-[10px] font-bold text-emerald-70">
-                    {analytics?.profileViews && analytics.profileViews > 0 ? "Active ↗" : "0 views"}
-                  </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-xs font-semibold text-text-grey truncate">Customer Views</span>
+                  {analytics?.profileViews && analytics.profileViews > 0 ? (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-70 shrink-0">
+                      Active ↗
+                    </span>
+                  ) : null}
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-semibold text-text-muted">
-                  <span className="rounded bg-emerald-70 px-1.5 py-0.5 text-white">{windowDays}D</span>
-                  <span className="px-1 py-0.5 text-text-grey">window</span>
-                </div>
+                <span className="shrink-0 rounded-full bg-surface-input px-2 py-0.5 text-[10px] font-semibold text-text-muted">
+                  {windowDays}D window
+                </span>
               </div>
             </div>
 
-            <div className="mt-3 flex items-end justify-between">
+            <div className="mt-3 flex items-end justify-between gap-2">
               <span className="text-3xl font-extrabold tracking-tight text-emerald-70">
                 {analytics?.profileViews ? analytics.profileViews.toLocaleString("en-IN") : "0"}
               </span>
@@ -174,52 +175,53 @@ export default async function VendorDashboardPage() {
           </div>
 
           {/* Card 2: WhatsApp Inquiries */}
-          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md">
             <div>
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-text-grey">WhatsApp Inquiries</span>
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-10 px-2 py-0.5 text-[10px] font-bold text-emerald-70">
-                    {analytics?.whatsappClicks && analytics.whatsappClicks > 0 ? "Direct Chat ↗" : "0 chats"}
-                  </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <svg className="h-3.5 w-3.5 text-[#25D366] shrink-0 fill-current" viewBox="0 0 24 24">
+                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.95.814 3.027.815h.005c3.18 0 5.767-2.586 5.768-5.766 0-3.18-2.587-5.766-5.768-5.766zm9.969 5.766c0 5.519-4.481 10-10 10-1.748 0-3.387-.45-4.821-1.239l-5.179 1.359 1.385-5.059c-.86-1.488-1.385-3.228-1.385-5.061 0-5.519 4.481-10 10-10s10 4.481 10 10z" />
+                  </svg>
+                  <span className="text-xs font-semibold text-text-grey truncate">WhatsApp Inquiries</span>
+                  {analytics?.whatsappClicks && analytics.whatsappClicks > 0 ? (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-70 shrink-0">
+                      Direct Chat ↗
+                    </span>
+                  ) : null}
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-semibold text-text-muted">
-                  <span className="rounded bg-[#25D366] px-1.5 py-0.5 text-white">{windowDays}D</span>
-                  <span className="px-1 py-0.5 text-text-grey">window</span>
-                </div>
+                <span className="shrink-0 rounded-full bg-surface-input px-2 py-0.5 text-[10px] font-semibold text-text-muted">
+                  {windowDays}D window
+                </span>
               </div>
             </div>
 
-            <div className="mt-3 flex items-end justify-between">
+            <div className="mt-3 flex items-end justify-between gap-2">
               <span className="text-3xl font-extrabold tracking-tight text-[#1da851]">
                 {analytics?.whatsappClicks ? analytics.whatsappClicks.toLocaleString("en-IN") : "0"}
               </span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-[#25D366]">
-                <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
-                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.95.814 3.027.815h.005c3.18 0 5.767-2.586 5.768-5.766 0-3.18-2.587-5.766-5.768-5.766zm9.969 5.766c0 5.519-4.481 10-10 10-1.748 0-3.387-.45-4.821-1.239l-5.179 1.359 1.385-5.059c-.86-1.488-1.385-3.228-1.385-5.061 0-5.519 4.481-10 10-10s10 4.481 10 10z" />
-                </svg>
-              </div>
+              <DashboardSparkline color="emerald" />
             </div>
           </div>
 
           {/* Card 3: Inquiries Received */}
-          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md">
             <div>
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-text-grey">Inquiries Received</span>
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-byzantine-blue-10 px-2 py-0.5 text-[10px] font-bold text-byzantine-blue-70">
-                    {analytics?.enquiries && analytics.enquiries > 0 ? "Active ↗" : "0 enquiries"}
-                  </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-xs font-semibold text-text-grey truncate">Inquiries Received</span>
+                  {analytics?.enquiries && analytics.enquiries > 0 ? (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-byzantine-blue-10 px-1.5 py-0.5 text-[10px] font-bold text-byzantine-blue-70 shrink-0">
+                      Active ↗
+                    </span>
+                  ) : null}
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-semibold text-text-muted">
-                  <span className="rounded bg-byzantine-blue px-1.5 py-0.5 text-white">{windowDays}D</span>
-                  <span className="px-1 py-0.5 text-text-grey">window</span>
-                </div>
+                <span className="shrink-0 rounded-full bg-surface-input px-2 py-0.5 text-[10px] font-semibold text-text-muted">
+                  {windowDays}D window
+                </span>
               </div>
             </div>
 
-            <div className="mt-3 flex items-end justify-between">
+            <div className="mt-3 flex items-end justify-between gap-2">
               <span className="text-3xl font-extrabold tracking-tight text-byzantine-blue">
                 {analytics?.enquiries ? analytics.enquiries.toLocaleString("en-IN") : "0"}
               </span>
@@ -235,22 +237,24 @@ export default async function VendorDashboardPage() {
           </div>
 
           {/* Card 4: Conversion Rate */}
-          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-white p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md">
             <div>
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-text-grey">Conversion Rate</span>
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-red-10 px-2 py-0.5 text-[10px] font-bold text-red-70">
-                    {analytics?.conversionRate && analytics.conversionRate > 0 ? "Won leads ↗" : "0% won"}
-                  </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-xs font-semibold text-text-grey truncate">Conversion Rate</span>
+                  {analytics?.conversionRate && analytics.conversionRate > 0 ? (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-red-10 px-1.5 py-0.5 text-[10px] font-bold text-red-70 shrink-0">
+                      Won leads ↗
+                    </span>
+                  ) : null}
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-semibold text-text-muted">
-                  <span className="rounded bg-red-70 px-1.5 py-0.5 text-white">Won / Total</span>
-                </div>
+                <span className="shrink-0 rounded-full bg-surface-input px-2 py-0.5 text-[10px] font-semibold text-text-muted">
+                  {windowDays}D window
+                </span>
               </div>
             </div>
 
-            <div className="mt-3 flex items-end justify-between">
+            <div className="mt-3 flex items-end justify-between gap-2">
               <span className="text-3xl font-extrabold tracking-tight text-red-70">
                 {analytics ? formatPercent(analytics.conversionRate) : "0%"}
               </span>

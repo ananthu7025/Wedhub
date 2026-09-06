@@ -66,7 +66,20 @@ export const updateAttributeSchema = z.object({
   sortOrder: z.coerce.number().int().optional(),
 });
 
+export const createServiceSchema = z.object({
+  name: z.string().min(1).max(150),
+  description: z.string().max(2000).optional(),
+});
+
+export const updateServiceSchema = z.object({
+  name: z.string().min(1).max(150).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
 export type CreateCategoryBody = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryBody = z.infer<typeof updateCategorySchema>;
 export type CreateAttributeBody = z.infer<typeof createAttributeSchema>;
 export type UpdateAttributeBody = z.infer<typeof updateAttributeSchema>;
+export type CreateServiceBody = z.infer<typeof createServiceSchema>;
+export type UpdateServiceBody = z.infer<typeof updateServiceSchema>;

@@ -8,6 +8,7 @@ import { formatApiError } from "@/lib/utils/error";
 import { LocationTree } from "./LocationTree";
 import { CategoryImagePicker } from "./CategoryImagePicker";
 import { CategoryAttributesPanel } from "./CategoryAttributesPanel";
+import { CategoryServicesPanel } from "./CategoryServicesPanel";
 
 /**
  * Categories & Locations admin page (Frontend Arch Phase 9, extended
@@ -83,7 +84,7 @@ export function CatalogBoard({
       setError(formatApiError(result.error));
       return;
     }
-    setCategories((prev) => [...prev, { ...result.data, attributes: [] }]);
+    setCategories((prev) => [...prev, { ...result.data, attributes: [], services: [] }]);
     setNewCategoryName("");
   }
 
@@ -142,6 +143,10 @@ export function CatalogBoard({
 
   function handleAttributesChange(categoryId: string, attributes: Category["attributes"]) {
     setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, attributes } : c)));
+  }
+
+  function handleServicesChange(categoryId: string, services: Category["services"]) {
+    setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, services } : c)));
   }
 
   return (
@@ -228,6 +233,7 @@ export function CatalogBoard({
                     onToggleStore={() => handleToggleStore(parent)}
                     onSaveHomepageFields={(imageUrl, priceLabel) => handleSaveHomepageFields(parent, imageUrl, priceLabel)}
                     onAttributesChange={(attributes) => handleAttributesChange(parent.id, attributes)}
+                    onServicesChange={(services) => handleServicesChange(parent.id, services)}
                   />
                   {parent.children.map((child) => (
                     <CategoryRow
@@ -240,6 +246,7 @@ export function CatalogBoard({
                       onToggleStore={() => handleToggleStore(child)}
                       onSaveHomepageFields={(imageUrl, priceLabel) => handleSaveHomepageFields(child, imageUrl, priceLabel)}
                       onAttributesChange={(attributes) => handleAttributesChange(child.id, attributes)}
+                      onServicesChange={(services) => handleServicesChange(child.id, services)}
                     />
                   ))}
                 </div>
@@ -263,6 +270,7 @@ function CategoryRow({
   onToggleStore,
   onSaveHomepageFields,
   onAttributesChange,
+  onServicesChange,
 }: {
   category: Category;
   indented?: boolean;
@@ -272,9 +280,11 @@ function CategoryRow({
   onToggleStore: () => void;
   onSaveHomepageFields: (imageUrl: string | null, startingPriceLabel: string) => void;
   onAttributesChange: (attributes: Category["attributes"]) => void;
+  onServicesChange: (services: Category["services"]) => void;
 }) {
   const [editingHomepage, setEditingHomepage] = useState(false);
   const [editingAttributes, setEditingAttributes] = useState(false);
+  const [editingServices, setEditingServices] = useState(false);
   const [imageUrlDraft, setImageUrlDraft] = useState<string | null>(category.imageUrl);
   const [priceDraft, setPriceDraft] = useState(category.startingPriceLabel ?? "");
 
@@ -296,6 +306,8 @@ function CategoryRow({
           </div>
           <div className="text-xs text-text-grey">
             {category.attributes.length} attribute{category.attributes.length === 1 ? "" : "s"}
+            {" · "}
+            {category.services.length} service{category.services.length === 1 ? "" : "s"}
             {!category.isActive && " · disabled"}
           </div>
         </div>
@@ -306,6 +318,13 @@ function CategoryRow({
             className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-bold text-text-dark hover:bg-surface-input"
           >
             {editingAttributes ? "Close attributes" : `Attributes (${category.attributes.length})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditingServices((v) => !v)}
+            className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-bold text-text-dark hover:bg-surface-input"
+          >
+            {editingServices ? "Close services" : `Services (${category.services.length})`}
           </button>
           <button
             type="button"
@@ -383,6 +402,14 @@ function CategoryRow({
           categoryId={category.id}
           attributes={category.attributes}
           onAttributesChange={onAttributesChange}
+        />
+      )}
+
+      {editingServices && (
+        <CategoryServicesPanel
+          categoryId={category.id}
+          services={category.services}
+          onServicesChange={onServicesChange}
         />
       )}
     </div>

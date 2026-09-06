@@ -7,19 +7,17 @@ interface SparklineProps {
 }
 
 export function DashboardSparkline({ color, dataPoints, className = "" }: SparklineProps) {
+  const gradientId = React.useId();
   const configs = {
     emerald: {
-      id: "gradient-emerald",
       stroke: "#10b981", // emerald-500
       stopColor: "#10b981",
     },
     blue: {
-      id: "gradient-blue",
       stroke: "#3b82f6", // blue-500
       stopColor: "#3b82f6",
     },
     coral: {
-      id: "gradient-coral",
       stroke: "#f43f5e", // rose-500
       stopColor: "#f43f5e",
     },
@@ -34,7 +32,8 @@ export function DashboardSparkline({ color, dataPoints, className = "" }: Sparkl
   let pathD = "";
   let areaD = "";
 
-  const points = dataPoints && dataPoints.length >= 2 ? dataPoints : null;
+  const hasNonZeroData = dataPoints && dataPoints.length >= 2 && dataPoints.some((v) => v > 0);
+  const points = hasNonZeroData ? dataPoints : null;
 
   if (points) {
     const min = Math.min(...points);
@@ -67,7 +66,7 @@ export function DashboardSparkline({ color, dataPoints, className = "" }: Sparkl
 
     areaD = `${pathD} L ${width} ${height} L 0 ${height} Z`;
   } else {
-    // Gentle baseline curve for when no daily time series is recorded yet
+    // Gentle baseline wave curve for zero-data/empty state
     pathD = `M 0 35 C 40 38, 80 32, 120 36 C 140 38, 150 34, 160 35`;
     areaD = `${pathD} L ${width} ${height} L 0 ${height} Z`;
   }
@@ -80,12 +79,12 @@ export function DashboardSparkline({ color, dataPoints, className = "" }: Sparkl
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <linearGradient id={c.id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={c.stopColor} stopOpacity="0.25" />
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={c.stopColor} stopOpacity="0.22" />
           <stop offset="100%" stopColor={c.stopColor} stopOpacity="0.0" />
         </linearGradient>
       </defs>
-      <path d={areaD} fill={`url(#${c.id})`} />
+      <path d={areaD} fill={`url(#${gradientId})`} />
       <path
         d={pathD}
         stroke={c.stroke}

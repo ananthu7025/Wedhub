@@ -127,8 +127,25 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
 
 const CATEGORY_SERVICES: Record<string, string[]> = {
   Photography: ["Candid Photography", "Traditional Photography", "Drone Coverage", "Pre-Wedding Shoot"],
+  Videography: ["Cinematic Videography", "Traditional Videography", "Drone Videography"],
   Venues: ["Indoor Hall", "Outdoor Lawn", "Banquet Hall", "Destination Venue"],
   "Makeup Artists": ["Bridal Makeup", "Groom Makeup", "Party Makeup", "Trial Session"],
+  "Mehndi Artists": ["Bridal Mehndi", "Party Mehndi", "Arabic Mehndi"],
+  "Wedding Planners": ["Full Wedding Planning", "Day-of Coordination", "Destination Wedding Planning"],
+  Decorators: ["Stage Decoration", "Venue Decoration", "Floral Decoration"],
+  Caterers: ["Multi-Cuisine Catering", "Live Counters", "Dessert Counters"],
+  DJs: ["Wedding DJ", "Sangeet DJ", "Sound & Lighting"],
+  Choreographers: ["Sangeet Choreography", "Couple Dance Choreography", "Group Dance Choreography"],
+  "Bridal Wear": ["Bridal Lehenga", "Bridal Saree", "Bridal Gown"],
+  "Groom Wear": ["Sherwani", "Groom Suit", "Groom Accessories"],
+  Jewellery: ["Bridal Jewellery Sets", "Jewellery Rental", "Custom Jewellery Design"],
+  Invitations: ["Printed Invitations", "Digital Invitations", "Custom Invitation Design"],
+  Cakes: ["Wedding Cakes", "Custom Theme Cakes", "Dessert Tables"],
+  Florists: ["Bridal Bouquets", "Venue Floral Arrangements", "Floral Jewellery"],
+  Rentals: ["Furniture Rental", "Tent & Canopy Rental", "Decor Prop Rental"],
+  Transportation: ["Wedding Car Rental", "Guest Shuttle Service", "Vintage Car Rental"],
+  "Honeymoon & Travel": ["Domestic Honeymoon Packages", "International Honeymoon Packages", "Travel & Visa Assistance"],
+  "Destination Weddings": ["Destination Wedding Planning", "Guest Travel Coordination", "Venue Sourcing Abroad"],
 };
 
 // Homepage carousel/bento-grid curation — same 7 categories the frontend's

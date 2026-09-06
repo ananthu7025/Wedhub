@@ -16,7 +16,10 @@ export function findActiveCategories() {
 export function findAllCategories() {
   return prisma.category.findMany({
     orderBy: { sortOrder: "asc" },
-    include: { attributes: { orderBy: { sortOrder: "asc" } } },
+    include: {
+      attributes: { orderBy: { sortOrder: "asc" } },
+      services: { orderBy: { name: "asc" } },
+    },
   });
 }
 
@@ -135,4 +138,33 @@ export function updateAttribute(id: string, data: AttributeUpdateFields) {
 
 export function deleteAttribute(id: string) {
   return prisma.categoryAttribute.delete({ where: { id } });
+}
+
+export function createService(categoryId: string, data: { name: string; slug: string; description: string | undefined }) {
+  const fields = omitUndefined({ description: data.description });
+  return prisma.service.create({
+    data: { categoryId, name: data.name, slug: data.slug, ...fields },
+  });
+}
+
+export function findServiceById(id: string) {
+  return prisma.service.findUnique({ where: { id } });
+}
+
+export function findServiceBySlug(categoryId: string, slug: string) {
+  return prisma.service.findUnique({ where: { categoryId_slug: { categoryId, slug } } });
+}
+
+export interface ServiceUpdateFields {
+  name: string | undefined;
+  description: string | null | undefined;
+  isActive: boolean | undefined;
+}
+
+export function updateService(id: string, data: ServiceUpdateFields) {
+  return prisma.service.update({ where: { id }, data: omitUndefined(data) });
+}
+
+export function deleteService(id: string) {
+  return prisma.service.delete({ where: { id } });
 }
