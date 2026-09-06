@@ -138,6 +138,7 @@ export async function createPackage(req: Request, res: Response): Promise<void> 
     price: body.price,
     currency: body.currency,
     inclusions: body.inclusions,
+    imageMediaId: body.imageMediaId,
   });
   res.status(201).json(successResponse(pkg));
 }
@@ -152,6 +153,7 @@ export async function updatePackage(req: Request, res: Response): Promise<void> 
     price: body.price,
     currency: body.currency,
     inclusions: body.inclusions,
+    imageMediaId: body.imageMediaId,
     sortOrder: body.sortOrder,
     isActive: body.isActive,
   });

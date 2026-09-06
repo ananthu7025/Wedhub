@@ -4,7 +4,7 @@ const IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const VIDEO_MIME_TYPES = ["video/mp4", "video/quicktime"];
 
 export const createUploadRequestSchema = z.object({
-  mediaType: z.enum(["LOGO", "COVER", "PORTFOLIO", "VIDEO", "STORE_ITEM_PHOTO"]),
+  mediaType: z.enum(["LOGO", "COVER", "PORTFOLIO", "VIDEO", "STORE_ITEM_PHOTO", "PACKAGE_PHOTO"]),
   albumId: z.string().uuid().optional(),
   filename: z.string().min(1).max(255),
   mimeType: z.enum([...IMAGE_MIME_TYPES, ...VIDEO_MIME_TYPES] as [string, ...string[]]),

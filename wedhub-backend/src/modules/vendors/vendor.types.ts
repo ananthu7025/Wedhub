@@ -57,6 +57,7 @@ export interface CreatePackageInput {
   price: number;
   currency: string | undefined;
   inclusions: string[] | undefined;
+  imageMediaId: string | null | undefined;
 }
 
 export interface UpdatePackageInput {
@@ -65,6 +66,7 @@ export interface UpdatePackageInput {
   price: number | undefined;
   currency: string | undefined;
   inclusions: string[] | undefined;
+  imageMediaId: string | null | undefined;
   sortOrder: number | undefined;
   isActive: boolean | undefined;
 }

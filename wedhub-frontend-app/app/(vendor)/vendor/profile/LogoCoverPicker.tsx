@@ -29,7 +29,7 @@ export function LogoCoverPicker({
   /** The current media's resolvable object key, if one was already set — the id alone can't be rendered without a fetch, so the parent passes this from the initial VendorProfile.logoMedia/coverMedia join. */
   initialObjectKey: string | null;
   onChange: (mediaId: string | null) => void;
-  mediaType: Extract<MediaType, "LOGO" | "COVER">;
+  mediaType: Extract<MediaType, "LOGO" | "COVER" | "PACKAGE_PHOTO">;
   shape: "square" | "wide";
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);

@@ -74,6 +74,7 @@ export const createPackageSchema = z.object({
   price: z.coerce.number().min(0),
   currency: z.string().length(3).optional(),
   inclusions: z.array(z.string().min(1).max(200)).max(50).optional(),
+  imageMediaId: z.string().uuid().nullable().optional(),
 });
 
 export const updatePackageSchema = z.object({
@@ -82,6 +83,7 @@ export const updatePackageSchema = z.object({
   price: z.coerce.number().min(0).optional(),
   currency: z.string().length(3).optional(),
   inclusions: z.array(z.string().min(1).max(200)).max(50).optional(),
+  imageMediaId: z.string().uuid().nullable().optional(),
   sortOrder: z.coerce.number().int().optional(),
   isActive: z.boolean().optional(),
 });

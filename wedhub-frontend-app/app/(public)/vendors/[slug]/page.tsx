@@ -167,24 +167,35 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                 <h2 className="mb-4 text-lg font-bold">Packages &amp; Pricing</h2>
                 {vendor.packages
                   .filter((pkg) => pkg.isActive)
-                  .map((pkg) => (
-                    <div key={pkg.id} className="mb-3.5 rounded-xl border border-border p-5">
-                      <div className="mb-2 flex items-baseline justify-between">
-                        <span className="text-[15px] font-bold">{pkg.name}</span>
-                        <span className="text-base font-bold text-brand-primary">
-                          {pkg.currency === "INR" ? "₹" : pkg.currency} {Number(pkg.price).toLocaleString("en-IN")}
-                        </span>
-                      </div>
-                      {pkg.description && <p className="mb-2 text-[13px] text-text-grey">{pkg.description}</p>}
-                      {pkg.inclusions.length > 0 && (
-                        <ul className="mt-2.5 list-disc pl-4.5 text-[13px] leading-loose text-text-body">
-                          {pkg.inclusions.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
+                  .map((pkg) => {
+                    const imageKey =
+                      pkg.image?.thumbnailObjectKey ?? pkg.image?.optimizedObjectKey ?? pkg.image?.originalObjectKey;
+                    return (
+                    <div key={pkg.id} className="mb-3.5 flex gap-4 rounded-xl border border-border p-5">
+                      {imageKey && (
+                        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-surface-input">
+                          <Image src={getPublicMediaUrl(imageKey)} alt={pkg.name} fill className="object-cover" />
+                        </div>
                       )}
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-baseline justify-between">
+                          <span className="text-[15px] font-bold">{pkg.name}</span>
+                          <span className="text-base font-bold text-brand-primary">
+                            {pkg.currency === "INR" ? "₹" : pkg.currency} {Number(pkg.price).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                        {pkg.description && <p className="mb-2 text-[13px] text-text-grey">{pkg.description}</p>}
+                        {pkg.inclusions.length > 0 && (
+                          <ul className="mt-2.5 list-disc pl-4.5 text-[13px] leading-loose text-text-body">
+                            {pkg.inclusions.map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 {vendor.profile?.customQuoteAvailable && (
                   <p className="text-[13px] text-text-grey">Custom quotations available on request.</p>
                 )}

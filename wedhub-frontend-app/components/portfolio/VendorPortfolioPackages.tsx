@@ -1,8 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import type { VendorPackage } from "@/lib/api/vendors.types";
 import { formatWhatsAppUrl } from "@/lib/utils/whatsapp";
 import { trackEvent } from "@/lib/analytics/track";
+import { getPublicMediaUrl } from "@/lib/media/url";
+import { CheckIcon, SparkleIcon, WhatsAppIcon } from "./icons";
 
 interface VendorPortfolioPackagesProps {
   vendorId?: string;
@@ -53,12 +56,26 @@ export function VendorPortfolioPackages({
             }
           };
 
+          const imageKey =
+            pkg.image?.optimizedObjectKey ?? pkg.image?.thumbnailObjectKey ?? pkg.image?.originalObjectKey ?? null;
+
           return (
             <div
               key={pkg.id}
               className="flex flex-col justify-between rounded-2xl border border-neutral-200 bg-white p-6 shadow-xs transition-all duration-200 hover:shadow-md hover:border-neutral-300"
             >
               <div>
+                {imageKey && (
+                  <div className="relative -mx-6 -mt-6 mb-5 h-40 overflow-hidden rounded-t-2xl bg-neutral-100">
+                    <Image
+                      src={getPublicMediaUrl(imageKey)}
+                      alt={pkg.name}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover"
+                    />
+                  </div>
+                )}
                 <div className="mb-3 flex items-baseline justify-between gap-2">
                   <h3 className="text-base sm:text-lg font-bold text-neutral-900">{pkg.name}</h3>
                   <span className="text-lg font-extrabold text-neutral-900 whitespace-nowrap">
@@ -80,7 +97,7 @@ export function VendorPortfolioPackages({
                     <ul className="flex flex-col gap-2 text-xs sm:text-sm text-neutral-700">
                       {pkg.inclusions.map((item: string, i: number) => (
                         <li key={i} className="flex items-start gap-2.5">
-                          <span className="flex-shrink-0 text-emerald-600 font-bold">✓</span>
+                          <CheckIcon className="flex-shrink-0 h-4 w-4 mt-0.5 text-emerald-600" />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -98,9 +115,7 @@ export function VendorPortfolioPackages({
                     onClick={handlePackageWhatsAppClick}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-xs sm:text-sm font-bold text-white transition-all hover:bg-[#20ba5a]"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.699c.971.53 1.95.814 3.027.815h.005c3.18 0 5.767-2.586 5.768-5.766 0-3.18-2.587-5.766-5.768-5.766zm9.969 5.766c0 5.519-4.481 10-10 10-1.748 0-3.387-.45-4.821-1.239l-5.179 1.359 1.385-5.059c-.86-1.488-1.385-3.228-1.385-5.061 0-5.519 4.481-10 10-10s10 4.481 10 10z" />
-                    </svg>
+                    <WhatsAppIcon className="h-[15px] w-[15px]" />
                     <span>Inquire on WhatsApp</span>
                   </a>
                 ) : (
@@ -118,14 +133,17 @@ export function VendorPortfolioPackages({
       </div>
 
       {customQuoteAvailable && (
-        <div className="mt-6 rounded-xl border border-neutral-200/80 bg-neutral-50/70 p-4 text-center text-xs sm:text-sm text-neutral-600">
-          ✨ Custom bespoke packages available upon request. Have unique wedding requirements?{" "}
-          <button
-            onClick={onEnquireClick}
-            className="font-bold text-neutral-900 underline hover:text-neutral-700"
-          >
-            Request a personalized quotation
-          </button>
+        <div className="mt-6 flex items-center justify-center gap-2 rounded-xl border border-neutral-200/80 bg-neutral-50/70 p-4 text-center text-xs sm:text-sm text-neutral-600">
+          <SparkleIcon className="hidden sm:inline h-4 w-4 flex-shrink-0 text-brand-primary" />
+          <span>
+            Custom bespoke packages available upon request. Have unique wedding requirements?{" "}
+            <button
+              onClick={onEnquireClick}
+              className="font-bold text-neutral-900 underline hover:text-neutral-700"
+            >
+              Request a personalized quotation
+            </button>
+          </span>
         </div>
       )}
     </div>

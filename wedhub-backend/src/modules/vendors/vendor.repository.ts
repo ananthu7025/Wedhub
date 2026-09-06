@@ -8,7 +8,7 @@ export const VENDOR_FULL_INCLUDE = {
   categories: { include: { category: true } },
   serviceAreas: { include: { location: true } },
   services: { include: { service: true } },
-  packages: true,
+  packages: { include: { image: true } },
   attributeValues: { include: { attribute: true } },
   city: true,
 } satisfies Prisma.VendorInclude;
@@ -245,14 +245,17 @@ export function createPackage(vendorId: string, data: {
   price: number;
   currency: string | undefined;
   inclusions: string[] | undefined;
+  imageMediaId: string | null | undefined;
 }) {
   const fields = omitUndefined({
     description: data.description,
     currency: data.currency,
     inclusions: data.inclusions,
+    imageMediaId: data.imageMediaId,
   });
   return prisma.package.create({
     data: { vendorId, name: data.name, price: data.price, ...fields },
+    include: { image: true },
   });
 }
 
@@ -262,6 +265,7 @@ export interface PackageUpdateFields {
   price: number | undefined;
   currency: string | undefined;
   inclusions: string[] | undefined;
+  imageMediaId: string | null | undefined;
   sortOrder: number | undefined;
   isActive: boolean | undefined;
 }
@@ -271,7 +275,11 @@ export function findPackageById(packageId: string) {
 }
 
 export function updatePackage(packageId: string, data: PackageUpdateFields) {
-  return prisma.package.update({ where: { id: packageId }, data: omitUndefined(data) });
+  return prisma.package.update({
+    where: { id: packageId },
+    data: omitUndefined(data),
+    include: { image: true },
+  });
 }
 
 export function deletePackage(packageId: string) {

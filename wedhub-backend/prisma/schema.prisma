@@ -539,19 +539,21 @@ model VendorService {
 }
 
 model Package {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId    String   @map("vendor_id") @db.Uuid
-  name        String
-  description String?
-  price       Decimal  @db.Decimal(12, 2)
-  currency    String   @default("INR")
-  inclusions  String[] @default([])
-  sortOrder   Int      @default(0) @map("sort_order")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId     String   @map("vendor_id") @db.Uuid
+  name         String
+  description  String?
+  price        Decimal  @db.Decimal(12, 2)
+  currency     String   @default("INR")
+  inclusions   String[] @default([])
+  imageMediaId String?  @map("image_media_id") @db.Uuid
+  sortOrder    Int      @default(0) @map("sort_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  image  Media? @relation("PackageImage", fields: [imageMediaId], references: [id], onDelete: SetNull)
 
   @@index([vendorId])
   @@map("packages")
@@ -627,6 +629,9 @@ enum MediaType {
   // POPULAR_SEARCH_IMAGE/BLOG_COVER_IMAGE above but kept as its own value
   // so admin-media's per-mediaType confirm checks stay unambiguous.
   INSPIRATION_PHOTO
+  // Vendor-owned, single optional photo on a Package (Package.imageMediaId),
+  // same one-FK-column shape as VendorProfile.logoMediaId/coverMediaId.
+  PACKAGE_PHOTO
 }
 
 enum MediaStatus {
@@ -694,6 +699,7 @@ model Media {
   weddingWebsiteCoverFor       WeddingWebsite?        @relation("WeddingWebsiteCover")
   weddingWebsiteCouplePhotoFor WeddingWebsite?        @relation("WeddingWebsiteCouplePhoto")
   storeItemMedia               VendorStoreItemMedia[]
+  packageImageFor              Package[]              @relation("PackageImage")
 
   @@index([vendorId])
   @@index([userId])

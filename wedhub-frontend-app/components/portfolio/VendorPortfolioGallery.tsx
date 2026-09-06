@@ -4,15 +4,19 @@ import { useState } from "react";
 import Image from "next/image";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import type { VendorAlbum, AlbumMedia } from "@/lib/api/vendors.types";
+import { CloseIcon, ChevronLeftIcon, ChevronRightIcon } from "./icons";
 
 interface VendorPortfolioGalleryProps {
   albums: VendorAlbum[];
   businessName: string;
 }
 
+const INITIAL_VISIBLE_COUNT = 7;
+
 export function VendorPortfolioGallery({ albums, businessName }: VendorPortfolioGalleryProps) {
   const [selectedAlbumId, setSelectedAlbumId] = useState<string>("all");
   const [activeMediaIndex, setActiveMediaIndex] = useState<number | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   // Flatten or filter media
   const allMedia = albums.flatMap((album) =>
@@ -33,6 +37,9 @@ export function VendorPortfolioGallery({ albums, businessName }: VendorPortfolio
   }
 
   const activeMedia = activeMediaIndex !== null ? displayedMedia[activeMediaIndex] : null;
+  const hasOverflow = !showAll && displayedMedia.length > INITIAL_VISIBLE_COUNT;
+  const visibleMedia = hasOverflow ? displayedMedia.slice(0, INITIAL_VISIBLE_COUNT) : displayedMedia;
+  const remainingCount = displayedMedia.length - INITIAL_VISIBLE_COUNT;
 
   return (
     <div>
@@ -40,19 +47,25 @@ export function VendorPortfolioGallery({ albums, businessName }: VendorPortfolio
       {albums.length > 1 && (
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setSelectedAlbumId("all")}
+            onClick={() => {
+              setSelectedAlbumId("all");
+              setShowAll(false);
+            }}
             className={`rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition-all ${
               selectedAlbumId === "all"
                 ? "bg-neutral-900 text-white shadow-xs"
                 : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
             }`}
           >
-            All Work ({allMedia.length})
+            All ({allMedia.length})
           </button>
           {albums.map((album) => (
             <button
               key={album.id}
-              onClick={() => setSelectedAlbumId(album.id)}
+              onClick={() => {
+                setSelectedAlbumId(album.id);
+                setShowAll(false);
+              }}
               className={`rounded-full px-4 py-2 text-xs sm:text-sm font-semibold transition-all ${
                 selectedAlbumId === album.id
                   ? "bg-neutral-900 text-white shadow-xs"
@@ -65,33 +78,47 @@ export function VendorPortfolioGallery({ albums, businessName }: VendorPortfolio
         </div>
       )}
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-        {displayedMedia.map((media, index) => {
+      {/* Asymmetric grid — first tile spans two rows on larger screens, mirroring the reference layout */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 grid-flow-dense gap-3 sm:gap-4">
+        {visibleMedia.map((media, index) => {
           const key =
             media.thumbnailObjectKey ??
             media.optimizedObjectKey ??
             media.originalObjectKey;
           const url = getPublicMediaUrl(key);
+          const isFeature = index === 0;
+          const isLastVisible = hasOverflow && index === visibleMedia.length - 1;
 
           return (
             <div
               key={media.id}
-              onClick={() => setActiveMediaIndex(index)}
-              className="group relative aspect-4/3 sm:aspect-square cursor-pointer overflow-hidden rounded-xl bg-neutral-100 shadow-2xs transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
+              onClick={() => (isLastVisible ? setShowAll(true) : setActiveMediaIndex(index))}
+              className={`group relative cursor-pointer overflow-hidden rounded-xl bg-neutral-100 shadow-2xs transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 ${
+                isFeature
+                  ? "col-span-2 row-span-2 aspect-square sm:aspect-auto"
+                  : "aspect-square"
+              }`}
             >
               <Image
                 src={url}
                 alt={media.altText ?? `${businessName} portfolio`}
                 fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                sizes={isFeature ? "(max-width: 640px) 100vw, 50vw" : "(max-width: 640px) 50vw, 25vw"}
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 flex items-end p-4">
-                <div className="text-white text-xs font-semibold">
-                  <span>{media.albumName}</span>
+
+              {isLastVisible ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-black/60 text-white">
+                  <span className="text-xl sm:text-2xl font-black">+{remainingCount}</span>
+                  <span className="text-[11px] sm:text-xs font-semibold">More Photos</span>
                 </div>
-              </div>
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 flex items-end p-4">
+                  <div className="text-white text-xs font-semibold">
+                    <span>{media.albumName}</span>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -105,10 +132,10 @@ export function VendorPortfolioGallery({ albums, businessName }: VendorPortfolio
         >
           <button
             onClick={() => setActiveMediaIndex(null)}
-            className="absolute top-6 right-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white text-xl transition-colors hover:bg-white/20"
+            className="absolute top-6 right-6 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
             aria-label="Close lightbox"
           >
-            ✕
+            <CloseIcon className="h-5 w-5" />
           </button>
 
           {/* Prev button */}
@@ -120,10 +147,10 @@ export function VendorPortfolioGallery({ albums, businessName }: VendorPortfolio
                   (activeMediaIndex! - 1 + displayedMedia.length) % displayedMedia.length
                 );
               }}
-              className="absolute left-4 sm:left-8 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white text-2xl transition-colors hover:bg-white/25"
+              className="absolute left-4 sm:left-8 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25"
               aria-label="Previous photo"
             >
-              ‹
+              <ChevronLeftIcon className="h-6 w-6" />
             </button>
           )}
 
@@ -136,10 +163,10 @@ export function VendorPortfolioGallery({ albums, businessName }: VendorPortfolio
                   (activeMediaIndex! + 1) % displayedMedia.length
                 );
               }}
-              className="absolute right-4 sm:right-8 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white text-2xl transition-colors hover:bg-white/25"
+              className="absolute right-4 sm:right-8 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25"
               aria-label="Next photo"
             >
-              ›
+              <ChevronRightIcon className="h-6 w-6" />
             </button>
           )}
 

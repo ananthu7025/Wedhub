@@ -3,6 +3,7 @@
 import Image from "next/image";
 import type { VendorReview } from "@/lib/api/vendors.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import { StarIcon, CheckIcon } from "./icons";
 
 interface VendorPortfolioReviewsProps {
   reviews: VendorReview[];
@@ -30,11 +31,9 @@ export function VendorPortfolioReviews({
               {numericRating > 0 ? numericRating.toFixed(1) : "—"}
             </div>
             <div>
-              <div className="flex items-center gap-1.5 text-amber-500 text-lg">
+              <div className="flex items-center gap-1 text-amber-500">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <span key={star}>
-                    {star <= Math.round(numericRating) ? "★" : "☆"}
-                  </span>
+                  <StarIcon key={star} className="h-4 w-4" filled={star <= Math.round(numericRating)} />
                 ))}
               </div>
               <p className="mt-1 text-xs sm:text-sm font-medium text-neutral-600">
@@ -52,8 +51,8 @@ export function VendorPortfolioReviews({
       {/* Reviews list */}
       {reviews.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-neutral-200 bg-white py-14 text-center px-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 text-xl mb-3">
-            ★
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 mb-3">
+            <StarIcon className="h-5 w-5" />
           </div>
           <h3 className="text-sm font-semibold text-neutral-900">No client reviews yet</h3>
           <p className="mt-1 text-xs text-neutral-500 max-w-sm">
@@ -67,16 +66,14 @@ export function VendorPortfolioReviews({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <div className="flex text-amber-500 text-sm">
+                    <div className="flex items-center gap-0.5 text-amber-500">
                       {[1, 2, 3, 4, 5].map((star) => (
-                        <span key={star}>
-                          {star <= review.rating ? "★" : "☆"}
-                        </span>
+                        <StarIcon key={star} className="h-3.5 w-3.5" filled={star <= review.rating} />
                       ))}
                     </div>
                     {review.verifiedInteraction && (
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/60">
-                        ✓ Verified Event
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/60">
+                        <CheckIcon className="h-3 w-3" /> Verified Event
                       </span>
                     )}
                   </div>

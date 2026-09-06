@@ -153,15 +153,32 @@ interface LocationSeed {
   cities?: string[];
 }
 
+// Kerala-only, all 14 districts — this platform currently operates only in
+// Kerala, so no other state/city data is seeded (confirmed with the user
+// 2026-09-06).
 const INDIA_STATES: LocationSeed[] = [
-  { name: "Maharashtra", cities: ["Mumbai", "Pune"] },
-  { name: "Delhi NCR", cities: ["Delhi"] },
-  { name: "Karnataka", cities: ["Bengaluru"] },
-  { name: "Tamil Nadu", cities: ["Chennai"] },
-  { name: "Telangana", cities: ["Hyderabad"] },
+  {
+    name: "Kerala",
+    cities: [
+      "Thiruvananthapuram",
+      "Kollam",
+      "Pathanamthitta",
+      "Alappuzha",
+      "Kottayam",
+      "Idukki",
+      "Ernakulam",
+      "Thrissur",
+      "Palakkad",
+      "Malappuram",
+      "Kozhikode",
+      "Wayanad",
+      "Kannur",
+      "Kasaragod",
+    ],
+  },
 ];
 
-async function seedCategories(): Promise<void> {
+export async function seedCategories(): Promise<void> {
   for (const [index, name] of WEDDING_CATEGORIES.entries()) {
     const category = await prisma.category.upsert({
       where: { slug: slugify(name) },
@@ -210,7 +227,7 @@ async function seedGalleryCategories(): Promise<void> {
   console.info(`Seeded ${GALLERY_CATEGORIES.length} gallery categories.`);
 }
 
-async function seedHomepageFeaturedCategories(): Promise<void> {
+export async function seedHomepageFeaturedCategories(): Promise<void> {
   for (const featured of HOMEPAGE_FEATURED_CATEGORIES) {
     const category = await prisma.category.findUnique({ where: { slug: slugify(featured.name) } });
     if (!category) continue;
@@ -249,7 +266,7 @@ async function seedServices(): Promise<void> {
   console.info(`Seeded ${count} services across ${Object.keys(CATEGORY_SERVICES).length} categories.`);
 }
 
-async function seedLocations(): Promise<void> {
+export async function seedLocations(): Promise<void> {
   // Prisma's compound-unique `where` clause rejects a literal `null` for parentId,
   // even though the underlying Postgres unique index treats it correctly — so the
   // one top-level (parent-less) row uses findFirst + conditional create instead of upsert.
@@ -405,7 +422,7 @@ async function seedSubscriptionPlans(): Promise<void> {
   console.info(`Seeded ${SUBSCRIPTION_PLANS.length} subscription plans.`);
 }
 
-async function main(): Promise<void> {
+export async function seedPermissionsAndRoles(): Promise<void> {
   const permissionRecords = await Promise.all(
     SYSTEM_PERMISSIONS.map((p) =>
       prisma.permission.upsert({
@@ -448,7 +465,10 @@ async function main(): Promise<void> {
   }
 
   console.info(`Seeded ${permissionRecords.length} permissions and ${SYSTEM_ROLES.length} roles.`);
+}
 
+async function main(): Promise<void> {
+  await seedPermissionsAndRoles();
   await seedCategories();
   await seedGalleryCategories();
   await seedHomepageFeaturedCategories();
@@ -457,11 +477,17 @@ async function main(): Promise<void> {
   await seedSubscriptionPlans();
 }
 
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Only auto-run when executed directly (`npx tsx prisma/seed.ts` or `prisma
+// db seed`) — NOT when another script imports this module's exported
+// functions (e.g. seed-permissions-and-locations.ts), which would otherwise
+// trigger this full seed as an unwanted side effect of the import itself.
+if (require.main === module) {
+  main()
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

@@ -1,6 +1,8 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { VendorAttributeValue } from "@/lib/api/vendors.types";
+import { CheckIcon, MapPinIcon, GlobeIcon, InstagramIcon, FacebookIcon } from "./icons";
 
 interface VendorPortfolioAboutProps {
   description?: string | null;
@@ -14,6 +16,10 @@ interface VendorPortfolioAboutProps {
   website?: string | null;
   socialLinks?: Record<string, string> | null;
   attributeValues: VendorAttributeValue[];
+  customQuoteAvailable?: boolean;
+  serviceAreaCount?: number;
+  /** Rendered above the Quick Facts card in the right sidebar — the reference's "Featured Packages" panel. */
+  sidebarTop?: ReactNode;
 }
 
 export function VendorPortfolioAbout({
@@ -28,6 +34,9 @@ export function VendorPortfolioAbout({
   website,
   socialLinks,
   attributeValues,
+  customQuoteAvailable,
+  serviceAreaCount = 0,
+  sidebarTop,
 }: VendorPortfolioAboutProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -54,7 +63,7 @@ export function VendorPortfolioAbout({
                 if (attr.valueBoolean !== null) {
                   valueDisplay = attr.valueBoolean ? (
                     <span className="inline-flex items-center gap-1 font-bold text-emerald-600">
-                      ✓ Available
+                      <CheckIcon className="h-3.5 w-3.5" /> Available
                     </span>
                   ) : (
                     <span className="text-neutral-400">Not Available</span>
@@ -90,8 +99,9 @@ export function VendorPortfolioAbout({
         )}
       </div>
 
-      {/* Right col: Quick facts & Social */}
+      {/* Right col: Featured packages, Quick facts & Social */}
       <div className="flex flex-col gap-6">
+        {sidebarTop}
         <div className="rounded-2xl border border-neutral-200/80 bg-white p-6 shadow-xs">
           <h3 className="mb-4 text-base font-bold text-neutral-900">Quick Facts</h3>
           <dl className="flex flex-col divide-y divide-neutral-100 text-xs sm:text-sm">
@@ -111,6 +121,18 @@ export function VendorPortfolioAbout({
               <div className="flex justify-between py-2.5">
                 <dt className="text-neutral-500">Base City</dt>
                 <dd className="font-semibold text-neutral-800">{cityName}</dd>
+              </div>
+            )}
+            {serviceAreaCount > 0 && (
+              <div className="flex justify-between py-2.5">
+                <dt className="text-neutral-500">Service Areas</dt>
+                <dd className="font-semibold text-neutral-800">{serviceAreaCount}</dd>
+              </div>
+            )}
+            {customQuoteAvailable && (
+              <div className="flex justify-between py-2.5">
+                <dt className="text-neutral-500">Custom Quotes</dt>
+                <dd className="font-semibold text-emerald-600">Available</dd>
               </div>
             )}
             {languages.length > 0 && (
@@ -140,13 +162,13 @@ export function VendorPortfolioAbout({
             <h3 className="mb-3 text-base font-bold text-neutral-900">Studio &amp; Online</h3>
             {address && (
               <div className="mb-3.5 flex items-start gap-2.5 text-xs sm:text-sm text-neutral-600">
-                <span className="flex-shrink-0 text-base">📍</span>
+                <MapPinIcon className="flex-shrink-0 h-4 w-4 mt-0.5 text-neutral-400" />
                 <p>{address}</p>
               </div>
             )}
             {website && (
               <div className="mb-3 flex items-center gap-2.5 text-xs sm:text-sm">
-                <span className="flex-shrink-0 text-base">🌐</span>
+                <GlobeIcon className="flex-shrink-0 h-4 w-4 text-neutral-400" />
                 <a
                   href={website.startsWith("http") ? website : `https://${website}`}
                   target="_blank"
@@ -159,7 +181,7 @@ export function VendorPortfolioAbout({
             )}
             {socialLinks?.instagram && (
               <div className="mb-3 flex items-center gap-2.5 text-xs sm:text-sm">
-                <span className="flex-shrink-0 text-base">📷</span>
+                <InstagramIcon className="flex-shrink-0 h-4 w-4 text-neutral-400" />
                 <a
                   href={`https://instagram.com/${socialLinks.instagram.replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//, "")}`}
                   target="_blank"
@@ -172,7 +194,7 @@ export function VendorPortfolioAbout({
             )}
             {socialLinks?.facebook && (
               <div className="flex items-center gap-2.5 text-xs sm:text-sm">
-                <span className="flex-shrink-0 text-base">👥</span>
+                <FacebookIcon className="flex-shrink-0 h-4 w-4 text-neutral-400" />
                 <a
                   href={socialLinks.facebook.startsWith("http") ? socialLinks.facebook : `https://${socialLinks.facebook}`}
                   target="_blank"

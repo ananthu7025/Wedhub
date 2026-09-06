@@ -20,7 +20,7 @@ export type VendorStatus =
 export type VerificationLevel = "UNVERIFIED" | "IDENTITY_VERIFIED" | "BUSINESS_VERIFIED" | "PLATFORM_VERIFIED";
 export type MediaStatus = "PENDING" | "UPLOADING" | "PROCESSING" | "READY" | "INACTIVE" | "FAILED" | "DELETED";
 export type MediaModerationStatus = "PENDING" | "APPROVED" | "REJECTED" | "HIDDEN";
-export type MediaType = "LOGO" | "COVER" | "PORTFOLIO" | "VIDEO" | "STORE_ITEM_PHOTO";
+export type MediaType = "LOGO" | "COVER" | "PORTFOLIO" | "VIDEO" | "STORE_ITEM_PHOTO" | "PACKAGE_PHOTO";
 
 export interface MediaItem {
   id: string;
@@ -124,6 +124,8 @@ export interface PackageSelf {
   price: string;
   currency: string;
   inclusions: string[];
+  imageMediaId: string | null;
+  image: MediaItem | null;
   sortOrder: number;
   isActive: boolean;
 }
@@ -219,6 +221,7 @@ export interface CreatePackageBody {
   price: number;
   currency?: string;
   inclusions?: string[];
+  imageMediaId?: string | null;
 }
 
 export interface UpdatePackageBody {
@@ -227,6 +230,7 @@ export interface UpdatePackageBody {
   price?: number;
   currency?: string;
   inclusions?: string[];
+  imageMediaId?: string | null;
   sortOrder?: number;
   isActive?: boolean;
 }

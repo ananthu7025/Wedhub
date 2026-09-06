@@ -56,13 +56,17 @@ export async function updateOwnVendor(vendorId: string, input: UpdateVendorInput
   return vendorRepository.updateVendor(vendorId, { businessName: input.businessName, cityId: undefined });
 }
 
-async function assertOwnReadyMediaOrNull(vendorId: string, mediaId: string | null | undefined): Promise<void> {
+async function assertOwnReadyMediaOrNull(
+  vendorId: string,
+  mediaId: string | null | undefined,
+  fieldLabel = "logoMediaId/coverMediaId",
+): Promise<void> {
   if (mediaId === null || mediaId === undefined) {
     return;
   }
   const media = await vendorRepository.findOwnMediaById(vendorId, mediaId);
   if (!media || media.status !== "READY") {
-    throw new ValidationError("logoMediaId/coverMediaId must reference your own, fully-processed media");
+    throw new ValidationError(`${fieldLabel} must reference your own, fully-processed media`);
   }
 }
 
@@ -201,6 +205,7 @@ export async function detachService(vendorId: string, serviceId: string): Promis
 }
 
 export async function createPackage(vendorId: string, input: CreatePackageInput) {
+  await assertOwnReadyMediaOrNull(vendorId, input.imageMediaId, "imageMediaId");
   const pkg = await vendorRepository.createPackage(vendorId, input);
   await recalculateCompleteness(vendorId);
   return pkg;
@@ -211,6 +216,7 @@ export async function updatePackage(vendorId: string, packageId: string, input: 
   if (!existing || existing.vendorId !== vendorId) {
     throw new NotFoundError("Package not found");
   }
+  await assertOwnReadyMediaOrNull(vendorId, input.imageMediaId, "imageMediaId");
   const pkg = await vendorRepository.updatePackage(packageId, input);
   await recalculateCompleteness(vendorId);
   return pkg;

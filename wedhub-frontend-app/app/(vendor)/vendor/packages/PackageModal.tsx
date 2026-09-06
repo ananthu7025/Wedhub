@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { PackageSelf } from "@/lib/api/vendor-self.types";
+import { LogoCoverPicker } from "../profile/LogoCoverPicker";
 
 export function PackageModal({
   initialPackage,
@@ -10,13 +11,20 @@ export function PackageModal({
 }: {
   initialPackage: PackageSelf | null;
   onClose: () => void;
-  onSave: (input: { name: string; description: string; price: number; inclusions: string[] }) => Promise<{ success: boolean; error?: string }>;
+  onSave: (input: {
+    name: string;
+    description: string;
+    price: number;
+    inclusions: string[];
+    imageMediaId: string | null;
+  }) => Promise<{ success: boolean; error?: string }>;
 }) {
   const [name, setName] = useState(initialPackage?.name ?? "");
   const [price, setPrice] = useState(initialPackage?.price ?? "");
   const [description, setDescription] = useState(initialPackage?.description ?? "");
   const [inclusions, setInclusions] = useState<string[]>(initialPackage?.inclusions ?? []);
   const [newInclusion, setNewInclusion] = useState("");
+  const [imageMediaId, setImageMediaId] = useState<string | null>(initialPackage?.imageMediaId ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,7 +50,13 @@ export function PackageModal({
     }
     setSaving(true);
     setError("");
-    const saveResult = await onSave({ name: name.trim(), description: description.trim(), price: Number(price), inclusions });
+    const saveResult = await onSave({
+      name: name.trim(),
+      description: description.trim(),
+      price: Number(price),
+      inclusions,
+      imageMediaId,
+    });
     if (saveResult.success) {
       onClose();
     } else {
@@ -72,6 +86,22 @@ export function PackageModal({
               className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
             />
           </label>
+
+          <div className="mb-3.5">
+            <LogoCoverPicker
+              label="Package photo"
+              mediaId={imageMediaId}
+              initialObjectKey={
+                initialPackage?.image?.thumbnailObjectKey ??
+                initialPackage?.image?.optimizedObjectKey ??
+                initialPackage?.image?.originalObjectKey ??
+                null
+              }
+              onChange={setImageMediaId}
+              mediaType="PACKAGE_PHOTO"
+              shape="wide"
+            />
+          </div>
 
           <label className="mb-3.5 block text-sm">
             <span className="mb-1.5 block font-bold text-[13px]">Price (₹)</span>

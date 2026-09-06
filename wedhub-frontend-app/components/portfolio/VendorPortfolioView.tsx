@@ -1,20 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { VendorDetail, VendorAlbum, VendorReview } from "@/lib/api/vendors.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
-import { formatWhatsAppUrl, formatTelUrl } from "@/lib/utils/whatsapp";
+import { formatTelUrl } from "@/lib/utils/whatsapp";
 import { trackEvent } from "@/lib/analytics/track";
-import { VendorPortfolioHeader } from "./VendorPortfolioHeader";
 import { VendorPortfolioGallery } from "./VendorPortfolioGallery";
 import { VendorPortfolioPackages } from "./VendorPortfolioPackages";
+import { VendorPortfolioFeaturedPackages } from "./VendorPortfolioFeaturedPackages";
 import { VendorPortfolioAbout } from "./VendorPortfolioAbout";
 import { VendorPortfolioReviews } from "./VendorPortfolioReviews";
+import { VendorPortfolioServiceAreas } from "./VendorPortfolioServiceAreas";
+import { VendorPortfolioInstagram } from "./VendorPortfolioInstagram";
 import { FloatingWhatsAppButton } from "./FloatingWhatsAppButton";
 import { PortfolioAttribution } from "./PortfolioAttribution";
 import { EnquiryModal } from "@/components/shared/EnquiryModal";
+import { StarIcon, VerifiedBadgeIcon, StoreIcon } from "./icons";
 
 interface VendorPortfolioViewProps {
   vendor: VendorDetail;
@@ -22,15 +25,22 @@ interface VendorPortfolioViewProps {
   reviews: VendorReview[];
 }
 
+const SECTIONS = [
+  { id: "portfolio", label: "Portfolio Gallery" },
+  { id: "about", label: "About & Details" },
+  { id: "packages", label: "Packages & Pricing" },
+  { id: "reviews", label: "Client Reviews" },
+] as const;
+
 export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolioViewProps) {
-  const [activeTab, setActiveTab] = useState<"portfolio" | "packages" | "about" | "reviews">("portfolio");
   const [enquiryModalOpen, setEnquiryModalOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("portfolio");
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const profile = vendor.profile;
   const phone = profile?.phone;
   const businessName = vendor.businessName;
 
-  // Track page view on direct portfolio visit
   useEffect(() => {
     trackEvent({
       eventType: "portfolio_view",
@@ -41,6 +51,35 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
       },
     });
   }, [vendor.id, vendor.slug, vendor.businessName]);
+
+  // Scroll-spy: highlight the tab whose section is currently in view.
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { rootMargin: "-45% 0px -50% 0px", threshold: 0 }
+    );
+
+    SECTIONS.forEach(({ id }) => {
+      const el = sectionRefs.current[id];
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollToSection = useCallback((id: string) => {
+    const el = sectionRefs.current[id];
+    if (!el) return;
+    const headerOffset = 56;
+    const top = el.getBoundingClientRect().top + window.scrollY - headerOffset;
+    window.scrollTo({ top, behavior: "smooth" });
+  }, []);
 
   // Resolve cover image
   const coverMedia = profile?.coverMedia;
@@ -61,7 +100,6 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
     null;
   const logoUrl = logoKey ? getPublicMediaUrl(logoKey) : null;
 
-  const whatsappUrl = formatWhatsAppUrl(phone, businessName);
   const telUrl = formatTelUrl(phone);
 
   const totalPhotosCount = albums.reduce((acc, alb) => acc + (alb.media?.length || 0), 0);
@@ -72,14 +110,7 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
     vendor.categories?.find((c) => c.isPrimary)?.category?.name ??
     vendor.categories?.[0]?.category?.name ??
     "Wedding Professional";
-
-  const handleHeroWhatsAppClick = () => {
-    trackEvent({
-      eventType: "portfolio_whatsapp_click",
-      vendorId: vendor.id,
-      metadata: { source: "hero", businessName },
-    });
-  };
+  const isVerified = Boolean(vendor.verificationLevel && vendor.verificationLevel !== "UNVERIFIED");
 
   const handleHeroTelClick = () => {
     trackEvent({
@@ -99,21 +130,10 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50/60 font-sans text-neutral-900 selection:bg-neutral-900 selection:text-white">
-      {/* Sticky Topbar */}
-      <VendorPortfolioHeader
-        vendorId={vendor.id}
-        businessName={businessName}
-        logoUrl={logoUrl}
-        phone={phone}
-        categoryName={primaryCategory}
-        cityName={vendor.city?.name}
-        onEnquireClick={handleOpenEnquiry}
-      />
-
+    <div className="min-h-screen bg-neutral-50/60 font-sans text-neutral-900 selection:bg-brand-primary/20">
       {/* Hero Banner with Cover Photo */}
       <div className="relative w-full">
-        <div className="relative h-56 sm:h-72 md:h-96 w-full overflow-hidden bg-gradient-to-r from-neutral-800 to-neutral-950">
+        <div className="relative h-64 sm:h-80 md:h-[26rem] w-full overflow-hidden bg-gradient-to-br from-neutral-800 via-neutral-900 to-neutral-950">
           {coverUrl ? (
             <>
               <Image
@@ -121,100 +141,89 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
                 alt={`${businessName} Cover`}
                 fill
                 priority
-                className="object-cover object-center opacity-90 transition-transform duration-700 hover:scale-105"
+                className="object-cover object-center"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
             </>
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 via-neutral-900 to-neutral-950 opacity-95">
-              <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]" />
-            </div>
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]" />
           )}
+
+          {/* Category + headline overlay, bottom-left of hero */}
+          <div className="absolute inset-x-0 bottom-0 px-4 sm:px-6 lg:px-8 pb-24 sm:pb-28">
+            <div className="mx-auto max-w-6xl">
+              <span className="inline-block rounded-full bg-white/15 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-white mb-3">
+                {primaryCategory}
+              </span>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white max-w-2xl">
+                {businessName}
+              </h1>
+              {profile?.shortDescription && (
+                <p className="mt-2 max-w-xl text-sm sm:text-base text-white/85 line-clamp-2">
+                  {profile.shortDescription}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Hero Vendor Information Overlap Card */}
+        {/* Identity + actions card, overlapping hero bottom */}
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="relative -mt-20 sm:-mt-24 mb-6 rounded-3xl border border-neutral-200/80 bg-white p-6 sm:p-8 shadow-xl">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="relative -mt-16 sm:-mt-20 mb-6 rounded-3xl border border-neutral-200/80 bg-white p-5 sm:p-7 shadow-xl">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
               {/* Left Identity Details */}
-              <div className="flex items-start sm:items-center gap-4 sm:gap-6">
-                <div className="relative h-20 w-20 sm:h-24 sm:w-24 flex-shrink-0 overflow-hidden rounded-2xl border-2 border-white bg-gradient-to-tr from-neutral-100 to-neutral-200 shadow-md">
+              <div className="flex items-start sm:items-center gap-4 sm:gap-5 min-w-0">
+                <div className="relative h-16 w-16 sm:h-20 sm:w-20 flex-shrink-0 overflow-hidden rounded-2xl border-2 border-white bg-gradient-to-tr from-neutral-100 to-neutral-200 shadow-md">
                   {logoUrl ? (
                     <Image src={logoUrl} alt={businessName} fill className="object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-2xl font-black text-neutral-800">
+                    <div className="flex h-full w-full items-center justify-center text-xl font-black text-neutral-800">
                       {businessName.slice(0, 2).toUpperCase()}
                     </div>
                   )}
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-neutral-900">
+                    <h2 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-900">
                       {businessName}
-                    </h1>
-                    {vendor.verificationLevel && vendor.verificationLevel !== "UNVERIFIED" && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
+                    </h2>
+                    {isVerified && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
+                        <VerifiedBadgeIcon className="w-3 h-3" />
                         Verified
                       </span>
                     )}
                   </div>
 
-                  <p className="mt-1 text-xs sm:text-sm font-medium text-neutral-500">
+                  <p className="mt-0.5 text-xs sm:text-sm font-medium text-neutral-500">
                     {primaryCategory}
-                    {vendor.city?.name && ` · Based in ${vendor.city.name}`}
+                    {vendor.city?.name && ` · ${vendor.city.name}`}
                   </p>
 
-                  <div className="mt-2.5 flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                     {ratingNumber > 0 && (
-                      <div className="flex items-center gap-1.5 font-bold text-neutral-800">
-                        <span className="flex items-center text-amber-500">★</span>
+                      <div className="flex items-center gap-1 font-bold text-neutral-800">
+                        <StarIcon className="w-3.5 h-3.5 text-amber-500" filled />
                         <span>{ratingNumber.toFixed(1)}</span>
-                        <span className="font-normal text-neutral-400">({reviewCount})</span>
+                        <span className="font-normal text-neutral-400">({reviewCount} reviews)</span>
                       </div>
                     )}
-
-                    {profile?.startingPrice && (
-                      <div className="flex items-center gap-1 font-semibold text-neutral-700">
-                        <span className="text-neutral-400 font-normal">Starting at</span>
-                        <span>₹{Number(profile.startingPrice).toLocaleString("en-IN")}</span>
-                      </div>
+                    {profile?.yearsExperience != null && (
+                      <div className="text-neutral-500">{profile.yearsExperience}+ years experience</div>
                     )}
-
-                    {profile?.yearsExperience && (
-                      <div className="text-neutral-500">
-                        {profile.yearsExperience}+ years experience
-                      </div>
-                    )}
+                    {isVerified && <div className="text-neutral-500">Verified Vendor</div>}
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 flex-shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-neutral-100">
-                {whatsappUrl && (
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={handleHeroWhatsAppClick}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-xs transition-all hover:bg-[#20ba5a] hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
-                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
-                    </svg>
-                    WhatsApp Vendor
-                  </a>
-                )}
-
+              <div className="flex flex-wrap items-center gap-2.5 flex-shrink-0 pt-1 md:pt-0">
                 {telUrl && (
                   <a
                     href={telUrl}
                     onClick={handleHeroTelClick}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-4 py-3 text-xs sm:text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors"
                   >
                     Call
                   </a>
@@ -223,7 +232,7 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
                 <button
                   type="button"
                   onClick={handleOpenEnquiry}
-                  className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-neutral-800 transition-all"
+                  className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-neutral-800 transition-all"
                 >
                   Send Enquiry
                 </button>
@@ -233,162 +242,153 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
         </div>
       </div>
 
-      {/* Main Content Area with Segmented Tabs */}
-      <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-20">
-        {/* Navigation Tabs */}
-        <div className="mb-8 border-b border-neutral-200">
-          <nav className="flex space-x-2 sm:space-x-8 overflow-x-auto no-scrollbar" aria-label="Tabs">
-            <button
-              type="button"
-              onClick={() => setActiveTab("portfolio")}
-              className={`flex items-center gap-2 border-b-2 py-4 px-2 text-xs sm:text-sm font-bold whitespace-nowrap transition-colors ${
-                activeTab === "portfolio"
-                  ? "border-neutral-900 text-neutral-900"
-                  : "border-transparent text-neutral-500 hover:text-neutral-800"
-              }`}
-            >
-              <span>Portfolio Gallery</span>
-              {totalPhotosCount > 0 && (
-                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600">
-                  {totalPhotosCount}
-                </span>
-              )}
-            </button>
+      {/* Section nav — scroll-spy pills, sticky under top bar */}
+      <div className="sticky top-0 z-40 w-full border-b border-neutral-200 bg-white/95 backdrop-blur-md">
+        <nav className="mx-auto flex max-w-6xl space-x-1 overflow-x-auto no-scrollbar px-4 sm:px-6 lg:px-8" aria-label="Sections">
+          {SECTIONS.map(({ id, label }) => {
+            const count =
+              id === "portfolio" ? totalPhotosCount :
+              id === "packages" ? activePackagesCount :
+              id === "reviews" ? reviewCount :
+              null;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => scrollToSection(id)}
+                className={`flex items-center gap-2 border-b-2 py-3.5 px-3 text-xs sm:text-sm font-bold whitespace-nowrap transition-colors ${
+                  activeSection === id
+                    ? "border-brand-primary text-neutral-900"
+                    : "border-transparent text-neutral-500 hover:text-neutral-800"
+                }`}
+              >
+                <span>{label}</span>
+                {count !== null && count > 0 && (
+                  <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600">
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("packages")}
-              className={`flex items-center gap-2 border-b-2 py-4 px-2 text-xs sm:text-sm font-bold whitespace-nowrap transition-colors ${
-                activeTab === "packages"
-                  ? "border-neutral-900 text-neutral-900"
-                  : "border-transparent text-neutral-500 hover:text-neutral-800"
-              }`}
-            >
-              <span>Packages & Pricing</span>
-              {activePackagesCount > 0 && (
-                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600">
-                  {activePackagesCount}
-                </span>
-              )}
-            </button>
+          <Link
+            href={`/store/${vendor.slug}`}
+            className="flex items-center gap-1.5 border-b-2 border-transparent py-3.5 px-3 text-xs sm:text-sm font-bold text-brand-primary hover:text-brand-primary-hover whitespace-nowrap transition-colors ml-auto"
+          >
+            <StoreIcon className="h-4 w-4" />
+            <span>Online Store</span>
+          </Link>
+        </nav>
+      </div>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("about")}
-              className={`flex items-center gap-2 border-b-2 py-4 px-2 text-xs sm:text-sm font-bold whitespace-nowrap transition-colors ${
-                activeTab === "about"
-                  ? "border-neutral-900 text-neutral-900"
-                  : "border-transparent text-neutral-500 hover:text-neutral-800"
-              }`}
-            >
-              <span>About & Details</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("reviews")}
-              className={`flex items-center gap-2 border-b-2 py-4 px-2 text-xs sm:text-sm font-bold whitespace-nowrap transition-colors ${
-                activeTab === "reviews"
-                  ? "border-neutral-900 text-neutral-900"
-                  : "border-transparent text-neutral-500 hover:text-neutral-800"
-              }`}
-            >
-              <span>Client Reviews</span>
-              {reviewCount > 0 && (
-                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600">
-                  {reviewCount}
-                </span>
-              )}
-            </button>
-
-            <Link
-              href={`/store/${vendor.slug}`}
-              className="flex items-center gap-1.5 border-b-2 border-transparent py-4 px-2 text-xs sm:text-sm font-bold text-brand-primary hover:text-brand-primary-hover whitespace-nowrap transition-colors ml-auto sm:ml-0"
-            >
-              <span>🛍️ Online Store</span>
-              <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-[10px] font-bold text-brand-primary">
-                Direct Order
-              </span>
-            </Link>
-          </nav>
-        </div>
-
-        {/* Tab Panels */}
-        <div className="transition-all duration-300">
-          {activeTab === "portfolio" && (
+      {/* Main Content Area — single flowing page */}
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16">
+        {/* Portfolio Gallery */}
+        <section
+          id="portfolio"
+          ref={(el) => { sectionRefs.current.portfolio = el; }}
+          className="scroll-mt-36 pt-10"
+        >
+          <div className="mb-6 flex items-center justify-between">
             <div>
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-bold text-neutral-900">Work & Moments</h2>
-                  <p className="text-xs text-neutral-500">
-                    High-resolution photographs and recent events captured by {businessName}
-                  </p>
-                </div>
-              </div>
-              <VendorPortfolioGallery albums={albums} businessName={businessName} />
+              <h2 className="text-lg sm:text-xl font-bold text-neutral-900">Work &amp; Moments</h2>
+              <p className="text-xs text-neutral-500">
+                A glimpse of {businessName}&apos;s recent work and wedding moments
+              </p>
             </div>
-          )}
+          </div>
+          <VendorPortfolioGallery albums={albums} businessName={businessName} />
+        </section>
 
-          {activeTab === "packages" && (
-            <div>
-              <div className="mb-6">
-                <h2 className="text-lg sm:text-xl font-bold text-neutral-900">Packages & Service Offerings</h2>
-                <p className="text-xs text-neutral-500">
-                  Transparent package pricing and bespoke coverage options
-                </p>
-              </div>
-              <VendorPortfolioPackages
-                vendorId={vendor.id}
+        {/* About + Featured Packages preview, two-column like the reference — packages surfaced
+            here (right sidebar) since pricing is a top decision factor, with the full detailed
+            grid further down under its own anchor. */}
+        <section
+          id="about"
+          ref={(el) => { sectionRefs.current.about = el; }}
+          className="scroll-mt-36 pt-14"
+        >
+          <div className="mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-neutral-900">About {businessName}</h2>
+            <p className="text-xs text-neutral-500">
+              Background, studio details, and everything you need to know
+            </p>
+          </div>
+          <VendorPortfolioAbout
+            description={profile?.description}
+            yearsExperience={profile?.yearsExperience}
+            teamSize={profile?.teamSize}
+            travelPolicy={profile?.travelPolicy}
+            languages={profile?.languages}
+            businessHours={profile?.businessHours}
+            address={profile?.address}
+            cityName={vendor.city?.name}
+            website={profile?.website}
+            socialLinks={profile?.socialLinks}
+            attributeValues={vendor.attributeValues ?? []}
+            customQuoteAvailable={profile?.customQuoteAvailable}
+            serviceAreaCount={vendor.serviceAreas?.length ?? 0}
+            sidebarTop={
+              <VendorPortfolioFeaturedPackages
                 packages={vendor.packages ?? []}
-                customQuoteAvailable={profile?.customQuoteAvailable}
-                phone={phone}
-                businessName={businessName}
-                onEnquireClick={handleOpenEnquiry}
+                onScrollToPackages={() => scrollToSection("packages")}
               />
-            </div>
-          )}
+            }
+          />
+        </section>
 
-          {activeTab === "about" && (
-            <div>
-              <div className="mb-6">
-                <h2 className="text-lg sm:text-xl font-bold text-neutral-900">About {businessName}</h2>
-                <p className="text-xs text-neutral-500">
-                  Background, team profile, dynamic category attributes, and studio details
-                </p>
-              </div>
-              <VendorPortfolioAbout
-                description={profile?.description}
-                yearsExperience={profile?.yearsExperience}
-                teamSize={profile?.teamSize}
-                travelPolicy={profile?.travelPolicy}
-                languages={profile?.languages}
-                businessHours={profile?.businessHours}
-                address={profile?.address}
-                cityName={vendor.city?.name}
-                website={profile?.website}
-                socialLinks={profile?.socialLinks}
-                attributeValues={vendor.attributeValues ?? []}
-              />
-            </div>
-          )}
+        {/* Packages — full detailed grid */}
+        <section
+          id="packages"
+          ref={(el) => { sectionRefs.current.packages = el; }}
+          className="scroll-mt-36 pt-14"
+        >
+          <div className="mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-neutral-900">Packages &amp; Service Offerings</h2>
+            <p className="text-xs text-neutral-500">
+              Transparent package pricing and bespoke coverage options
+            </p>
+          </div>
+          <VendorPortfolioPackages
+            vendorId={vendor.id}
+            packages={vendor.packages ?? []}
+            customQuoteAvailable={profile?.customQuoteAvailable}
+            phone={phone}
+            businessName={businessName}
+            onEnquireClick={handleOpenEnquiry}
+          />
+        </section>
 
-          {activeTab === "reviews" && (
-            <div>
-              <div className="mb-6">
-                <h2 className="text-lg sm:text-xl font-bold text-neutral-900">Client Reviews & Testimonials</h2>
-                <p className="text-xs text-neutral-500">
-                  Hear what real brides and grooms have to say about working with {businessName}
-                </p>
-              </div>
-              <VendorPortfolioReviews
-                reviews={reviews}
-                averageRating={vendor.averageRating}
-                reviewCount={reviewCount}
-                businessName={businessName}
-              />
-            </div>
-          )}
-        </div>
+        {/* Client Reviews */}
+        <section
+          id="reviews"
+          ref={(el) => { sectionRefs.current.reviews = el; }}
+          className="scroll-mt-36 pt-14"
+        >
+          <div className="mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-neutral-900">Client Reviews</h2>
+            <p className="text-xs text-neutral-500">
+              Hear what real brides and grooms have to say about working with {businessName}
+            </p>
+          </div>
+          <VendorPortfolioReviews
+            reviews={reviews}
+            averageRating={vendor.averageRating}
+            reviewCount={reviewCount}
+            businessName={businessName}
+          />
+        </section>
+
+        {/* Service Areas — only if the vendor has any configured */}
+        <VendorPortfolioServiceAreas
+          serviceAreas={vendor.serviceAreas}
+          baseCityName={vendor.city?.name}
+          onCheckAvailability={handleOpenEnquiry}
+        />
+
+        {/* Instagram — only if a handle/link exists */}
+        <VendorPortfolioInstagram instagram={profile?.socialLinks?.instagram} />
       </main>
 
       {/* Floating Sticky WhatsApp Button for mobile */}

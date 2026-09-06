@@ -110,6 +110,8 @@ export interface VendorPackage {
   price: string;
   currency: string;
   inclusions: string[];
+  imageMediaId: string | null;
+  image: VendorProfileMedia | null;
   sortOrder: number;
   isActive: boolean;
 }

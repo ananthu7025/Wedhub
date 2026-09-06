@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createMyPackage, deleteMyPackage, updateMyPackage } from "@/lib/api/vendor-self-client";
 import type { PackageSelf } from "@/lib/api/vendor-self.types";
 import { formatApiError } from "@/lib/utils/error";
+import { getPublicMediaUrl } from "@/lib/media/url";
 import { PackageModal } from "./PackageModal";
 
 export function PackagesManager({
@@ -33,7 +34,13 @@ export function PackagesManager({
     await deleteMyPackage(pkg.id);
   }
 
-  async function handleSave(input: { name: string; description: string; price: number; inclusions: string[] }): Promise<{ success: boolean; error?: string }> {
+  async function handleSave(input: {
+    name: string;
+    description: string;
+    price: number;
+    inclusions: string[];
+    imageMediaId: string | null;
+  }): Promise<{ success: boolean; error?: string }> {
     if (editingPackage) {
       const result = await updateMyPackage(editingPackage.id, input);
       if (result.success) {
@@ -78,15 +85,28 @@ export function PackagesManager({
           </button>
         </div>
       ) : (
-        packages.map((pkg) => (
+        packages.map((pkg) => {
+          const imageKey =
+            pkg.image?.thumbnailObjectKey ?? pkg.image?.optimizedObjectKey ?? pkg.image?.originalObjectKey ?? null;
+          return (
           <div key={pkg.id} className="mb-4 rounded-xl border border-border bg-white p-4 sm:p-6 shadow-xs">
             <div className="mb-1.5 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[17px] font-bold">{pkg.name}</p>
-                <p className="text-xl font-bold text-brand-primary">
-                  {pkg.currency === "INR" ? "₹" : pkg.currency}
-                  {Number(pkg.price).toLocaleString("en-IN")}
-                </p>
+              <div className="flex items-start gap-3.5 min-w-0">
+                {imageKey && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={getPublicMediaUrl(imageKey)}
+                    alt=""
+                    className="h-14 w-14 flex-shrink-0 rounded-lg object-cover border border-border"
+                  />
+                )}
+                <div>
+                  <p className="text-[17px] font-bold">{pkg.name}</p>
+                  <p className="text-xl font-bold text-brand-primary">
+                    {pkg.currency === "INR" ? "₹" : pkg.currency}
+                    {Number(pkg.price).toLocaleString("en-IN")}
+                  </p>
+                </div>
               </div>
               <div className="flex flex-shrink-0 gap-2">
                 <button
@@ -114,7 +134,8 @@ export function PackagesManager({
               </ul>
             )}
           </div>
-        ))
+          );
+        })
       )}
 
       {modalOpen && (
