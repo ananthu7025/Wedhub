@@ -42,8 +42,13 @@ export function LoginForm() {
   function goToDestination(role: UserRole) {
     const next = searchParams.get("next") || searchParams.get("redirect");
     const destination = next ?? roleHomeRoute[role];
+    // router.refresh() previously ran right after push() — refresh() re-renders
+    // the CURRENT route from the server, which raced push()'s own in-flight
+    // navigation to the new route and could leave the browser stuck on
+    // /login?next=... with a blank page until a manual reload. push() alone
+    // already fetches a fresh server render for the destination route (which
+    // is always different from /login here), so refresh() was redundant.
     router.push(destination);
-    router.refresh();
   }
 
   return (

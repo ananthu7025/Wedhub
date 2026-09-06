@@ -31,8 +31,13 @@ export function VendorOnboardingForm() {
         return;
       }
 
+      // router.refresh() previously ran right after push() here — same race
+      // as LoginForm.tsx's goToDestination: refresh() re-renders the
+      // CURRENT route from the server while push()'s own navigation to the
+      // new route is still in flight, which could leave the browser stuck
+      // with a blank page until a manual reload. push() alone already
+      // fetches a fresh server render for the destination route.
       router.push("/vendor/dashboard");
-      router.refresh();
     } catch {
       setError("Failed to create vendor listing. Please try again.");
       setPending(false);

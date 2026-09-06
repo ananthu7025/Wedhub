@@ -37,6 +37,7 @@ declare global {
           initialize: (config: {
             client_id: string;
             callback: (response: { credential: string }) => void;
+            use_fedcm_for_prompt?: boolean;
           }) => void;
           renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
         };
@@ -87,6 +88,13 @@ export function GoogleSignInButton({
       callback: (response) => {
         void handleCredential(response);
       },
+      // Google's modern, recommended flow (third-party-cookie-independent).
+      // Without it, GIS's rendered button falls back to inconsistent
+      // per-browser popup/tab handling on some mobile browsers — observed
+      // in production as the button opening a new tab that navigates
+      // nowhere useful (this app has no GET handler for /api/auth/google,
+      // only POST) while the original tab never receives a callback.
+      use_fedcm_for_prompt: true,
     });
     // GIS's renderButton wants a fixed pixel width, not a percentage — it
     // can't fluidly track its container the way the rest of this form does,

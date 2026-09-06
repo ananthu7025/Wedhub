@@ -73,8 +73,10 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
         // button (rather than actually signing up) already has a vendor
         // profile — send them to it instead of showing this as an error.
         if (result.error?.code === "CONFLICT") {
+          // See goToDashboard's comment below — push() alone already fetches
+          // a fresh server render for the destination route; the extra
+          // refresh() raced it and could leave a blank page on this route.
           router.push(roleHomeRoute.VENDOR);
-          router.refresh();
           return;
         }
         setError(formatApiError(result.error));
@@ -99,8 +101,14 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
 
   function goToDashboard() {
     const next = searchParams.get("next") || searchParams.get("redirect");
+    // router.refresh() previously ran right after push() here — refresh()
+    // re-renders the CURRENT route from the server, which raced push()'s own
+    // in-flight navigation to the new route and could leave the browser
+    // stuck with a blank page until a manual reload (same bug as
+    // LoginForm.tsx's goToDestination). push() alone already fetches a
+    // fresh server render for the destination route, so refresh() was
+    // redundant.
     router.push(next ?? roleHomeRoute[accountType]);
-    router.refresh();
   }
 
   if (step === "credentials") {
