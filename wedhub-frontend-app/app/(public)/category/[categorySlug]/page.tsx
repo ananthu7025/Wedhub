@@ -38,6 +38,12 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       url: seo.canonicalPath,
       images: seo.ogImageUrl ? [{ url: seo.ogImageUrl }] : undefined,
     },
+    twitter: {
+      card: "summary_large_image",
+      title: seo.ogTitle,
+      description: seo.ogDescription,
+      images: seo.ogImageUrl ? [seo.ogImageUrl] : undefined,
+    },
     robots: seo.indexable ? { index: true, follow: true } : { index: false, follow: true },
   };
 }

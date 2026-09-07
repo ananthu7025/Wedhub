@@ -5,11 +5,18 @@ import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { PublicFooter } from "@/components/shared/PublicFooter";
 import { listBlogPosts } from "@/lib/api/catalog";
 
+const BLOG_DESCRIPTION =
+  "Expert wedding planning tips, styling advice, vendor guides, and real inspiration to help you plan your perfect day.";
+
 export const metadata: Metadata = {
   title: "Wedding Planning Blog & Guides",
-  description:
-    "Expert wedding planning tips, styling advice, vendor guides, and real inspiration to help you plan your perfect day.",
+  description: BLOG_DESCRIPTION,
   alternates: { canonical: "/blog" },
+  openGraph: {
+    title: "Wedding Planning Blog & Guides | itsmyKalyanam",
+    description: BLOG_DESCRIPTION,
+    url: "/blog",
+  },
 };
 
 interface BlogListPageProps {

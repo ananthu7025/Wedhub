@@ -10,6 +10,7 @@ import { createVendor } from "@/lib/api/vendor-onboarding-client";
 import { GoogleSignInButton } from "@/components/shared/GoogleSignInButton";
 import type { UserRole } from "@/lib/auth/types";
 import { formatApiError } from "@/lib/utils/error";
+import { trackEvent } from "@/lib/analytics/track";
 
 type AccountType = "END_USER" | "VENDOR";
 type Step = "credentials" | "profile" | "done";
@@ -57,6 +58,10 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
       return;
     }
 
+    if (accountType === "VENDOR") {
+      trackEvent({ eventType: "vendor_registration_started" });
+    }
+
     setPending(false);
     setStep("profile");
   }
@@ -83,6 +88,7 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
         setPending(false);
         return;
       }
+      trackEvent({ eventType: "vendor_registration_completed" });
     } else if (firstName || lastName) {
       const result = await updateMyProfile({
         firstName: firstName.trim() || undefined,

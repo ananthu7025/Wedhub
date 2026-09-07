@@ -26,9 +26,28 @@ export async function generateMetadata({
   const { slug } = await params;
   try {
     const store = await loadStore(slug);
+    const title = store.storeName;
+    const description = store.tagline || store.aboutStore || `Shop online at ${store.storeName}.`;
+    const canonicalPath = `/store/${store.slug}`;
+    const ogImage = store.vendor.coverUrl ?? store.vendor.logoUrl ?? undefined;
+
     return {
-      title: store.storeName,
-      description: store.tagline || store.aboutStore || `Shop online at ${store.storeName}.`,
+      title,
+      description,
+      alternates: { canonical: canonicalPath },
+      openGraph: {
+        title,
+        description,
+        url: canonicalPath,
+        images: ogImage ? [{ url: ogImage }] : undefined,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: ogImage ? [ogImage] : undefined,
+      },
+      robots: { index: true, follow: true },
     };
   } catch {
     return { title: "Store Not Found" };

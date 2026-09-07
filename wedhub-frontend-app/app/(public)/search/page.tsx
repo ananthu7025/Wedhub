@@ -11,6 +11,17 @@ import { SearchResultsView } from "./SearchResultsView";
 export const metadata: Metadata = {
   title: "Find Wedding Vendors",
   description: "Search and filter trusted wedding vendors by category, location, and budget.",
+  // Canonicalizes every filtered/paginated variant (?keyword=, ?categoryId=,
+  // ?page=, etc.) to the bare /search URL — those combinations are useful
+  // for visitors but not meant to be indexed individually (thin/duplicate
+  // content risk); the real category/location landing pages under
+  // /category and /city are what should rank for those queries instead.
+  alternates: { canonical: "/search" },
+  openGraph: {
+    title: "Find Wedding Vendors | itsmyKalyanam",
+    description: "Search and filter trusted wedding vendors by category, location, and budget.",
+    url: "/search",
+  },
 };
 
 interface SearchPageProps {

@@ -5,8 +5,10 @@ import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { PublicFooter } from "@/components/shared/PublicFooter";
+import { JsonLd } from "@/components/shared/JsonLd";
 import { getBlogPostBySlug } from "@/lib/api/catalog";
 import { ApiRequestError } from "@/lib/api/types";
+import { blogPostingJsonLd, breadcrumbListJsonLd } from "@/lib/seo/json-ld";
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -42,6 +44,13 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
       type: "article",
       images: post.coverImageUrl ? [{ url: post.coverImageUrl }] : undefined,
     },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: post.coverImageUrl ? [post.coverImageUrl] : undefined,
+    },
+    robots: { index: true, follow: true },
   };
 }
 
@@ -51,10 +60,25 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   return (
     <div className="min-h-screen bg-surface-page">
+      <JsonLd
+        data={blogPostingJsonLd({
+          title: post.title,
+          slug: post.slug,
+          description: post.seoDescription ?? post.excerpt,
+          coverImageUrl: post.coverImageUrl,
+        })}
+      />
+      <JsonLd
+        data={breadcrumbListJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Blog", path: "/blog" },
+          { name: post.title, path: `/blog/${post.slug}` },
+        ])}
+      />
       <PublicTopbar />
 
       <article className="px-6 py-10 max-[900px]:px-4">
-        <nav className="mx-auto mb-4 max-w-3xl text-xs text-text-grey">
+        <nav className="mx-auto mb-4 max-w-3xl text-xs text-text-grey" aria-label="Breadcrumb">
           <Link href="/" className="no-underline hover:underline">
             Home
           </Link>
@@ -62,6 +86,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           <Link href="/blog" className="no-underline hover:underline">
             Blog
           </Link>
+          {" / "}
+          <span aria-current="page">{post.title}</span>
         </nav>
 
         <div className="mx-auto max-w-3xl">

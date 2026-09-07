@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import type { VendorPackage } from "@/lib/api/vendors.types";
 import { formatWhatsAppUrl } from "@/lib/utils/whatsapp";
@@ -25,6 +26,25 @@ export function VendorPortfolioPackages({
   onEnquireClick,
 }: VendorPortfolioPackagesProps) {
   const activePackages = packages.filter((p) => p.isActive);
+  const impressionsFired = useRef(false);
+
+  // "view_package" — fires once per package rendered on this page, matching
+  // VendorCard's own "small, non-virtualized grid" justification for
+  // skipping a real IntersectionObserver (see that component's header
+  // comment): a vendor profile's package grid is always a handful of items,
+  // never an infinite/virtualized list.
+  useEffect(() => {
+    if (impressionsFired.current || !vendorId || activePackages.length === 0) return;
+    impressionsFired.current = true;
+    for (const pkg of activePackages) {
+      trackEvent({
+        eventType: "view_package",
+        vendorId,
+        metadata: { package_id: pkg.id, packageName: pkg.name, price: pkg.price, businessName },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vendorId, activePackages.length]);
 
   if (activePackages.length === 0 && !customQuoteAvailable) {
     return null;

@@ -199,6 +199,13 @@ export async function generateMetadata({ params }: StoryPageProps): Promise<Meta
         description: s.snippet,
         images: [{ url: s.coverImageUrl }],
       },
+      // These are illustrative placeholder stories (fabricated couple/vendor
+      // names, stock photos) shown to fill empty slots until enough real,
+      // admin-curated stories exist (see app/(public)/page.tsx's
+      // fillWeddingStorySlots). Never index them as real content — Google
+      // (and this project's own no-fake-content rule) must never see a
+      // fabricated wedding attributed to a fabricated vendor as if real.
+      robots: { index: false, follow: true },
     };
   }
 
@@ -208,11 +215,20 @@ export async function generateMetadata({ params }: StoryPageProps): Promise<Meta
     return {
       title: `${real.coupleName}'s Wedding in ${real.location} | Real Weddings`,
       description: real.snippet,
+      alternates: { canonical: `/real-weddings/${id}` },
       openGraph: {
         title: `${real.coupleName} | Real Weddings`,
         description: real.snippet,
+        url: `/real-weddings/${id}`,
         images: coverKey ? [{ url: getPublicMediaUrl(coverKey) }] : [],
       },
+      twitter: {
+        card: "summary_large_image",
+        title: `${real.coupleName} | Real Weddings`,
+        description: real.snippet,
+        images: coverKey ? [getPublicMediaUrl(coverKey)] : undefined,
+      },
+      robots: { index: true, follow: true },
     };
   } catch {
     return {

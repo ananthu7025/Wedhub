@@ -5,12 +5,19 @@ import { listAllWeddingStories } from "@/lib/api/catalog";
 import type { WeddingStoriesListResponse } from "@/lib/api/vendors.types";
 import { RealWeddingsView } from "./RealWeddingsView";
 
+const REAL_WEDDINGS_DESCRIPTION =
+  "Explore real Indian wedding stories, photo albums, bridal looks, mandap decor, and trusted wedding vendors behind each celebration on itsmyKalyanam.";
+
 export const metadata: Metadata = {
   title: "Real Weddings | Real Couples & Wedding Photos",
-  description:
-    "Explore real Indian wedding stories, photo albums, bridal looks, mandap decor, and trusted wedding vendors behind each celebration on itsmyKalyanam.",
+  description: REAL_WEDDINGS_DESCRIPTION,
   alternates: {
     canonical: "/real-weddings",
+  },
+  openGraph: {
+    title: "Real Weddings | itsmyKalyanam",
+    description: REAL_WEDDINGS_DESCRIPTION,
+    url: "/real-weddings",
   },
 };
 

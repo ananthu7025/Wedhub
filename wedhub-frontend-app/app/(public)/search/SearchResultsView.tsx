@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SearchControlsHeader } from "./SearchControlsHeader";
 import { SearchCard } from "./SearchCard";
+import { trackEvent } from "@/lib/analytics/track";
 import type { Category, Location, VendorSearchResult } from "@/lib/api/vendors.types";
 
 interface SearchResultsViewProps {
@@ -39,6 +40,25 @@ export function SearchResultsView({
 }: SearchResultsViewProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const searchParams = useSearchParams();
+
+  // GA4 "search" event (Google's recommended-event name) — fires once per
+  // rendered result set, i.e. once per real filter/keyword change, since
+  // this whole page is server-rendered per navigation (see app/(public)/
+  // search/page.tsx) and this component remounts with fresh props each
+  // time. No PII: only the search term and resolved category/city/result
+  // count, never any user identity.
+  useEffect(() => {
+    trackEvent({
+      eventType: "search",
+      metadata: {
+        search_term: keyword,
+        vendor_category: selectedCategory?.name,
+        location: selectedCity?.name,
+        results_count: total,
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyword, selectedCategory?.id, selectedCity?.id, total]);
 
   function buildUrl(overrides: Record<string, string | undefined>) {
     const next = new URLSearchParams(searchParams.toString());

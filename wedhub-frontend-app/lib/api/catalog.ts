@@ -28,6 +28,28 @@ import type {
  * comment. skipAuth: true since none of these need a session.
  */
 
+// GET /vendors — plain, unfiltered APPROVED-vendor listing (verified against
+// wedhub-backend's vendor.routes.ts: no rate limiter attached, unlike
+// /search/vendors' searchRateLimiter). public: true is safe here for exactly
+// that reason — this is the only vendor-listing endpoint eligible for
+// static/cached rendering; searchVendors() below must never be called from
+// a static-generation context like app/sitemap.ts (it forces dynamic
+// rendering with public: false, deliberately, to keep relaying real visitor
+// IPs to the rate limiter it does hit — see apiFetch's `public` flag doc).
+// Response shape here is the raw VENDOR_FULL_INCLUDE vendor row (same shape
+// as GET /vendors/:slug's VendorDetail, verified against
+// vendor.repository.ts), NOT VendorSearchResult's trimmed/resolved shape —
+// only the slug is used (sitemap.ts), so it's typed minimally rather than
+// claiming fields (like a resolved logoUrl) this endpoint doesn't return.
+export function listPublicVendors(params: { page?: number; limit?: number } = {}) {
+  return apiFetch<Array<{ slug: string }>, PaginationMeta>("/vendors", {
+    query: { page: params.page ?? 1, limit: params.limit ?? 100 },
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 3600 },
+  });
+}
+
 export function searchVendors(params: SearchVendorsParams) {
   const query: Record<string, string | number | boolean | undefined> = {
     keyword: params.keyword,

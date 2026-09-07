@@ -21,13 +21,27 @@ import type { WeddingStory as RealWeddingStory } from "@/lib/api/vendors.types";
 
 const WEDDING_STORIES_SLOTS = 6;
 
+const HOME_DESCRIPTION =
+  "Discover wedding photographers, makeup artists, venues, planners, decorators, caterers and other trusted wedding vendors on itsmyKalyanam — starting in Kerala.";
+
 export const metadata: Metadata = {
   // No brand suffix here — the root layout's title template
   // ("%s | itsmyKalyanam") already appends it to every page's <title>,
   // including this one (a real bug caught live: this used to duplicate
   // the brand name at both ends of the rendered title).
   title: "Your Wedding, Your Way | Find Trusted Vendors",
-  description: "Discover and connect with trusted wedding vendors near you — photographers, venues, makeup artists and more.",
+  description: HOME_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "itsmyKalyanam | Find Wedding Vendors & Services",
+    description: HOME_DESCRIPTION,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "itsmyKalyanam | Find Wedding Vendors & Services",
+    description: HOME_DESCRIPTION,
+  },
 };
 
 const TELEGRAM_BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "VendorMatefinderBot";

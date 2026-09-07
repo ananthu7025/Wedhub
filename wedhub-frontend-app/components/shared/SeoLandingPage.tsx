@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { VendorCard } from "@/components/shared/VendorCard";
+import { JsonLd } from "@/components/shared/JsonLd";
+import { ViewCategoryTracker } from "@/components/shared/ViewCategoryTracker";
 import { searchVendors } from "@/lib/api/catalog";
 import type { SeoPageData } from "@/lib/api/vendors.types";
 import { getOptionalSession } from "@/lib/auth/dal";
+import { breadcrumbListJsonLd, vendorItemListJsonLd, type BreadcrumbItem } from "@/lib/seo/json-ld";
 
 // Shared render for all three SEO landing page types (Arch Phase 17):
 // /category/[categorySlug], /category/[categorySlug]/[citySlug],
@@ -29,29 +32,38 @@ export async function SeoLandingPage({ seo }: { seo: SeoPageData }) {
     ...(seo.city ? { cityId: seo.city.id } : {}),
   }).toString()}`;
 
+  const breadcrumbItems: BreadcrumbItem[] = [
+    { name: "Home", path: "/" },
+    ...(seo.category ? [{ name: seo.category.name, path: `/category/${seo.category.slug}` }] : []),
+    ...(seo.city ? [{ name: seo.city.name, path: `/city/${seo.city.slug}` }] : []),
+  ];
+
   return (
     <>
+      <JsonLd data={breadcrumbListJsonLd(breadcrumbItems)} />
+      {vendors.length > 0 && <JsonLd data={vendorItemListJsonLd(vendors)} />}
+      <ViewCategoryTracker
+        categoryId={seo.category?.id}
+        categoryName={seo.category?.name}
+        locationName={seo.city?.name}
+        vendorCount={meta?.total ?? vendors.length}
+      />
       <PublicTopbar />
 
       <div className="px-10 py-8 max-[900px]:px-4">
-        <nav className="mb-4 text-xs text-text-grey">
-          <Link href="/" className="no-underline hover:underline">
-            Home
-          </Link>
-          {" / "}
-          {seo.category && (
-            <>
-              <Link href={`/category/${seo.category.slug}`} className="no-underline hover:underline">
-                {seo.category.name}
-              </Link>
-              {seo.city && " / "}
-            </>
-          )}
-          {seo.city && (
-            <Link href={`/city/${seo.city.slug}`} className="no-underline hover:underline">
-              {seo.city.name}
-            </Link>
-          )}
+        <nav className="mb-4 text-xs text-text-grey" aria-label="Breadcrumb">
+          {breadcrumbItems.map((item, index) => (
+            <span key={item.path}>
+              {index > 0 && " / "}
+              {index === breadcrumbItems.length - 1 ? (
+                <span aria-current="page">{item.name}</span>
+              ) : (
+                <Link href={item.path} className="no-underline hover:underline">
+                  {item.name}
+                </Link>
+              )}
+            </span>
+          ))}
         </nav>
 
         <h1 className="mb-2 text-2xl font-bold text-text-dark">{seo.h1}</h1>

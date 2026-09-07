@@ -8,6 +8,7 @@ import { VendorOnboardingForm } from "./VendorOnboardingForm";
 
 export const metadata: Metadata = {
   title: "Complete Vendor Setup | itsmyKalyanam",
+  robots: { index: false, follow: false },
 };
 
 export default async function VendorOnboardingPage() {

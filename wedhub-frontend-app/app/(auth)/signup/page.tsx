@@ -7,6 +7,7 @@ import { SignupWizard } from "./SignupWizard";
 
 export const metadata: Metadata = {
   title: "Sign up",
+  robots: { index: false, follow: false },
 };
 
 const roleHomeRoute: Record<string, string> = {

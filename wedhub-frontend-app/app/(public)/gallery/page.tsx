@@ -4,9 +4,17 @@ import { PublicFooter } from "@/components/shared/PublicFooter";
 import { listFeaturedGalleryMedia, listGalleryCategories } from "@/lib/api/catalog";
 import { GalleryPageView } from "./GalleryPageView";
 
+const GALLERY_DESCRIPTION = "Browse real wedding decor, bridal outfits, jewelry, and creative ideas from real vendors.";
+
 export const metadata: Metadata = {
   title: "Gallery Inspiration",
-  description: "Browse real wedding decor, bridal outfits, jewelry, and creative ideas from real vendors.",
+  description: GALLERY_DESCRIPTION,
+  alternates: { canonical: "/gallery" },
+  openGraph: {
+    title: "Gallery Inspiration | itsmyKalyanam",
+    description: GALLERY_DESCRIPTION,
+    url: "/gallery",
+  },
 };
 
 const PAGE_SIZE = 24;

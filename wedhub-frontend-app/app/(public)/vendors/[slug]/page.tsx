@@ -6,11 +6,14 @@ import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { VendorAttributes } from "@/components/shared/VendorAttributes";
 import { VendorHeartButton } from "@/components/shared/VendorHeartButton";
 import { EnquiryCta } from "@/components/shared/EnquiryCta";
+import { JsonLd } from "@/components/shared/JsonLd";
+import { VendorContactLinks } from "@/components/shared/VendorContactLinks";
 import { getVendorAlbums, getVendorBySlug, getVendorReviews } from "@/lib/api/catalog";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { ApiRequestError } from "@/lib/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { getOptionalSession } from "@/lib/auth/dal";
+import { breadcrumbListJsonLd, vendorLocalBusinessJsonLd } from "@/lib/seo/json-ld";
 
 interface VendorPageProps {
   params: Promise<{ slug: string }>;
@@ -32,9 +35,41 @@ export async function generateMetadata({ params }: VendorPageProps): Promise<Met
   const { slug } = await params;
   try {
     const vendor = await loadVendor(slug);
+    const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? vendor.categories[0]?.category;
+    const title =
+      vendor.profile?.seoTitle ??
+      (primaryCategory && vendor.city
+        ? `${vendor.businessName} | ${primaryCategory.name} in ${vendor.city.name}`
+        : vendor.businessName);
+    const description = vendor.profile?.seoDescription ?? vendor.profile?.shortDescription ?? undefined;
+    const canonicalPath = `/vendors/${vendor.slug}`;
+    // A vendor-supplied canonicalUrl (VendorProfile.canonicalUrl) is an
+    // escape hatch for a vendor pointing Google at their own external site
+    // instead — honored only when set; the marketplace's own /vendors/:slug
+    // URL is canonical by default.
+    const canonical = vendor.profile?.canonicalUrl || canonicalPath;
+    const coverMedia = vendor.profile?.coverMedia;
+    const ogImage = coverMedia
+      ? getPublicMediaUrl(coverMedia.optimizedObjectKey ?? coverMedia.originalObjectKey)
+      : undefined;
+
     return {
-      title: vendor.profile?.seoTitle ?? vendor.businessName,
-      description: vendor.profile?.seoDescription ?? vendor.profile?.shortDescription ?? undefined,
+      title,
+      description,
+      alternates: { canonical },
+      openGraph: {
+        title,
+        description,
+        url: canonicalPath,
+        images: ogImage ? [{ url: ogImage }] : undefined,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: ogImage ? [ogImage] : undefined,
+      },
+      robots: { index: true, follow: true },
     };
   } catch {
     return { title: "Vendor" };
@@ -83,8 +118,36 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
   const verificationLabel = VERIFICATION_LABEL[vendor.verificationLevel];
   const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? vendor.categories[0]?.category;
 
+  const breadcrumbItems = [
+    { name: "Home", path: "/" },
+    ...(primaryCategory ? [{ name: primaryCategory.name, path: `/category/${primaryCategory.slug}` }] : []),
+    ...(vendor.city ? [{ name: vendor.city.name, path: `/city/${vendor.city.slug}` }] : []),
+    { name: vendor.businessName, path: `/vendors/${vendor.slug}` },
+  ];
+
   return (
     <>
+      <JsonLd data={breadcrumbListJsonLd(breadcrumbItems)} />
+      <JsonLd
+        data={vendorLocalBusinessJsonLd({
+          businessName: vendor.businessName,
+          slug: vendor.slug,
+          description: vendor.profile?.description ?? vendor.profile?.shortDescription,
+          categoryName: primaryCategory?.name,
+          address: vendor.profile?.address,
+          cityName: vendor.city?.name,
+          latitude: vendor.profile?.latitude,
+          longitude: vendor.profile?.longitude,
+          phone: vendor.profile?.phone,
+          website: vendor.profile?.website,
+          imageUrl: heroImageUrl,
+          priceRangeMin: vendor.profile?.priceRangeMin,
+          priceRangeMax: vendor.profile?.priceRangeMax,
+          currency: vendor.profile?.currency,
+          averageRating: vendor.averageRating,
+          reviewCount: vendor.reviewCount,
+        })}
+      />
       <PublicTopbar />
 
       <div className="relative h-80 bg-surface-input max-[900px]:h-52">
@@ -92,7 +155,22 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
       </div>
 
       <div className="mx-auto max-w-[1200px] px-10 max-[900px]:px-4">
-        <div className="-mt-16 flex items-end gap-5 max-[900px]:flex-wrap">
+        <nav className="mb-4 pt-5 text-xs text-text-grey" aria-label="Breadcrumb">
+          {breadcrumbItems.map((item, index) => (
+            <span key={item.path}>
+              {index > 0 && " / "}
+              {index === breadcrumbItems.length - 1 ? (
+                <span aria-current="page">{item.name}</span>
+              ) : (
+                <Link href={item.path} className="no-underline hover:underline">
+                  {item.name}
+                </Link>
+              )}
+            </span>
+          ))}
+        </nav>
+
+        <div className="-mt-4 flex items-end gap-5 max-[900px]:flex-wrap">
           <div className="relative flex h-32 w-32 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-surface-input text-3xl font-bold text-text-grey shadow-[var(--shadow-card)]">
             {logoImageUrl ? (
               <Image src={logoImageUrl} alt={vendor.businessName} fill className="object-cover" />
@@ -226,7 +304,12 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                           const key = photo.thumbnailObjectKey ?? photo.optimizedObjectKey ?? photo.originalObjectKey;
                           return (
                             <div key={photo.id} className="relative h-16 w-16 overflow-hidden rounded-md bg-surface-input">
-                              <Image src={getPublicMediaUrl(key)} alt="" fill className="object-cover" />
+                              <Image
+                                src={getPublicMediaUrl(key)}
+                                alt={`Review photo for ${vendor.businessName}`}
+                                fill
+                                className="object-cover"
+                              />
                             </div>
                           );
                         })}
@@ -262,15 +345,13 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
               />
 
               <div className="mt-5 border-t border-border pt-4">
-                {vendor.profile?.phone && (
-                  <div className="flex items-center gap-2.5 py-1.5 text-[13px]">📞 {vendor.profile.phone}</div>
-                )}
-                {vendor.profile?.email && (
-                  <div className="flex items-center gap-2.5 py-1.5 text-[13px]">✉️ {vendor.profile.email}</div>
-                )}
-                {vendor.profile?.website && (
-                  <div className="flex items-center gap-2.5 py-1.5 text-[13px]">🌐 {vendor.profile.website}</div>
-                )}
+                <VendorContactLinks
+                  vendorId={vendor.id}
+                  businessName={vendor.businessName}
+                  phone={vendor.profile?.phone}
+                  email={vendor.profile?.email}
+                  website={vendor.profile?.website}
+                />
               </div>
             </div>
           </aside>

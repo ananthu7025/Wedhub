@@ -5,6 +5,7 @@ import { VerifyEmailStatus } from "./VerifyEmailStatus";
 
 export const metadata: Metadata = {
   title: "Verify your email",
+  robots: { index: false, follow: false },
 };
 
 export default async function VerifyEmailPage({

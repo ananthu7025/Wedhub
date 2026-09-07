@@ -6,10 +6,18 @@ import { listCategories, searchVendors } from "@/lib/api/catalog";
 import { CategoryCardGrid } from "./CategoryCardGrid";
 import { CuratedVendorShelf } from "./CuratedVendorShelf";
 
+const VENDORS_DESCRIPTION =
+  "Explore wedding categories — venues, photographers, makeup artists, decorators, bridal wear, and more. Find and book trusted wedding vendors.";
+
 export const metadata: Metadata = {
   title: "Wedding Vendors Directory | Wedding Categories",
-  description:
-    "Explore wedding categories — venues, photographers, makeup artists, decorators, bridal wear, and more. Find and book trusted wedding vendors.",
+  description: VENDORS_DESCRIPTION,
+  alternates: { canonical: "/vendors" },
+  openGraph: {
+    title: "Wedding Vendors Directory | itsmyKalyanam",
+    description: VENDORS_DESCRIPTION,
+    url: "/vendors",
+  },
 };
 
 export default async function VendorsDirectoryPage() {
