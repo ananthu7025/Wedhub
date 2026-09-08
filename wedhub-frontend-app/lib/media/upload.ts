@@ -51,9 +51,22 @@ export async function uploadChallengeEntryPhoto(file: File): Promise<string> {
     throw new Error("Photo upload to storage failed");
   }
 
-  const confirmResult = await confirmChallengeEntryPhotoUpload(mediaId);
+  // Processing (resize/optimize) happens async on a worker — status starts
+  // PROCESSING, not READY, the instant confirm returns, and the backend's
+  // findOwnUnattachedPhoto check on submit requires READY. Poll briefly
+  // (confirm is idempotent past PENDING) same pattern as
+  // InspirationPhotoUploader.tsx, rather than racing straight into submit.
+  let confirmResult = await confirmChallengeEntryPhotoUpload(mediaId);
+  for (let attempt = 0; attempt < 10 && confirmResult.success && confirmResult.data.status !== "READY"; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    confirmResult = await confirmChallengeEntryPhotoUpload(mediaId);
+  }
+
   if (!confirmResult.success) {
     throw new Error(formatApiError(confirmResult.error));
+  }
+  if (confirmResult.data.status !== "READY") {
+    throw new Error("Your photo is still processing — please wait a moment and try submitting again.");
   }
 
   return mediaId;

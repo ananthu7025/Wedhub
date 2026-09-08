@@ -38,8 +38,18 @@ export function createChallengeEntryPhotoUploadRequest(filename: string, mimeTyp
   });
 }
 
+export interface ChallengeEntryPhotoConfirmResult {
+  id: string;
+  status: "PENDING" | "UPLOADING" | "PROCESSING" | "READY" | "INACTIVE" | "FAILED" | "DELETED";
+}
+
+// Processing (resize/optimize) happens async on a worker — status starts
+// PROCESSING, not READY, the instant this returns. Callers must poll (this
+// endpoint is idempotent past PENDING — see challenge-entry-media.service.ts's
+// confirmUpload) until status is READY, same pattern as
+// InspirationPhotoUploader.tsx/VendorPhotoUploader.tsx.
 export function confirmChallengeEntryPhotoUpload(mediaId: string) {
-  return call(`/challenge-entry-media/${mediaId}/confirm`, "POST");
+  return call<ChallengeEntryPhotoConfirmResult>(`/challenge-entry-media/${mediaId}/confirm`, "POST");
 }
 
 export function submitChallengeEntry(slug: string, body: CreateChallengeEntryBody) {
