@@ -22,7 +22,13 @@ import type { NextConfig } from "next";
 //     "Sign in with Google" button (GoogleSignInButton.tsx). GIS renders
 //     its button/One Tap UI in an iframe from accounts.google.com and
 //     posts the ID token back via postMessage — no redirect navigation,
-//     so no frame-ancestors/navigation exception is needed for it.
+//     so no frame-ancestors/navigation exception is needed for it. GIS
+//     also injects its own stylesheet from accounts.google.com/gsi/style
+//     for the rendered button, so style-src needs that origin too.
+//   - www.googletagmanager.com — GA4's gtag.js loader
+//     (<Script src="https://www.googletagmanager.com/gtag/js?id=...">
+//     in GoogleAnalytics.tsx). Missed when GA4 was wired up (SEO
+//     foundation commit) — CSP blocked it in production ever since.
 //   - *.r2.cloudflarestorage.com — media uploads (vendor logo/cover,
 //     portfolio photos, category images, gallery inspiration, etc.) go
 //     straight from the browser to a presigned R2 PutObject URL
@@ -55,12 +61,12 @@ const isDev = process.env.NODE_ENV !== "production";
 const cspDirectives = [
   "default-src 'self'",
   isDev
-    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://accounts.google.com/gsi/client"
-    : "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://accounts.google.com/gsi/client",
-  "style-src 'self' 'unsafe-inline'",
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://accounts.google.com/gsi/client https://www.googletagmanager.com"
+    : "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://accounts.google.com/gsi/client https://www.googletagmanager.com",
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "img-src 'self' blob: data: https://images.unsplash.com https://pub-7116e74b9a3d44a1ab03594911f56ad8.r2.dev",
   "font-src 'self' data:",
-  "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com https://*.r2.cloudflarestorage.com",
+  "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://www.googletagmanager.com",
   "frame-src https://checkout.razorpay.com https://api.razorpay.com https://accounts.google.com",
   "object-src 'none'",
   "base-uri 'self'",
