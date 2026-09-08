@@ -6,9 +6,11 @@ import { getMyAnalytics } from "@/lib/api/vendor-self";
 import { getMe, listMyNotifications } from "@/lib/api/account";
 import { listMyLeads } from "@/lib/api/leads";
 import { getVendorReviews } from "@/lib/api/catalog";
+import { getActiveChallenge } from "@/lib/api/challenges";
 import { COMPLETENESS_CHECKS } from "@/lib/api/vendor-self.types";
 import { DashboardSparkline } from "./DashboardSparkline";
 import { DashboardInteractiveSections } from "./DashboardInteractiveSections";
+import { ChallengeEntryWidget } from "./ChallengeEntryWidget";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -75,7 +77,9 @@ function isChecklistItemMet(label: string, vendor: Awaited<ReturnType<typeof req
 
 export default async function VendorDashboardPage() {
   const vendor = await requireVendorOwnership();
-  const [analytics, me, leadsResponse, notificationsResponse, reviewsResponse] = await Promise.all([
+  const primaryCategoryId = vendor.categories.find((c) => c.isPrimary)?.categoryId;
+
+  const [analytics, me, leadsResponse, notificationsResponse, reviewsResponse, activeChallenge] = await Promise.all([
     getMyAnalytics()
       .then((r) => r.data)
       .catch(() => null),
@@ -89,6 +93,11 @@ export default async function VendorDashboardPage() {
     getVendorReviews(vendor.id, 1, 5)
       .then((r) => r.data)
       .catch(() => []),
+    primaryCategoryId
+      ? getActiveChallenge({ categoryId: primaryCategoryId })
+          .then((r) => r.data)
+          .catch(() => null)
+      : Promise.resolve(null),
   ]);
 
   const emailUnverified = !me.emailVerifiedAt;
@@ -327,6 +336,9 @@ export default async function VendorDashboardPage() {
           }}
           analytics={analytics}
         />
+
+        {/* Challenge entry status — only rendered when the vendor's primary category has an active contest */}
+        {activeChallenge && <ChallengeEntryWidget challenge={activeChallenge} />}
 
         {/* Profile Completeness Checklist Container — only shown when profile is not yet 100% complete */}
         {vendor.profileCompleteness < 100 && (

@@ -63,6 +63,7 @@ model User {
   telegramUser             TelegramUser?
   uploadedMedia            Media[]                  @relation("MediaUploader")
   weddingWebsites          WeddingWebsite[]
+  challengeVotes           ChallengeVote[]
 
   @@index([role])
   @@index([status])
@@ -275,6 +276,8 @@ model Category {
   enquiries        Enquiry[]
   featuredListings FeaturedListing[]
   seoOverrides     SeoOverride[]
+  challenges       Challenge[]
+  challengeEntries ChallengeEntry[]
 
   @@index([parentId])
   @@index([isActive])
@@ -400,6 +403,7 @@ model Vendor {
   paymentAccount   VendorPaymentAccount?
   storeTransfers   VendorStoreTransfer[]
   storeSettlements VendorStoreSettlement[]
+  challengeEntries ChallengeEntry[]
 
   @@index([status])
   @@index([cityId])
@@ -632,6 +636,11 @@ enum MediaType {
   // Vendor-owned, single optional photo on a Package (Package.imageMediaId),
   // same one-FK-column shape as VendorProfile.logoMediaId/coverMediaId.
   PACKAGE_PHOTO
+  // Uploaded by the submitting user before a ChallengeEntry row necessarily
+  // exists — userId set, vendorId null at upload time, same shape as
+  // REVIEW_PHOTO. Reusable across every contest category (Mehndi, Makeup,
+  // Photography, ...): no per-category MediaType.
+  CHALLENGE_ENTRY_PHOTO
 }
 
 enum MediaStatus {
@@ -700,6 +709,8 @@ model Media {
   weddingWebsiteCouplePhotoFor WeddingWebsite?        @relation("WeddingWebsiteCouplePhoto")
   storeItemMedia               VendorStoreItemMedia[]
   packageImageFor              Package[]              @relation("PackageImage")
+  challengeEntryCoverFor        ChallengeEntry?        @relation("ChallengeEntryCoverImage")
+  challengeEntryPhotoFor        ChallengeEntryPhoto?   @relation("ChallengeEntryAdditionalPhoto")
 
   @@index([vendorId])
   @@index([userId])
@@ -795,8 +806,173 @@ model GalleryCategory {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   featuredMedia FeaturedMedia[]
+  challenges    Challenge[]
 
   @@map("gallery_categories")
+}
+
+enum ChallengeStatus {
+  DRAFT
+  UPCOMING
+  LIVE
+  VOTING
+  COMPLETED
+  ARCHIVED
+}
+
+enum ChallengeEntryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DISQUALIFIED
+}
+
+enum ChallengeVoteScope {
+  PER_ENTRY
+  PER_CHALLENGE
+}
+
+// Reusable contest/challenge system (launch: 30-Day Mehndi Challenge).
+// categoryId is the real vendor-facing Category — the only taxonomy a
+// Vendor's VendorCategory rows ever point at, so it's the only thing that
+// can answer an entry-eligibility question. galleryCategoryId is a separate,
+// display-only link into the existing Gallery Inspiration taxonomy so the
+// /gallery page can show a "challenge is live" banner for a given
+// GalleryCategory without conflating that presentation taxonomy with real
+// vendor eligibility. Not reusable-as-eligibility on purpose.
+model Challenge {
+  id                             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title                          String
+  slug                           String               @unique
+  categoryId                     String               @map("category_id") @db.Uuid
+  galleryCategoryId              String?              @map("gallery_category_id") @db.Uuid
+  description                    String?
+  bannerImage                    String?              @map("banner_image")
+  startDate                      DateTime             @map("start_date")
+  endDate                        DateTime             @map("end_date")
+  votingStartDate                DateTime             @map("voting_start_date")
+  votingEndDate                  DateTime             @map("voting_end_date")
+  status                         ChallengeStatus       @default(DRAFT)
+  // Configurable per challenge because Postgres can't conditionally scope a
+  // unique constraint on a sibling row's field — see ChallengeVote below for
+  // how PER_CHALLENGE is actually enforced (DB constraint + app check in one
+  // Serializable transaction).
+  voteScope                      ChallengeVoteScope    @default(PER_ENTRY) @map("vote_scope")
+  // Hides public rankings during the final N hours of the VOTING phase.
+  // Admins always see live data regardless (see challenge-ranking.service.ts).
+  hideLiveRankingsBeforeEndHours Int?                 @map("hide_live_rankings_before_end_hours")
+  allowMultipleEntriesPerVendor  Boolean              @default(false) @map("allow_multiple_entries_per_vendor")
+  maxEntries                     Int?                 @map("max_entries")
+  // Sponsor/prize fields are all optional — a challenge may launch before a
+  // sponsor is confirmed ("Special Winner Prize — Revealing Soon" is a
+  // frontend fallback when sponsorName is null, not a stored value).
+  prizeTitle                     String?              @map("prize_title")
+  prizeDescription               String?              @map("prize_description")
+  prizeValue                     String?              @map("prize_value")
+  sponsorName                    String?              @map("sponsor_name")
+  sponsorLogo                    String?              @map("sponsor_logo")
+  sponsorUrl                     String?              @map("sponsor_url")
+  winnerEntryId                  String?              @unique @map("winner_entry_id") @db.Uuid
+  rules                          String?
+  termsAndConditions             String?              @map("terms_and_conditions")
+  createdAt                      DateTime             @default(now()) @map("created_at")
+  updatedAt                      DateTime             @updatedAt @map("updated_at")
+
+  category        Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  galleryCategory GalleryCategory? @relation(fields: [galleryCategoryId], references: [id], onDelete: SetNull)
+  winnerEntry     ChallengeEntry?  @relation("ChallengeWinner", fields: [winnerEntryId], references: [id], onDelete: SetNull)
+  entries         ChallengeEntry[] @relation("ChallengeEntries")
+  votes           ChallengeVote[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([galleryCategoryId])
+  @@map("challenges")
+}
+
+model ChallengeEntry {
+  id              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  challengeId     String               @map("challenge_id") @db.Uuid
+  vendorId        String               @map("vendor_id") @db.Uuid
+  // Denormalized copy of the challenge's category at submission time, so a
+  // later challenge category edit can't retroactively invalidate old entries.
+  categoryId      String               @map("category_id") @db.Uuid
+  title           String
+  description     String?
+  imageMediaId    String               @unique @map("image_media_id") @db.Uuid
+  location        String?
+  status          ChallengeEntryStatus @default(PENDING)
+  // Denormalized, atomically incremented alongside each ChallengeVote insert
+  // (not recomputed from a live aggregate like Vendor.averageRating/
+  // reviewCount — votes are insert-only in the happy path, unlike reviews
+  // which are edited/deleted, so an O(1) increment is safe and avoids a
+  // COUNT(*) on every single vote). Self-healing recalculation still exists
+  // for the one path that removes vote-contribution outside normal insert:
+  // admin disqualification — see challenge-entry.repository.ts's
+  // recalculateEntryVoteCount().
+  voteCount       Int                  @default(0) @map("vote_count")
+  submittedAt     DateTime             @default(now()) @map("submitted_at")
+  approvedAt      DateTime?            @map("approved_at")
+  rejectionReason String?              @map("rejection_reason")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  challenge        Challenge             @relation("ChallengeEntries", fields: [challengeId], references: [id], onDelete: Cascade)
+  vendor           Vendor                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category         Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  image            Media                 @relation("ChallengeEntryCoverImage", fields: [imageMediaId], references: [id], onDelete: Restrict)
+  additionalImages ChallengeEntryPhoto[]
+  votes            ChallengeVote[]
+  wonChallenge     Challenge?            @relation("ChallengeWinner")
+
+  @@index([challengeId, status])
+  @@index([vendorId])
+  @@index([challengeId, voteCount])
+  @@map("challenge_entries")
+}
+
+// Join table for "additional images" beyond the required cover image, rather
+// than a second nullable FK column on Media — Media's ownership columns are
+// single-owner-per-relation, and an entry needs both a distinguished cover
+// image (for card/leaderboard thumbnails) and N extra photos. Mirrors
+// Album's media-list pattern but keeps a distinguished cover.
+model ChallengeEntryPhoto {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entryId   String   @map("entry_id") @db.Uuid
+  mediaId   String   @unique @map("media_id") @db.Uuid
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  entry ChallengeEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  media Media          @relation("ChallengeEntryAdditionalPhoto", fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@map("challenge_entry_photos")
+}
+
+// One row per (user, challenge, entry) vote. The unique constraint below
+// always prevents a double-vote on the SAME entry (fully covers PER_ENTRY
+// scope on its own). For PER_CHALLENGE scope it is necessary but not
+// sufficient — see challenge-vote.service.ts for the additional
+// any-vote-in-this-challenge check, which must run inside the same
+// Serializable transaction as the insert to close the check-then-insert race.
+model ChallengeVote {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  challengeId String   @map("challenge_id") @db.Uuid
+  entryId     String   @map("entry_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  challenge Challenge      @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  entry     ChallengeEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId, entryId])
+  @@index([challengeId])
+  @@index([entryId])
+  @@map("challenge_votes")
 }
 
 enum SeoPageType {

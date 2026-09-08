@@ -38,6 +38,12 @@ import { analyticsRouter } from "../modules/analytics";
 import { vendorInvoiceRouter } from "../modules/vendor-invoices";
 import { vendorStoreRouter, publicStoreRouter } from "../modules/vendor-store/vendor-store.routes";
 import { adminStorePaymentsRouter } from "../modules/admin-store-payments";
+import {
+  challengeRouter,
+  challengeAdminRouter,
+  challengeEntryAdminRouter,
+  challengeEntryMediaRouter,
+} from "../modules/challenges";
 
 export const apiV1Router = Router();
 
@@ -96,6 +102,10 @@ apiV1Router.use("/vendor-invoices", vendorInvoiceRouter);
 apiV1Router.use("/vendor-store", vendorStoreRouter);
 apiV1Router.use("/stores", publicStoreRouter);
 apiV1Router.use("/admin/store-payments", adminStorePaymentsRouter);
+apiV1Router.use("/challenge-entry-media", challengeEntryMediaRouter);
+apiV1Router.use("/admin/challenge-entries", challengeEntryAdminRouter);
+apiV1Router.use("/admin/challenges", challengeAdminRouter);
+apiV1Router.use("/challenges", challengeRouter);
 
 
 // Mounted BEFORE /vendors: vendorRouter's public GET /:slug would otherwise

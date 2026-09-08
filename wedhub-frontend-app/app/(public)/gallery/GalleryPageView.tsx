@@ -4,9 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { FeaturedMediaItem, GalleryCategory } from "@/lib/api/vendors.types";
+import type { Challenge } from "@/lib/api/challenges.types";
 import { listFeaturedGalleryMediaClient } from "@/lib/api/catalog-client";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { GalleryPhotoModal } from "./GalleryPhotoModal";
+import { ChallengeBannerCard } from "./ChallengeBannerCard";
 
 // Cycled by index so the masonry grid actually staggers like Pinterest —
 // FeaturedMediaItem carries no stored aspect ratio to key off of instead.
@@ -48,12 +50,14 @@ export function GalleryPageView({
   categories,
   activeCategory,
   pageSize,
+  activeChallenge,
 }: {
   initialItems: FeaturedMediaItem[];
   initialTotalPages: number;
   categories: GalleryCategory[];
   activeCategory: string | null;
   pageSize: number;
+  activeChallenge?: Challenge | null;
 }) {
   const router = useRouter();
   const [displayItems, setDisplayItems] = useState<GalleryDisplayItem[]>(() => toDisplayItems(initialItems, 0));
@@ -114,6 +118,8 @@ export function GalleryPageView({
           Discover real wedding decor, bridal outfits, jewelry, and creative ideas
         </p>
       </div>
+
+      {activeChallenge && <ChallengeBannerCard challenge={activeChallenge} />}
 
       {/* Category Pills — real navigation, not local filtering, so pagination stays correct per category */}
       <div className="mb-6 flex flex-wrap gap-2">

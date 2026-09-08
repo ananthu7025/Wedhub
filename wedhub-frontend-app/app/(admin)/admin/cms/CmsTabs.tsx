@@ -10,13 +10,16 @@ import type {
   AdminVendorListItem,
   AdminWeddingStory,
 } from "@/lib/api/admin.types";
-import type { GalleryCategory } from "@/lib/api/vendors.types";
+import type { Category, GalleryCategory } from "@/lib/api/vendors.types";
+import type { Challenge, ChallengeEntry } from "@/lib/api/challenges.types";
 import { WeddingStoriesBoard } from "./WeddingStoriesBoard";
 import { GalleryInspirationSection } from "./GalleryInspirationSection";
 import { PopularSearchCardsBoard } from "./PopularSearchCardsBoard";
 import { BlogPostsBoard } from "./BlogPostsBoard";
+import { ChallengesBoard } from "./ChallengesBoard";
+import { ChallengeEntriesBoard } from "./ChallengeEntriesBoard";
 
-type Tab = "overview" | "real-weddings" | "gallery" | "popular-searches" | "blog";
+type Tab = "overview" | "real-weddings" | "gallery" | "popular-searches" | "blog" | "challenges";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "overview", label: "Overview" },
@@ -24,6 +27,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "gallery", label: "Gallery" },
   { id: "popular-searches", label: "Popular Searches" },
   { id: "blog", label: "Blog" },
+  { id: "challenges", label: "Challenges" },
 ];
 
 const STILL_STUB_ITEMS = ["Pages", "Guides", "FAQs", "Banners"];
@@ -63,6 +67,10 @@ export function CmsTabs({
   blogPosts,
   vendors,
   galleryCategories,
+  challenges,
+  categories,
+  challengeEntries,
+  entriesByChallenge,
 }: {
   albums: AdminAlbum[];
   approvedMedia: AdminApprovedMedia[];
@@ -72,6 +80,10 @@ export function CmsTabs({
   blogPosts: AdminBlogPost[];
   vendors: AdminVendorListItem[];
   galleryCategories: GalleryCategory[];
+  challenges: Challenge[];
+  categories: Category[];
+  challengeEntries: ChallengeEntry[];
+  entriesByChallenge: Record<string, ChallengeEntry[]>;
 }) {
   const [tab, setTab] = useState<Tab>("overview");
 
@@ -80,6 +92,12 @@ export function CmsTabs({
     { id: "gallery", label: "Gallery photos", count: featuredMedia.length },
     { id: "popular-searches", label: "Popular Searches", count: popularSearchCards.length },
     { id: "blog", label: "Blog posts", count: blogPosts.length, sub: `${blogPosts.filter((p) => !p.publishedAt).length} drafts` },
+    {
+      id: "challenges",
+      label: "Challenges",
+      count: challenges.length,
+      sub: `${challengeEntries.filter((e) => e.status === "PENDING").length} pending entries`,
+    },
   ];
 
   return (
@@ -185,6 +203,32 @@ export function CmsTabs({
             count={blogPosts.length}
           />
           <BlogPostsBoard initialPosts={blogPosts} />
+        </div>
+      )}
+
+      {tab === "challenges" && (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-border bg-white p-6">
+            <TabHeader
+              title="Challenges"
+              description="Reusable contest campaigns (30-Day Mehndi Challenge and future vendor-category contests) — create/edit, manage status, set winners, and promote approved entries into the Gallery."
+              count={challenges.length}
+            />
+            <ChallengesBoard
+              initialChallenges={challenges}
+              categories={categories}
+              galleryCategories={galleryCategories}
+              entriesByChallenge={entriesByChallenge}
+            />
+          </div>
+          <div className="rounded-xl border border-border bg-white p-6">
+            <TabHeader
+              title="Entry Moderation"
+              description="Approve, reject, or disqualify submitted challenge entries — an entry is only publicly visible once approved."
+              count={challengeEntries.filter((e) => e.status === "PENDING").length}
+            />
+            <ChallengeEntriesBoard challenges={challenges} initialEntries={challengeEntries} />
+          </div>
         </div>
       )}
     </div>

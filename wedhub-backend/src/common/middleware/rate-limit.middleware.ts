@@ -85,3 +85,20 @@ export const storePaymentVerifyRateLimiter = createRateLimiter({
   message: "Too many payment verification attempts. Please try again later.",
 });
 
+// Contest voting — authenticated, must resist scripted vote-buying while not
+// blocking a real user browsing/voting on a few entries per visit.
+export const challengeVoteRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: process.env.CHALLENGE_VOTE_RATE_LIMIT_MAX ? Number(process.env.CHALLENGE_VOTE_RATE_LIMIT_MAX) : 10,
+  message: "Too many votes submitted. Please slow down.",
+});
+
+// Contest entry submission — a vendor submitting many entries in a short
+// burst is itself a fraud signal, so this is deliberately tighter than the
+// generic enquiry/review limiters above.
+export const challengeEntryRateLimiter = createRateLimiter({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: process.env.CHALLENGE_ENTRY_RATE_LIMIT_MAX ? Number(process.env.CHALLENGE_ENTRY_RATE_LIMIT_MAX) : 5,
+  message: "Too many challenge entries submitted. Please try again tomorrow.",
+});
+

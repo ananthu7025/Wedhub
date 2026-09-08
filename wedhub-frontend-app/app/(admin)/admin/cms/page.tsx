@@ -4,12 +4,14 @@ import { requireAdmin } from "@/lib/auth/require-admin";
 import {
   listAdminApprovedMedia,
   listAdminBlogPosts,
+  listAdminCategories,
   listAdminFeaturedMedia,
   listAdminPopularSearchCards,
   listAdminPublicAlbums,
   listAdminVendors,
   listAdminWeddingStories,
 } from "@/lib/api/admin";
+import { listAdminChallengeEntries, listAdminChallenges } from "@/lib/api/admin-challenges";
 import { listGalleryCategories } from "@/lib/api/catalog";
 import { CmsTabs } from "./CmsTabs";
 
@@ -53,6 +55,9 @@ export default async function AdminCmsPage() {
     { data: blogPosts },
     { data: vendors },
     { data: galleryCategories },
+    { data: challenges },
+    { data: categories },
+    { data: challengeEntries },
   ] = await Promise.all([
     listAdminPublicAlbums(),
     listAdminApprovedMedia(),
@@ -62,7 +67,15 @@ export default async function AdminCmsPage() {
     listAdminBlogPosts(),
     listAdminVendors({ status: "APPROVED", limit: 100 }),
     listGalleryCategories(),
+    listAdminChallenges(),
+    listAdminCategories(false),
+    listAdminChallengeEntries({ limit: 200 }),
   ]);
+
+  const entriesByChallenge: Record<string, typeof challengeEntries> = {};
+  for (const entry of challengeEntries) {
+    (entriesByChallenge[entry.challengeId] ??= []).push(entry);
+  }
 
   return (
     <AdminShell activeHref="/admin/cms">
@@ -80,6 +93,10 @@ export default async function AdminCmsPage() {
         blogPosts={blogPosts}
         vendors={vendors}
         galleryCategories={galleryCategories}
+        challenges={challenges}
+        categories={categories}
+        challengeEntries={challengeEntries}
+        entriesByChallenge={entriesByChallenge}
       />
     </AdminShell>
   );
