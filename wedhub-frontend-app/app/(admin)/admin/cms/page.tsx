@@ -14,6 +14,8 @@ import {
 import { listAdminChallengeEntries, listAdminChallenges } from "@/lib/api/admin-challenges";
 import { listGalleryCategories } from "@/lib/api/catalog";
 import { CmsTabs } from "./CmsTabs";
+import type { Challenge, ChallengeEntry } from "@/lib/api/challenges.types";
+import type { Category } from "@/lib/api/vendors.types";
 
 export const metadata: Metadata = {
   title: "CMS",
@@ -55,9 +57,9 @@ export default async function AdminCmsPage() {
     { data: blogPosts },
     { data: vendors },
     { data: galleryCategories },
-    { data: challenges },
-    { data: categories },
-    { data: challengeEntries },
+    challenges,
+    categories,
+    challengeEntries,
   ] = await Promise.all([
     listAdminPublicAlbums(),
     listAdminApprovedMedia(),
@@ -67,9 +69,22 @@ export default async function AdminCmsPage() {
     listAdminBlogPosts(),
     listAdminVendors({ status: "APPROVED", limit: 100 }),
     listGalleryCategories(),
-    listAdminChallenges(),
-    listAdminCategories(false),
-    listAdminChallengeEntries({ limit: 200 }),
+    // Challenges is a new, still-settling tab — isolate its fetches with a
+    // fallback so a transient/future issue here (e.g. a validation error)
+    // degrades to an empty Challenges tab instead of 500ing the entire CMS
+    // page, including Blog/Gallery/Popular Searches which have nothing to
+    // do with it. A real bug caught live: listAdminChallengeEntries's
+    // limit:200 exceeded the backend's max(100), and this Promise.all had
+    // no error isolation, so the whole page 500'd.
+    listAdminChallenges()
+      .then((r) => r.data)
+      .catch((): Challenge[] => []),
+    listAdminCategories(false)
+      .then((r) => r.data)
+      .catch((): Category[] => []),
+    listAdminChallengeEntries({ limit: 100 })
+      .then((r) => r.data)
+      .catch((): ChallengeEntry[] => []),
   ]);
 
   const entriesByChallenge: Record<string, typeof challengeEntries> = {};
