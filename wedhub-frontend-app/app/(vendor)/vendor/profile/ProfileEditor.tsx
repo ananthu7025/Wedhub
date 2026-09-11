@@ -8,6 +8,7 @@ import {
   setMyAttributes,
   setMyCategories,
   setMyServiceAreas,
+  submitMyVendor,
   upsertMyProfile,
 } from "@/lib/api/vendor-self-client";
 import { EVENTS_COMPLETED_RANGES, type CategorySelf, type LocationSelf, type VendorSelf } from "@/lib/api/vendor-self.types";
@@ -17,7 +18,6 @@ import { Badge } from "@/components/ui/Badge";
 import { AttributesSection, type AttributeValue, type AttributeValueMap } from "./AttributesSection";
 import { LogoCoverPicker } from "./LogoCoverPicker";
 import { ServicesSection } from "./ServicesSection";
-import { SubmitBar } from "./SubmitBar";
 
 type TabId =
   | "basic-info"
@@ -141,6 +141,7 @@ export function ProfileEditor({
 
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState("");
+  const [missingFields, setMissingFields] = useState<string[]>([]);
   const [categoryChangeWarningAcked, setCategoryChangeWarningAcked] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabId>("basic-info");
@@ -184,15 +185,10 @@ export function ProfileEditor({
     return false; // numbers and booleans (including false/0) count as filled in
   }
 
-  // Returns whether the save succeeded, so SubmitBar can save pending
-  // changes first and only proceed to actually submit if that save went
-  // through — previously "Submit for review" validated against whatever
-  // was last saved, silently ignoring any edit made since, with only a
-  // small caption ("Save your changes first if you've made any") warning
-  // about it.
-  async function handleSave(event?: React.FormEvent): Promise<boolean> {
-    event?.preventDefault();
-
+  // Returns whether the save succeeded, so handleFinish (the last tab's
+  // action) can save every tab's changes first and only proceed to actually
+  // submit for review if that save went through.
+  async function handleSave(): Promise<boolean> {
     if (primaryCategoryChanged && !categoryChangeWarningAcked) {
       const confirmed = window.confirm(
         "Changing your primary category will require your listing to be re-reviewed by an admin before it's publicly visible again. Continue?",
@@ -326,23 +322,36 @@ export function ProfileEditor({
     return true;
   }
 
+  // Only DRAFT/REJECTED vendors have a submit-for-review step (the backend
+  // 409s otherwise) — for any other status the last tab's action is just a
+  // save, same as every other tab's "Next" would otherwise silently defer.
+  const canSubmitForReview = vendor.status === "DRAFT" || vendor.status === "REJECTED";
+
+  async function handleFinish() {
+    const saved = await handleSave();
+    if (!saved || !canSubmitForReview) return;
+
+    setStatus("saving");
+    const result = await submitMyVendor();
+    if (!result.success) {
+      setStatus("error");
+      setError(formatApiError(result.error));
+      const missingDetail = result.error.details?.missing;
+      if (Array.isArray(missingDetail)) setMissingFields(missingDetail as string[]);
+      return;
+    }
+    router.push("/vendor/dashboard");
+    router.refresh();
+  }
+
+  const activeTabIndex = TABS.findIndex((t) => t.id === activeTab);
+  const isLastTab = activeTabIndex === TABS.length - 1;
+
   return (
-    <form onSubmit={handleSave}>
-      <div className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 bg-surface-page pt-1 sm:sticky sm:top-0 sm:z-20">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Edit profile</h1>
-          <p className="text-xs sm:text-sm text-text-grey">This information is shown to couples on your public vendor page.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {status === "error" && <span className="text-[13px] text-red">{error}</span>}
-          <button
-            type="submit"
-            disabled={status === "saving"}
-            className="w-full sm:w-auto rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white shadow-xs disabled:opacity-60"
-          >
-            {status === "saving" ? "Saving…" : status === "saved" ? "Saved ✓" : "Save changes"}
-          </button>
-        </div>
+    <div>
+      <div className="mb-5 sm:mb-6 bg-surface-page pt-1 sm:sticky sm:top-0 sm:z-20">
+        <h1 className="text-xl sm:text-2xl font-bold">Edit profile</h1>
+        <p className="text-xs sm:text-sm text-text-grey">This information is shown to couples on your public vendor page.</p>
       </div>
 
       <div className="grid grid-cols-[1fr_320px] gap-7 max-[1100px]:grid-cols-1">
@@ -720,7 +729,55 @@ export function ProfileEditor({
             </section>
           )}
 
-          <SubmitBar vendorStatus={vendor.status} onSaveChanges={() => handleSave()} />
+          <div className="rounded-xl border border-border bg-white p-5">
+            {status === "error" && (
+              <div className="mb-3.5 rounded-md bg-red-10 p-3.5 text-[13px] text-red-70">
+                <p className="mb-1 font-semibold">{error}</p>
+                {missingFields.length > 0 && (
+                  <ul className="ml-4 list-disc">
+                    {missingFields.map((label) => (
+                      <li key={label}>{label}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab(TABS[activeTabIndex - 1].id)}
+                disabled={activeTabIndex === 0}
+                className="rounded-md border border-border bg-white px-5 py-2.5 text-sm font-bold text-text-dark hover:bg-surface-input disabled:opacity-0"
+              >
+                Back
+              </button>
+              {isLastTab ? (
+                <button
+                  type="button"
+                  onClick={handleFinish}
+                  disabled={status === "saving"}
+                  className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+                >
+                  {status === "saving" ? "Saving…" : canSubmitForReview ? "Submit for review" : "Save changes"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab(TABS[activeTabIndex + 1].id)}
+                  className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white"
+                >
+                  Next
+                </button>
+              )}
+            </div>
+            {isLastTab && (
+              <p className="mt-2.5 text-xs text-text-grey">
+                {canSubmitForReview
+                  ? "This saves every tab's changes and submits your listing for admin approval."
+                  : "This saves every tab's changes."}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col gap-5 max-[1100px]:order-first">
@@ -778,6 +835,6 @@ export function ProfileEditor({
           </div>
         </div>
       </div>
-    </form>
+    </div>
   );
 }

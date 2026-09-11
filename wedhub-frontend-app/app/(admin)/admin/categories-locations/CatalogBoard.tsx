@@ -63,6 +63,12 @@ export function CatalogBoard({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Once a category is selected, the full list collapses to a slim rail so
+  // the detail panel (whose Attributes table is wide — 8 columns) gets most
+  // of the page width instead of being squeezed into `1fr` next to a
+  // permanent 340px list. Expanding the rail temporarily brings the full
+  // list back without losing the current selection.
+  const [listExpanded, setListExpanded] = useState(false);
 
   const tree = buildCategoryTree(categories);
   const flatOrdered = tree.flatMap((parent) => [parent, ...parent.children]);
@@ -275,56 +281,100 @@ export function CatalogBoard({
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[340px_1fr]">
-            {/* Category list — hidden on mobile once a category is selected */}
+          <div className={`grid grid-cols-1 gap-5 ${selected && !listExpanded ? "lg:grid-cols-[72px_1fr]" : "lg:grid-cols-[340px_1fr]"}`}>
+            {/* Category list — collapses to a slim rail once a category is
+                selected (desktop only) so the detail panel's wide Attributes
+                table isn't squeezed; hidden entirely on mobile in that state
+                since the rail isn't useful at narrow widths. */}
             <div className={selected ? "hidden lg:block" : ""}>
-              <div className="mb-3 flex gap-2">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search categories…"
-                  className="w-full rounded-md border border-border px-3 py-2 text-sm"
-                />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")}
-                  className="shrink-0 rounded-md border border-border px-2 py-2 text-sm"
-                >
-                  <option value="ALL">All status</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="INACTIVE">Disabled</option>
-                </select>
-              </div>
-
-              <p className="mb-2 text-xs font-semibold text-text-grey">All categories ({filtered.length})</p>
-
-              <div className="max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-white">
-                {filtered.length === 0 ? (
-                  <p className="p-6 text-sm text-text-grey">No categories match.</p>
-                ) : (
-                  filtered.map((category) => (
+              {selected && !listExpanded ? (
+                <div className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto rounded-xl border border-border bg-white p-2">
+                  <button
+                    type="button"
+                    onClick={() => setListExpanded(true)}
+                    aria-label="Show category list"
+                    className="mb-1 flex h-9 w-9 items-center justify-center self-center rounded-md text-text-grey hover:bg-surface-input"
+                  >
+                    ☰
+                  </button>
+                  {filtered.map((category) => (
                     <button
                       key={category.id}
                       type="button"
                       onClick={() => setSelectedId(category.id)}
-                      className={`flex w-full items-center justify-between gap-3 border-b border-neutral-grey-20 px-4 py-3 text-left last:border-b-0 ${
-                        selectedId === category.id ? "bg-brand-primary-soft" : "hover:bg-surface-input"
-                      } ${!category.isActive ? "opacity-60" : ""} ${category.parentId ? "pl-8" : ""}`}
+                      title={category.name}
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full text-xs font-bold ${
+                        selectedId === category.id ? "bg-brand-primary text-white" : "bg-surface-input text-text-grey hover:bg-neutral-grey-20"
+                      } ${!category.isActive ? "opacity-60" : ""}`}
                     >
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-bold text-text-dark">{category.name}</div>
-                        <div className="text-xs text-text-grey">
-                          {category.attributes.length} attribute{category.attributes.length === 1 ? "" : "s"}
-                          {" · "}
-                          {category.services.length} service{category.services.length === 1 ? "" : "s"}
-                        </div>
-                      </div>
-                      <Badge variant={category.isActive ? "green" : "grey"}>{category.isActive ? "Active" : "Disabled"}</Badge>
+                      {category.name.charAt(0).toUpperCase()}
                     </button>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div>
+                  <div className="mb-3 flex items-center gap-2">
+                    {selected && (
+                      <button
+                        type="button"
+                        onClick={() => setListExpanded(false)}
+                        aria-label="Collapse category list"
+                        className="hidden shrink-0 rounded-md border border-border bg-white px-2.5 py-2 text-text-grey hover:bg-surface-input lg:block"
+                      >
+                        ☰
+                      </button>
+                    )}
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search categories…"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm"
+                    />
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")}
+                      className="shrink-0 rounded-md border border-border px-2 py-2 text-sm"
+                    >
+                      <option value="ALL">All status</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Disabled</option>
+                    </select>
+                  </div>
+
+                  <p className="mb-2 text-xs font-semibold text-text-grey">All categories ({filtered.length})</p>
+
+                  <div className="max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-white">
+                    {filtered.length === 0 ? (
+                      <p className="p-6 text-sm text-text-grey">No categories match.</p>
+                    ) : (
+                      filtered.map((category) => (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedId(category.id);
+                            setListExpanded(false);
+                          }}
+                          className={`flex w-full items-center justify-between gap-3 border-b border-neutral-grey-20 px-4 py-3 text-left last:border-b-0 ${
+                            selectedId === category.id ? "bg-brand-primary-soft" : "hover:bg-surface-input"
+                          } ${!category.isActive ? "opacity-60" : ""} ${category.parentId ? "pl-8" : ""}`}
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-bold text-text-dark">{category.name}</div>
+                            <div className="text-xs text-text-grey">
+                              {category.attributes.length} attribute{category.attributes.length === 1 ? "" : "s"}
+                              {" · "}
+                              {category.services.length} service{category.services.length === 1 ? "" : "s"}
+                            </div>
+                          </div>
+                          <Badge variant={category.isActive ? "green" : "grey"}>{category.isActive ? "Active" : "Disabled"}</Badge>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Detail panel */}
