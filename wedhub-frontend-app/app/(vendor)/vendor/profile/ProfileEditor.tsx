@@ -12,21 +12,51 @@ import {
 } from "@/lib/api/vendor-self-client";
 import { EVENTS_COMPLETED_RANGES, type CategorySelf, type LocationSelf, type VendorSelf } from "@/lib/api/vendor-self.types";
 import { formatApiError } from "@/lib/utils/error";
+import { getPublicMediaUrl } from "@/lib/media/url";
+import { Badge } from "@/components/ui/Badge";
 import { AttributesSection, type AttributeValue, type AttributeValueMap } from "./AttributesSection";
 import { LogoCoverPicker } from "./LogoCoverPicker";
 import { ServicesSection } from "./ServicesSection";
 import { SubmitBar } from "./SubmitBar";
 
-const SECTIONS = [
-  { id: "identity", label: "Identity" },
-  { id: "classification", label: "Classification" },
+type TabId =
+  | "basic-info"
+  | "services-categories"
+  | "location"
+  | "pricing-policies"
+  | "contact-social"
+  | "more-details"
+  | "attributes";
+
+const TABS: Array<{ id: TabId; label: string }> = [
+  { id: "basic-info", label: "Basic Info" },
+  { id: "services-categories", label: "Services & Categories" },
   { id: "location", label: "Location" },
-  { id: "commercial", label: "Commercial" },
-  { id: "trust", label: "Trust" },
-  { id: "contact", label: "Contact" },
-  { id: "operational", label: "Operational" },
+  { id: "pricing-policies", label: "Pricing & Policies" },
+  { id: "contact-social", label: "Contact & Social" },
+  { id: "more-details", label: "More Details" },
   { id: "attributes", label: "Category Details" },
-] as const;
+];
+
+// Same map as app/(public)/vendors/[slug]/page.tsx's VERIFICATION_LABEL —
+// duplicated rather than imported since that one lives in a Server Component
+// page file, not a shared module.
+const VERIFICATION_LABEL: Record<string, string> = {
+  UNVERIFIED: "",
+  IDENTITY_VERIFIED: "✓ Identity Verified",
+  BUSINESS_VERIFIED: "✓ Business Verified",
+  PLATFORM_VERIFIED: "✓ Platform Verified",
+};
+
+// Mirrors wedhub-backend's vendor.completeness.ts CHECKS — re-derived
+// against the form's current (possibly unsaved) state so the sidebar
+// checklist updates live as the vendor types, since the backend only ever
+// returns the single profileCompleteness score, never a live per-item
+// breakdown.
+interface CompletionCheck {
+  label: string;
+  met: boolean;
+}
 
 function toStringList(csv: string): string[] {
   return csv
@@ -113,8 +143,34 @@ export function ProfileEditor({
   const [error, setError] = useState("");
   const [categoryChangeWarningAcked, setCategoryChangeWarningAcked] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<TabId>("basic-info");
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(
+    profile?.logoMedia?.optimizedObjectKey || profile?.logoMedia?.originalObjectKey
+      ? getPublicMediaUrl((profile.logoMedia.optimizedObjectKey ?? profile.logoMedia.originalObjectKey) as string)
+      : null,
+  );
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(
+    profile?.coverMedia?.optimizedObjectKey || profile?.coverMedia?.originalObjectKey
+      ? getPublicMediaUrl((profile.coverMedia.optimizedObjectKey ?? profile.coverMedia.originalObjectKey) as string)
+      : null,
+  );
+
   const primaryCategoryChanged = vendor.status === "APPROVED" && primaryCategoryId !== primaryCategory?.id;
   const selectedCategory = categories.find((c) => c.id === primaryCategoryId) ?? null;
+
+  const completionChecks: CompletionCheck[] = [
+    { label: "Business name", met: vendor.businessName.length > 0 },
+    { label: "Short description", met: !!shortDescription },
+    { label: "Full description", met: !!description },
+    { label: "Primary category", met: !!primaryCategoryId },
+    { label: "Primary city", met: !!cityId },
+    { label: "At least one service area", met: serviceAreaIds.size > 0 },
+    { label: "Pricing information", met: !!startingPrice || customQuoteAvailable },
+    { label: "At least one package", met: vendor.packages.length > 0 },
+    { label: "At least one service", met: selectedServiceIds.size > 0 },
+    { label: "A contact method", met: !!(phone || email || website) },
+    { label: "Category attribute values", met: Object.keys(attributeValues).length > 0 },
+  ];
 
   function isAttributeValueEmpty(value: AttributeValue | undefined): boolean {
     if (value === undefined) return true;
@@ -289,22 +345,26 @@ export function ProfileEditor({
         </div>
       </div>
 
-      <div className="grid grid-cols-[220px_1fr] gap-7 max-[1000px]:grid-cols-1">
-        <nav className="sticky top-24 flex h-fit flex-col gap-0.5 max-[1000px]:static max-[1000px]:flex-row max-[1000px]:overflow-x-auto no-scrollbar whitespace-nowrap pb-2">
-          {SECTIONS.map((section) => (
-            <a
-              key={section.id}
-              href={`#${section.id}`}
-              className="shrink-0 rounded-md border-l-2 border-transparent px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-[13px] font-semibold text-text-grey no-underline hover:bg-surface-input hover:text-text-dark"
-            >
-              {section.label}
-            </a>
-          ))}
-        </nav>
-
+      <div className="grid grid-cols-[1fr_320px] gap-7 max-[1100px]:grid-cols-1">
         <div className="flex flex-col gap-5">
-          <section id="identity" className="scroll-mt-24 rounded-xl border border-border bg-white p-6">
-            <h3 className="mb-4 text-base font-bold">Identity</h3>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveTab(t.id)}
+                className={`shrink-0 rounded-full px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-[13px] font-bold ${
+                  activeTab === t.id ? "bg-jet-black-90 text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === "basic-info" && (
+          <section className="rounded-xl border border-border bg-white p-6">
+            <h3 className="mb-4 text-base font-bold">Basic information</h3>
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Business name</span>
               <input value={vendor.businessName} disabled className="w-full rounded-md border border-border bg-surface-input px-3 py-2.5 text-sm text-text-grey" />
@@ -316,6 +376,7 @@ export function ProfileEditor({
                 mediaId={logoMediaId}
                 initialObjectKey={profile?.logoMedia?.optimizedObjectKey ?? profile?.logoMedia?.originalObjectKey ?? null}
                 onChange={setLogoMediaId}
+                onPreviewChange={setLogoPreviewUrl}
                 mediaType="LOGO"
                 shape="square"
               />
@@ -326,6 +387,7 @@ export function ProfileEditor({
                 mediaId={coverMediaId}
                 initialObjectKey={profile?.coverMedia?.optimizedObjectKey ?? profile?.coverMedia?.originalObjectKey ?? null}
                 onChange={setCoverMediaId}
+                onPreviewChange={setCoverPreviewUrl}
                 mediaType="COVER"
                 shape="wide"
               />
@@ -353,9 +415,11 @@ export function ProfileEditor({
               <p className="mt-1 text-xs text-text-grey">Shown in the About section of your public profile.</p>
             </label>
           </section>
+          )}
 
-          <section id="classification" className="scroll-mt-24 rounded-xl border border-border bg-white p-6">
-            <h3 className="mb-4 text-base font-bold">Classification</h3>
+          {activeTab === "services-categories" && (
+          <section className="rounded-xl border border-border bg-white p-6">
+            <h3 className="mb-4 text-base font-bold">Services &amp; categories</h3>
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Category</span>
               <select
@@ -404,8 +468,10 @@ export function ProfileEditor({
               />
             </label>
           </section>
+          )}
 
-          <section id="location" className="scroll-mt-24 rounded-xl border border-border bg-white p-6">
+          {activeTab === "location" && (
+          <section className="rounded-xl border border-border bg-white p-6">
             <h3 className="mb-4 text-base font-bold">Location</h3>
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">City</span>
@@ -470,9 +536,11 @@ export function ProfileEditor({
               </div>
             </fieldset>
           </section>
+          )}
 
-          <section id="commercial" className="scroll-mt-24 rounded-xl border border-border bg-white p-6">
-            <h3 className="mb-4 text-base font-bold">Commercial</h3>
+          {activeTab === "pricing-policies" && (
+          <section className="rounded-xl border border-border bg-white p-6">
+            <h3 className="mb-4 text-base font-bold">Pricing &amp; policies</h3>
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Starting price (₹)</span>
               <input type="number" min="0" value={startingPrice} onChange={(e) => setStartingPrice(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
@@ -523,46 +591,11 @@ export function ProfileEditor({
               </a>
             </p>
           </section>
+          )}
 
-          <section id="trust" className="scroll-mt-24 rounded-xl border border-border bg-white p-6">
-            <h3 className="mb-4 text-base font-bold">Trust &amp; credibility</h3>
-            <div className="mb-3.5">
-              <span className="mb-1.5 block text-[13px] font-bold">Verification status</span>
-              <span className="inline-block rounded-full bg-neutral-grey-20 px-2.5 py-1 text-[11px] font-bold uppercase text-text-grey">
-                {vendor.verificationLevel.replace(/_/g, " ")}
-              </span>
-              <p className="mt-1.5 text-xs text-text-grey">Vendors cannot self-verify — contact support to request verification.</p>
-            </div>
-            <label className="mb-3.5 block text-sm">
-              <span className="mb-1.5 block font-bold text-[13px]">Years of experience</span>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={yearsExperience}
-                onChange={(e) => setYearsExperience(e.target.value)}
-                className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1.5 block font-bold text-[13px]">Events completed</span>
-              <select
-                value={eventsCompletedRange}
-                onChange={(e) => setEventsCompletedRange(e.target.value)}
-                className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
-              >
-                <option value="">Select…</option>
-                {EVENTS_COMPLETED_RANGES.map((range) => (
-                  <option key={range} value={range}>
-                    {range}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
-
-          <section id="contact" className="scroll-mt-24 rounded-xl border border-border bg-white p-6">
-            <h3 className="mb-4 text-base font-bold">Contact</h3>
+          {activeTab === "contact-social" && (
+          <section className="rounded-xl border border-border bg-white p-6">
+            <h3 className="mb-4 text-base font-bold">Contact &amp; social</h3>
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Website</span>
               <input
@@ -603,8 +636,48 @@ export function ProfileEditor({
               <input value={youtube} onChange={(e) => setYoutube(e.target.value)} placeholder="youtube.com/@yourchannel" className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
             </label>
           </section>
+          )}
 
-          <section id="operational" className="scroll-mt-24 rounded-xl border border-border bg-white p-6">
+          {activeTab === "more-details" && (
+          <>
+          <section className="rounded-xl border border-border bg-white p-6">
+            <h3 className="mb-4 text-base font-bold">Trust &amp; credibility</h3>
+            <div className="mb-3.5">
+              <span className="mb-1.5 block text-[13px] font-bold">Verification status</span>
+              <span className="inline-block rounded-full bg-neutral-grey-20 px-2.5 py-1 text-[11px] font-bold uppercase text-text-grey">
+                {vendor.verificationLevel.replace(/_/g, " ")}
+              </span>
+              <p className="mt-1.5 text-xs text-text-grey">Vendors cannot self-verify — contact support to request verification.</p>
+            </div>
+            <label className="mb-3.5 block text-sm">
+              <span className="mb-1.5 block font-bold text-[13px]">Years of experience</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={yearsExperience}
+                onChange={(e) => setYearsExperience(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-bold text-[13px]">Events completed</span>
+              <select
+                value={eventsCompletedRange}
+                onChange={(e) => setEventsCompletedRange(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+              >
+                <option value="">Select…</option>
+                {EVENTS_COMPLETED_RANGES.map((range) => (
+                  <option key={range} value={range}>
+                    {range}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </section>
+
+          <section className="rounded-xl border border-border bg-white p-6">
             <h3 className="mb-4 text-base font-bold">Operational</h3>
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Business hours</span>
@@ -628,20 +701,81 @@ export function ProfileEditor({
               <input type="number" min="0" max="10000" value={teamSize} onChange={(e) => setTeamSize(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
             </label>
           </section>
+          </>
+          )}
 
-          {selectedCategory && selectedCategory.attributes.length > 0 && (
-            <section id="attributes" className="scroll-mt-24 rounded-xl border border-border bg-white p-6">
-              <h3 className="mb-4 text-base font-bold">{selectedCategory.name} details</h3>
-              <AttributesSection
-                attributes={selectedCategory.attributes}
-                values={attributeValues}
-                onChange={setAttributeValues}
-                mediaByAttributeId={vendor.mediaByAttributeId}
-              />
+          {activeTab === "attributes" && (
+            <section className="rounded-xl border border-border bg-white p-6">
+              <h3 className="mb-4 text-base font-bold">{selectedCategory ? `${selectedCategory.name} details` : "Category details"}</h3>
+              {selectedCategory && selectedCategory.attributes.length > 0 ? (
+                <AttributesSection
+                  attributes={selectedCategory.attributes}
+                  values={attributeValues}
+                  onChange={setAttributeValues}
+                  mediaByAttributeId={vendor.mediaByAttributeId}
+                />
+              ) : (
+                <p className="text-sm text-text-grey">This category has no additional profile fields configured.</p>
+              )}
             </section>
           )}
 
           <SubmitBar vendorStatus={vendor.status} onSaveChanges={() => handleSave()} />
+        </div>
+
+        <div className="flex flex-col gap-5 max-[1100px]:order-first">
+          <div className="sticky top-24 flex flex-col gap-5">
+            <div className="overflow-hidden rounded-xl border border-border bg-white">
+              <div
+                className="h-24 bg-surface-input bg-cover bg-center"
+                style={coverPreviewUrl ? { backgroundImage: `url(${coverPreviewUrl})` } : undefined}
+              />
+              <div className="px-4 pb-4">
+                <div className="-mt-8 mb-2 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-surface-input text-xl font-bold text-text-grey shadow-sm">
+                  {logoPreviewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={logoPreviewUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    vendor.businessName.charAt(0)
+                  )}
+                </div>
+                <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                  <h3 className="text-sm font-bold">{vendor.businessName}</h3>
+                  {VERIFICATION_LABEL[vendor.verificationLevel] && <Badge variant="green">{VERIFICATION_LABEL[vendor.verificationLevel]}</Badge>}
+                </div>
+                {shortDescription && <p className="mb-2 text-xs text-text-grey">{shortDescription}</p>}
+                <p className="text-xs text-text-grey">
+                  {cities.find((c) => c.id === cityId)?.name}
+                  {cityId && primaryCategoryId && " · "}
+                  {categories.find((c) => c.id === primaryCategoryId)?.name}
+                </p>
+                <a
+                  href={`/vendors/${vendor.slug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 block rounded-md border border-border px-3 py-2 text-center text-xs font-bold text-text-dark no-underline hover:bg-surface-input"
+                >
+                  View public profile
+                </a>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-white p-5">
+              <h3 className="mb-1 text-sm font-bold">Profile completion</h3>
+              <p className="mb-3 text-xs text-text-grey">{vendor.profileCompleteness}% complete</p>
+              <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-surface-input">
+                <div className="h-full rounded-full bg-brand-primary" style={{ width: `${vendor.profileCompleteness}%` }} />
+              </div>
+              <ul className="flex flex-col gap-1.5">
+                {completionChecks.map((check) => (
+                  <li key={check.label} className="flex items-center gap-2 text-xs">
+                    <span className={check.met ? "text-emerald-600" : "text-text-grey"}>{check.met ? "✓" : "○"}</span>
+                    <span className={check.met ? "text-text-dark" : "text-text-grey"}>{check.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
     </form>

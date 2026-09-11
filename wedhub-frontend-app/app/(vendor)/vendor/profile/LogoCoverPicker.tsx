@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { confirmMediaUpload, createMediaUploadRequest } from "@/lib/api/vendor-self-client";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { compressImageIfPossible } from "@/lib/media/compress-image";
@@ -21,6 +21,7 @@ export function LogoCoverPicker({
   mediaId,
   initialObjectKey,
   onChange,
+  onPreviewChange,
   mediaType,
   shape,
 }: {
@@ -29,6 +30,8 @@ export function LogoCoverPicker({
   /** The current media's resolvable object key, if one was already set — the id alone can't be rendered without a fetch, so the parent passes this from the initial VendorProfile.logoMedia/coverMedia join. */
   initialObjectKey: string | null;
   onChange: (mediaId: string | null) => void;
+  /** Fires whenever the resolved preview URL changes (mount, fresh upload, remove) — lets a parent mirror the live (possibly unsaved) image, e.g. a profile preview card, without re-deriving the upload/object-key logic itself. */
+  onPreviewChange?: (url: string | null) => void;
   mediaType: Extract<MediaType, "LOGO" | "COVER" | "PACKAGE_PHOTO" | "CATEGORY_ATTRIBUTE_PHOTO">;
   shape: "square" | "wide";
 }) {
@@ -38,6 +41,11 @@ export function LogoCoverPicker({
   );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    onPreviewChange?.(previewUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewUrl]);
 
   async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0];

@@ -12,15 +12,17 @@ import { CategoryServicesPanel } from "./CategoryServicesPanel";
 
 /**
  * Categories & Locations admin page (Frontend Arch Phase 9, extended
- * 2026-09-03, redesigned 2026-09-07 to a master-detail layout — category
- * list on the left, a full editor panel for the selected category on the
- * right, per a reference screenshot's UX). Same underlying data/actions as
- * before (create, rename/describe, enable/disable, feature on homepage,
- * store toggle, homepage image & price, attributes, services) — nothing
- * added or removed, only rearranged out of the previous flat
- * accordion-style row list. Real gaps vs. any mockup, confirmed via
- * backend research: no reorder-specific endpoint (dragging isn't wired —
- * sortOrder edits would need a dedicated numeric input).
+ * 2026-09-03, redesigned 2026-09-07 to a master-detail layout, redesigned
+ * again 2026-09-11 to a stat-card + tabbed detail panel per a reference
+ * screenshot's UX). Same underlying data/actions as before (create,
+ * rename/describe, enable/disable, feature on homepage, store toggle,
+ * homepage image & price, attributes, services) — nothing added or removed,
+ * only rearranged. Real gaps vs. any mockup, confirmed via backend research:
+ * no reorder-specific endpoint (dragging isn't wired — sortOrder edits would
+ * need a dedicated numeric input); no per-category location assignment or
+ * per-category SEO override exists, so this redesign deliberately does not
+ * add "Locations"/"SEO" tabs inside a category's detail panel — Locations
+ * stays its own separate top-level tab, same as before.
  *
  * Both GET /categories and GET /locations are the exact same public
  * endpoints Phase 2 built against — includeInactive=true is only honored
@@ -75,6 +77,7 @@ export function CatalogBoard({
   const featured = categories
     .filter((c) => c.isFeaturedOnHomepage)
     .sort((a, b) => a.homepageSortOrder - b.homepageSortOrder);
+  const totalServices = categories.reduce((n, c) => n + c.services.length, 0);
 
   async function handleCreateCategory(event: React.FormEvent) {
     event.preventDefault();
@@ -216,6 +219,29 @@ export function CatalogBoard({
 
       {tab === "categories" && (
         <>
+          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-border bg-white p-4">
+              <p className="text-xs font-semibold text-text-grey">Total categories</p>
+              <p className="mt-1 text-2xl font-bold">{categories.length}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-white p-4">
+              <p className="text-xs font-semibold text-text-grey">Featured on homepage</p>
+              <p className="mt-1 text-2xl font-bold">{featured.length}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-white p-4">
+              <p className="text-xs font-semibold text-text-grey">Total services</p>
+              <p className="mt-1 text-2xl font-bold">{totalServices}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTab("locations")}
+              className="rounded-xl border border-border bg-white p-4 text-left hover:border-brand-primary hover:bg-surface-input"
+            >
+              <p className="text-xs font-semibold text-text-grey">Active locations</p>
+              <p className="mt-1 text-2xl font-bold">{initialCountries.length}</p>
+            </button>
+          </div>
+
           <div className="mb-5 rounded-xl border border-border bg-brand-primary-soft/40 p-5">
             <h2 className="text-sm font-bold">Homepage-featured categories ({featured.length})</h2>
             <p className="mt-0.5 text-xs text-text-grey">
@@ -332,6 +358,28 @@ export function CatalogBoard({
   );
 }
 
+type DetailTab = "overview" | "attributes" | "services" | "homepage" | "settings";
+
+function ToggleSwitch({
+  checked,
+  disabled,
+  onChange,
+  activeColorClassName = "peer-checked:bg-brand-primary",
+}: {
+  checked: boolean;
+  disabled: boolean;
+  onChange: () => void;
+  activeColorClassName?: string;
+}) {
+  return (
+    <span className="relative inline-flex h-[22px] w-10 flex-shrink-0 cursor-pointer items-center">
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={onChange} className="peer sr-only" />
+      <span className={`absolute inset-0 rounded-full bg-border transition-colors ${activeColorClassName}`} />
+      <span className="absolute left-[3px] h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-[18px]" />
+    </span>
+  );
+}
+
 function CategoryDetailPanel({
   category,
   pending,
@@ -355,42 +403,49 @@ function CategoryDetailPanel({
   onAttributesChange: (attributes: Category["attributes"]) => void;
   onServicesChange: (services: Category["services"]) => void;
 }) {
+  const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [name, setName] = useState(category.name);
   const [description, setDescription] = useState(category.description ?? "");
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [imageUrlDraft, setImageUrlDraft] = useState<string | null>(category.imageUrl);
   const [priceDraft, setPriceDraft] = useState(category.startingPriceLabel ?? "");
 
+  const TABS: Array<{ id: DetailTab; label: string }> = [
+    { id: "overview", label: "Overview" },
+    { id: "attributes", label: `Attributes (${category.attributes.length})` },
+    { id: "services", label: `Services (${category.services.length})` },
+    { id: "homepage", label: "Homepage" },
+    { id: "settings", label: "Settings" },
+  ];
+
   return (
     <div className="flex flex-col gap-5">
-      <div className="rounded-xl border border-border bg-white p-5">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
+      <div className="rounded-xl border border-border bg-white">
+        <div
+          className="flex h-32 items-end rounded-t-xl bg-surface-input bg-cover bg-center sm:h-40"
+          style={category.imageUrl ? { backgroundImage: `url(${category.imageUrl})` } : undefined}
+        >
+          <div className="flex w-full items-center justify-between gap-3 p-4">
             <button
               type="button"
               onClick={onBack}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-text-grey hover:bg-surface-input lg:hidden"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-text-grey hover:bg-surface-input lg:hidden"
               aria-label="Back to category list"
             >
               ←
             </button>
-            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md border border-border bg-surface-input">
-              {category.imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={category.imageUrl} alt="" className="h-full w-full object-cover" />
-              )}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-start justify-between gap-3 p-5">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="truncate text-base font-bold">{category.name}</h2>
+              <Badge variant={category.isActive ? "green" : "grey"}>{category.isActive ? "Active" : "Disabled"}</Badge>
             </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-base font-bold">{category.name}</h2>
-                <Badge variant={category.isActive ? "green" : "grey"}>{category.isActive ? "Active" : "Disabled"}</Badge>
-              </div>
-              <p className="text-xs text-text-grey">
-                {category.attributes.length} attribute{category.attributes.length === 1 ? "" : "s"} · {category.services.length} service
-                {category.services.length === 1 ? "" : "s"}
-                {category.isFeaturedOnHomepage && " · Featured on homepage"}
-              </p>
-            </div>
+            <p className="text-xs text-text-grey">
+              {category.attributes.length} attribute{category.attributes.length === 1 ? "" : "s"} · {category.services.length} service
+              {category.services.length === 1 ? "" : "s"}
+              {category.isFeaturedOnHomepage && " · Featured on homepage"}
+            </p>
           </div>
           <button
             type="button"
@@ -405,111 +460,191 @@ function CategoryDetailPanel({
             {category.isFeaturedOnHomepage ? "Remove from homepage" : "★ Feature on homepage"}
           </button>
         </div>
-
-        <h3 className="mb-3 text-sm font-bold">Basic information</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_180px]">
-          <div className="flex flex-col gap-3">
-            <label className="block text-sm">
-              <span className="mb-1 block text-xs font-semibold text-text-grey">Category name</span>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={150}
-                className="w-full rounded-md border border-border px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-xs font-semibold text-text-grey">Description (optional)</span>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                maxLength={2000}
-                className="min-h-[70px] w-full rounded-md border border-border px-3 py-2 text-sm"
-              />
-            </label>
-          </div>
-          <div>
-            <span className="mb-1 block text-xs font-semibold text-text-grey">Category image (optional)</span>
-            <CategoryImagePicker currentImageUrl={category.imageUrl} onUploaded={(url) => setImageUrlDraft(url)} />
-          </div>
-        </div>
-        <div className="mt-4 flex items-center gap-3">
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => onSaveBasicInfo(name, description)}
-            className="rounded-md bg-brand-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
-          >
-            {pending ? "Saving…" : "Save changes"}
-          </button>
-          <label className="flex items-center gap-2 text-xs text-text-grey">
-            Active
-            <span className="relative inline-flex h-[22px] w-10 flex-shrink-0 cursor-pointer items-center">
-              <input type="checkbox" checked={category.isActive} disabled={pending} onChange={onToggle} className="peer sr-only" />
-              <span className="absolute inset-0 rounded-full bg-border transition-colors peer-checked:bg-brand-primary" />
-              <span className="absolute left-[3px] h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-[18px]" />
-            </span>
-          </label>
-        </div>
       </div>
 
-      <CategoryAttributesPanel categoryId={category.id} attributes={category.attributes} onAttributesChange={onAttributesChange} />
+      <div className="flex gap-2 overflow-x-auto no-scrollbar">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setActiveTab(t.id)}
+            className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold ${
+              activeTab === t.id ? "bg-jet-black-90 text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-      <CategoryServicesPanel categoryId={category.id} services={category.services} onServicesChange={onServicesChange} />
-
-      <div className="rounded-xl border border-border bg-white">
-        <button
-          type="button"
-          onClick={() => setAdvancedOpen((v) => !v)}
-          className="flex w-full items-center justify-between gap-3 p-5 text-left"
-        >
-          <div>
-            <h3 className="text-sm font-bold">Advanced settings</h3>
-            <p className="mt-0.5 text-xs text-text-grey">Homepage image &amp; price, store settings and more</p>
-          </div>
-          <span className={`text-text-grey transition-transform ${advancedOpen ? "rotate-180" : ""}`}>▾</span>
-        </button>
-
-        {advancedOpen && (
-          <div className="border-t border-border p-5">
-            <div className="flex flex-wrap items-end gap-4">
-              <label className="block">
-                <span className="mb-1 block text-xs font-semibold text-text-grey">Starting price label</span>
+      {activeTab === "overview" && (
+        <div className="flex flex-col gap-5">
+          <div className="rounded-xl border border-border bg-white p-5">
+            <h3 className="mb-3 text-sm font-bold">Category information</h3>
+            <div className="flex flex-col gap-3">
+              <label className="block text-sm">
+                <span className="mb-1 block text-xs font-semibold text-text-grey">Category name</span>
                 <input
-                  value={priceDraft}
-                  onChange={(e) => setPriceDraft(e.target.value)}
-                  placeholder="₹ 50,000"
-                  maxLength={60}
-                  className="w-40 rounded-md border border-border px-3 py-1.5 text-xs"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={150}
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm"
                 />
               </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-xs font-semibold text-text-grey">Description (optional)</span>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  maxLength={2000}
+                  className="min-h-[70px] w-full rounded-md border border-border px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block text-xs font-semibold text-text-grey">Category image (optional)</span>
+                <CategoryImagePicker currentImageUrl={category.imageUrl} onUploaded={(url) => setImageUrlDraft(url)} />
+              </label>
+            </div>
+            <div className="mt-4 flex items-center gap-3">
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => onSaveHomepageFields(imageUrlDraft, priceDraft)}
-                className="rounded-md bg-brand-primary px-3.5 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+                onClick={() => onSaveBasicInfo(name, description)}
+                className="rounded-md bg-brand-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
               >
-                {pending ? "Saving…" : "Save"}
+                {pending ? "Saving…" : "Save changes"}
+              </button>
+              <label className="flex items-center gap-2 text-xs text-text-grey">
+                Active
+                <ToggleSwitch checked={category.isActive} disabled={pending} onChange={onToggle} />
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-white p-5">
+            <h3 className="mb-3 text-sm font-bold">Quick actions</h3>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <button
+                type="button"
+                onClick={() => setActiveTab("attributes")}
+                className="rounded-xl border border-border bg-white p-4 text-left hover:border-brand-primary hover:bg-surface-input"
+              >
+                <p className="text-sm font-bold">Manage attributes</p>
+                <p className="mt-0.5 text-xs text-text-grey">Add or edit vendor profile fields</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("services")}
+                className="rounded-xl border border-border bg-white p-4 text-left hover:border-brand-primary hover:bg-surface-input"
+              >
+                <p className="text-sm font-bold">Add services</p>
+                <p className="mt-0.5 text-xs text-text-grey">Create offerings for vendors</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("homepage")}
+                className="rounded-xl border border-border bg-white p-4 text-left hover:border-brand-primary hover:bg-surface-input"
+              >
+                <p className="text-sm font-bold">Homepage settings</p>
+                <p className="mt-0.5 text-xs text-text-grey">Feature on the homepage carousel</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("settings")}
+                className="rounded-xl border border-border bg-white p-4 text-left hover:border-brand-primary hover:bg-surface-input"
+              >
+                <p className="text-sm font-bold">Settings</p>
+                <p className="mt-0.5 text-xs text-text-grey">Store and other category settings</p>
               </button>
             </div>
-
-            <label className="mt-4 flex items-center gap-2 text-xs text-text-grey cursor-pointer" title="Enable/Disable Vendor Store feature for vendors in this category">
-              Store enabled
-              <span className="relative inline-flex h-[22px] w-10 flex-shrink-0 cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  checked={Boolean(category.hasStoreEnabled)}
-                  disabled={pending}
-                  onChange={onToggleStore}
-                  className="peer sr-only"
-                />
-                <span className="absolute inset-0 rounded-full bg-border transition-colors peer-checked:bg-emerald-600" />
-                <span className="absolute left-[3px] h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-[18px]" />
-              </span>
-            </label>
           </div>
-        )}
-      </div>
+
+          {category.isFeaturedOnHomepage && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-600/30 bg-emerald-600/10 p-4">
+              <p className="text-sm font-semibold text-emerald-800">This category is featured on the homepage.</p>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={onToggleFeatured}
+                className="shrink-0 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-bold text-text-dark hover:bg-surface-input disabled:opacity-60"
+              >
+                Remove from homepage
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "attributes" && (
+        <CategoryAttributesPanel categoryId={category.id} attributes={category.attributes} onAttributesChange={onAttributesChange} />
+      )}
+
+      {activeTab === "services" && (
+        <CategoryServicesPanel categoryId={category.id} services={category.services} onServicesChange={onServicesChange} />
+      )}
+
+      {activeTab === "homepage" && (
+        <div className="rounded-xl border border-border bg-white p-5">
+          <h3 className="text-sm font-bold">Homepage settings</h3>
+          <p className="mt-0.5 text-xs text-text-grey">Feature this category on the homepage carousel/bento grid.</p>
+
+          <div className="mt-4">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={onToggleFeatured}
+              className={`rounded-md px-3 py-1.5 text-xs font-bold disabled:opacity-60 ${
+                category.isFeaturedOnHomepage
+                  ? "border border-border bg-white text-text-dark hover:bg-surface-input"
+                  : "bg-brand-primary text-white hover:bg-brand-primary-hover"
+              }`}
+            >
+              {category.isFeaturedOnHomepage ? "Remove from homepage" : "★ Feature on homepage"}
+            </button>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-end gap-4">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-text-grey">Starting price label</span>
+              <input
+                value={priceDraft}
+                onChange={(e) => setPriceDraft(e.target.value)}
+                placeholder="₹ 50,000"
+                maxLength={60}
+                className="w-40 rounded-md border border-border px-3 py-1.5 text-xs"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onSaveHomepageFields(imageUrlDraft, priceDraft)}
+              className="rounded-md bg-brand-primary px-3.5 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+            >
+              {pending ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "settings" && (
+        <div className="rounded-xl border border-border bg-white p-5">
+          <h3 className="text-sm font-bold">Settings</h3>
+          <p className="mt-0.5 text-xs text-text-grey">Store and other category settings</p>
+
+          <label
+            className="mt-4 flex items-center gap-2 text-xs text-text-grey cursor-pointer"
+            title="Enable/Disable Vendor Store feature for vendors in this category"
+          >
+            Store enabled
+            <ToggleSwitch
+              checked={Boolean(category.hasStoreEnabled)}
+              disabled={pending}
+              onChange={onToggleStore}
+              activeColorClassName="peer-checked:bg-emerald-600"
+            />
+          </label>
+        </div>
+      )}
     </div>
   );
 }
