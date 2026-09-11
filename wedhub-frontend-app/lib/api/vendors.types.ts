@@ -55,6 +55,7 @@ export interface CategoryAttribute {
   options: string[] | null;
   isFilterable: boolean;
   isComparable: boolean;
+  isRequired: boolean;
   sortOrder: number;
 }
 

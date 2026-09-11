@@ -295,6 +295,7 @@ model CategoryAttribute {
   options      Json?
   isFilterable Boolean           @default(false) @map("is_filterable")
   isComparable Boolean           @default(false) @map("is_comparable")
+  isRequired   Boolean           @default(false) @map("is_required")
   sortOrder    Int               @default(0) @map("sort_order")
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")

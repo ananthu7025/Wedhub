@@ -5,6 +5,7 @@ import type {
   CreateAttributeBody,
   CreateCategoryBody,
   CreateServiceBody,
+  ReorderAttributesBody,
   UpdateAttributeBody,
   UpdateCategoryBody,
   UpdateServiceBody,
@@ -68,6 +69,7 @@ export async function createAttribute(req: Request, res: Response): Promise<void
     options: body.options,
     isFilterable: body.isFilterable,
     isComparable: body.isComparable,
+    isRequired: body.isRequired,
   });
   res.status(201).json(successResponse(attribute));
 }
@@ -79,6 +81,7 @@ export async function updateAttribute(req: Request, res: Response): Promise<void
     options: body.options,
     isFilterable: body.isFilterable,
     isComparable: body.isComparable,
+    isRequired: body.isRequired,
     sortOrder: body.sortOrder,
   });
   res.json(successResponse(attribute));
@@ -87,6 +90,12 @@ export async function updateAttribute(req: Request, res: Response): Promise<void
 export async function deleteAttribute(req: Request, res: Response): Promise<void> {
   await categoriesService.deleteAttribute(req.params.attributeId as string);
   res.json(successResponse({ deleted: true }));
+}
+
+export async function reorderAttributes(req: Request, res: Response): Promise<void> {
+  const body = req.body as ReorderAttributesBody;
+  const attributes = await categoriesService.reorderAttributes(req.params.id as string, body.attributeIds);
+  res.json(successResponse(attributes));
 }
 
 export async function createService(req: Request, res: Response): Promise<void> {

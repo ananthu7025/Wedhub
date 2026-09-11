@@ -39,6 +39,7 @@ export const createAttributeSchema = z
     options: z.array(z.string().min(1)).min(1).max(50).optional(),
     isFilterable: z.boolean().optional(),
     isComparable: z.boolean().optional(),
+    isRequired: z.boolean().optional(),
   })
   .superRefine((value, ctx) => {
     const requiresOptions = optionsRequiringTypes.has(value.dataType);
@@ -63,7 +64,12 @@ export const updateAttributeSchema = z.object({
   options: z.array(z.string().min(1)).min(1).max(50).optional(),
   isFilterable: z.boolean().optional(),
   isComparable: z.boolean().optional(),
+  isRequired: z.boolean().optional(),
   sortOrder: z.coerce.number().int().optional(),
+});
+
+export const reorderAttributesSchema = z.object({
+  attributeIds: z.array(z.string().uuid()).min(1).max(200),
 });
 
 export const createServiceSchema = z.object({
@@ -81,5 +87,6 @@ export type CreateCategoryBody = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryBody = z.infer<typeof updateCategorySchema>;
 export type CreateAttributeBody = z.infer<typeof createAttributeSchema>;
 export type UpdateAttributeBody = z.infer<typeof updateAttributeSchema>;
+export type ReorderAttributesBody = z.infer<typeof reorderAttributesSchema>;
 export type CreateServiceBody = z.infer<typeof createServiceSchema>;
 export type UpdateServiceBody = z.infer<typeof updateServiceSchema>;

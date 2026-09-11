@@ -108,6 +108,14 @@ export function ProfileEditor({
   const [categoryChangeWarningAcked, setCategoryChangeWarningAcked] = useState(false);
 
   const primaryCategoryChanged = vendor.status === "APPROVED" && primaryCategoryId !== primaryCategory?.id;
+  const selectedCategory = categories.find((c) => c.id === primaryCategoryId) ?? null;
+
+  function isAttributeValueEmpty(value: string | number | boolean | string[] | undefined): boolean {
+    if (value === undefined) return true;
+    if (typeof value === "string") return value.trim().length === 0;
+    if (Array.isArray(value)) return value.length === 0;
+    return false; // numbers and booleans (including false/0) count as filled in
+  }
 
   // Returns whether the save succeeded, so SubmitBar can save pending
   // changes first and only proceed to actually submit if that save went
@@ -146,6 +154,19 @@ export function ProfileEditor({
     if (trimmedPhone && trimmedPhone.length < 6) {
       setStatus("error");
       setError("Phone number must be at least 6 characters.");
+      return false;
+    }
+
+    // Mirrors the backend's setAttributeValues check (vendor.service.ts) so
+    // a missing required category field surfaces immediately, not after a
+    // round trip — admins mark fields required per category in
+    // CategoryAttributesPanel.
+    const missingRequiredAttributes = (selectedCategory?.attributes ?? []).filter(
+      (attribute) => attribute.isRequired && isAttributeValueEmpty(attributeValues[attribute.id]),
+    );
+    if (missingRequiredAttributes.length > 0) {
+      setStatus("error");
+      setError(`Missing required field(s): ${missingRequiredAttributes.map((a) => a.label).join(", ")}`);
       return false;
     }
 
@@ -233,8 +254,6 @@ export function ProfileEditor({
     router.refresh();
     return true;
   }
-
-  const selectedCategory = categories.find((c) => c.id === primaryCategoryId) ?? null;
 
   return (
     <form onSubmit={handleSave}>

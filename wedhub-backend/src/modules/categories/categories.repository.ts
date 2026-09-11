@@ -95,12 +95,14 @@ export function createAttribute(
     options: string[] | undefined;
     isFilterable: boolean | undefined;
     isComparable: boolean | undefined;
+    isRequired: boolean | undefined;
   },
 ) {
   const fields = omitUndefined({
     options: data.options as Prisma.InputJsonValue | undefined,
     isFilterable: data.isFilterable,
     isComparable: data.isComparable,
+    isRequired: data.isRequired,
   });
   return prisma.categoryAttribute.create({
     data: {
@@ -117,11 +119,16 @@ export function findAttributeById(id: string) {
   return prisma.categoryAttribute.findUnique({ where: { id } });
 }
 
+export function findAttributesByCategoryId(categoryId: string) {
+  return prisma.categoryAttribute.findMany({ where: { categoryId }, orderBy: { sortOrder: "asc" } });
+}
+
 export interface AttributeUpdateFields {
   label: string | undefined;
   options: string[] | undefined;
   isFilterable: boolean | undefined;
   isComparable: boolean | undefined;
+  isRequired: boolean | undefined;
   sortOrder: number | undefined;
 }
 
@@ -131,6 +138,7 @@ export function updateAttribute(id: string, data: AttributeUpdateFields) {
     options: data.options as Prisma.InputJsonValue | undefined,
     isFilterable: data.isFilterable,
     isComparable: data.isComparable,
+    isRequired: data.isRequired,
     sortOrder: data.sortOrder,
   });
   return prisma.categoryAttribute.update({ where: { id }, data: fields });
@@ -138,6 +146,20 @@ export function updateAttribute(id: string, data: AttributeUpdateFields) {
 
 export function deleteAttribute(id: string) {
   return prisma.categoryAttribute.delete({ where: { id } });
+}
+
+// Persists the admin's drag-free reorder (up/down move) of a category's
+// attribute list — each attribute's sortOrder is set to its index in the
+// given array, all-or-nothing so a partial reorder never leaves gaps.
+export function reorderAttributes(categoryId: string, attributeIds: string[]) {
+  return prisma.$transaction(
+    attributeIds.map((id, index) =>
+      prisma.categoryAttribute.update({
+        where: { id, categoryId },
+        data: { sortOrder: index },
+      }),
+    ),
+  );
 }
 
 export function createService(categoryId: string, data: { name: string; slug: string; description: string | undefined }) {

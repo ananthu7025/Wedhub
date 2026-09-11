@@ -20,6 +20,15 @@ export function AttributesSection({
     onChange({ ...values, [attributeId]: value });
   }
 
+  function labelWithMarker(attribute: CategoryAttributeSelf) {
+    return (
+      <>
+        {attribute.label}
+        {attribute.isRequired && <span className="text-red"> *</span>}
+      </>
+    );
+  }
+
   return (
     <div className="grid grid-cols-2 gap-3.5 max-[700px]:grid-cols-1">
       {attributes.map((attribute) => {
@@ -28,7 +37,7 @@ export function AttributesSection({
         if (attribute.dataType === "TEXT") {
           return (
             <label key={attribute.id} className="block text-sm">
-              <span className="mb-1.5 block font-bold text-[13px]">{attribute.label}</span>
+              <span className="mb-1.5 block font-bold text-[13px]">{labelWithMarker(attribute)}</span>
               <input
                 value={typeof value === "string" ? value : ""}
                 onChange={(e) => setValue(attribute.id, e.target.value)}
@@ -41,7 +50,7 @@ export function AttributesSection({
         if (attribute.dataType === "NUMBER") {
           return (
             <label key={attribute.id} className="block text-sm">
-              <span className="mb-1.5 block font-bold text-[13px]">{attribute.label}</span>
+              <span className="mb-1.5 block font-bold text-[13px]">{labelWithMarker(attribute)}</span>
               <input
                 type="number"
                 value={typeof value === "number" ? value : ""}
@@ -55,7 +64,7 @@ export function AttributesSection({
         if (attribute.dataType === "BOOLEAN") {
           return (
             <label key={attribute.id} className="flex items-center justify-between gap-4 py-2 text-sm">
-              <span className="text-[13px] font-bold">{attribute.label}</span>
+              <span className="text-[13px] font-bold">{labelWithMarker(attribute)}</span>
               <input
                 type="checkbox"
                 checked={value === true}
@@ -69,7 +78,7 @@ export function AttributesSection({
         if (attribute.dataType === "SELECT") {
           return (
             <label key={attribute.id} className="block text-sm">
-              <span className="mb-1.5 block font-bold text-[13px]">{attribute.label}</span>
+              <span className="mb-1.5 block font-bold text-[13px]">{labelWithMarker(attribute)}</span>
               <select
                 value={typeof value === "string" ? value : ""}
                 onChange={(e) => setValue(attribute.id, e.target.value)}
@@ -90,7 +99,7 @@ export function AttributesSection({
         const selectedOptions = Array.isArray(value) ? value : [];
         return (
           <div key={attribute.id} className="text-sm">
-            <span className="mb-1.5 block font-bold text-[13px]">{attribute.label}</span>
+            <span className="mb-1.5 block font-bold text-[13px]">{labelWithMarker(attribute)}</span>
             <div className="flex flex-col gap-1.5">
               {(attribute.options ?? []).map((option) => (
                 <label key={option} className="flex items-center gap-2 text-[13px]">

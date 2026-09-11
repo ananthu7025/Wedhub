@@ -26,6 +26,7 @@ export interface CreateAttributeInput {
   options: string[] | undefined;
   isFilterable: boolean | undefined;
   isComparable: boolean | undefined;
+  isRequired: boolean | undefined;
 }
 
 export interface UpdateAttributeInput {
@@ -33,6 +34,7 @@ export interface UpdateAttributeInput {
   options: string[] | undefined;
   isFilterable: boolean | undefined;
   isComparable: boolean | undefined;
+  isRequired: boolean | undefined;
   sortOrder: number | undefined;
 }
 

@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { createAdminAttribute, deleteAdminAttribute, updateAdminAttribute } from "@/lib/api/admin-client";
+import {
+  createAdminAttribute,
+  deleteAdminAttribute,
+  reorderAdminAttributes,
+  updateAdminAttribute,
+} from "@/lib/api/admin-client";
 import type { AttributeDataType, CategoryAttribute } from "@/lib/api/vendors.types";
 import { formatApiError } from "@/lib/utils/error";
 
@@ -22,6 +27,15 @@ const OPTIONS_REQUIRED: AttributeDataType[] = ["SELECT", "MULTI_SELECT"];
  * `options` is required for SELECT/MULTI_SELECT and forbidden for every
  * other type (backend superRefine) — enforced client-side too so the
  * error surfaces before a round trip, not just after.
+ *
+ * `isRequired` (added 2026-09-11) drives per-category onboarding/profile
+ * validation in ProfileEditor/AttributesSection — the backend rejects a
+ * vendor's attribute-value save if a required field for their primary
+ * category is missing. Reordering uses simple up/down buttons rather than
+ * drag-and-drop (no DnD library exists elsewhere in this admin panel);
+ * each move swaps two rows client-side and PUTs the *entire* resulting
+ * id order to /attributes/reorder, which the backend rejects unless it's
+ * an exact permutation of the category's current attribute ids.
  */
 export function CategoryAttributesPanel({
   categoryId,
@@ -47,6 +61,7 @@ export function CategoryAttributesPanel({
       options: OPTIONS_REQUIRED.includes(input.dataType) ? input.options : undefined,
       isFilterable: input.isFilterable,
       isComparable: input.isComparable,
+      isRequired: input.isRequired,
     });
     setPendingId(null);
     if (!result.success) {
@@ -65,6 +80,7 @@ export function CategoryAttributesPanel({
       options: OPTIONS_REQUIRED.includes(input.dataType) ? input.options : undefined,
       isFilterable: input.isFilterable,
       isComparable: input.isComparable,
+      isRequired: input.isRequired,
     });
     setPendingId(null);
     if (!result.success) {
@@ -85,6 +101,27 @@ export function CategoryAttributesPanel({
       return;
     }
     onAttributesChange(attributes.filter((a) => a.id !== attribute.id));
+  }
+
+  async function handleMove(attribute: CategoryAttribute, direction: "up" | "down") {
+    const index = attributes.findIndex((a) => a.id === attribute.id);
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (index === -1 || targetIndex < 0 || targetIndex >= attributes.length) {
+      return;
+    }
+
+    const reordered = [...attributes];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+
+    setPendingId(attribute.id);
+    setError(null);
+    const result = await reorderAdminAttributes(categoryId, { attributeIds: reordered.map((a) => a.id) });
+    setPendingId(null);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    onAttributesChange(result.data);
   }
 
   return (
@@ -118,22 +155,24 @@ export function CategoryAttributesPanel({
       ) : (
         attributes.length > 0 && (
           <div className="overflow-x-auto rounded-md border border-border">
-            <table className="w-full min-w-[560px] text-left text-[13px]">
+            <table className="w-full min-w-[640px] text-left text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-surface-input text-xs text-text-grey">
+                  <th className="px-3 py-2 font-semibold">Order</th>
                   <th className="px-3 py-2 font-semibold">Key</th>
                   <th className="px-3 py-2 font-semibold">Label</th>
                   <th className="px-3 py-2 font-semibold">Type</th>
+                  <th className="px-3 py-2 text-center font-semibold">Required</th>
                   <th className="px-3 py-2 text-center font-semibold">Searchable</th>
                   <th className="px-3 py-2 text-center font-semibold">Comparison</th>
                   <th className="px-3 py-2 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {attributes.map((attribute) =>
+                {attributes.map((attribute, index) =>
                   editingId === attribute.id ? (
                     <tr key={attribute.id} className="border-b border-neutral-grey-20 last:border-b-0">
-                      <td colSpan={6} className="p-3">
+                      <td colSpan={8} className="p-3">
                         <AttributeForm
                           initial={attribute}
                           lockDataType
@@ -147,6 +186,28 @@ export function CategoryAttributesPanel({
                   ) : (
                     <tr key={attribute.id} className="border-b border-neutral-grey-20 last:border-b-0">
                       <td className="px-3 py-2.5">
+                        <div className="flex flex-col leading-none">
+                          <button
+                            type="button"
+                            disabled={pendingId !== null || index === 0}
+                            onClick={() => handleMove(attribute, "up")}
+                            aria-label={`Move ${attribute.label} up`}
+                            className="px-1 py-0.5 text-text-grey hover:text-brand-primary disabled:opacity-30"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            disabled={pendingId !== null || index === attributes.length - 1}
+                            onClick={() => handleMove(attribute, "down")}
+                            aria-label={`Move ${attribute.label} down`}
+                            className="px-1 py-0.5 text-text-grey hover:text-brand-primary disabled:opacity-30"
+                          >
+                            ▼
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5">
                         <code className="rounded bg-surface-input px-1 py-0.5 text-[11px] text-text-grey">{attribute.key}</code>
                       </td>
                       <td className="px-3 py-2.5 font-bold">
@@ -156,6 +217,7 @@ export function CategoryAttributesPanel({
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-text-grey">{attribute.dataType}</td>
+                      <td className="px-3 py-2.5 text-center">{attribute.isRequired ? "✓" : "—"}</td>
                       <td className="px-3 py-2.5 text-center">{attribute.isFilterable ? "✓" : "—"}</td>
                       <td className="px-3 py-2.5 text-center">{attribute.isComparable ? "✓" : "—"}</td>
                       <td className="px-3 py-2.5">
@@ -197,6 +259,7 @@ interface AttributeFormValues {
   options?: string[];
   isFilterable: boolean;
   isComparable: boolean;
+  isRequired: boolean;
 }
 
 function AttributeForm({
@@ -220,6 +283,7 @@ function AttributeForm({
   const [optionsText, setOptionsText] = useState((initial?.options ?? []).join(", "));
   const [isFilterable, setIsFilterable] = useState(initial?.isFilterable ?? false);
   const [isComparable, setIsComparable] = useState(initial?.isComparable ?? false);
+  const [isRequired, setIsRequired] = useState(initial?.isRequired ?? false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const needsOptions = OPTIONS_REQUIRED.includes(dataType);
@@ -247,7 +311,7 @@ function AttributeForm({
       return;
     }
 
-    onSubmit({ key, label: label.trim(), dataType, options, isFilterable, isComparable });
+    onSubmit({ key, label: label.trim(), dataType, options, isFilterable, isComparable, isRequired });
   }
 
   return (
@@ -311,6 +375,10 @@ function AttributeForm({
         <label className="flex items-center gap-1.5 text-[11px] text-text-grey">
           <input type="checkbox" checked={isComparable} onChange={(e) => setIsComparable(e.target.checked)} />
           Shown in comparison
+        </label>
+        <label className="flex items-center gap-1.5 text-[11px] text-text-grey">
+          <input type="checkbox" checked={isRequired} onChange={(e) => setIsRequired(e.target.checked)} />
+          Required on vendor profile
         </label>
       </div>
       <div className="flex gap-2">

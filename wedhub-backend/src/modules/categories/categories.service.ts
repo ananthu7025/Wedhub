@@ -99,6 +99,7 @@ export async function updateAttribute(attributeId: string, input: UpdateAttribut
     options: input.options,
     isFilterable: input.isFilterable,
     isComparable: input.isComparable,
+    isRequired: input.isRequired,
     sortOrder: input.sortOrder,
   });
 }
@@ -109,6 +110,23 @@ export async function deleteAttribute(attributeId: string): Promise<void> {
     throw new NotFoundError("Attribute not found");
   }
   await categoriesRepository.deleteAttribute(attributeId);
+}
+
+export async function reorderAttributes(categoryId: string, attributeIds: string[]) {
+  const category = await categoriesRepository.findCategoryById(categoryId);
+  if (!category) {
+    throw new NotFoundError("Category not found");
+  }
+
+  const currentAttributes = await categoriesRepository.findAttributesByCategoryId(categoryId);
+  const currentIds = new Set(currentAttributes.map((a) => a.id));
+  const isSameSet = attributeIds.length === currentIds.size && attributeIds.every((id) => currentIds.has(id));
+  if (!isSameSet) {
+    throw new ValidationError("attributeIds must include every attribute of this category exactly once");
+  }
+
+  await categoriesRepository.reorderAttributes(categoryId, attributeIds);
+  return categoriesRepository.findAttributesByCategoryId(categoryId);
 }
 
 export async function createService(categoryId: string, input: CreateServiceInput) {

@@ -9,6 +9,7 @@ import {
   createAttributeSchema,
   createCategorySchema,
   createServiceSchema,
+  reorderAttributesSchema,
   updateAttributeSchema,
   updateCategorySchema,
   updateServiceSchema,
@@ -62,6 +63,14 @@ categoriesRouter.delete(
   authenticateMiddleware,
   authorize(Role.ADMIN),
   asyncHandler(categoriesController.deleteAttribute),
+);
+
+categoriesRouter.put(
+  "/:id/attributes/reorder",
+  authenticateMiddleware,
+  authorize(Role.ADMIN),
+  validateBody(reorderAttributesSchema),
+  asyncHandler(categoriesController.reorderAttributes),
 );
 
 categoriesRouter.post(

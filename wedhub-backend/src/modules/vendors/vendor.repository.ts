@@ -196,6 +196,19 @@ export function findAttributesByIds(attributeIds: string[]) {
   return prisma.categoryAttribute.findMany({ where: { id: { in: attributeIds } } });
 }
 
+// Required fields are admin-configured per category (CategoryAttributesPanel),
+// so "which attributes must be filled in" depends on the vendor's *current*
+// primary category, not a fixed list — this looks it up fresh on every save.
+export async function findRequiredAttributesForPrimaryCategory(vendorId: string) {
+  const primary = await prisma.vendorCategory.findFirst({ where: { vendorId, isPrimary: true } });
+  if (!primary) {
+    return [];
+  }
+  return prisma.categoryAttribute.findMany({
+    where: { categoryId: primary.categoryId, isRequired: true },
+  });
+}
+
 export interface AttributeValueRow {
   attributeId: string;
   valueText: string | undefined;

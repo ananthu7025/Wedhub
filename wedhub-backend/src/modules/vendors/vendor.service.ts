@@ -184,9 +184,31 @@ export async function setAttributeValues(vendorId: string, values: AttributeValu
     return write;
   });
 
+  const requiredAttributes = await vendorRepository.findRequiredAttributesForPrimaryCategory(vendorId);
+  const submittedById = new Map(rows.map((row) => [row.attributeId, row]));
+  const missingLabels = requiredAttributes
+    .filter((attribute) => !isAttributeValuePresent(submittedById.get(attribute.id)))
+    .map((attribute) => attribute.label);
+  if (missingLabels.length > 0) {
+    throw new ValidationError(`Missing required field(s): ${missingLabels.join(", ")}`);
+  }
+
   await vendorRepository.replaceAttributeValues(vendorId, rows);
   await recalculateCompleteness(vendorId);
   return vendorRepository.findVendorById(vendorId);
+}
+
+function isAttributeValuePresent(row: vendorRepository.AttributeValueRow | undefined): boolean {
+  if (!row) {
+    return false;
+  }
+  if (row.valueText !== undefined) {
+    return row.valueText.length > 0;
+  }
+  if (row.valueOptions !== undefined) {
+    return row.valueOptions.length > 0;
+  }
+  return row.valueNumber !== undefined || row.valueBoolean !== undefined;
 }
 
 export async function attachService(vendorId: string, serviceId: string, note: string | undefined) {

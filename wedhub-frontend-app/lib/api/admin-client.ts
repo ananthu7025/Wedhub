@@ -38,6 +38,7 @@ import type {
   AdminPopularSearchImageConfirmResult,
   AdminPopularSearchImageUploadRequestResult,
   AdminReasonBody,
+  AdminReorderAttributesBody,
   AdminReviewStatusUpdateResult,
   AdminSeoOverride,
   AdminSetVerificationBody,
@@ -143,6 +144,10 @@ export function updateAdminAttribute(categoryId: string, attributeId: string, bo
 
 export function deleteAdminAttribute(categoryId: string, attributeId: string) {
   return call<{ deleted: true }>(`/categories/${categoryId}/attributes/${attributeId}`, "DELETE");
+}
+
+export function reorderAdminAttributes(categoryId: string, body: AdminReorderAttributesBody) {
+  return call<CategoryAttribute[]>(`/categories/${categoryId}/attributes/reorder`, "PUT", body);
 }
 
 export function createAdminService(categoryId: string, body: AdminCreateServiceBody) {

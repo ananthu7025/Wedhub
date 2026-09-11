@@ -238,6 +238,7 @@ export interface AdminCreateAttributeBody {
   options?: string[];
   isFilterable?: boolean;
   isComparable?: boolean;
+  isRequired?: boolean;
 }
 
 // ---- PATCH /categories/:id/attributes/:attributeId (ADMIN) ----
@@ -246,7 +247,13 @@ export interface AdminUpdateAttributeBody {
   options?: string[];
   isFilterable?: boolean;
   isComparable?: boolean;
+  isRequired?: boolean;
   sortOrder?: number;
+}
+
+// ---- PUT /categories/:id/attributes/reorder (ADMIN) ----
+export interface AdminReorderAttributesBody {
+  attributeIds: string[];
 }
 
 // ---- POST /categories/:id/services (ADMIN) ----
