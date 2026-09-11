@@ -14,6 +14,7 @@ import {
   listFeaturedListings,
   listFeaturedPopularSearchCards,
   listFeaturedWeddingStories,
+  listGalleryCategories,
 } from "@/lib/api/catalog";
 import { getOptionalSession } from "@/lib/auth/dal";
 import { getPublicMediaUrl } from "@/lib/media/url";
@@ -440,17 +441,23 @@ async function BlogSection() {
 
 /** Streamed independently in its own <Suspense> boundary — see the HomePage's Suspense wiring above. */
 async function GallerySection() {
-  const { data: galleryMedia } = await listFeaturedGalleryMedia({ page: 1, limit: 6 });
-  return <GalleryInspiration items={galleryMedia} />;
+  const [{ data: categories }, { data: galleryMedia }] = await Promise.all([
+    listGalleryCategories(),
+    // Enough items to very likely find one real cover photo per active
+    // category — GalleryInspiration falls back to a sample cover for any
+    // category this page doesn't cover.
+    listFeaturedGalleryMedia({ page: 1, limit: 48 }),
+  ]);
+  return <GalleryInspiration categories={categories.filter((c) => c.isActive)} items={galleryMedia} />;
 }
 
 function GallerySkeleton() {
   return (
     <section className="px-6 py-10 max-[900px]:px-4">
       <div className="mb-6 h-6 w-48 animate-pulse rounded bg-surface-input" />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="aspect-square animate-pulse rounded-xl bg-surface-input" />
+      <div className="flex gap-4 overflow-hidden">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="aspect-[3/4] w-[42%] flex-none animate-pulse rounded-2xl bg-surface-input sm:w-48" />
         ))}
       </div>
     </section>

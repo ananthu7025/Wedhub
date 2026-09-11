@@ -1,131 +1,76 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { FeaturedMediaItem } from "@/lib/api/vendors.types";
+import type { FeaturedMediaItem, GalleryCategory } from "@/lib/api/vendors.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 
-// Backs the public homepage's "Gallery Inspiration" section — real,
-// admin-curated selections of real vendor portfolio media (Arch Phase 17,
-// 2026-09-04). Below a fixed number of real items, sample content fills
-// the remaining slots (see fillGallerySlots) so the section always shows
-// a full grid even on a fresh platform with few/no vendor photos yet —
-// each real item added removes one sample; once GALLERY_SLOTS real items
-// exist, zero samples render.
+// Backs the public homepage's "Gallery Inspiration" section — one tile per
+// active GalleryCategory, each linking to /gallery?category=<slug> (real
+// navigation into GalleryPageView's server-paginated, per-category feed).
+// This replaced the earlier version that showed individual featured photos
+// directly on the homepage; browsing individual photos now only happens
+// after clicking into a category, matching the reference "Gallery to Look
+// for" pattern of category tiles instead of a flat photo grid.
 
-const GALLERY_SLOTS = 6;
+// Sample cover images only, not sourced from any vendor — used when a
+// category has no real featured photo yet to derive a cover from. Keyed by
+// category name so they line up with the real GalleryCategory taxonomy
+// (see prisma/seed.ts's GALLERY_CATEGORIES).
+const SAMPLE_COVER_IMAGES: Record<string, string> = {
+  Outfit: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=600&q=80",
+  "Decor & Ideas": "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80",
+  Mehndi: "https://images.unsplash.com/photo-1621184455862-c163dfb30e0f?w=600&q=80",
+  "Wedding Photography": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80",
+  "Jewellery & Accessories": "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80",
+};
+const FALLBACK_COVER_IMAGE = "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80";
 
-// Normalized shape the grid renders — both a real FeaturedMediaItem and a
-// sample map into this, so the card itself never branches on "real or
-// placeholder."
-interface DisplayGalleryItem {
+interface DisplayCategoryTile {
   key: string;
-  category: string;
-  title: string;
+  slug: string;
+  name: string;
   imageUrl: string;
 }
 
-// Sample content only, not sourced from any vendor — fills empty slots
-// until enough real, admin-curated gallery items exist. Categories match
-// the real GalleryCategory taxonomy (see prisma/seed.ts's
-// GALLERY_CATEGORIES) so placeholders and real content share one
-// vocabulary immediately, with no re-labeling once real photos arrive.
-const SAMPLE_GALLERY_ITEMS: DisplayGalleryItem[] = [
-  {
-    key: "sample-1",
-    category: "Outfit",
-    title: "Handcrafted Crimson Velvet Bridal Lehenga",
-    imageUrl: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=600&q=80",
-  },
-  {
-    key: "sample-2",
-    category: "Decor & Ideas",
-    title: "Floral Royal Canopy & Golden Fairy Lights Mandap",
-    imageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80",
-  },
-  {
-    key: "sample-3",
-    category: "Mehndi",
-    title: "Intricate Rajasthani Bridal Henna Art",
-    imageUrl: "https://images.unsplash.com/photo-1584282479904-4c4f9f6d6332?w=600&q=80",
-  },
-  {
-    key: "sample-4",
-    category: "Wedding Photography",
-    title: "Sunset Golden Hour Silhouette Couple Shoot",
-    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80",
-  },
-  {
-    key: "sample-5",
-    category: "Jewellery & Accessories",
-    title: "Traditional Polki & Kundan Wedding Choker Set",
-    imageUrl: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80",
-  },
-  {
-    key: "sample-6",
-    category: "Decor & Ideas",
-    title: "Pastel Marigold & Lotus Haldi Ceremony Decor",
-    imageUrl: "https://images.unsplash.com/photo-1478146059778-26028b07395a?w=600&q=80",
-  },
-];
-
-// Standalone INSPIRATION_PHOTO items (no owning vendor) carry a real
-// galleryCategory — preferred when set. Older vendor-featured rows that
-// predate this field fall back to the vendor's primary category, same as
-// before this field existed.
-function itemCategory(item: FeaturedMediaItem): string {
-  if (item.galleryCategory) return item.galleryCategory.name;
-  const vendor = item.media.vendor;
-  return vendor ? (vendor.categories.find((c) => c.isPrimary)?.category.name ?? vendor.businessName) : "Inspiration";
+// One real featured photo per category (first match) becomes that
+// category's cover image; categories with no featured photo yet fall back
+// to a sample cover so the row never shows a blank tile.
+function buildCategoryTiles(categories: GalleryCategory[], items: FeaturedMediaItem[]): DisplayCategoryTile[] {
+  return categories.map((category) => {
+    const coverItem = items.find((item) => item.galleryCategory?.id === category.id);
+    const imageUrl = coverItem
+      ? getPublicMediaUrl(coverItem.media.optimizedObjectKey ?? coverItem.media.originalObjectKey)
+      : (SAMPLE_COVER_IMAGES[category.name] ?? FALLBACK_COVER_IMAGE);
+    return { key: category.id, slug: category.slug, name: category.name, imageUrl };
+  });
 }
 
-function itemTitle(item: FeaturedMediaItem): string {
-  return item.titleOverride ?? item.media.altText ?? item.media.vendor?.businessName ?? "Wedding inspiration";
-}
-
-// Real items fill first, samples fill any remaining slots up to
-// GALLERY_SLOTS — see the "fixed display count" decision this implements.
-function fillGallerySlots(realItems: FeaturedMediaItem[]): DisplayGalleryItem[] {
-  const real: DisplayGalleryItem[] = realItems.slice(0, GALLERY_SLOTS).map((item) => ({
-    key: item.id,
-    category: itemCategory(item),
-    title: itemTitle(item),
-    imageUrl: getPublicMediaUrl(item.media.optimizedObjectKey ?? item.media.originalObjectKey),
-  }));
-  const remaining = GALLERY_SLOTS - real.length;
-  return remaining > 0 ? [...real, ...SAMPLE_GALLERY_ITEMS.slice(0, remaining)] : real;
-}
-
-function GalleryCard({ item }: { item: DisplayGalleryItem }) {
+function CategoryTile({ tile }: { tile: DisplayCategoryTile }) {
   return (
-    <div className="group relative aspect-[3/4] w-[42%] flex-none snap-start overflow-hidden rounded-2xl border border-border bg-surface-input shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md sm:w-48">
+    <Link
+      href={`/gallery?category=${encodeURIComponent(tile.slug)}`}
+      className="group relative aspect-[3/4] w-[42%] flex-none snap-start overflow-hidden rounded-2xl border border-border bg-surface-input shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md sm:w-48 no-underline text-inherit"
+    >
       <Image
-        src={item.imageUrl}
-        alt={item.title}
+        src={tile.imageUrl}
+        alt={tile.name}
         fill
         className="object-cover transition-transform duration-500 group-hover:scale-105"
         sizes="(max-width: 640px) 160px, 192px"
       />
-      {/* Subtle Gradient Overlay on hover */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity group-hover:opacity-95" />
       <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-        <span className="inline-block rounded-full bg-white/25 px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm mb-1">
-          {item.category}
-        </span>
-        <p className="text-xs font-bold leading-snug line-clamp-2">{item.title}</p>
+        <p className="text-sm font-bold leading-snug">{tile.name}</p>
       </div>
-    </div>
+    </Link>
   );
 }
 
-export function GalleryInspiration({ items }: { items: FeaturedMediaItem[] }) {
-  const displayItems = fillGallerySlots(items);
-  const categories = Array.from(new Set(displayItems.map((item) => item.category)));
-  const [activeCategory, setActiveCategory] = useState("All");
+export function GalleryInspiration({ categories, items }: { categories: GalleryCategory[]; items: FeaturedMediaItem[] }) {
+  const tiles = buildCategoryTiles(categories, items);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const filteredItems = activeCategory === "All" ? displayItems : displayItems.filter((item) => item.category === activeCategory);
 
   function scroll(direction: "left" | "right") {
     if (scrollContainerRef.current) {
@@ -133,6 +78,8 @@ export function GalleryInspiration({ items }: { items: FeaturedMediaItem[] }) {
       scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
     }
   }
+
+  if (tiles.length === 0) return null;
 
   return (
     <section id="gallery-inspiration" className="px-6 py-10 max-[900px]:px-4">
@@ -148,30 +95,12 @@ export function GalleryInspiration({ items }: { items: FeaturedMediaItem[] }) {
             See all →
           </Link>
         </div>
-
-        {/* Filter Pills */}
-        <div className="flex flex-wrap gap-2">
-          {["All", ...categories].map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setActiveCategory(cat)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
-                activeCategory === cat
-                  ? "bg-brand-primary text-white shadow-sm"
-                  : "bg-surface-input text-text-grey hover:bg-neutral-grey-30 hover:text-text-dark"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {/* Single arrowed slider (same mechanism as CategoryCapsuleCarousel's
-          "Wedding Categories" row) — the active pill filters which cards
-          appear, but there is only ever one scrollable row, never a stacked
-          grid or per-category sub-sections. */}
+      {/* Single arrowed slider of category tiles (same mechanism as
+          CategoryCapsuleCarousel's "Wedding Categories" row) — clicking a
+          tile navigates into /gallery filtered to that category, rather
+          than filtering a photo grid in place. */}
       <div className="relative">
         <button
           type="button"
@@ -200,8 +129,8 @@ export function GalleryInspiration({ items }: { items: FeaturedMediaItem[] }) {
           className="flex snap-x snap-mandatory gap-4 overflow-x-auto py-1 px-1 scroll-smooth no-scrollbar"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {filteredItems.map((item) => (
-            <GalleryCard key={item.key} item={item} />
+          {tiles.map((tile) => (
+            <CategoryTile key={tile.key} tile={tile} />
           ))}
         </div>
       </div>

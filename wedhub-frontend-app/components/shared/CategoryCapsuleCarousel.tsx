@@ -80,7 +80,10 @@ export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCa
             <Link
               key={category.id}
               href={`/search?categoryId=${category.id}`}
-              className="group relative flex-shrink-0 w-[145px] sm:w-[165px] h-[245px] sm:h-[275px] rounded-[80px] overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 no-underline text-white flex flex-col justify-between p-4"
+              className="group flex-shrink-0 w-[145px] sm:w-[165px] no-underline"
+            >
+            <div
+              className="relative w-full h-[245px] sm:h-[275px] rounded-[80px] overflow-hidden shadow-md transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1.5 text-white flex flex-col justify-between p-4"
             >
               {/* Full Background Image */}
               <div className="absolute inset-0 z-0 bg-surface-input">
@@ -129,6 +132,12 @@ export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCa
                   </svg>
                 </div>
               </div>
+            </div>
+
+            {/* Category name — always visible caption below the pill */}
+            <p className="mt-2 text-center text-xs sm:text-sm font-bold text-jet-black line-clamp-1 group-hover:text-brand-primary">
+              {category.name}
+            </p>
             </Link>
           ))}
         </div>

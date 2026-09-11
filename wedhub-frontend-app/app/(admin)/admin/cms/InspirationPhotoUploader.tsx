@@ -27,20 +27,13 @@ export function InspirationPhotoUploader({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [galleryCategoryId, setGalleryCategoryId] = useState(categories[0]?.id ?? "");
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState("");
 
-  async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
-    const selectedFile = event.target.files?.[0];
-    event.target.value = "";
-    if (!selectedFile || !galleryCategoryId) return;
-
+  async function uploadOne(selectedFile: File): Promise<string | null> {
     if (!ACCEPTED_MIME_TYPES.includes(selectedFile.type)) {
-      setError("Only JPG, PNG, and WebP images are supported.");
-      return;
+      return `${selectedFile.name}: only JPG, PNG, and WebP images are supported.`;
     }
-
-    setError("");
-    setUploading(true);
 
     const file = await compressImageIfPossible(selectedFile);
     const requestResult = await createAdminInspirationImageUploadRequest({
@@ -49,17 +42,13 @@ export function InspirationPhotoUploader({
       fileSize: file.size,
     });
     if (!requestResult.success) {
-      setError(formatApiError(requestResult.error));
-      setUploading(false);
-      return;
+      return `${selectedFile.name}: ${formatApiError(requestResult.error)}`;
     }
 
     const { mediaId, uploadUrl } = requestResult.data;
     const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
     if (!putResponse.ok) {
-      setError("Upload to storage failed");
-      setUploading(false);
-      return;
+      return `${selectedFile.name}: upload to storage failed`;
     }
 
     // Processing (resize/optimize) happens async on the worker — poll
@@ -73,18 +62,35 @@ export function InspirationPhotoUploader({
     }
 
     if (!confirmed.success) {
-      setError(formatApiError(confirmed.error));
-      setUploading(false);
-      return;
+      return `${selectedFile.name}: ${formatApiError(confirmed.error)}`;
     }
     if (!confirmed.data.url) {
-      setError("Photo is still processing — try again in a few seconds.");
-      setUploading(false);
-      return;
+      return `${selectedFile.name}: still processing — try again in a few seconds.`;
     }
 
     onUploaded({ id: confirmed.data.id, url: confirmed.data.url, galleryCategoryId });
+    return null;
+  }
+
+  async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (selectedFiles.length === 0 || !galleryCategoryId) return;
+
+    setError("");
+    setUploading(true);
+    setProgress({ done: 0, total: selectedFiles.length });
+
+    const errors: string[] = [];
+    for (let i = 0; i < selectedFiles.length; i += 1) {
+      const message = await uploadOne(selectedFiles[i]);
+      if (message) errors.push(message);
+      setProgress({ done: i + 1, total: selectedFiles.length });
+    }
+
+    if (errors.length > 0) setError(errors.join(" | "));
     setUploading(false);
+    setProgress(null);
   }
 
   if (categories.length === 0) {
@@ -111,10 +117,17 @@ export function InspirationPhotoUploader({
         disabled={uploading || !galleryCategoryId}
         className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-bold hover:bg-surface-input disabled:opacity-60"
       >
-        {uploading ? "Uploading…" : "Upload a standalone photo"}
+        {uploading ? `Uploading ${progress?.done ?? 0}/${progress?.total ?? 0}…` : "Upload standalone photos"}
       </button>
       {error && <p className="text-xs text-red">{error}</p>}
-      <input ref={fileInputRef} type="file" accept={ACCEPTED_MIME_TYPES.join(",")} hidden onChange={handleFileSelect} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPTED_MIME_TYPES.join(",")}
+        multiple
+        hidden
+        onChange={handleFileSelect}
+      />
     </div>
   );
 }
