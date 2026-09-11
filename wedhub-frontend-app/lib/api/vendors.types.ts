@@ -14,7 +14,20 @@
 
 export type VerificationLevel = "UNVERIFIED" | "IDENTITY_VERIFIED" | "BUSINESS_VERIFIED" | "PLATFORM_VERIFIED";
 export type LocationType = "COUNTRY" | "STATE" | "CITY" | "AREA";
-export type AttributeDataType = "BOOLEAN" | "NUMBER" | "TEXT" | "SELECT" | "MULTI_SELECT";
+export type AttributeDataType =
+  | "BOOLEAN"
+  | "NUMBER"
+  | "TEXT"
+  | "SELECT"
+  | "MULTI_SELECT"
+  | "TEXTAREA"
+  | "NUMBER_RANGE"
+  | "IMAGE"
+  | "PHONE"
+  | "URL"
+  | "EMAIL"
+  | "TIME"
+  | "TIME_RANGE";
 
 // ---- GET /search/vendors ----
 export interface VendorSearchResult {
@@ -56,6 +69,10 @@ export interface CategoryAttribute {
   isFilterable: boolean;
   isComparable: boolean;
   isRequired: boolean;
+  placeholder: string | null;
+  helpText: string | null;
+  uiVariant: string | null;
+  aspectRatio: string | null;
   sortOrder: number;
 }
 

@@ -100,6 +100,10 @@ export async function updateAttribute(attributeId: string, input: UpdateAttribut
     isFilterable: input.isFilterable,
     isComparable: input.isComparable,
     isRequired: input.isRequired,
+    placeholder: input.placeholder,
+    helpText: input.helpText,
+    uiVariant: input.uiVariant,
+    aspectRatio: input.aspectRatio,
     sortOrder: input.sortOrder,
   });
 }

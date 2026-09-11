@@ -96,6 +96,10 @@ export function createAttribute(
     isFilterable: boolean | undefined;
     isComparable: boolean | undefined;
     isRequired: boolean | undefined;
+    placeholder: string | undefined;
+    helpText: string | undefined;
+    uiVariant: string | undefined;
+    aspectRatio: string | undefined;
   },
 ) {
   const fields = omitUndefined({
@@ -103,6 +107,10 @@ export function createAttribute(
     isFilterable: data.isFilterable,
     isComparable: data.isComparable,
     isRequired: data.isRequired,
+    placeholder: data.placeholder,
+    helpText: data.helpText,
+    uiVariant: data.uiVariant,
+    aspectRatio: data.aspectRatio,
   });
   return prisma.categoryAttribute.create({
     data: {
@@ -129,6 +137,10 @@ export interface AttributeUpdateFields {
   isFilterable: boolean | undefined;
   isComparable: boolean | undefined;
   isRequired: boolean | undefined;
+  placeholder: string | null | undefined;
+  helpText: string | null | undefined;
+  uiVariant: string | null | undefined;
+  aspectRatio: string | null | undefined;
   sortOrder: number | undefined;
 }
 
@@ -139,6 +151,10 @@ export function updateAttribute(id: string, data: AttributeUpdateFields) {
     isFilterable: data.isFilterable,
     isComparable: data.isComparable,
     isRequired: data.isRequired,
+    placeholder: data.placeholder,
+    helpText: data.helpText,
+    uiVariant: data.uiVariant,
+    aspectRatio: data.aspectRatio,
     sortOrder: data.sortOrder,
   });
   return prisma.categoryAttribute.update({ where: { id }, data: fields });

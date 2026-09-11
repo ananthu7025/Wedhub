@@ -196,6 +196,10 @@ export function findAttributesByIds(attributeIds: string[]) {
   return prisma.categoryAttribute.findMany({ where: { id: { in: attributeIds } } });
 }
 
+export function findMediaByIds(mediaIds: string[]) {
+  return prisma.media.findMany({ where: { id: { in: mediaIds } } });
+}
+
 // Required fields are admin-configured per category (CategoryAttributesPanel),
 // so "which attributes must be filled in" depends on the vendor's *current*
 // primary category, not a fixed list — this looks it up fresh on every save.
@@ -215,6 +219,7 @@ export interface AttributeValueRow {
   valueNumber: number | undefined;
   valueBoolean: boolean | undefined;
   valueOptions: string[] | undefined;
+  valueJson: Prisma.InputJsonValue | undefined;
 }
 
 export function replaceAttributeValues(vendorId: string, rows: AttributeValueRow[]) {
@@ -229,6 +234,7 @@ export function replaceAttributeValues(vendorId: string, rows: AttributeValueRow
           valueNumber: row.valueNumber,
           valueBoolean: row.valueBoolean,
           valueOptions: row.valueOptions,
+          valueJson: row.valueJson,
         }),
       })),
     }),

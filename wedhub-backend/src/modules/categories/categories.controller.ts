@@ -70,6 +70,10 @@ export async function createAttribute(req: Request, res: Response): Promise<void
     isFilterable: body.isFilterable,
     isComparable: body.isComparable,
     isRequired: body.isRequired,
+    placeholder: body.placeholder,
+    helpText: body.helpText,
+    uiVariant: body.uiVariant,
+    aspectRatio: body.aspectRatio,
   });
   res.status(201).json(successResponse(attribute));
 }
@@ -82,6 +86,10 @@ export async function updateAttribute(req: Request, res: Response): Promise<void
     isFilterable: body.isFilterable,
     isComparable: body.isComparable,
     isRequired: body.isRequired,
+    placeholder: body.placeholder,
+    helpText: body.helpText,
+    uiVariant: body.uiVariant,
+    aspectRatio: body.aspectRatio,
     sortOrder: body.sortOrder,
   });
   res.json(successResponse(attribute));

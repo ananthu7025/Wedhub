@@ -10,8 +10,29 @@ import {
 import type { AttributeDataType, CategoryAttribute } from "@/lib/api/vendors.types";
 import { formatApiError } from "@/lib/utils/error";
 
-const DATA_TYPES: AttributeDataType[] = ["BOOLEAN", "NUMBER", "TEXT", "SELECT", "MULTI_SELECT"];
+// DROPDOWN_RANGE/RADIO/CHECKBOX/DROPDOWN from the original field-type spec
+// are deliberately not separate entries here — DROPDOWN_RANGE is just
+// SELECT with range-labeled options (typed into the same Options input
+// below), CHECKBOX is BOOLEAN (already renders as a checkbox), DROPDOWN is
+// SELECT, and RADIO is SELECT + the "Radio" UI variant control below.
+const DATA_TYPES: AttributeDataType[] = [
+  "TEXT",
+  "TEXTAREA",
+  "NUMBER",
+  "NUMBER_RANGE",
+  "BOOLEAN",
+  "SELECT",
+  "MULTI_SELECT",
+  "IMAGE",
+  "PHONE",
+  "URL",
+  "EMAIL",
+  "TIME",
+  "TIME_RANGE",
+];
 const OPTIONS_REQUIRED: AttributeDataType[] = ["SELECT", "MULTI_SELECT"];
+const ASPECT_RATIOS = ["1:1", "4:5", "16:9", "3:2"] as const;
+type AspectRatio = (typeof ASPECT_RATIOS)[number];
 
 /**
  * Category attribute management (added 2026-09-03) — the vendor-facing
@@ -36,6 +57,14 @@ const OPTIONS_REQUIRED: AttributeDataType[] = ["SELECT", "MULTI_SELECT"];
  * each move swaps two rows client-side and PUTs the *entire* resulting
  * id order to /attributes/reorder, which the backend rejects unless it's
  * an exact permutation of the category's current attribute ids.
+ *
+ * Extended 2026-09-11 for the Category Details form builder: the type list
+ * grew from 5 to 13 (TEXTAREA, NUMBER_RANGE, IMAGE, PHONE, URL, EMAIL,
+ * TIME, TIME_RANGE added), plus per-field `placeholder`/`helpText` (shown
+ * on the vendor's form) and two type-conditional hints: `uiVariant`
+ * ("Radio" vs "Dropdown", only for SELECT) and `aspectRatio` (a guidance
+ * label only, only for IMAGE — no cropping/dimension enforcement exists
+ * anywhere in the media pipeline).
  */
 export function CategoryAttributesPanel({
   categoryId,
@@ -62,6 +91,10 @@ export function CategoryAttributesPanel({
       isFilterable: input.isFilterable,
       isComparable: input.isComparable,
       isRequired: input.isRequired,
+      placeholder: input.placeholder || undefined,
+      helpText: input.helpText || undefined,
+      uiVariant: input.dataType === "SELECT" ? input.uiVariant : undefined,
+      aspectRatio: input.dataType === "IMAGE" ? input.aspectRatio : undefined,
     });
     setPendingId(null);
     if (!result.success) {
@@ -81,6 +114,10 @@ export function CategoryAttributesPanel({
       isFilterable: input.isFilterable,
       isComparable: input.isComparable,
       isRequired: input.isRequired,
+      placeholder: input.placeholder || null,
+      helpText: input.helpText || null,
+      uiVariant: input.dataType === "SELECT" ? (input.uiVariant ?? null) : null,
+      aspectRatio: input.dataType === "IMAGE" ? (input.aspectRatio ?? null) : null,
     });
     setPendingId(null);
     if (!result.success) {
@@ -216,7 +253,11 @@ export function CategoryAttributesPanel({
                           <div className="mt-0.5 text-[11px] font-normal text-text-grey">{attribute.options.join(", ")}</div>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-text-grey">{attribute.dataType}</td>
+                      <td className="px-3 py-2.5 text-text-grey">
+                        {attribute.dataType}
+                        {attribute.uiVariant === "RADIO" && " (Radio)"}
+                        {attribute.dataType === "IMAGE" && attribute.aspectRatio && ` (${attribute.aspectRatio})`}
+                      </td>
                       <td className="px-3 py-2.5 text-center">{attribute.isRequired ? "✓" : "—"}</td>
                       <td className="px-3 py-2.5 text-center">{attribute.isFilterable ? "✓" : "—"}</td>
                       <td className="px-3 py-2.5 text-center">{attribute.isComparable ? "✓" : "—"}</td>
@@ -260,6 +301,10 @@ interface AttributeFormValues {
   isFilterable: boolean;
   isComparable: boolean;
   isRequired: boolean;
+  placeholder: string;
+  helpText: string;
+  uiVariant?: "RADIO";
+  aspectRatio?: AspectRatio;
 }
 
 function AttributeForm({
@@ -284,6 +329,12 @@ function AttributeForm({
   const [isFilterable, setIsFilterable] = useState(initial?.isFilterable ?? false);
   const [isComparable, setIsComparable] = useState(initial?.isComparable ?? false);
   const [isRequired, setIsRequired] = useState(initial?.isRequired ?? false);
+  const [placeholder, setPlaceholder] = useState(initial?.placeholder ?? "");
+  const [helpText, setHelpText] = useState(initial?.helpText ?? "");
+  const [uiVariant, setUiVariant] = useState<"DROPDOWN" | "RADIO">(initial?.uiVariant === "RADIO" ? "RADIO" : "DROPDOWN");
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio | "">(
+    (initial?.aspectRatio as AspectRatio | undefined) ?? "",
+  );
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const needsOptions = OPTIONS_REQUIRED.includes(dataType);
@@ -311,7 +362,19 @@ function AttributeForm({
       return;
     }
 
-    onSubmit({ key, label: label.trim(), dataType, options, isFilterable, isComparable, isRequired });
+    onSubmit({
+      key,
+      label: label.trim(),
+      dataType,
+      options,
+      isFilterable,
+      isComparable,
+      isRequired,
+      placeholder: placeholder.trim(),
+      helpText: helpText.trim(),
+      uiVariant: dataType === "SELECT" && uiVariant === "RADIO" ? "RADIO" : undefined,
+      aspectRatio: dataType === "IMAGE" && aspectRatio ? aspectRatio : undefined,
+    });
   }
 
   return (
@@ -366,6 +429,58 @@ function AttributeForm({
             />
           </label>
         )}
+        {dataType === "SELECT" && (
+          <label className="block">
+            <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">Display as</span>
+            <select
+              value={uiVariant}
+              onChange={(e) => setUiVariant(e.target.value as "DROPDOWN" | "RADIO")}
+              className="w-28 rounded-md border border-border px-2 py-1 text-xs"
+            >
+              <option value="DROPDOWN">Dropdown</option>
+              <option value="RADIO">Radio</option>
+            </select>
+          </label>
+        )}
+        {dataType === "IMAGE" && (
+          <label className="block">
+            <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">Aspect ratio</span>
+            <select
+              value={aspectRatio}
+              onChange={(e) => setAspectRatio(e.target.value as AspectRatio | "")}
+              className="w-28 rounded-md border border-border px-2 py-1 text-xs"
+            >
+              <option value="">No preference</option>
+              {ASPECT_RATIOS.map((ratio) => (
+                <option key={ratio} value={ratio}>
+                  {ratio}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <label className="block flex-1">
+          <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">Placeholder / example value</span>
+          <input
+            value={placeholder}
+            onChange={(e) => setPlaceholder(e.target.value)}
+            placeholder="e.g. 75,000"
+            maxLength={200}
+            className="w-full min-w-[160px] rounded-md border border-border px-2 py-1 text-xs"
+          />
+        </label>
+        <label className="block flex-1">
+          <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">Help text (shown to vendors)</span>
+          <input
+            value={helpText}
+            onChange={(e) => setHelpText(e.target.value)}
+            placeholder="Guidance shown under the field"
+            maxLength={500}
+            className="w-full min-w-[200px] rounded-md border border-border px-2 py-1 text-xs"
+          />
+        </label>
       </div>
       <div className="flex items-center gap-4">
         <label className="flex items-center gap-1.5 text-[11px] text-text-grey">

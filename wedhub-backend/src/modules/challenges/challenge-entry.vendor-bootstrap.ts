@@ -106,6 +106,10 @@ export async function bootstrapVendorForChallenge(
     cityId: fields.cityId,
     logoMediaId: undefined,
     coverMediaId: undefined,
+    willingToTravel: undefined,
+    advanceBookingPercent: undefined,
+    cancellationPolicy: undefined,
+    eventsCompletedRange: undefined,
   });
 
   await vendorService.setCategories(vendor.id, { primaryCategoryId: challenge.categoryId, subcategoryIds: [] });

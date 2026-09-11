@@ -245,6 +245,20 @@ enum AttributeDataType {
   TEXT
   SELECT
   MULTI_SELECT
+  // Added 2026-09-11 for the Category Details form builder. DROPDOWN,
+  // DROPDOWN_RANGE, RADIO and CHECKBOX from the original field-type spec
+  // were deliberately NOT added as separate values here — they're
+  // identical in storage/validation to SELECT/BOOLEAN and are reached via
+  // CategoryAttribute.uiVariant (RADIO) or plain option-string content
+  // (DROPDOWN_RANGE), not a new enum member.
+  TEXTAREA
+  NUMBER_RANGE
+  IMAGE
+  PHONE
+  URL
+  EMAIL
+  TIME
+  TIME_RANGE
 }
 
 model Category {
@@ -296,6 +310,20 @@ model CategoryAttribute {
   isFilterable Boolean           @default(false) @map("is_filterable")
   isComparable Boolean           @default(false) @map("is_comparable")
   isRequired   Boolean           @default(false) @map("is_required")
+  // Admin-facing example text shown inside the input as a placeholder.
+  placeholder  String?           @map("placeholder")
+  // Admin/vendor-facing guidance shown under the field label.
+  helpText     String?           @map("help_text")
+  // Rendering hint for otherwise-identical storage/validation types —
+  // currently only "RADIO" (dataType SELECT rendered as radio buttons
+  // instead of a <select>). Null/unset means the default widget for the
+  // dataType.
+  uiVariant    String?           @map("ui_variant")
+  // Guidance-only aspect ratio label for IMAGE fields (e.g. "1:1",
+  // "16:9") — never enforced; no cropping/dimension validation exists
+  // anywhere in the media pipeline today (Media.width/height are filled
+  // in later, asynchronously, and never checked against a ratio).
+  aspectRatio  String?           @map("aspect_ratio")
   sortOrder    Int               @default(0) @map("sort_order")
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")
@@ -420,36 +448,49 @@ model Vendor {
 }
 
 model VendorProfile {
-  vendorId             String   @id @map("vendor_id") @db.Uuid
-  shortDescription     String?  @map("short_description")
-  description          String?
-  logoMediaId          String?  @map("logo_media_id") @db.Uuid
-  coverMediaId         String?  @map("cover_media_id") @db.Uuid
-  vendorType           String?  @map("vendor_type")
-  tags                 String[] @default([])
-  address              String?
-  latitude             Decimal? @db.Decimal(9, 6)
-  longitude            Decimal? @db.Decimal(9, 6)
-  startingPrice        Decimal? @map("starting_price") @db.Decimal(12, 2)
-  priceRangeMin        Decimal? @map("price_range_min") @db.Decimal(12, 2)
-  priceRangeMax        Decimal? @map("price_range_max") @db.Decimal(12, 2)
-  currency             String   @default("INR")
-  customQuoteAvailable Boolean  @default(false) @map("custom_quote_available")
-  yearsExperience      Int?     @map("years_experience")
-  teamSize             Int?     @map("team_size")
-  languages            String[] @default([])
-  travelPolicy         String?  @map("travel_policy")
-  website              String?
-  phone                String?
-  email                String?
-  socialLinks          Json?    @map("social_links")
-  businessHours        Json?    @map("business_hours")
-  availabilityNotes    String?  @map("availability_notes")
-  seoTitle             String?  @map("seo_title")
-  seoDescription       String?  @map("seo_description")
-  canonicalUrl         String?  @map("canonical_url")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  vendorId              String   @id @map("vendor_id") @db.Uuid
+  shortDescription      String?  @map("short_description")
+  description           String?
+  logoMediaId           String?  @map("logo_media_id") @db.Uuid
+  coverMediaId          String?  @map("cover_media_id") @db.Uuid
+  vendorType            String?  @map("vendor_type")
+  tags                  String[] @default([])
+  address               String?
+  latitude              Decimal? @db.Decimal(9, 6)
+  longitude             Decimal? @db.Decimal(9, 6)
+  startingPrice         Decimal? @map("starting_price") @db.Decimal(12, 2)
+  priceRangeMin         Decimal? @map("price_range_min") @db.Decimal(12, 2)
+  priceRangeMax         Decimal? @map("price_range_max") @db.Decimal(12, 2)
+  currency              String   @default("INR")
+  customQuoteAvailable  Boolean  @default(false) @map("custom_quote_available")
+  yearsExperience       Int?     @map("years_experience")
+  teamSize              Int?     @map("team_size")
+  languages             String[] @default([])
+  travelPolicy          String?  @map("travel_policy")
+  website               String?
+  phone                 String?
+  email                 String?
+  socialLinks           Json?    @map("social_links")
+  businessHours         Json?    @map("business_hours")
+  availabilityNotes     String?  @map("availability_notes")
+  // Fixed fields added 2026-09-11 for sections shared by every vendor
+  // category (Location & Coverage / Commercials & Pricing / Trust &
+  // Credibility) — unlike Category Details these are NOT admin-configurable
+  // per category, so they're real columns, not CategoryAttribute rows.
+  // Nullable = "not answered yet", not "false"/"zero".
+  willingToTravel       Boolean? @map("willing_to_travel")
+  advanceBookingPercent Int?     @map("advance_booking_percent")
+  cancellationPolicy    String?  @map("cancellation_policy")
+  // A fixed admin-authored range label (e.g. "100-250 events"), not a
+  // numeric min/max — matches the source spec's "Dropdown Range" intent,
+  // and the option list itself is a hardcoded frontend constant since this
+  // section is the same for every vendor, unlike Category Details.
+  eventsCompletedRange  String?  @map("events_completed_range")
+  seoTitle              String?  @map("seo_title")
+  seoDescription        String?  @map("seo_description")
+  canonicalUrl          String?  @map("canonical_url")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   vendor     Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   logoMedia  Media? @relation("VendorProfileLogo", fields: [logoMediaId], references: [id], onDelete: SetNull)
@@ -500,6 +541,11 @@ model VendorAttributeValue {
   valueNumber  Decimal? @map("value_number") @db.Decimal(14, 4)
   valueBoolean Boolean? @map("value_boolean")
   valueOptions String[] @default([]) @map("value_options")
+  // Holds NUMBER_RANGE ({min,max}), TIME ({time}), and TIME_RANGE
+  // ({start,end}) payloads — existing typed columns above are kept as-is
+  // for every pre-existing scalar type; this is only for the new
+  // multi-part shapes that don't fit a single scalar column.
+  valueJson    Json?    @map("value_json")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -642,6 +688,11 @@ enum MediaType {
   // REVIEW_PHOTO. Reusable across every contest category (Mehndi, Makeup,
   // Photography, ...): no per-category MediaType.
   CHALLENGE_ENTRY_PHOTO
+  // Vendor-owned photo uploaded for a dynamic Category Details IMAGE
+  // attribute field — same one-FK-column-elsewhere shape as PACKAGE_PHOTO,
+  // just referenced from VendorAttributeValue.valueText (a Media id)
+  // instead of a dedicated FK column, since attributes are EAV-shaped.
+  CATEGORY_ATTRIBUTE_PHOTO
 }
 
 enum MediaStatus {
@@ -710,8 +761,8 @@ model Media {
   weddingWebsiteCouplePhotoFor WeddingWebsite?        @relation("WeddingWebsiteCouplePhoto")
   storeItemMedia               VendorStoreItemMedia[]
   packageImageFor              Package[]              @relation("PackageImage")
-  challengeEntryCoverFor        ChallengeEntry?        @relation("ChallengeEntryCoverImage")
-  challengeEntryPhotoFor        ChallengeEntryPhoto?   @relation("ChallengeEntryAdditionalPhoto")
+  challengeEntryCoverFor       ChallengeEntry?        @relation("ChallengeEntryCoverImage")
+  challengeEntryPhotoFor       ChallengeEntryPhoto?   @relation("ChallengeEntryAdditionalPhoto")
 
   @@index([vendorId])
   @@index([userId])
@@ -842,42 +893,42 @@ enum ChallengeVoteScope {
 // GalleryCategory without conflating that presentation taxonomy with real
 // vendor eligibility. Not reusable-as-eligibility on purpose.
 model Challenge {
-  id                             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title                          String
-  slug                           String               @unique
-  categoryId                     String               @map("category_id") @db.Uuid
-  galleryCategoryId              String?              @map("gallery_category_id") @db.Uuid
+  slug                           String             @unique
+  categoryId                     String             @map("category_id") @db.Uuid
+  galleryCategoryId              String?            @map("gallery_category_id") @db.Uuid
   description                    String?
-  bannerImage                    String?              @map("banner_image")
-  startDate                      DateTime             @map("start_date")
-  endDate                        DateTime             @map("end_date")
-  votingStartDate                DateTime             @map("voting_start_date")
-  votingEndDate                  DateTime             @map("voting_end_date")
-  status                         ChallengeStatus       @default(DRAFT)
+  bannerImage                    String?            @map("banner_image")
+  startDate                      DateTime           @map("start_date")
+  endDate                        DateTime           @map("end_date")
+  votingStartDate                DateTime           @map("voting_start_date")
+  votingEndDate                  DateTime           @map("voting_end_date")
+  status                         ChallengeStatus    @default(DRAFT)
   // Configurable per challenge because Postgres can't conditionally scope a
   // unique constraint on a sibling row's field — see ChallengeVote below for
   // how PER_CHALLENGE is actually enforced (DB constraint + app check in one
   // Serializable transaction).
-  voteScope                      ChallengeVoteScope    @default(PER_ENTRY) @map("vote_scope")
+  voteScope                      ChallengeVoteScope @default(PER_ENTRY) @map("vote_scope")
   // Hides public rankings during the final N hours of the VOTING phase.
   // Admins always see live data regardless (see challenge-ranking.service.ts).
-  hideLiveRankingsBeforeEndHours Int?                 @map("hide_live_rankings_before_end_hours")
-  allowMultipleEntriesPerVendor  Boolean              @default(false) @map("allow_multiple_entries_per_vendor")
-  maxEntries                     Int?                 @map("max_entries")
+  hideLiveRankingsBeforeEndHours Int?               @map("hide_live_rankings_before_end_hours")
+  allowMultipleEntriesPerVendor  Boolean            @default(false) @map("allow_multiple_entries_per_vendor")
+  maxEntries                     Int?               @map("max_entries")
   // Sponsor/prize fields are all optional — a challenge may launch before a
   // sponsor is confirmed ("Special Winner Prize — Revealing Soon" is a
   // frontend fallback when sponsorName is null, not a stored value).
-  prizeTitle                     String?              @map("prize_title")
-  prizeDescription               String?              @map("prize_description")
-  prizeValue                     String?              @map("prize_value")
-  sponsorName                    String?              @map("sponsor_name")
-  sponsorLogo                    String?              @map("sponsor_logo")
-  sponsorUrl                     String?              @map("sponsor_url")
-  winnerEntryId                  String?              @unique @map("winner_entry_id") @db.Uuid
+  prizeTitle                     String?            @map("prize_title")
+  prizeDescription               String?            @map("prize_description")
+  prizeValue                     String?            @map("prize_value")
+  sponsorName                    String?            @map("sponsor_name")
+  sponsorLogo                    String?            @map("sponsor_logo")
+  sponsorUrl                     String?            @map("sponsor_url")
+  winnerEntryId                  String?            @unique @map("winner_entry_id") @db.Uuid
   rules                          String?
-  termsAndConditions             String?              @map("terms_and_conditions")
-  createdAt                      DateTime             @default(now()) @map("created_at")
-  updatedAt                      DateTime             @updatedAt @map("updated_at")
+  termsAndConditions             String?            @map("terms_and_conditions")
+  createdAt                      DateTime           @default(now()) @map("created_at")
+  updatedAt                      DateTime           @updatedAt @map("updated_at")
 
   category        Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   galleryCategory GalleryCategory? @relation(fields: [galleryCategoryId], references: [id], onDelete: SetNull)

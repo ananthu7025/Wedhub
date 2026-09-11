@@ -8,8 +8,21 @@ export const updateVendorSchema = z.object({
   businessName: z.string().min(1).max(200).optional(),
 });
 
+// Fixed range labels for "Events Completed" (Trust & Credibility section) —
+// the same list for every category, unlike Category Details, so this stays
+// a hardcoded enum rather than an admin-configurable option set.
+export const EVENTS_COMPLETED_RANGES = [
+  "Under 50",
+  "50-100",
+  "100-250",
+  "250-500",
+  "500+",
+] as const;
+
 export const upsertProfileSchema = z.object({
-  shortDescription: z.string().max(300).optional(),
+  // Tightened from 300 to 150 to match the "Tagline / Short Description"
+  // spec (Business Information section).
+  shortDescription: z.string().max(150).optional(),
   description: z.string().max(5000).optional(),
   vendorType: z.string().max(100).optional(),
   tags: z.array(z.string().min(1).max(50)).max(20).optional(),
@@ -41,6 +54,10 @@ export const upsertProfileSchema = z.object({
   // real "unset this" write.
   logoMediaId: z.string().uuid().nullable().optional(),
   coverMediaId: z.string().uuid().nullable().optional(),
+  willingToTravel: z.boolean().optional(),
+  advanceBookingPercent: z.coerce.number().int().min(0).max(100).optional(),
+  cancellationPolicy: z.string().max(1000).optional(),
+  eventsCompletedRange: z.enum(EVENTS_COMPLETED_RANGES).optional(),
 });
 
 export const setCategoriesSchema = z.object({
@@ -52,12 +69,24 @@ export const setServiceAreasSchema = z.object({
   locationIds: z.array(z.string().uuid()).max(100),
 });
 
+// Shape-only validation — well-formed JSON matching one of these shapes.
+// Semantic validation (regex format, min<=max, start<end, option
+// membership) happens in vendor.service.ts's setAttributeValues, where the
+// attribute's configured dataType is known.
 export const setAttributesSchema = z.object({
   values: z
     .array(
       z.object({
         attributeId: z.string().uuid(),
-        value: z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]),
+        value: z.union([
+          z.string(),
+          z.number(),
+          z.boolean(),
+          z.array(z.string()),
+          z.object({ min: z.number(), max: z.number() }),
+          z.object({ time: z.string() }),
+          z.object({ start: z.string(), end: z.string() }),
+        ]),
       }),
     )
     .max(100),

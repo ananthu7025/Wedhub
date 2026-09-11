@@ -1,4 +1,17 @@
-export type AttributeDataType = "BOOLEAN" | "NUMBER" | "TEXT" | "SELECT" | "MULTI_SELECT";
+export type AttributeDataType =
+  | "BOOLEAN"
+  | "NUMBER"
+  | "TEXT"
+  | "SELECT"
+  | "MULTI_SELECT"
+  | "TEXTAREA"
+  | "NUMBER_RANGE"
+  | "IMAGE"
+  | "PHONE"
+  | "URL"
+  | "EMAIL"
+  | "TIME"
+  | "TIME_RANGE";
 
 export interface CreateCategoryInput {
   name: string;
@@ -27,6 +40,10 @@ export interface CreateAttributeInput {
   isFilterable: boolean | undefined;
   isComparable: boolean | undefined;
   isRequired: boolean | undefined;
+  placeholder: string | undefined;
+  helpText: string | undefined;
+  uiVariant: string | undefined;
+  aspectRatio: string | undefined;
 }
 
 export interface UpdateAttributeInput {
@@ -35,6 +52,10 @@ export interface UpdateAttributeInput {
   isFilterable: boolean | undefined;
   isComparable: boolean | undefined;
   isRequired: boolean | undefined;
+  placeholder: string | null | undefined;
+  helpText: string | null | undefined;
+  uiVariant: string | null | undefined;
+  aspectRatio: string | null | undefined;
   sortOrder: number | undefined;
 }
 

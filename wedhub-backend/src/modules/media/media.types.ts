@@ -1,4 +1,11 @@
-export type MediaType = "LOGO" | "COVER" | "PORTFOLIO" | "VIDEO" | "STORE_ITEM_PHOTO" | "PACKAGE_PHOTO";
+export type MediaType =
+  | "LOGO"
+  | "COVER"
+  | "PORTFOLIO"
+  | "VIDEO"
+  | "STORE_ITEM_PHOTO"
+  | "PACKAGE_PHOTO"
+  | "CATEGORY_ATTRIBUTE_PHOTO";
 
 export interface CreateUploadRequestInput {
   mediaType: MediaType;

@@ -10,9 +10,9 @@ import {
   setMyServiceAreas,
   upsertMyProfile,
 } from "@/lib/api/vendor-self-client";
-import type { CategorySelf, LocationSelf, VendorSelf } from "@/lib/api/vendor-self.types";
+import { EVENTS_COMPLETED_RANGES, type CategorySelf, type LocationSelf, type VendorSelf } from "@/lib/api/vendor-self.types";
 import { formatApiError } from "@/lib/utils/error";
-import { AttributesSection } from "./AttributesSection";
+import { AttributesSection, type AttributeValue, type AttributeValueMap } from "./AttributesSection";
 import { LogoCoverPicker } from "./LogoCoverPicker";
 import { ServicesSection } from "./ServicesSection";
 import { SubmitBar } from "./SubmitBar";
@@ -78,27 +78,33 @@ export function ProfileEditor({
   const [priceRangeMin, setPriceRangeMin] = useState(profile?.priceRangeMin ?? "");
   const [priceRangeMax, setPriceRangeMax] = useState(profile?.priceRangeMax ?? "");
   const [customQuoteAvailable, setCustomQuoteAvailable] = useState(profile?.customQuoteAvailable ?? false);
+  const [advanceBookingPercent, setAdvanceBookingPercent] = useState(profile?.advanceBookingPercent?.toString() ?? "");
+  const [cancellationPolicy, setCancellationPolicy] = useState(profile?.cancellationPolicy ?? "");
 
   const [yearsExperience, setYearsExperience] = useState(profile?.yearsExperience?.toString() ?? "");
+  const [eventsCompletedRange, setEventsCompletedRange] = useState(profile?.eventsCompletedRange ?? "");
 
   const [website, setWebsite] = useState(profile?.website ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [email, setEmail] = useState(profile?.email ?? "");
   const [instagram, setInstagram] = useState(profile?.socialLinks?.instagram ?? "");
   const [facebook, setFacebook] = useState(profile?.socialLinks?.facebook ?? "");
+  const [youtube, setYoutube] = useState(profile?.socialLinks?.youtube ?? "");
+  const [willingToTravel, setWillingToTravel] = useState<boolean | null>(profile?.willingToTravel ?? null);
 
   const [businessHours, setBusinessHours] = useState(profile?.businessHours?.general ?? "");
   const [travelPolicy, setTravelPolicy] = useState(profile?.travelPolicy ?? "");
   const [languages, setLanguages] = useState(profile?.languages.join(", ") ?? "");
   const [teamSize, setTeamSize] = useState(profile?.teamSize?.toString() ?? "");
 
-  const [attributeValues, setAttributeValues] = useState<Record<string, string | number | boolean | string[]>>(() => {
-    const initial: Record<string, string | number | boolean | string[]> = {};
+  const [attributeValues, setAttributeValues] = useState<AttributeValueMap>(() => {
+    const initial: AttributeValueMap = {};
     for (const av of vendor.attributeValues) {
       if (av.valueText !== null) initial[av.attributeId] = av.valueText;
       else if (av.valueNumber !== null) initial[av.attributeId] = Number(av.valueNumber);
       else if (av.valueBoolean !== null) initial[av.attributeId] = av.valueBoolean;
       else if (av.valueOptions.length > 0) initial[av.attributeId] = av.valueOptions;
+      else if (av.valueJson !== null) initial[av.attributeId] = av.valueJson;
     }
     return initial;
   });
@@ -110,10 +116,15 @@ export function ProfileEditor({
   const primaryCategoryChanged = vendor.status === "APPROVED" && primaryCategoryId !== primaryCategory?.id;
   const selectedCategory = categories.find((c) => c.id === primaryCategoryId) ?? null;
 
-  function isAttributeValueEmpty(value: string | number | boolean | string[] | undefined): boolean {
+  function isAttributeValueEmpty(value: AttributeValue | undefined): boolean {
     if (value === undefined) return true;
     if (typeof value === "string") return value.trim().length === 0;
     if (Array.isArray(value)) return value.length === 0;
+    if (typeof value === "object") {
+      if ("min" in value) return !Number.isFinite(value.min) || !Number.isFinite(value.max);
+      if ("time" in value) return value.time.trim().length === 0;
+      if ("start" in value) return value.start.trim().length === 0 || value.end.trim().length === 0;
+    }
     return false; // numbers and booleans (including false/0) count as filled in
   }
 
@@ -190,11 +201,15 @@ export function ProfileEditor({
       website: website.trim() ? normalizeUrl(website) : undefined,
       phone: trimmedPhone || undefined,
       email: email.trim() || undefined,
-      socialLinks: instagram || facebook ? { instagram, facebook } : undefined,
+      socialLinks: instagram || facebook || youtube ? { instagram, facebook, youtube } : undefined,
       businessHours: businessHours ? { general: businessHours } : undefined,
       cityId: cityId || undefined,
       logoMediaId,
       coverMediaId,
+      willingToTravel: willingToTravel ?? undefined,
+      advanceBookingPercent: advanceBookingPercent ? Number(advanceBookingPercent) : undefined,
+      cancellationPolicy: cancellationPolicy || undefined,
+      eventsCompletedRange: eventsCompletedRange || undefined,
     });
 
     if (!profileResult.success) {
@@ -316,14 +331,16 @@ export function ProfileEditor({
               />
             </div>
             <label className="mb-3.5 block text-sm">
-              <span className="mb-1.5 block font-bold text-[13px]">Short description</span>
+              <span className="mb-1.5 block font-bold text-[13px]">Tagline / short description</span>
               <textarea
                 value={shortDescription}
                 onChange={(e) => setShortDescription(e.target.value)}
-                maxLength={300}
+                maxLength={150}
                 className="min-h-[60px] w-full rounded-md border border-border px-3 py-2.5 text-sm"
               />
-              <p className="mt-1 text-xs text-text-grey">Shown on search results and vendor cards.</p>
+              <p className="mt-1 text-xs text-text-grey">
+                {shortDescription.length}/150 — shown on search results and vendor cards.
+              </p>
             </label>
             <label className="block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Full description</span>
@@ -427,6 +444,31 @@ export function ProfileEditor({
               </div>
               <p className="mt-1.5 text-xs text-text-grey">Cities you&apos;re willing to travel to for weddings.</p>
             </div>
+            <fieldset className="mt-3.5">
+              <legend className="mb-1.5 text-[13px] font-bold">Willing to travel for destination weddings?</legend>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-1.5 text-[13px]">
+                  <input
+                    type="radio"
+                    name="willingToTravel"
+                    checked={willingToTravel === true}
+                    onChange={() => setWillingToTravel(true)}
+                    className="accent-brand-primary"
+                  />
+                  Yes
+                </label>
+                <label className="flex items-center gap-1.5 text-[13px]">
+                  <input
+                    type="radio"
+                    name="willingToTravel"
+                    checked={willingToTravel === false}
+                    onChange={() => setWillingToTravel(false)}
+                    className="accent-brand-primary"
+                  />
+                  No
+                </label>
+              </div>
+            </fieldset>
           </section>
 
           <section id="commercial" className="scroll-mt-24 rounded-xl border border-border bg-white p-6">
@@ -454,6 +496,26 @@ export function ProfileEditor({
                 className="h-5 w-5 accent-brand-primary"
               />
             </label>
+            <label className="mb-3.5 block text-sm">
+              <span className="mb-1.5 block font-bold text-[13px]">Advance booking amount (%)</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={advanceBookingPercent}
+                onChange={(e) => setAdvanceBookingPercent(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+              />
+            </label>
+            <label className="mb-3.5 block text-sm">
+              <span className="mb-1.5 block font-bold text-[13px]">Cancellation &amp; refund policy</span>
+              <textarea
+                value={cancellationPolicy}
+                onChange={(e) => setCancellationPolicy(e.target.value)}
+                maxLength={1000}
+                className="min-h-[70px] w-full rounded-md border border-border px-3 py-2.5 text-sm"
+              />
+            </label>
             <p className="mt-2 text-[13px] text-text-grey">
               Detailed packages are managed separately.{" "}
               <a href="/vendor/packages" className="font-bold text-brand-primary no-underline">
@@ -471,7 +533,7 @@ export function ProfileEditor({
               </span>
               <p className="mt-1.5 text-xs text-text-grey">Vendors cannot self-verify — contact support to request verification.</p>
             </div>
-            <label className="block text-sm">
+            <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Years of experience</span>
               <input
                 type="number"
@@ -481,6 +543,21 @@ export function ProfileEditor({
                 onChange={(e) => setYearsExperience(e.target.value)}
                 className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
               />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-bold text-[13px]">Events completed</span>
+              <select
+                value={eventsCompletedRange}
+                onChange={(e) => setEventsCompletedRange(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+              >
+                <option value="">Select…</option>
+                {EVENTS_COMPLETED_RANGES.map((range) => (
+                  <option key={range} value={range}>
+                    {range}
+                  </option>
+                ))}
+              </select>
             </label>
           </section>
 
@@ -517,9 +594,13 @@ export function ProfileEditor({
               <span className="mb-1.5 block font-bold text-[13px]">Instagram</span>
               <input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="instagram.com/yourhandle" className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
             </label>
-            <label className="block text-sm">
+            <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Facebook</span>
               <input value={facebook} onChange={(e) => setFacebook(e.target.value)} placeholder="facebook.com/yourpage" className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1.5 block font-bold text-[13px]">YouTube / Vimeo</span>
+              <input value={youtube} onChange={(e) => setYoutube(e.target.value)} placeholder="youtube.com/@yourchannel" className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
             </label>
           </section>
 
@@ -555,6 +636,7 @@ export function ProfileEditor({
                 attributes={selectedCategory.attributes}
                 values={attributeValues}
                 onChange={setAttributeValues}
+                mediaByAttributeId={vendor.mediaByAttributeId}
               />
             </section>
           )}

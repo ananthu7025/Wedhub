@@ -20,7 +20,14 @@ export type VendorStatus =
 export type VerificationLevel = "UNVERIFIED" | "IDENTITY_VERIFIED" | "BUSINESS_VERIFIED" | "PLATFORM_VERIFIED";
 export type MediaStatus = "PENDING" | "UPLOADING" | "PROCESSING" | "READY" | "INACTIVE" | "FAILED" | "DELETED";
 export type MediaModerationStatus = "PENDING" | "APPROVED" | "REJECTED" | "HIDDEN";
-export type MediaType = "LOGO" | "COVER" | "PORTFOLIO" | "VIDEO" | "STORE_ITEM_PHOTO" | "PACKAGE_PHOTO";
+export type MediaType =
+  | "LOGO"
+  | "COVER"
+  | "PORTFOLIO"
+  | "VIDEO"
+  | "STORE_ITEM_PHOTO"
+  | "PACKAGE_PHOTO"
+  | "CATEGORY_ATTRIBUTE_PHOTO";
 
 export interface MediaItem {
   id: string;
@@ -73,18 +80,41 @@ export interface VendorProfileSelf {
   seoTitle: string | null;
   seoDescription: string | null;
   canonicalUrl: string | null;
+  willingToTravel: boolean | null;
+  advanceBookingPercent: number | null;
+  cancellationPolicy: string | null;
+  eventsCompletedRange: string | null;
 }
+
+export type CategoryAttributeDataType =
+  | "BOOLEAN"
+  | "NUMBER"
+  | "TEXT"
+  | "SELECT"
+  | "MULTI_SELECT"
+  | "TEXTAREA"
+  | "NUMBER_RANGE"
+  | "IMAGE"
+  | "PHONE"
+  | "URL"
+  | "EMAIL"
+  | "TIME"
+  | "TIME_RANGE";
 
 export interface CategoryAttributeSelf {
   id: string;
   categoryId: string;
   key: string;
   label: string;
-  dataType: "BOOLEAN" | "NUMBER" | "TEXT" | "SELECT" | "MULTI_SELECT";
+  dataType: CategoryAttributeDataType;
   options: string[] | null;
   isFilterable: boolean;
   isComparable: boolean;
   isRequired: boolean;
+  placeholder: string | null;
+  helpText: string | null;
+  uiVariant: string | null;
+  aspectRatio: string | null;
   sortOrder: number;
 }
 
@@ -132,6 +162,11 @@ export interface PackageSelf {
   isActive: boolean;
 }
 
+export type AttributeValueJson =
+  | { min: number; max: number }
+  | { time: string }
+  | { start: string; end: string };
+
 export interface VendorAttributeValueSelf {
   vendorId: string;
   attributeId: string;
@@ -139,6 +174,7 @@ export interface VendorAttributeValueSelf {
   valueNumber: string | null;
   valueBoolean: boolean | null;
   valueOptions: string[];
+  valueJson: AttributeValueJson | null;
   attribute: CategoryAttributeSelf;
 }
 
@@ -164,7 +200,19 @@ export interface VendorSelf {
   packages: PackageSelf[];
   attributeValues: VendorAttributeValueSelf[];
   city: LocationSelf | null;
+  // Resolved Media rows for IMAGE-typed attribute values, keyed by
+  // attributeId — valueText only stores a Media id (same EAV shape as every
+  // other attribute type), so the backend resolves it here to let the
+  // profile editor render an existing image preview without a per-field
+  // round trip. See vendor.controller.ts's getMyVendor.
+  mediaByAttributeId: Record<string, MediaItem>;
 }
+
+// Fixed range labels for "Events Completed" (Trust & Credibility section) —
+// mirrors EVENTS_COMPLETED_RANGES in wedhub-backend's vendor.schema.ts.
+// Same list for every category (unlike Category Details), so this is a
+// hardcoded constant, not an admin-configurable option set.
+export const EVENTS_COMPLETED_RANGES = ["Under 50", "50-100", "100-250", "250-500", "500+"] as const;
 
 // ---- PUT /vendors/me/profile ----
 export interface UpsertProfileBody {
@@ -196,6 +244,10 @@ export interface UpsertProfileBody {
   cityId?: string;
   logoMediaId?: string | null;
   coverMediaId?: string | null;
+  willingToTravel?: boolean;
+  advanceBookingPercent?: number;
+  cancellationPolicy?: string;
+  eventsCompletedRange?: string;
 }
 
 export interface SetCategoriesBody {
@@ -208,7 +260,7 @@ export interface SetServiceAreasBody {
 }
 
 export interface SetAttributesBody {
-  values: Array<{ attributeId: string; value: string | number | boolean | string[] }>;
+  values: Array<{ attributeId: string; value: string | number | boolean | string[] | AttributeValueJson }>;
 }
 
 export interface AttachServiceBody {

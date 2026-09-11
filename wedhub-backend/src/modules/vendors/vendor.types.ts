@@ -35,6 +35,10 @@ export interface UpsertVendorProfileInput {
   cityId: string | undefined;
   logoMediaId: string | null | undefined;
   coverMediaId: string | null | undefined;
+  willingToTravel: boolean | undefined;
+  advanceBookingPercent: number | undefined;
+  cancellationPolicy: string | undefined;
+  eventsCompletedRange: string | undefined;
 }
 
 export interface SetCategoriesInput {
@@ -46,9 +50,13 @@ export interface SetServiceAreasInput {
   locationIds: string[];
 }
 
+export type NumberRangeValue = { min: number; max: number };
+export type TimeValue = { time: string };
+export type TimeRangeValue = { start: string; end: string };
+
 export interface AttributeValueInput {
   attributeId: string;
-  value: string | number | boolean | string[];
+  value: string | number | boolean | string[] | NumberRangeValue | TimeValue | TimeRangeValue;
 }
 
 export interface CreatePackageInput {

@@ -23,9 +23,30 @@ export const updateCategorySchema = z.object({
   startingPriceLabel: z.string().max(60).nullable().optional(),
 });
 
-const attributeDataType = z.enum(["BOOLEAN", "NUMBER", "TEXT", "SELECT", "MULTI_SELECT"]);
+// DROPDOWN, DROPDOWN_RANGE, RADIO and CHECKBOX from the original field-type
+// spec are deliberately not separate values here — they're identical in
+// storage/validation to SELECT/BOOLEAN (see AttributeDataType in
+// schema.prisma) and are reached via `uiVariant` (RADIO) or plain
+// option-string content (DROPDOWN_RANGE), not a new enum member.
+const attributeDataType = z.enum([
+  "BOOLEAN",
+  "NUMBER",
+  "TEXT",
+  "SELECT",
+  "MULTI_SELECT",
+  "TEXTAREA",
+  "NUMBER_RANGE",
+  "IMAGE",
+  "PHONE",
+  "URL",
+  "EMAIL",
+  "TIME",
+  "TIME_RANGE",
+]);
 
 const optionsRequiringTypes = new Set(["SELECT", "MULTI_SELECT"]);
+const uiVariantValues = z.enum(["RADIO"]);
+const aspectRatioValues = z.enum(["1:1", "4:5", "16:9", "3:2"]);
 
 export const createAttributeSchema = z
   .object({
@@ -40,6 +61,10 @@ export const createAttributeSchema = z
     isFilterable: z.boolean().optional(),
     isComparable: z.boolean().optional(),
     isRequired: z.boolean().optional(),
+    placeholder: z.string().max(200).optional(),
+    helpText: z.string().max(500).optional(),
+    uiVariant: uiVariantValues.optional(),
+    aspectRatio: aspectRatioValues.optional(),
   })
   .superRefine((value, ctx) => {
     const requiresOptions = optionsRequiringTypes.has(value.dataType);
@@ -57,6 +82,20 @@ export const createAttributeSchema = z
         message: `options must not be set when dataType is ${value.dataType}`,
       });
     }
+    if (value.uiVariant && value.dataType !== "SELECT") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["uiVariant"],
+        message: "uiVariant is only valid when dataType is SELECT",
+      });
+    }
+    if (value.aspectRatio && value.dataType !== "IMAGE") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["aspectRatio"],
+        message: "aspectRatio is only valid when dataType is IMAGE",
+      });
+    }
   });
 
 export const updateAttributeSchema = z.object({
@@ -65,6 +104,10 @@ export const updateAttributeSchema = z.object({
   isFilterable: z.boolean().optional(),
   isComparable: z.boolean().optional(),
   isRequired: z.boolean().optional(),
+  placeholder: z.string().max(200).nullable().optional(),
+  helpText: z.string().max(500).nullable().optional(),
+  uiVariant: uiVariantValues.nullable().optional(),
+  aspectRatio: aspectRatioValues.nullable().optional(),
   sortOrder: z.coerce.number().int().optional(),
 });
 

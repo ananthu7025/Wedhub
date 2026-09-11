@@ -239,6 +239,10 @@ export interface AdminCreateAttributeBody {
   isFilterable?: boolean;
   isComparable?: boolean;
   isRequired?: boolean;
+  placeholder?: string;
+  helpText?: string;
+  uiVariant?: "RADIO";
+  aspectRatio?: "1:1" | "4:5" | "16:9" | "3:2";
 }
 
 // ---- PATCH /categories/:id/attributes/:attributeId (ADMIN) ----
@@ -248,6 +252,10 @@ export interface AdminUpdateAttributeBody {
   isFilterable?: boolean;
   isComparable?: boolean;
   isRequired?: boolean;
+  placeholder?: string | null;
+  helpText?: string | null;
+  uiVariant?: "RADIO" | null;
+  aspectRatio?: "1:1" | "4:5" | "16:9" | "3:2" | null;
   sortOrder?: number;
 }
 

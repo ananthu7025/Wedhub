@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { prisma } from "../../config/database";
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
@@ -118,11 +119,39 @@ export async function setServiceAreas(vendorId: string, input: SetServiceAreasIn
   return vendorRepository.findVendorById(vendorId);
 }
 
+const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const PHONE_PATTERN = /^\+?[0-9][0-9\s\-()]{6,19}$/;
+
+function isNumberRangeValue(value: unknown): value is { min: number; max: number } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    typeof (value as { min: unknown }).min === "number" &&
+    typeof (value as { max: unknown }).max === "number"
+  );
+}
+
+function isTimeValue(value: unknown): value is { time: string } {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && typeof (value as { time: unknown }).time === "string";
+}
+
+function isTimeRangeValue(value: unknown): value is { start: string; end: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    typeof (value as { start: unknown }).start === "string" &&
+    typeof (value as { end: unknown }).end === "string"
+  );
+}
+
 export async function setAttributeValues(vendorId: string, values: AttributeValueInput[]) {
   const attributes = await vendorRepository.findAttributesByIds(values.map((v) => v.attributeId));
   const attributeById = new Map(attributes.map((attribute) => [attribute.id, attribute]));
 
-  const rows = values.map((entry) => {
+  const rows: vendorRepository.AttributeValueRow[] = [];
+  for (const entry of values) {
     const attribute = attributeById.get(entry.attributeId);
     if (!attribute) {
       throw new ValidationError(`Attribute ${entry.attributeId} does not exist`);
@@ -134,10 +163,12 @@ export async function setAttributeValues(vendorId: string, values: AttributeValu
       valueNumber: undefined,
       valueBoolean: undefined,
       valueOptions: undefined,
+      valueJson: undefined,
     };
 
     switch (attribute.dataType) {
       case "TEXT":
+      case "TEXTAREA":
       case "SELECT": {
         if (typeof entry.value !== "string") {
           throw new ValidationError(`Attribute "${attribute.label}" expects a text value`);
@@ -151,11 +182,74 @@ export async function setAttributeValues(vendorId: string, values: AttributeValu
         write.valueText = entry.value;
         break;
       }
+      case "PHONE": {
+        if (typeof entry.value !== "string" || !PHONE_PATTERN.test(entry.value)) {
+          throw new ValidationError(`Attribute "${attribute.label}" expects a valid phone number`);
+        }
+        write.valueText = entry.value;
+        break;
+      }
+      case "EMAIL": {
+        if (typeof entry.value !== "string" || !z.string().email().safeParse(entry.value).success) {
+          throw new ValidationError(`Attribute "${attribute.label}" expects a valid email address`);
+        }
+        write.valueText = entry.value;
+        break;
+      }
+      case "URL": {
+        if (typeof entry.value !== "string" || !z.string().url().safeParse(entry.value).success) {
+          throw new ValidationError(`Attribute "${attribute.label}" expects a valid URL`);
+        }
+        write.valueText = entry.value;
+        break;
+      }
+      case "IMAGE": {
+        if (typeof entry.value !== "string") {
+          throw new ValidationError(`Attribute "${attribute.label}" expects an uploaded image`);
+        }
+        const media = await vendorRepository.findOwnMediaById(vendorId, entry.value);
+        if (!media || media.status !== "READY") {
+          throw new ValidationError(`Attribute "${attribute.label}" must reference your own, fully-processed image`);
+        }
+        write.valueText = entry.value;
+        break;
+      }
       case "NUMBER": {
         if (typeof entry.value !== "number") {
           throw new ValidationError(`Attribute "${attribute.label}" expects a numeric value`);
         }
         write.valueNumber = entry.value;
+        break;
+      }
+      case "NUMBER_RANGE": {
+        if (!isNumberRangeValue(entry.value) || !Number.isFinite(entry.value.min) || !Number.isFinite(entry.value.max)) {
+          throw new ValidationError(`Attribute "${attribute.label}" expects a numeric range ({min, max})`);
+        }
+        if (entry.value.min > entry.value.max) {
+          throw new ValidationError(`Attribute "${attribute.label}": min must not be greater than max`);
+        }
+        write.valueJson = entry.value;
+        break;
+      }
+      case "TIME": {
+        if (!isTimeValue(entry.value) || !TIME_PATTERN.test(entry.value.time)) {
+          throw new ValidationError(`Attribute "${attribute.label}" expects a valid time (HH:mm)`);
+        }
+        write.valueJson = entry.value;
+        break;
+      }
+      case "TIME_RANGE": {
+        if (
+          !isTimeRangeValue(entry.value) ||
+          !TIME_PATTERN.test(entry.value.start) ||
+          !TIME_PATTERN.test(entry.value.end)
+        ) {
+          throw new ValidationError(`Attribute "${attribute.label}" expects a valid time range (start/end, HH:mm)`);
+        }
+        if (entry.value.start >= entry.value.end) {
+          throw new ValidationError(`Attribute "${attribute.label}": start time must be before end time`);
+        }
+        write.valueJson = entry.value;
         break;
       }
       case "BOOLEAN": {
@@ -181,8 +275,8 @@ export async function setAttributeValues(vendorId: string, values: AttributeValu
       }
     }
 
-    return write;
-  });
+    rows.push(write);
+  }
 
   const requiredAttributes = await vendorRepository.findRequiredAttributesForPrimaryCategory(vendorId);
   const submittedById = new Map(rows.map((row) => [row.attributeId, row]));
@@ -208,7 +302,49 @@ function isAttributeValuePresent(row: vendorRepository.AttributeValueRow | undef
   if (row.valueOptions !== undefined) {
     return row.valueOptions.length > 0;
   }
+  if (row.valueJson !== undefined) {
+    const json = row.valueJson as { min?: number; max?: number; time?: string; start?: string; end?: string };
+    if (json.min !== undefined || json.max !== undefined) {
+      return json.min !== undefined && json.max !== undefined;
+    }
+    if (json.time !== undefined) {
+      return json.time.length > 0;
+    }
+    if (json.start !== undefined || json.end !== undefined) {
+      return !!json.start && !!json.end;
+    }
+    return true;
+  }
   return row.valueNumber !== undefined || row.valueBoolean !== undefined;
+}
+
+// Resolves the Media row behind each IMAGE-typed attribute value's valueText
+// (a Media id) so the frontend can render an existing image preview without
+// a per-field round trip. Keyed by attributeId since that's what
+// AttributesSection/ProfileEditor already key their value map on.
+export async function resolveImageAttributeMedia(
+  attributeValues: Array<{ attributeId: string; valueText: string | null; attribute: { dataType: string } }>,
+) {
+  const imageMediaIds = attributeValues
+    .filter((av) => av.attribute.dataType === "IMAGE" && av.valueText)
+    .map((av) => av.valueText as string);
+  if (imageMediaIds.length === 0) {
+    return {};
+  }
+
+  const mediaRows = await vendorRepository.findMediaByIds(imageMediaIds);
+  const mediaById = new Map(mediaRows.map((m) => [m.id, m]));
+
+  const result: Record<string, (typeof mediaRows)[number]> = {};
+  for (const av of attributeValues) {
+    if (av.attribute.dataType === "IMAGE" && av.valueText) {
+      const media = mediaById.get(av.valueText);
+      if (media) {
+        result[av.attributeId] = media;
+      }
+    }
+  }
+  return result;
 }
 
 export async function attachService(vendorId: string, serviceId: string, note: string | undefined) {

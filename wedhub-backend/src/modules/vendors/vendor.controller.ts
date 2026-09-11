@@ -38,7 +38,12 @@ export async function getMyVendor(req: Request, res: Response): Promise<void> {
   const owned = await getOwnedVendorOrThrow(userId);
   await vendorService.advanceIfEmailNowVerified(owned.id);
   const vendor = await vendorRepository.findVendorById(owned.id);
-  res.json(successResponse(vendor));
+  // IMAGE-typed attribute values only store a Media id (valueText, same EAV
+  // shape as every other type) — resolve those to full Media rows here so
+  // ProfileEditor's AttributesSection can render an existing image preview
+  // without a separate round trip per field.
+  const mediaByAttributeId = vendor ? await vendorService.resolveImageAttributeMedia(vendor.attributeValues) : {};
+  res.json(successResponse(vendor ? { ...vendor, mediaByAttributeId } : vendor));
 }
 
 export async function updateMyVendor(req: Request, res: Response): Promise<void> {
@@ -82,6 +87,10 @@ export async function upsertProfile(req: Request, res: Response): Promise<void> 
     cityId: body.cityId,
     logoMediaId: body.logoMediaId,
     coverMediaId: body.coverMediaId,
+    willingToTravel: body.willingToTravel,
+    advanceBookingPercent: body.advanceBookingPercent,
+    cancellationPolicy: body.cancellationPolicy,
+    eventsCompletedRange: body.eventsCompletedRange,
   });
   res.json(successResponse(profile));
 }
