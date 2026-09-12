@@ -134,6 +134,7 @@ export function toPublicView(media: {
   status: string;
   optimizedObjectKey: string | null;
   thumbnailObjectKey: string | null;
+  blurDataUrl: string | null;
   altText: string | null;
   width: number | null;
   height: number | null;
@@ -144,6 +145,7 @@ export function toPublicView(media: {
     status: media.status,
     url: media.optimizedObjectKey ? getPublicUrl(media.optimizedObjectKey) : null,
     thumbnailUrl: media.thumbnailObjectKey ? getPublicUrl(media.thumbnailObjectKey) : null,
+    blurDataUrl: media.blurDataUrl,
     altText: media.altText,
     width: media.width,
     height: media.height,

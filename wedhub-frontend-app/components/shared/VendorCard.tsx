@@ -35,6 +35,7 @@ export function VendorCard({
   slug,
   businessName,
   logoUrl,
+  logoBlurDataUrl,
   shortDescription,
   startingPrice,
   currency,
@@ -47,6 +48,7 @@ export function VendorCard({
   slug: string;
   businessName: string;
   logoUrl: string | null;
+  logoBlurDataUrl?: string | null;
   shortDescription: string | null;
   startingPrice: string | null;
   currency: string | null;
@@ -79,7 +81,14 @@ export function VendorCard({
     >
       <div className="relative aspect-4/3 bg-surface-input">
         {logoUrl ? (
-          <Image src={logoUrl} alt={businessName} fill className="object-cover" sizes="(max-width: 900px) 50vw, 25vw" />
+          <Image
+            src={logoUrl}
+            alt={businessName}
+            fill
+            className="object-cover"
+            sizes="(max-width: 900px) 50vw, 25vw"
+            {...(logoBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoBlurDataUrl } : {})}
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm text-text-grey">No photo yet</div>
         )}

@@ -32,6 +32,7 @@ interface DisplayCategoryTile {
   slug: string;
   name: string;
   imageUrl: string;
+  imageBlurDataUrl?: string | null;
 }
 
 // An admin-pinned GalleryCategory.coverImageUrl always wins when set (an
@@ -47,7 +48,8 @@ function buildCategoryTiles(categories: GalleryCategory[], items: FeaturedMediaI
       (coverItem
         ? getPublicMediaUrl(coverItem.media.optimizedObjectKey ?? coverItem.media.originalObjectKey)
         : (SAMPLE_COVER_IMAGES[category.name] ?? FALLBACK_COVER_IMAGE));
-    return { key: category.id, slug: category.slug, name: category.name, imageUrl };
+    const imageBlurDataUrl = category.coverImageUrl ? null : coverItem?.media.blurDataUrl;
+    return { key: category.id, slug: category.slug, name: category.name, imageUrl, imageBlurDataUrl };
   });
 }
 
@@ -63,6 +65,7 @@ function CategoryTile({ tile }: { tile: DisplayCategoryTile }) {
         fill
         className="object-cover transition-transform duration-500 group-hover:scale-105"
         sizes="(max-width: 640px) 160px, 192px"
+        {...(tile.imageBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: tile.imageBlurDataUrl } : {})}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity group-hover:opacity-95" />
       <div className="absolute bottom-0 left-0 right-0 p-3 text-white">

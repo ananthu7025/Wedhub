@@ -114,7 +114,10 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
   const heroImageUrl = heroImageKey ? getPublicMediaUrl(heroImageKey) : null;
 
   const logoMedia = vendor.profile?.logoMedia;
-  const logoImageKey = logoMedia?.optimizedObjectKey ?? logoMedia?.originalObjectKey;
+  // Rendered into a 128px badge (see the h-32 w-32 box below) — the
+  // 300px thumbnail variant is already more than enough resolution, no
+  // need to request the 800px "medium" variant for this.
+  const logoImageKey = logoMedia?.thumbnailObjectKey ?? logoMedia?.optimizedObjectKey ?? logoMedia?.originalObjectKey;
   const logoImageUrl = logoImageKey ? getPublicMediaUrl(logoImageKey) : null;
 
   const verificationLabel = VERIFICATION_LABEL[vendor.verificationLevel];
@@ -153,7 +156,9 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
       <PublicTopbar />
 
       <div className="relative h-80 bg-surface-input max-[900px]:h-52">
-        {heroImageUrl && <Image src={heroImageUrl} alt={vendor.businessName} fill className="object-cover" priority />}
+        {heroImageUrl && (
+          <Image src={heroImageUrl} alt={vendor.businessName} fill sizes="100vw" className="object-cover" priority />
+        )}
       </div>
 
       <div className="mx-auto max-w-[1200px] px-10 max-[900px]:px-4">
@@ -175,7 +180,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
         <div className="-mt-4 flex items-end gap-5 max-[900px]:flex-wrap">
           <div className="relative flex h-32 w-32 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-surface-input text-3xl font-bold text-text-grey shadow-[var(--shadow-card)]">
             {logoImageUrl ? (
-              <Image src={logoImageUrl} alt={vendor.businessName} fill className="object-cover" />
+              <Image src={logoImageUrl} alt={vendor.businessName} fill sizes="128px" className="object-cover" />
             ) : (
               vendor.businessName.charAt(0)
             )}
@@ -237,7 +242,13 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                       const key = media.thumbnailObjectKey ?? media.optimizedObjectKey ?? media.originalObjectKey;
                       return (
                         <div key={media.id} className="relative aspect-square overflow-hidden rounded-md bg-surface-input">
-                          <Image src={getPublicMediaUrl(key)} alt={media.altText ?? vendor.businessName} fill className="object-cover" />
+                          <Image
+                            src={getPublicMediaUrl(key)}
+                            alt={media.altText ?? vendor.businessName}
+                            fill
+                            sizes="(max-width: 900px) 50vw, 25vw"
+                            className="object-cover"
+                          />
                         </div>
                       );
                     })}
@@ -260,7 +271,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                       <div key={pkg.id} className="mb-3.5 flex gap-4 rounded-xl border border-border p-5">
                         {imageKey && (
                           <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-surface-input">
-                            <Image src={getPublicMediaUrl(imageKey)} alt={pkg.name} fill className="object-cover" />
+                            <Image src={getPublicMediaUrl(imageKey)} alt={pkg.name} fill sizes="64px" className="object-cover" />
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
@@ -319,6 +330,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                                 src={getPublicMediaUrl(key)}
                                 alt={`Review photo for ${vendor.businessName}`}
                                 fill
+                                sizes="64px"
                                 className="object-cover"
                               />
                             </div>

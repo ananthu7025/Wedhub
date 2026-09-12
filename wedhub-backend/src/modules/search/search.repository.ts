@@ -232,7 +232,14 @@ export async function searchVendors(
           vp.short_description AS "shortDescription",
           vp.starting_price AS "startingPrice",
           vp.currency,
-          COALESCE(logo.optimized_object_key, logo.original_object_key) AS "logoObjectKey",
+          -- Search/listing cards render this at <=320px (VendorCard/SearchCard
+          -- are never wider than a ~33vw grid column) — the 300px thumbnail
+          -- variant is already sufficient resolution, no need to ship the
+          -- 800px "medium" variant into a small card. Falls back to medium
+          -- then original only while a just-uploaded logo is still PROCESSING
+          -- and hasn't produced a thumbnail yet.
+          COALESCE(logo.thumbnail_object_key, logo.optimized_object_key, logo.original_object_key) AS "logoObjectKey",
+          logo.blur_data_url AS "logoBlurDataUrl",
           v.created_at AS "createdAt",
           (${similarity})::float AS similarity,
           ${categoryMatch} AS "categoryMatch",

@@ -13,7 +13,9 @@ const VENDOR_SUMMARY_INCLUDE = {
           shortDescription: true,
           startingPrice: true,
           currency: true,
-          logoMedia: { select: { optimizedObjectKey: true, originalObjectKey: true } },
+          logoMedia: {
+            select: { thumbnailObjectKey: true, optimizedObjectKey: true, originalObjectKey: true, blurDataUrl: true },
+          },
         },
       },
     },

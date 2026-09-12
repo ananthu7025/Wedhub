@@ -39,6 +39,7 @@ export interface VendorSearchResult {
   startingPrice: string | null;
   currency: string | null;
   logoUrl: string | null;
+  logoBlurDataUrl: string | null;
 }
 
 export const SEARCH_SORT_OPTIONS = ["relevance", "price_low", "price_high", "newest", "recommended"] as const;
@@ -148,6 +149,7 @@ export interface VendorProfileMedia {
   id: string;
   optimizedObjectKey: string | null;
   thumbnailObjectKey: string | null;
+  blurDataUrl: string | null;
   originalObjectKey: string;
 }
 
@@ -213,6 +215,7 @@ export interface AlbumMedia {
   originalObjectKey: string;
   optimizedObjectKey: string | null;
   thumbnailObjectKey: string | null;
+  blurDataUrl: string | null;
   altText: string | null;
   sortOrder: number;
 }
@@ -233,6 +236,7 @@ export interface WeddingStoryAlbumMedia {
   originalObjectKey: string;
   optimizedObjectKey: string | null;
   thumbnailObjectKey: string | null;
+  blurDataUrl?: string | null;
   altText?: string | null;
 }
 
@@ -371,6 +375,7 @@ export interface FeaturedListing {
     startingPrice: string | null;
     currency: string | null;
     logoUrl: string | null;
+    logoBlurDataUrl: string | null;
   };
   category: { id: string; name: string; slug: string } | null;
   city: { id: string; name: string; slug: string } | null;

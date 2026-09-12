@@ -739,6 +739,12 @@ model Media {
   originalObjectKey  String                @map("original_object_key")
   optimizedObjectKey String?               @map("optimized_object_key")
   thumbnailObjectKey String?               @map("thumbnail_object_key")
+  // Tiny (~16px) base64 WebP data URL generated alongside the thumbnail/
+  // medium variants in media-processing.processor.ts — used as
+  // next/image's placeholder="blur" so a card shows an instant, image-
+  // accurate blur instead of a blank/flat-color box while the real
+  // optimized image loads. A few hundred bytes, never a full image.
+  blurDataUrl        String?               @map("blur_data_url")
   mimeType           String                @map("mime_type")
   fileSize           Int                   @map("file_size")
   width              Int?

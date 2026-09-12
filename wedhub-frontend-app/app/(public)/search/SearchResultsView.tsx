@@ -147,6 +147,7 @@ export function SearchResultsView({
               slug={vendor.slug}
               businessName={vendor.businessName}
               logoUrl={vendor.logoUrl}
+              logoBlurDataUrl={vendor.logoBlurDataUrl}
               shortDescription={vendor.shortDescription}
               startingPrice={vendor.startingPrice}
               currency={vendor.currency}
@@ -167,6 +168,7 @@ export function SearchResultsView({
               slug={vendor.slug}
               businessName={vendor.businessName}
               logoUrl={vendor.logoUrl}
+              logoBlurDataUrl={vendor.logoBlurDataUrl}
               shortDescription={vendor.shortDescription}
               startingPrice={vendor.startingPrice}
               currency={vendor.currency}

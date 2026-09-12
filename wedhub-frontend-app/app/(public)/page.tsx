@@ -58,6 +58,7 @@ interface DisplayWeddingStory {
   tag: string;
   snippet: string;
   imageUrl: string;
+  imageBlurDataUrl?: string | null;
 }
 
 // Sample content only — shown to fill empty slots in the "Real Wedding
@@ -139,6 +140,7 @@ function fillWeddingStorySlots(realStories: RealWeddingStory[]): DisplayWeddingS
       imageUrl: coverKey
         ? getPublicMediaUrl(coverKey)
         : "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&q=80",
+      imageBlurDataUrl: coverKey ? story.album.coverMedia?.blurDataUrl : null,
     };
   });
   const remaining = WEDDING_STORIES_SLOTS - real.length;
@@ -158,10 +160,19 @@ export default async function HomePage() {
 
       {/* Hero Section — strictly preserving user copy & search form, enhanced with generated wedding background */}
       <section className="relative m-6 overflow-hidden rounded-[24px] px-8 py-16 text-white shadow-xl max-[900px]:m-4 max-[900px]:px-6 max-[900px]:py-10">
-        {/* High resolution Indian wedding photography background */}
-        <div
-          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 hover:scale-105"
-          style={{ backgroundImage: "url('/images/hero-wedding-bg.jpg')" }}
+        {/* High resolution Indian wedding photography background — this is
+            the page's LCP element, so it uses next/image with `priority`
+            (skips lazy-loading + gets a fetchpriority hint) instead of a
+            plain CSS background-image, which Next can't optimize, resize,
+            or re-encode to AVIF/WebP. Same visual result (object-cover,
+            hover zoom) as the previous background-image div. */}
+        <Image
+          src="/images/hero-wedding-bg.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="z-0 object-cover transition-transform duration-700 hover:scale-105"
         />
         {/* Elegant dark gradient overlay ensuring crisp contrast & readability */}
         <div className="absolute inset-0 z-0 bg-gradient-to-r from-black/85 via-black/65 to-black/30 backdrop-blur-[0.5px]" />
@@ -496,6 +507,7 @@ async function FeaturedVendorsSection({ isAuthenticated }: { isAuthenticated: bo
             slug={listing.vendor.slug}
             businessName={listing.vendor.businessName}
             logoUrl={listing.vendor.logoUrl}
+            logoBlurDataUrl={listing.vendor.logoBlurDataUrl}
             shortDescription={listing.vendor.shortDescription}
             startingPrice={listing.vendor.startingPrice}
             currency={listing.vendor.currency}
@@ -523,6 +535,7 @@ function WeddingStoryCard({ story, className }: { story: DisplayWeddingStory; cl
         fill
         className="object-cover transition-transform duration-500 group-hover:scale-110"
         sizes="(max-width: 768px) 100vw, 33vw"
+        {...(story.imageBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: story.imageBlurDataUrl } : {})}
       />
 
       {/* Top shade — revealed on hover */}

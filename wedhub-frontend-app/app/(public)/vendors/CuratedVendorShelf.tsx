@@ -100,6 +100,7 @@ export function CuratedVendorShelf({
                       fill
                       className="object-cover transition-transform duration-500 hover:scale-105"
                       sizes="250px"
+                      {...(vendor.logoBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: vendor.logoBlurDataUrl } : {})}
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-gray-100 text-xs text-gray-400 font-medium">

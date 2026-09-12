@@ -151,7 +151,11 @@ export async function listActiveFeaturedListings(filter: {
 
   const publicListings = listings.map((listing) => {
     const profile = listing.vendor.profile;
-    const logoKey = profile?.logoMedia?.optimizedObjectKey ?? profile?.logoMedia?.originalObjectKey;
+    // Rendered into a VendorCard, never wider than a ~25vw grid column —
+    // the 300px thumbnail is enough resolution; falls back to medium/
+    // original only while a just-uploaded logo hasn't finished processing.
+    const logoKey =
+      profile?.logoMedia?.thumbnailObjectKey ?? profile?.logoMedia?.optimizedObjectKey ?? profile?.logoMedia?.originalObjectKey;
     return {
       ...listing,
       vendor: {
@@ -162,6 +166,7 @@ export async function listActiveFeaturedListings(filter: {
         startingPrice: profile?.startingPrice != null ? profile.startingPrice.toString() : null,
         currency: profile?.currency ?? null,
         logoUrl: logoKey ? getPublicUrl(logoKey) : null,
+        logoBlurDataUrl: profile?.logoMedia?.blurDataUrl ?? null,
       },
     };
   });

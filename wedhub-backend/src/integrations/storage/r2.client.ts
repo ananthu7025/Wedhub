@@ -48,6 +48,26 @@ export function isStorageConfigured(): boolean {
   return isConfigured();
 }
 
+// Every object key this app writes is a fresh randomUUID()-derived path
+// (media.service.ts's createUploadRequest, and variantObjectKey() for the
+// derived thumbnail/medium variants) — a key is never reused for
+// different content, so it's always safe to cache these objects
+// immutably forever rather than relying on R2/the CDN's shorter default.
+// A vendor "changing" a photo produces a brand-new Media row/object key,
+// not an overwrite, so there is no stale-cache risk to guard against.
+//
+// NOT applied to getSignedUploadUrl's PutObjectCommand below: any param
+// added to a presigned command becomes part of what the client's actual
+// PUT request must replicate exactly for the SigV4 signature to validate
+// (lib/media/upload.ts's browser-side PUT only ever sends Content-Type
+// today) — changing that safely requires updating every upload call site
+// in lockstep, which is out of scope here. Instead applied only to
+// uploadObject, used exclusively by the media-processing worker
+// (media-processing.processor.ts) to write the derived variants — a
+// server-to-server call this backend fully controls, no client coordination
+// needed.
+const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
 export async function getSignedUploadUrl(objectKey: string, mimeType: string): Promise<string> {
   const command = new PutObjectCommand({
     Bucket: env.R2_BUCKET,
@@ -82,7 +102,13 @@ export async function uploadObject(
   mimeType: string,
 ): Promise<void> {
   await getClient().send(
-    new PutObjectCommand({ Bucket: env.R2_BUCKET, Key: objectKey, Body: body, ContentType: mimeType }),
+    new PutObjectCommand({
+      Bucket: env.R2_BUCKET,
+      Key: objectKey,
+      Body: body,
+      ContentType: mimeType,
+      CacheControl: IMMUTABLE_CACHE_CONTROL,
+    }),
   );
 }
 

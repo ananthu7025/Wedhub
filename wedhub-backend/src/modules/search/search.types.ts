@@ -23,6 +23,7 @@ export interface VendorSearchRow {
   startingPrice: string | null;
   currency: string | null;
   logoObjectKey: string | null;
+  logoBlurDataUrl: string | null;
   createdAt: Date;
   similarity: number;
   categoryMatch: boolean;

@@ -150,6 +150,7 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
                 alt={`${businessName} Cover`}
                 fill
                 priority
+                sizes="100vw"
                 className="object-cover object-center"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
@@ -184,7 +185,7 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
               <div className="flex items-start sm:items-center gap-4 sm:gap-5 min-w-0">
                 <div className="relative h-16 w-16 sm:h-20 sm:w-20 flex-shrink-0 overflow-hidden rounded-2xl border-2 border-white bg-gradient-to-tr from-neutral-100 to-neutral-200 shadow-md">
                   {logoUrl ? (
-                    <Image src={logoUrl} alt={businessName} fill className="object-cover" />
+                    <Image src={logoUrl} alt={businessName} fill sizes="80px" className="object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xl font-black text-neutral-800">
                       {businessName.slice(0, 2).toUpperCase()}

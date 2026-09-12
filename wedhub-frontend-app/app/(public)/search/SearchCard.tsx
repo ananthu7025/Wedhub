@@ -12,6 +12,7 @@ interface SearchCardProps {
   slug: string;
   businessName: string;
   logoUrl: string | null;
+  logoBlurDataUrl?: string | null;
   shortDescription: string | null;
   startingPrice: string | null;
   currency: string | null;
@@ -28,6 +29,7 @@ export function SearchCard({
   slug,
   businessName,
   logoUrl,
+  logoBlurDataUrl,
   shortDescription,
   startingPrice,
   currency,
@@ -77,6 +79,7 @@ export function SearchCard({
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width: 640px) 100vw, 320px"
+              {...(logoBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoBlurDataUrl } : {})}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gray-100 text-xs text-gray-400 font-medium">
@@ -181,6 +184,7 @@ export function SearchCard({
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 900px) 50vw, 33vw"
+            {...(logoBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoBlurDataUrl } : {})}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gray-100 text-xs text-gray-400 font-medium">

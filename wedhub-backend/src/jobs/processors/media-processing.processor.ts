@@ -22,6 +22,21 @@ function variantObjectKey(originalKey: string, variant: string): string {
   return `${base}-${variant}.webp`;
 }
 
+// A tiny (16px-wide) heavily-compressed WebP, inlined as a data URL and
+// stored directly on the Media row — this is what next/image's
+// placeholder="blur" renders before the real optimized image arrives.
+// Deliberately not one of the R2-uploaded VARIANTS: it's small enough
+// (a few hundred bytes) to embed in the API response/DB row directly, so
+// the browser paints an image-accurate blur with zero extra network
+// request instead of a flat placeholder color.
+async function generateBlurDataUrl(original: Buffer): Promise<string> {
+  const blurBuffer = await sharp(original)
+    .resize({ width: 16, withoutEnlargement: true })
+    .webp({ quality: 20 })
+    .toBuffer();
+  return `data:image/webp;base64,${blurBuffer.toString("base64")}`;
+}
+
 async function processImage(mediaId: string): Promise<void> {
   const start = performance.now();
   const media = await prisma.media.findUniqueOrThrow({ where: { id: mediaId } });
@@ -49,9 +64,12 @@ async function processImage(mediaId: string): Promise<void> {
     }
   }
 
+  const blurDataUrl = await generateBlurDataUrl(original);
+
   const fields = omitUndefined({
     optimizedObjectKey: optimizedKey,
     thumbnailObjectKey: thumbnailKey,
+    blurDataUrl,
     width: metadata.width,
     height: metadata.height,
   });

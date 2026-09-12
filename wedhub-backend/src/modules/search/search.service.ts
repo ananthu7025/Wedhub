@@ -20,6 +20,7 @@ function toPublicVendorSummary(row: VendorSearchRow) {
     startingPrice: row.startingPrice,
     currency: row.currency,
     logoUrl: row.logoObjectKey ? getPublicUrl(row.logoObjectKey) : null,
+    logoBlurDataUrl: row.logoBlurDataUrl,
   };
 }
 

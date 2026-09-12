@@ -91,6 +91,24 @@ const nextConfig: NextConfig = {
         // R2_PUBLIC_BASE_URL and lib/media/url.ts's getPublicMediaUrl().
       },
     ],
+    // Every R2-hosted media object is a fresh randomUUID()-derived key,
+    // never overwritten in place (r2.client.ts's IMMUTABLE_CACHE_CONTROL
+    // comment) — the optimizer's re-encoded output for a given (url, width,
+    // quality) tuple is just as immutable, so there's no correctness reason
+    // to fall back to Next's 4-hour default. A long TTL means a repeat
+    // visitor (or a second card reusing the same source image at the same
+    // size) gets served straight from the /_next/image cache instead of
+    // paying for re-optimization. Unsplash placeholder images are the one
+    // remotePattern this doesn't perfectly fit, but they're static per URL
+    // in practice too (no rotating query-string busting seen in this repo).
+    minimumCacheTTL: 31536000,
+    // Next only negotiates WebP by default — AVIF isn't in the default
+    // formats list despite typically compressing 20-30% smaller than WebP
+    // for the same visual quality on photographic content (every real image
+    // this marketplace serves). Listed first so it's preferred whenever the
+    // requesting browser's Accept header supports it, falling back to WebP
+    // otherwise (Next negotiates via content-negotiation automatically).
+    formats: ["image/avif", "image/webp"],
   },
   async headers() {
     return [
