@@ -118,14 +118,20 @@ export async function bootstrapVendorForChallenge(
   const defaultService = category.services[0];
   if (defaultService) {
     await vendorService.attachService(vendor.id, defaultService.id, undefined);
-    await vendorService.createPackage(vendor.id, {
-      name: defaultService.name,
-      description: fields.shortDescription,
-      price: fields.startingPrice ?? 0,
-      currency: undefined,
-      inclusions: undefined,
-      imageMediaId: undefined,
-    });
+    // Only create a default package when the entrant actually supplied a
+    // price — a persisted Package with price: 0 is indistinguishable from a
+    // vendor who genuinely charges ₹0 once this profile is public (audit
+    // rule: never invent a price).
+    if (fields.startingPrice !== undefined) {
+      await vendorService.createPackage(vendor.id, {
+        name: defaultService.name,
+        description: fields.shortDescription,
+        price: fields.startingPrice,
+        currency: undefined,
+        inclusions: undefined,
+        imageMediaId: undefined,
+      });
+    }
   }
 
   await attachSensibleAttributeDefaults(vendor.id, category);

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SeoLandingPage } from "@/components/shared/SeoLandingPage";
 import { getSeoPage, listCategories, listLocations } from "@/lib/api/catalog";
 import { ApiRequestError } from "@/lib/api/types";
+import { resolveCitySlugAlias } from "@/lib/seo/location-aliases";
 
 interface CategoryCityPageProps {
   params: Promise<{ categorySlug: string; citySlug: string }>;
@@ -13,6 +14,13 @@ async function loadSeoPage(categorySlug: string, citySlug: string) {
   const category = categories.find((c) => c.slug === categorySlug);
   const city = cities.find((c) => c.slug === citySlug);
   if (!category || !city) {
+    // Colloquial city name (e.g. "kochi") — redirect to the canonical
+    // /category/<slug>/ernakulam URL rather than serving a second indexable
+    // URL for the same real page.
+    const canonicalCitySlug = resolveCitySlugAlias(citySlug);
+    if (category && canonicalCitySlug !== citySlug && cities.some((c) => c.slug === canonicalCitySlug)) {
+      redirect(`/category/${categorySlug}/${canonicalCitySlug}`);
+    }
     notFound();
   }
   try {

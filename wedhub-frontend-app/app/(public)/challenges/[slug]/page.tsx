@@ -32,24 +32,20 @@ async function loadChallenge(slug: string): Promise<Challenge> {
 
 export async function generateMetadata({ params }: ChallengePageProps): Promise<Metadata> {
   const { slug } = await params;
-  try {
-    const challenge = await loadChallenge(slug);
-    const canonicalPath = `/challenges/${challenge.slug}`;
-    return {
+  const challenge = await loadChallenge(slug);
+  const canonicalPath = `/challenges/${challenge.slug}`;
+  return {
+    title: challenge.title,
+    description: challenge.description ?? undefined,
+    alternates: { canonical: canonicalPath },
+    openGraph: {
       title: challenge.title,
       description: challenge.description ?? undefined,
-      alternates: { canonical: canonicalPath },
-      openGraph: {
-        title: challenge.title,
-        description: challenge.description ?? undefined,
-        url: canonicalPath,
-        images: challenge.bannerImage ? [{ url: challenge.bannerImage }] : undefined,
-      },
-      robots: challenge.status === "DRAFT" ? { index: false, follow: false } : { index: true, follow: true },
-    };
-  } catch {
-    return { title: "Challenge" };
-  }
+      url: canonicalPath,
+      images: challenge.bannerImage ? [{ url: challenge.bannerImage }] : undefined,
+    },
+    robots: challenge.status === "DRAFT" ? { index: false, follow: false } : { index: true, follow: true },
+  };
 }
 
 const STATUS_LABEL: Record<Challenge["status"], string> = {

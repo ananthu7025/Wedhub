@@ -19,27 +19,32 @@ interface EntryPageProps {
 
 export async function generateMetadata({ params }: EntryPageProps): Promise<Metadata> {
   const { slug, entryId } = await params;
+  let challenge, entry;
   try {
-    const [{ data: challenge }, { data: entry }] = await Promise.all([
+    [{ data: challenge }, { data: entry }] = await Promise.all([
       getChallengeBySlug(slug),
       getChallengeEntryById(slug, entryId),
     ]);
-    const canonicalPath = `/challenges/${slug}/entry/${entryId}`;
-    const imageUrl = getPublicMediaUrl(entry.image.optimizedObjectKey ?? entry.image.originalObjectKey);
-    const title = `${entry.title} by ${entry.vendor.businessName} — ${challenge.title}`;
-    const description = `Vote for this entry on ${BRAND_NAME}`;
-
-    return {
-      title,
-      description,
-      alternates: { canonical: canonicalPath },
-      openGraph: { title, description, url: canonicalPath, images: [{ url: imageUrl }] },
-      twitter: { card: "summary_large_image", title, description, images: [imageUrl] },
-      robots: { index: true, follow: true },
-    };
-  } catch {
-    return { title: "Challenge Entry" };
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 404) {
+      notFound();
+    }
+    throw error;
   }
+
+  const canonicalPath = `/challenges/${slug}/entry/${entryId}`;
+  const imageUrl = getPublicMediaUrl(entry.image.optimizedObjectKey ?? entry.image.originalObjectKey);
+  const title = `${entry.title} by ${entry.vendor.businessName} — ${challenge.title}`;
+  const description = `Vote for this entry on ${BRAND_NAME}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: canonicalPath },
+    openGraph: { title, description, url: canonicalPath, images: [{ url: imageUrl }] },
+    twitter: { card: "summary_large_image", title, description, images: [imageUrl] },
+    robots: { index: true, follow: true },
+  };
 }
 
 async function loadEntryPageData(slug: string, entryId: string) {

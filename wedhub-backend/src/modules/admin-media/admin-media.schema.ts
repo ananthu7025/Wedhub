@@ -62,4 +62,18 @@ export const createInspirationImageUploadRequestSchema = z.object({
 
 export type CreateInspirationImageUploadRequestBody = z.infer<typeof createInspirationImageUploadRequestSchema>;
 
+// Admin-only, platform-owned image for a GalleryCategory's homepage cover
+// (pinned Gallery Inspiration tile photo) — same shape as the others above,
+// kept as its own schema/route pair since it produces a
+// GALLERY_CATEGORY_COVER_IMAGE rather than CATEGORY_IMAGE/
+// POPULAR_SEARCH_IMAGE/BLOG_COVER_IMAGE/INSPIRATION_PHOTO (see MediaType
+// enum comment in schema.prisma).
+export const createGalleryCategoryImageUploadRequestSchema = z.object({
+  filename: z.string().min(1).max(255),
+  mimeType: z.enum(IMAGE_MIME_TYPES as [string, ...string[]]),
+  fileSize: z.coerce.number().int().positive(),
+});
+
+export type CreateGalleryCategoryImageUploadRequestBody = z.infer<typeof createGalleryCategoryImageUploadRequestSchema>;
+
 export { IMAGE_MIME_TYPES };

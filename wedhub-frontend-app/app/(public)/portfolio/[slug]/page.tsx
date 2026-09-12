@@ -25,49 +25,45 @@ async function loadVendor(slug: string) {
 
 export async function generateMetadata({ params }: PortfolioPageProps): Promise<Metadata> {
   const { slug } = await params;
-  try {
-    const vendor = await loadVendor(slug);
-    const coverMedia = vendor.profile?.coverMedia;
-    const ogImage = coverMedia
-      ? getPublicMediaUrl(coverMedia.optimizedObjectKey ?? coverMedia.originalObjectKey)
-      : undefined;
+  const vendor = await loadVendor(slug);
+  const coverMedia = vendor.profile?.coverMedia;
+  const ogImage = coverMedia
+    ? getPublicMediaUrl(coverMedia.optimizedObjectKey ?? coverMedia.originalObjectKey)
+    : undefined;
 
-    const title = vendor.profile?.seoTitle || `${vendor.businessName} — Portfolio & Pricing`;
-    const description =
-      vendor.profile?.seoDescription ||
-      vendor.profile?.shortDescription ||
-      `Explore the official wedding portfolio, photography, packages, and direct contact details for ${vendor.businessName}.`;
-    const canonicalPath = `/portfolio/${vendor.slug}`;
+  const title = vendor.profile?.seoTitle || `${vendor.businessName} — Portfolio & Pricing`;
+  const description =
+    vendor.profile?.seoDescription ||
+    vendor.profile?.shortDescription ||
+    `Explore the official wedding portfolio, photography, packages, and direct contact details for ${vendor.businessName}.`;
+  const canonicalPath = `/portfolio/${vendor.slug}`;
 
-    return {
-      title: { absolute: title },
-      description,
-      // Self-canonical: this is a distinct, vendor-branded shareable page
-      // (QR codes, WhatsApp/Instagram links) — a genuinely different
-      // real-world destination from the marketplace's own /vendors/:slug
-      // discovery page, not a throwaway duplicate, so it keeps its own
-      // canonical rather than pointing at /vendors/:slug.
-      alternates: { canonical: canonicalPath },
-      openGraph: {
-        title: `${vendor.businessName} — Official Portfolio`,
-        description:
-          vendor.profile?.shortDescription ||
-          `Official wedding portfolio and service offerings for ${vendor.businessName}.`,
-        url: canonicalPath,
-        images: ogImage ? [{ url: ogImage }] : undefined,
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: `${vendor.businessName} — Official Portfolio`,
-        description:
-          vendor.profile?.shortDescription || `Official wedding portfolio for ${vendor.businessName}.`,
-        images: ogImage ? [ogImage] : undefined,
-      },
-      robots: { index: true, follow: true },
-    };
-  } catch {
-    return { title: "Vendor Portfolio" };
-  }
+  return {
+    title: { absolute: title },
+    description,
+    // Self-canonical: this is a distinct, vendor-branded shareable page
+    // (QR codes, WhatsApp/Instagram links) — a genuinely different
+    // real-world destination from the marketplace's own /vendors/:slug
+    // discovery page, not a throwaway duplicate, so it keeps its own
+    // canonical rather than pointing at /vendors/:slug.
+    alternates: { canonical: canonicalPath },
+    openGraph: {
+      title: `${vendor.businessName} — Official Portfolio`,
+      description:
+        vendor.profile?.shortDescription ||
+        `Official wedding portfolio and service offerings for ${vendor.businessName}.`,
+      url: canonicalPath,
+      images: ogImage ? [{ url: ogImage }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${vendor.businessName} — Official Portfolio`,
+      description:
+        vendor.profile?.shortDescription || `Official wedding portfolio for ${vendor.businessName}.`,
+      images: ogImage ? [ogImage] : undefined,
+    },
+    robots: { index: true, follow: true },
+  };
 }
 
 export default async function VendorPortfolioPage({ params }: PortfolioPageProps) {

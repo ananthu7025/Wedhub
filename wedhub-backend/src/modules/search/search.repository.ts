@@ -14,13 +14,65 @@ export function createSearchLog(data: {
   return prisma.searchLog.create({ data });
 }
 
+// A keyword that names a category (e.g. "photographer", "wedding venues")
+// resolves against the small, fixed Category table so keyword search can
+// find vendors by what they *are* (their category), not only by what their
+// own bio text happens to say. Categories.length is in the tens, so a plain
+// ILIKE/trigram scan needs no index — this mirrors the categoryId filter's
+// own EXISTS against vendor_categories, just discovered from free text
+// instead of a UUID. Returns every category id that plausibly matches,
+// since an ambiguous keyword (e.g. "wedding") may fuzzy-match more than one.
+async function resolveKeywordCategoryIds(keyword: string | undefined): Promise<string[]> {
+  if (!keyword) return [];
+  const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT id FROM categories
+    WHERE is_active = true
+      AND (name % ${keyword} OR slug % ${keyword} OR name ILIKE '%' || ${keyword} || '%')
+  `);
+  return rows.map((row) => row.id);
+}
+
+// Colloquial/alternate city names people actually type ("Trivandrum",
+// "Cochin", "TVM") that don't match the canonical administrative-district
+// name stored as Location.name ("Thiruvananthapuram", "Ernakulam") — the
+// Location model has no alias column (a schema change, out of scope here),
+// so this fixed map is the search-time equivalent of the frontend's
+// lib/seo/location-aliases.ts for free-text keyword matching specifically.
+const CITY_KEYWORD_ALIASES: Record<string, string> = {
+  trivandrum: "thiruvananthapuram",
+  tvm: "thiruvananthapuram",
+  cochin: "ernakulam",
+  kochi: "ernakulam",
+  calicut: "kozhikode",
+  trichur: "thrissur",
+};
+
+// A keyword that names a city (e.g. "photographers in Trivandrum") resolves
+// against the Location table the same way resolveKeywordCategoryIds resolves
+// categories — trigram/ILIKE match on the real name, plus a lookup against
+// the known-alias map above for colloquial names that would never trigram-
+// match their formal district name closely enough.
+async function resolveKeywordCityIds(keyword: string | undefined): Promise<string[]> {
+  if (!keyword) return [];
+  const aliasTarget = CITY_KEYWORD_ALIASES[keyword.trim().toLowerCase()];
+  const rows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT id FROM locations
+    WHERE type = 'CITY' AND is_active = true
+      AND (
+        name % ${keyword} OR slug % ${keyword} OR name ILIKE '%' || ${keyword} || '%'
+        ${aliasTarget ? Prisma.sql`OR slug = ${aliasTarget}` : Prisma.empty}
+      )
+  `);
+  return rows.map((row) => row.id);
+}
+
 // Raw SQL is required here (not Prisma's query builder) for two things
 // Prisma can't express: pg_trgm similarity() as an orderable/filterable
 // score, and a dynamic number of category-attribute EXISTS joins built from
 // user-supplied filters. Every value is passed through Prisma.sql's tagged
 // template, which parameterizes them the same way Prisma's own query
 // builder would — string concatenation into the SQL text never happens.
-function buildWhere(filters: VendorSearchFilters): Prisma.Sql {
+function buildWhere(filters: VendorSearchFilters, keywordCategoryIds: string[], keywordCityIds: string[]): Prisma.Sql {
   const conditions: Prisma.Sql[] = [Prisma.sql`v.status = 'APPROVED'`, Prisma.sql`v.deleted_at IS NULL`];
 
   if (filters.categoryId) {
@@ -58,6 +110,19 @@ function buildWhere(filters: VendorSearchFilters): Prisma.Sql {
         OR vp.short_description % ${filters.keyword}
         OR vp.description % ${filters.keyword}
         OR ${filters.keyword} ILIKE ANY (SELECT '%' || unnest(vp.tags) || '%')
+        ${
+          keywordCategoryIds.length > 0
+            ? Prisma.sql`OR EXISTS (
+                SELECT 1 FROM vendor_categories vc
+                WHERE vc.vendor_id = v.id AND vc.category_id = ANY(${keywordCategoryIds}::uuid[])
+              )`
+            : Prisma.empty
+        }
+        ${
+          keywordCityIds.length > 0
+            ? Prisma.sql`OR v.city_id = ANY(${keywordCityIds}::uuid[])`
+            : Prisma.empty
+        }
       )`,
     );
   }
@@ -126,10 +191,30 @@ export async function searchVendors(
   filters: VendorSearchFilters,
   sort: string,
 ): Promise<{ rows: VendorSearchRow[]; total: number }> {
-  const where = buildWhere(filters);
+  const [keywordCategoryIds, keywordCityIds] = await Promise.all([
+    resolveKeywordCategoryIds(filters.keyword),
+    resolveKeywordCityIds(filters.keyword),
+  ]);
+  const where = buildWhere(filters, keywordCategoryIds, keywordCityIds);
   const similarity = similarityExpr(filters.keyword);
-  const categoryMatch = filters.categoryId ? Prisma.sql`true` : Prisma.sql`false`;
-  const cityMatch = filters.cityId ? Prisma.sql`v.city_id = ${filters.cityId}::uuid` : Prisma.sql`false`;
+  // A structured categoryId filter already restricts every row to that
+  // category, so it's a blanket match; a keyword-resolved category isn't a
+  // hard filter (vendors can still qualify via text/tag match instead), so
+  // it needs a real per-row check for ranking to reward the vendors that
+  // actually belong to the implied category.
+  const categoryMatch = filters.categoryId
+    ? Prisma.sql`true`
+    : keywordCategoryIds.length > 0
+      ? Prisma.sql`EXISTS (
+          SELECT 1 FROM vendor_categories vc
+          WHERE vc.vendor_id = v.id AND vc.category_id = ANY(${keywordCategoryIds}::uuid[])
+        )`
+      : Prisma.sql`false`;
+  const cityMatch = filters.cityId
+    ? Prisma.sql`v.city_id = ${filters.cityId}::uuid`
+    : keywordCityIds.length > 0
+      ? Prisma.sql`v.city_id = ANY(${keywordCityIds}::uuid[])`
+      : Prisma.sql`false`;
   const offset = (filters.page - 1) * filters.limit;
   const orderBy = SORT_CLAUSES[sort] ?? SORT_CLAUSES.relevance;
 

@@ -19,6 +19,8 @@ interface SearchCardProps {
   isAuthenticated: boolean;
   viewMode?: "grid" | "list";
   cityName?: string;
+  /** Whether this vendor is already in the viewer's shortlist — seeds the heart button so it reflects real state instead of always starting unfavorited. */
+  initialFavorited?: boolean;
 }
 
 export function SearchCard({
@@ -33,6 +35,7 @@ export function SearchCard({
   isAuthenticated,
   viewMode = "grid",
   cityName,
+  initialFavorited,
 }: SearchCardProps) {
   const impressionFired = useRef(false);
 
@@ -95,6 +98,7 @@ export function SearchCard({
           <VendorHeartButton
             vendorId={vendorId}
             isAuthenticated={isAuthenticated}
+            initialFavorited={initialFavorited}
             className="absolute top-3 right-3 z-10"
           />
         </div>
@@ -198,6 +202,7 @@ export function SearchCard({
         <VendorHeartButton
           vendorId={vendorId}
           isAuthenticated={isAuthenticated}
+          initialFavorited={initialFavorited}
           className="absolute top-3 right-3 z-10"
         />
       </div>

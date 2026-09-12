@@ -15,6 +15,7 @@ import type {
   AdminCreateCouponBody,
   AdminCreateFeaturedMediaBody,
   AdminCreateGalleryCategoryBody,
+  AdminCreateGalleryCategoryImageUploadRequestBody,
   AdminCreateImageUploadRequestBody,
   AdminCreateInspirationImageUploadRequestBody,
   AdminCreateInvitationBody,
@@ -27,6 +28,8 @@ import type {
   AdminCreateVendorBody,
   AdminCreateWeddingStoryBody,
   AdminFeaturedMedia,
+  AdminGalleryCategoryImageConfirmResult,
+  AdminGalleryCategoryImageUploadRequestResult,
   AdminImageConfirmResult,
   AdminImageUploadRequestResult,
   AdminInspirationImageConfirmResult,
@@ -275,6 +278,25 @@ export function createAdminInspirationImageUploadRequest(body: AdminCreateInspir
 export function confirmAdminInspirationImageUpload(mediaId: string) {
   return call<AdminInspirationImageConfirmResult>(
     `/admin/media-uploads/inspiration-image-upload-requests/${mediaId}/confirm`,
+    "POST",
+  );
+}
+
+// Same real R2 presign -> PUT -> confirm flow as the popular-search/blog-
+// cover/inspiration pairs above, for a GalleryCategory's homepage cover
+// image — GALLERY_CATEGORY_COVER_IMAGE instead of POPULAR_SEARCH_IMAGE/
+// BLOG_COVER_IMAGE/INSPIRATION_PHOTO, see admin.types.ts's header comment.
+export function createAdminGalleryCategoryImageUploadRequest(body: AdminCreateGalleryCategoryImageUploadRequestBody) {
+  return call<AdminGalleryCategoryImageUploadRequestResult>(
+    "/admin/media-uploads/gallery-category-image-upload-requests",
+    "POST",
+    body,
+  );
+}
+
+export function confirmAdminGalleryCategoryImageUpload(mediaId: string) {
+  return call<AdminGalleryCategoryImageConfirmResult>(
+    `/admin/media-uploads/gallery-category-image-upload-requests/${mediaId}/confirm`,
     "POST",
   );
 }

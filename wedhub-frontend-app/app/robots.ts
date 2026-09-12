@@ -9,7 +9,11 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: [
         "/admin",
-        "/vendor",
+        // Trailing slash matters: "/vendor" (no slash) would also prefix-match
+        // "/vendors" and "/vendors/[slug]" — the public vendor-profile pages
+        // this same route submits to search engines via app/sitemap.ts. Scope
+        // this to the vendor dashboard route group only.
+        "/vendor/",
         "/api",
         // /preview — Arch Phase 26 temporary wedding-website previews; each
         // page also sets its own noindex/nofollow meta, this is defense in

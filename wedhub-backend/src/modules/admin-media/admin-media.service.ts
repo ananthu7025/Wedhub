@@ -194,6 +194,52 @@ export async function confirmInspirationUpload(mediaId: string) {
   return updated ? toPublicView(updated) : null;
 }
 
+/**
+ * Same presign/confirm pair as createUploadRequest/confirmUpload above, for
+ * a GalleryCategory's homepage cover image instead of a Category's — kept
+ * as its own pair (not a shared parameter) so the object-key prefix and
+ * mediaType tag stay distinct per curated content type, same reasoning as
+ * the popular-search/blog-cover/inspiration pairs above being separate
+ * from these.
+ */
+export async function createGalleryCategoryImageUploadRequest(input: { filename: string; mimeType: string; fileSize: number }) {
+  const maxSize = env.MEDIA_MAX_IMAGE_SIZE_MB * 1024 * 1024;
+  if (input.fileSize > maxSize) {
+    throw new ValidationError(`File exceeds the maximum allowed size of ${env.MEDIA_MAX_IMAGE_SIZE_MB}MB`);
+  }
+
+  const objectKey = `platform/gallery-category-images/${randomUUID()}${extensionFor(input.filename)}`;
+  const uploadUrl = await getSignedUploadUrl(objectKey, input.mimeType);
+
+  const media = await adminMediaRepository.createUnattachedGalleryCategoryImage({
+    originalObjectKey: objectKey,
+    mimeType: input.mimeType,
+    fileSize: input.fileSize,
+  });
+
+  return { mediaId: media.id, uploadUrl, objectKey };
+}
+
+export async function confirmGalleryCategoryImageUpload(mediaId: string) {
+  const media = await adminMediaRepository.findImageById(mediaId);
+  if (!media || media.mediaType !== "GALLERY_CATEGORY_COVER_IMAGE") {
+    throw new NotFoundError("Media not found");
+  }
+  if (media.status !== "PENDING") {
+    return toPublicView(media); // already confirmed — idempotent from the caller's point of view
+  }
+
+  const exists = await objectExists(media.originalObjectKey);
+  if (!exists) {
+    throw new ValidationError("Upload not found in storage yet — has the browser upload completed?");
+  }
+
+  await adminMediaRepository.markProcessing(mediaId);
+  await enqueueMediaProcessing(mediaId);
+  const updated = await adminMediaRepository.findImageById(mediaId);
+  return updated ? toPublicView(updated) : null;
+}
+
 // Category.imageUrl needs a resolvable URL, not an objectKey — same
 // resolution media.service.ts's toPublicView uses (optimized, falling
 // back to nothing until processing completes).

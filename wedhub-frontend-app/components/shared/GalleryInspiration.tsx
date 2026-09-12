@@ -34,15 +34,19 @@ interface DisplayCategoryTile {
   imageUrl: string;
 }
 
-// One real featured photo per category (first match) becomes that
-// category's cover image; categories with no featured photo yet fall back
+// An admin-pinned GalleryCategory.coverImageUrl always wins when set (an
+// intentional choice, not just "whichever photo happened to be tagged
+// first"). Otherwise, one real featured photo per category (first match)
+// becomes that category's cover image; categories with neither fall back
 // to a sample cover so the row never shows a blank tile.
 function buildCategoryTiles(categories: GalleryCategory[], items: FeaturedMediaItem[]): DisplayCategoryTile[] {
   return categories.map((category) => {
     const coverItem = items.find((item) => item.galleryCategory?.id === category.id);
-    const imageUrl = coverItem
-      ? getPublicMediaUrl(coverItem.media.optimizedObjectKey ?? coverItem.media.originalObjectKey)
-      : (SAMPLE_COVER_IMAGES[category.name] ?? FALLBACK_COVER_IMAGE);
+    const imageUrl =
+      category.coverImageUrl ??
+      (coverItem
+        ? getPublicMediaUrl(coverItem.media.optimizedObjectKey ?? coverItem.media.originalObjectKey)
+        : (SAMPLE_COVER_IMAGES[category.name] ?? FALLBACK_COVER_IMAGE));
     return { key: category.id, slug: category.slug, name: category.name, imageUrl };
   });
 }

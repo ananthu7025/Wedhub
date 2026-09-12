@@ -79,6 +79,7 @@ export interface GalleryCategoryUpdateFields {
   name: string | undefined;
   sortOrder: number | undefined;
   isActive: boolean | undefined;
+  coverImageUrl: string | null | undefined;
 }
 
 export function updateGalleryCategory(id: string, data: GalleryCategoryUpdateFields) {

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { PublicFooter } from "@/components/shared/PublicFooter";
 import { getPublicWeddingStory } from "@/lib/api/catalog";
+import { ApiRequestError } from "@/lib/api/types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { StoryDetailData, StoryDetailPhoto, StoryDetailView } from "./StoryDetailView";
 
@@ -209,32 +210,35 @@ export async function generateMetadata({ params }: StoryPageProps): Promise<Meta
     };
   }
 
+  let real;
   try {
-    const { data: real } = await getPublicWeddingStory(id);
-    const coverKey = real.album.coverMedia?.optimizedObjectKey ?? real.album.coverMedia?.originalObjectKey;
-    return {
-      title: `${real.coupleName}'s Wedding in ${real.location} | Real Weddings`,
-      description: real.snippet,
-      alternates: { canonical: `/real-weddings/${id}` },
-      openGraph: {
-        title: `${real.coupleName} | Real Weddings`,
-        description: real.snippet,
-        url: `/real-weddings/${id}`,
-        images: coverKey ? [{ url: getPublicMediaUrl(coverKey) }] : [],
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: `${real.coupleName} | Real Weddings`,
-        description: real.snippet,
-        images: coverKey ? [getPublicMediaUrl(coverKey)] : undefined,
-      },
-      robots: { index: true, follow: true },
-    };
-  } catch {
-    return {
-      title: "Real Wedding Story | itsmyKalyanam",
-    };
+    ({ data: real } = await getPublicWeddingStory(id));
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 404) {
+      notFound();
+    }
+    throw error;
   }
+
+  const coverKey = real.album.coverMedia?.optimizedObjectKey ?? real.album.coverMedia?.originalObjectKey;
+  return {
+    title: `${real.coupleName}'s Wedding in ${real.location} | Real Weddings`,
+    description: real.snippet,
+    alternates: { canonical: `/real-weddings/${id}` },
+    openGraph: {
+      title: `${real.coupleName} | Real Weddings`,
+      description: real.snippet,
+      url: `/real-weddings/${id}`,
+      images: coverKey ? [{ url: getPublicMediaUrl(coverKey) }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${real.coupleName} | Real Weddings`,
+      description: real.snippet,
+      images: coverKey ? [getPublicMediaUrl(coverKey)] : undefined,
+    },
+    robots: { index: true, follow: true },
+  };
 }
 
 export default async function RealWeddingDetailPage({ params }: StoryPageProps) {
@@ -319,7 +323,9 @@ export default async function RealWeddingDetailPage({ params }: StoryPageProps) 
       </div>
     );
   } catch (error) {
-    console.error("Failed to load wedding story:", error);
-    notFound();
+    if (error instanceof ApiRequestError && error.status === 404) {
+      notFound();
+    }
+    throw error;
   }
 }

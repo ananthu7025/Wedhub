@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SeoLandingPage } from "@/components/shared/SeoLandingPage";
 import { getSeoPage, listLocations } from "@/lib/api/catalog";
 import { ApiRequestError } from "@/lib/api/types";
+import { resolveCitySlugAlias } from "@/lib/seo/location-aliases";
 
 interface CityPageProps {
   params: Promise<{ citySlug: string }>;
@@ -12,6 +13,13 @@ async function loadSeoPage(citySlug: string) {
   const { data: cities } = await listLocations("CITY");
   const city = cities.find((c) => c.slug === citySlug);
   if (!city) {
+    // Colloquial name (e.g. "trivandrum") — redirect to the canonical
+    // /city/thiruvananthapuram URL rather than serving a second indexable
+    // URL for the same real page (duplicate-content risk).
+    const canonicalSlug = resolveCitySlugAlias(citySlug);
+    if (canonicalSlug !== citySlug && cities.some((c) => c.slug === canonicalSlug)) {
+      redirect(`/city/${canonicalSlug}`);
+    }
     notFound();
   }
   try {

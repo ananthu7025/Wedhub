@@ -693,6 +693,11 @@ enum MediaType {
   // just referenced from VendorAttributeValue.valueText (a Media id)
   // instead of a dedicated FK column, since attributes are EAV-shaped.
   CATEGORY_ATTRIBUTE_PHOTO
+  // Admin-only, platform-owned image (no vendorId/userId) — backs
+  // GalleryCategory.coverImageUrl, same shape as CATEGORY_IMAGE/
+  // POPULAR_SEARCH_IMAGE/BLOG_COVER_IMAGE above but kept as its own value
+  // so admin-media's per-mediaType confirm checks stay unambiguous.
+  GALLERY_CATEGORY_COVER_IMAGE
 }
 
 enum MediaStatus {
@@ -849,13 +854,19 @@ model FeaturedMedia {
 // Bridal Makeup & Hair) — seeded once in the migration, editable later if
 // an admin-facing CRUD screen is ever added.
 model GalleryCategory {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name      String
-  slug      String   @unique
-  sortOrder Int      @default(0) @map("sort_order")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  slug          String   @unique
+  sortOrder     Int      @default(0) @map("sort_order")
+  isActive      Boolean  @default(true) @map("is_active")
+  // Admin-pinned cover photo for this category's homepage Gallery
+  // Inspiration tile — takes priority over the "first tagged FeaturedMedia"
+  // fallback GalleryInspiration.tsx otherwise uses. Homepage-only; the
+  // public /gallery browse page is unaffected and keeps showing real
+  // tagged FeaturedMedia photos.
+  coverImageUrl String?  @map("cover_image_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   featuredMedia FeaturedMedia[]
   challenges    Challenge[]

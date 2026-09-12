@@ -59,6 +59,20 @@ export function createUnattachedInspirationImage(data: { originalObjectKey: stri
   });
 }
 
+// Same shape as createUnattachedImage above, but tagged
+// GALLERY_CATEGORY_COVER_IMAGE — backs GalleryCategory.coverImageUrl (see
+// MediaType enum comment).
+export function createUnattachedGalleryCategoryImage(data: { originalObjectKey: string; mimeType: string; fileSize: number }) {
+  return prisma.media.create({
+    data: {
+      mediaType: "GALLERY_CATEGORY_COVER_IMAGE",
+      originalObjectKey: data.originalObjectKey,
+      mimeType: data.mimeType,
+      fileSize: data.fileSize,
+    },
+  });
+}
+
 export function findImageById(id: string) {
   return prisma.media.findUnique({ where: { id } });
 }

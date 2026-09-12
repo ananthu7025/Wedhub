@@ -35,6 +35,10 @@ export const updateGalleryCategorySchema = z.object({
   name: z.string().min(1).max(150).optional(),
   sortOrder: z.coerce.number().int().optional(),
   isActive: z.boolean().optional(),
+  // Nullable (not just optional) so an admin can explicitly clear a
+  // previously-set cover, not just leave it unchanged — same pattern as
+  // Category.imageUrl's updateCategorySchema.
+  coverImageUrl: z.string().url().max(2000).nullable().optional(),
 });
 
 export type CreateGalleryCategoryBody = z.infer<typeof createGalleryCategorySchema>;

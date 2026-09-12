@@ -322,6 +322,7 @@ export interface GalleryCategory {
   slug: string;
   sortOrder: number;
   isActive: boolean;
+  coverImageUrl: string | null;
 }
 
 // ---- GET /vendors/:vendorId/reviews ----

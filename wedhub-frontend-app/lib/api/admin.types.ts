@@ -287,6 +287,7 @@ export interface AdminUpdateGalleryCategoryBody {
   name?: string;
   sortOrder?: number;
   isActive?: boolean;
+  coverImageUrl?: string | null;
 }
 
 // ---- POST /locations (ADMIN) ----
@@ -917,6 +918,28 @@ export interface AdminInspirationImageUploadRequestResult {
 }
 
 export interface AdminInspirationImageConfirmResult {
+  id: string;
+  status: string;
+  url: string | null;
+}
+
+// ---- POST /admin/media-uploads/gallery-category-image-upload-requests, /:id/confirm ----
+// Same presign/confirm shape as the popular-search/blog-cover/inspiration
+// pairs above, but tagged GALLERY_CATEGORY_COVER_IMAGE instead — backs a
+// GalleryCategory's pinned homepage cover photo (GalleryCategoriesPanel.tsx).
+export interface AdminCreateGalleryCategoryImageUploadRequestBody {
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+}
+
+export interface AdminGalleryCategoryImageUploadRequestResult {
+  mediaId: string;
+  uploadUrl: string;
+  objectKey: string;
+}
+
+export interface AdminGalleryCategoryImageConfirmResult {
   id: string;
   status: string;
   url: string | null;

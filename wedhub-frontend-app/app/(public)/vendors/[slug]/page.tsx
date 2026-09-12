@@ -13,6 +13,7 @@ import { getPublicMediaUrl } from "@/lib/media/url";
 import { ApiRequestError } from "@/lib/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { getOptionalSession } from "@/lib/auth/dal";
+import { listMyShortlistedVendorIds } from "@/lib/api/shortlists";
 import { breadcrumbListJsonLd, vendorLocalBusinessJsonLd } from "@/lib/seo/json-ld";
 
 interface VendorPageProps {
@@ -33,47 +34,43 @@ async function loadVendor(slug: string) {
 
 export async function generateMetadata({ params }: VendorPageProps): Promise<Metadata> {
   const { slug } = await params;
-  try {
-    const vendor = await loadVendor(slug);
-    const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? vendor.categories[0]?.category;
-    const title =
-      vendor.profile?.seoTitle ??
-      (primaryCategory && vendor.city
-        ? `${vendor.businessName} | ${primaryCategory.name} in ${vendor.city.name}`
-        : vendor.businessName);
-    const description = vendor.profile?.seoDescription ?? vendor.profile?.shortDescription ?? undefined;
-    const canonicalPath = `/vendors/${vendor.slug}`;
-    // A vendor-supplied canonicalUrl (VendorProfile.canonicalUrl) is an
-    // escape hatch for a vendor pointing Google at their own external site
-    // instead — honored only when set; the marketplace's own /vendors/:slug
-    // URL is canonical by default.
-    const canonical = vendor.profile?.canonicalUrl || canonicalPath;
-    const coverMedia = vendor.profile?.coverMedia;
-    const ogImage = coverMedia
-      ? getPublicMediaUrl(coverMedia.optimizedObjectKey ?? coverMedia.originalObjectKey)
-      : undefined;
+  const vendor = await loadVendor(slug);
+  const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? vendor.categories[0]?.category;
+  const title =
+    vendor.profile?.seoTitle ??
+    (primaryCategory && vendor.city
+      ? `${vendor.businessName} | ${primaryCategory.name} in ${vendor.city.name}`
+      : vendor.businessName);
+  const description = vendor.profile?.seoDescription ?? vendor.profile?.shortDescription ?? undefined;
+  const canonicalPath = `/vendors/${vendor.slug}`;
+  // A vendor-supplied canonicalUrl (VendorProfile.canonicalUrl) is an
+  // escape hatch for a vendor pointing Google at their own external site
+  // instead — honored only when set; the marketplace's own /vendors/:slug
+  // URL is canonical by default.
+  const canonical = vendor.profile?.canonicalUrl || canonicalPath;
+  const coverMedia = vendor.profile?.coverMedia;
+  const ogImage = coverMedia
+    ? getPublicMediaUrl(coverMedia.optimizedObjectKey ?? coverMedia.originalObjectKey)
+    : undefined;
 
-    return {
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
       title,
       description,
-      alternates: { canonical },
-      openGraph: {
-        title,
-        description,
-        url: canonicalPath,
-        images: ogImage ? [{ url: ogImage }] : undefined,
-      },
-      twitter: {
-        card: "summary_large_image",
-        title,
-        description,
-        images: ogImage ? [ogImage] : undefined,
-      },
-      robots: { index: true, follow: true },
-    };
-  } catch {
-    return { title: "Vendor" };
-  }
+      url: canonicalPath,
+      images: ogImage ? [{ url: ogImage }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
+    },
+    robots: { index: true, follow: true },
+  };
 }
 
 const VERIFICATION_LABEL: Record<string, string> = {
@@ -93,6 +90,11 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
     getOptionalSession(),
   ]);
   const reviews = reviewsResult.data;
+
+  // Seeds the heart button with real shortlist membership instead of always
+  // starting "unfavorited" (which made un-hearting an already-shortlisted
+  // vendor from this page impossible — see VendorHeartButton's doc comment).
+  const isFavorited = session !== null && (await listMyShortlistedVendorIds()).has(vendor.id);
 
   // GET /vendors/:slug now joins profile.logoMedia/coverMedia directly
   // (vendor.repository.ts's include) — the earlier "no way to resolve
@@ -196,6 +198,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
             <VendorHeartButton
               vendorId={vendor.id}
               isAuthenticated={session !== null}
+              initialFavorited={isFavorited}
               className="static h-10 w-10 border border-border bg-white shadow-none"
             />
             <Link
@@ -209,10 +212,12 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
 
         <div className="mt-8 grid grid-cols-[1fr_340px] gap-7 max-[900px]:grid-cols-1">
           <main className="max-[900px]:order-2">
-            {vendor.profile?.description && (
+            {(vendor.profile?.description || vendor.attributeValues.length > 0) && (
               <section className="mb-9">
                 <h2 className="mb-4 text-lg font-bold">About</h2>
-                <p className="text-sm leading-relaxed text-text-body">{vendor.profile.description}</p>
+                {vendor.profile?.description && (
+                  <p className="text-sm leading-relaxed text-text-body">{vendor.profile.description}</p>
+                )}
                 {vendor.attributeValues.length > 0 && (
                   <div className="mt-5">
                     <VendorAttributes attributeValues={vendor.attributeValues} />
@@ -221,9 +226,9 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
               </section>
             )}
 
-            {albums.length > 0 && (
-              <section className="mb-9">
-                <h2 className="mb-4 text-lg font-bold">Portfolio</h2>
+            <section className="mb-9">
+              <h2 className="mb-4 text-lg font-bold">Portfolio</h2>
+              {albums.length > 0 ? (
                 <div className="grid grid-cols-3 gap-2.5 max-[900px]:grid-cols-2">
                   {albums
                     .flatMap((album) => album.media)
@@ -237,48 +242,54 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                       );
                     })}
                 </div>
-              </section>
-            )}
+              ) : (
+                <p className="text-sm text-text-grey">Portfolio photos are being prepared. Check back soon.</p>
+              )}
+            </section>
 
-            {vendor.packages.length > 0 && (
-              <section className="mb-9">
-                <h2 className="mb-4 text-lg font-bold">Packages &amp; Pricing</h2>
-                {vendor.packages
-                  .filter((pkg) => pkg.isActive)
-                  .map((pkg) => {
-                    const imageKey =
-                      pkg.image?.thumbnailObjectKey ?? pkg.image?.optimizedObjectKey ?? pkg.image?.originalObjectKey;
-                    return (
-                    <div key={pkg.id} className="mb-3.5 flex gap-4 rounded-xl border border-border p-5">
-                      {imageKey && (
-                        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-surface-input">
-                          <Image src={getPublicMediaUrl(imageKey)} alt={pkg.name} fill className="object-cover" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex items-baseline justify-between">
-                          <span className="text-[15px] font-bold">{pkg.name}</span>
-                          <span className="text-base font-bold text-brand-primary">
-                            {pkg.currency === "INR" ? "₹" : pkg.currency} {Number(pkg.price).toLocaleString("en-IN")}
-                          </span>
-                        </div>
-                        {pkg.description && <p className="mb-2 text-[13px] text-text-grey">{pkg.description}</p>}
-                        {pkg.inclusions.length > 0 && (
-                          <ul className="mt-2.5 list-disc pl-4.5 text-[13px] leading-loose text-text-body">
-                            {pkg.inclusions.map((item) => (
-                              <li key={item}>{item}</li>
-                            ))}
-                          </ul>
+            <section className="mb-9">
+              <h2 className="mb-4 text-lg font-bold">Packages &amp; Pricing</h2>
+              {vendor.packages.length > 0 ? (
+                <>
+                  {vendor.packages
+                    .filter((pkg) => pkg.isActive)
+                    .map((pkg) => {
+                      const imageKey =
+                        pkg.image?.thumbnailObjectKey ?? pkg.image?.optimizedObjectKey ?? pkg.image?.originalObjectKey;
+                      return (
+                      <div key={pkg.id} className="mb-3.5 flex gap-4 rounded-xl border border-border p-5">
+                        {imageKey && (
+                          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-surface-input">
+                            <Image src={getPublicMediaUrl(imageKey)} alt={pkg.name} fill className="object-cover" />
+                          </div>
                         )}
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex items-baseline justify-between">
+                            <span className="text-[15px] font-bold">{pkg.name}</span>
+                            <span className="text-base font-bold text-brand-primary">
+                              {pkg.currency === "INR" ? "₹" : pkg.currency} {Number(pkg.price).toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                          {pkg.description && <p className="mb-2 text-[13px] text-text-grey">{pkg.description}</p>}
+                          {pkg.inclusions.length > 0 && (
+                            <ul className="mt-2.5 list-disc pl-4.5 text-[13px] leading-loose text-text-body">
+                              {pkg.inclusions.map((item) => (
+                                <li key={item}>{item}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    );
-                  })}
-                {vendor.profile?.customQuoteAvailable && (
-                  <p className="text-[13px] text-text-grey">Custom quotations available on request.</p>
-                )}
-              </section>
-            )}
+                      );
+                    })}
+                  {vendor.profile?.customQuoteAvailable && (
+                    <p className="text-[13px] text-text-grey">Custom quotations available on request.</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-text-grey">No packages listed yet. Contact the vendor for pricing.</p>
+              )}
+            </section>
 
             <section>
               <h2 className="mb-4 text-lg font-bold">Reviews</h2>

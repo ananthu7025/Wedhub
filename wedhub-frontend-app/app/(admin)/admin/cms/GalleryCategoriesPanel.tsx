@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createAdminGalleryCategory, deleteAdminGalleryCategory, updateAdminGalleryCategory } from "@/lib/api/admin-client";
 import type { GalleryCategory } from "@/lib/api/vendors.types";
 import { formatApiError } from "@/lib/utils/error";
+import { GalleryCategoryImagePicker } from "./GalleryCategoryImagePicker";
 
 /**
  * Gallery Inspiration taxonomy management — the 8 "Photos" mega-menu-style
@@ -16,6 +17,12 @@ import { formatApiError } from "@/lib/utils/error";
  * existing FeaturedMedia rows; it only becomes a new option in the
  * category picker below and a new pill on /gallery once a photo is
  * tagged with it.
+ *
+ * `coverImageUrl` (added 2026-09-11) is a separate, admin-pinned homepage
+ * cover photo for this category's Gallery Inspiration tile — independent
+ * of any FeaturedMedia photo tagged with the category. Read only by the
+ * public homepage (GalleryInspiration.tsx); the /gallery browse page's
+ * pills and grid are unaffected and keep showing real tagged photos.
  */
 export function GalleryCategoriesPanel({
   categories,
@@ -33,19 +40,27 @@ export function GalleryCategoriesPanel({
     setPendingId("new");
     setError(null);
     const result = await createAdminGalleryCategory({ name: input.name });
-    setPendingId(null);
     if (!result.success) {
+      setPendingId(null);
       setError(formatApiError(result.error));
       return;
     }
-    onCategoriesChange([...categories, result.data]);
+    // Category must exist before its cover can be saved (PATCH, not part of
+    // the create body) — same two-step pattern as Category.imageUrl.
+    let created = result.data;
+    if (input.coverImageUrl) {
+      const coverResult = await updateAdminGalleryCategory(created.id, { coverImageUrl: input.coverImageUrl });
+      if (coverResult.success) created = coverResult.data;
+    }
+    setPendingId(null);
+    onCategoriesChange([...categories, created]);
     setAdding(false);
   }
 
   async function handleUpdate(category: GalleryCategory, input: GalleryCategoryFormValues) {
     setPendingId(category.id);
     setError(null);
-    const result = await updateAdminGalleryCategory(category.id, { name: input.name });
+    const result = await updateAdminGalleryCategory(category.id, { name: input.name, coverImageUrl: input.coverImageUrl ?? null });
     setPendingId(null);
     if (!result.success) {
       setError(formatApiError(result.error));
@@ -116,10 +131,18 @@ export function GalleryCategoriesPanel({
               key={category.id}
               className={`flex items-center justify-between gap-3 rounded-md border border-border bg-white px-3 py-2 ${!category.isActive ? "opacity-60" : ""}`}
             >
-              <div className="text-xs">
-                <span className="font-bold">{category.name}</span>{" "}
-                <code className="rounded bg-surface-input px-1 py-0.5 text-[10px] text-text-grey">{category.slug}</code>
-                {!category.isActive && <span className="text-text-grey"> · inactive</span>}
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-12 flex-shrink-0 overflow-hidden rounded border border-border bg-surface-input">
+                  {category.coverImageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={category.coverImageUrl} alt="" className="h-full w-full object-cover" />
+                  )}
+                </div>
+                <div className="text-xs">
+                  <span className="font-bold">{category.name}</span>{" "}
+                  <code className="rounded bg-surface-input px-1 py-0.5 text-[10px] text-text-grey">{category.slug}</code>
+                  {!category.isActive && <span className="text-text-grey"> · inactive</span>}
+                </div>
               </div>
               <div className="flex flex-shrink-0 gap-3">
                 <button
@@ -161,6 +184,7 @@ export function GalleryCategoriesPanel({
 
 interface GalleryCategoryFormValues {
   name: string;
+  coverImageUrl?: string | null;
 }
 
 function GalleryCategoryForm({
@@ -175,6 +199,7 @@ function GalleryCategoryForm({
   onSubmit: (values: GalleryCategoryFormValues) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(initial?.coverImageUrl ?? null);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   function handleSubmit(event: React.FormEvent) {
@@ -186,7 +211,7 @@ function GalleryCategoryForm({
       return;
     }
 
-    onSubmit({ name: name.trim() });
+    onSubmit({ name: name.trim(), coverImageUrl });
   }
 
   return (
@@ -202,6 +227,10 @@ function GalleryCategoryForm({
           className="w-56 rounded-md border border-border px-2 py-1 text-xs"
         />
       </label>
+      <div>
+        <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">Homepage cover photo (optional)</span>
+        <GalleryCategoryImagePicker currentImageUrl={coverImageUrl} onUploaded={setCoverImageUrl} />
+      </div>
       <div className="flex gap-2">
         <button
           type="submit"

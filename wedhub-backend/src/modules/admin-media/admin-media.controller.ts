@@ -5,6 +5,7 @@ import type {
   CreateAdminImageUploadRequestBody,
   CreateAdminVendorUploadRequestBody,
   CreateBlogCoverImageUploadRequestBody,
+  CreateGalleryCategoryImageUploadRequestBody,
   CreateInspirationImageUploadRequestBody,
   CreatePopularSearchImageUploadRequestBody,
 } from "./admin-media.schema";
@@ -61,5 +62,16 @@ export async function createInspirationImageUploadRequest(req: Request, res: Res
 
 export async function confirmInspirationImageUpload(req: Request, res: Response): Promise<void> {
   const media = await adminMediaService.confirmInspirationUpload(req.params.id as string);
+  res.json(successResponse(media));
+}
+
+export async function createGalleryCategoryImageUploadRequest(req: Request, res: Response): Promise<void> {
+  const body = req.body as CreateGalleryCategoryImageUploadRequestBody;
+  const result = await adminMediaService.createGalleryCategoryImageUploadRequest(body);
+  res.status(201).json(successResponse(result));
+}
+
+export async function confirmGalleryCategoryImageUpload(req: Request, res: Response): Promise<void> {
+  const media = await adminMediaService.confirmGalleryCategoryImageUpload(req.params.id as string);
   res.json(successResponse(media));
 }

@@ -1,12 +1,22 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/shared/BrandLogo";
+import { FooterNewsletterForm } from "@/components/shared/FooterNewsletterForm";
+import { listCategories } from "@/lib/api/catalog";
 
-export function PublicFooter() {
-  const [subscribed, setSubscribed] = useState(false);
-  const [email, setEmail] = useState("");
+// Resolves a real Category.id for a footer link's ?categoryId= param — a
+// hardcoded slug-shaped string like "venue" never matches search's UUID
+// filter and gets silently dropped (SEO/QA audit finding). Falls back to a
+// free-text keyword search if the category isn't seeded, same precedent as
+// PublicTopbar's venuesLink.
+function categoryHref(categories: { id: string; slug: string }[], slug: string, keyword: string) {
+  const category = categories.find((c) => c.slug === slug);
+  return category ? `/search?categoryId=${category.id}` : `/search?keyword=${encodeURIComponent(keyword)}`;
+}
+
+export async function PublicFooter() {
+  const { data: categories } = await listCategories();
+  const venuesHref = categoryHref(categories, "venues", "venue");
+  const photographyHref = categoryHref(categories, "photography-videography", "photographer");
 
   return (
     <footer className="mt-16 border-t border-border bg-white text-text-body">
@@ -22,8 +32,8 @@ export function PublicFooter() {
               itsmyKalyanam — Everything For Your Kalyanam
             </h3>
             <p className="text-xs leading-relaxed text-text-grey">
-              itsmyKalyanam is India&apos;s trusted wedding planning platform, helping millions of couples plan their dream wedding.
-              From finding top-rated venues and photographers to bridal makeup, decor, and e-invites, itsmyKalyanam connects you with verified vendors, transparent pricing, authentic reviews, and endless wedding inspiration.
+              Everything for your Kalyanam. Discover wedding photographers, venues, makeup artists, caterers and more across Kerala.
+              From finding venues and photographers to bridal makeup, decor, and e-invites, itsmyKalyanam connects you with wedding vendors, transparent pricing, and wedding inspiration.
             </p>
 
             <div className="mt-6">
@@ -60,34 +70,7 @@ export function PublicFooter() {
             <p className="text-xs text-text-grey mb-3">
               Get the latest bridal fashion, decor tips, real wedding features, and exclusive vendor deals delivered to your inbox.
             </p>
-            {subscribed ? (
-              <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-800">
-                ✓ Thank you for subscribing to itsmyKalyanam updates!
-              </div>
-            ) : (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (email.trim()) setSubscribed(true);
-                }}
-                className="flex gap-2"
-              >
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  className="flex-1 rounded-md border border-neutral-grey bg-white px-3 py-2 text-xs text-text-dark outline-none focus:border-brand-primary"
-                />
-                <button
-                  type="submit"
-                  className="rounded-md bg-brand-primary px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-brand-primary-hover shadow-sm"
-                >
-                  Subscribe
-                </button>
-              </form>
-            )}
+            <FooterNewsletterForm />
 
             <Link
               href="/signup?type=vendor"
@@ -98,17 +81,14 @@ export function PublicFooter() {
           </div>
         </div>
 
-        {/* 5 Footer Navigation Columns */}
-        <div className="mt-12 grid grid-cols-2 gap-8 border-t border-border pt-10 sm:grid-cols-3 md:grid-cols-5">
+        {/* 4 Footer Navigation Columns */}
+        <div className="mt-12 grid grid-cols-2 gap-8 border-t border-border pt-10 sm:grid-cols-3 md:grid-cols-4">
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-jet-black mb-3">Wedding Planning</h4>
             <ul className="space-y-2 text-xs text-text-grey list-none p-0 m-0">
               <li><Link href="/search" className="hover:text-brand-primary hover:underline">Find Vendors</Link></li>
-              <li><Link href="/search?categoryId=venue" className="hover:text-brand-primary hover:underline">Wedding Venues</Link></li>
-              <li><Link href="/search?categoryId=photographer" className="hover:text-brand-primary hover:underline">Photographers</Link></li>
-              <li><Link href="/search" className="hover:text-brand-primary hover:underline">Checklists &amp; Tools</Link></li>
-              <li><Link href="/search" className="hover:text-brand-primary hover:underline">Wedding Cost Estimator</Link></li>
-              <li><Link href="/search" className="hover:text-brand-primary hover:underline">E-Invites &amp; Save the Date</Link></li>
+              <li><Link href={venuesHref} className="hover:text-brand-primary hover:underline">Wedding Venues</Link></li>
+              <li><Link href={photographyHref} className="hover:text-brand-primary hover:underline">Photographers</Link></li>
             </ul>
           </div>
 
@@ -116,7 +96,7 @@ export function PublicFooter() {
             <h4 className="text-xs font-bold uppercase tracking-wider text-jet-black mb-3">Wedding Ideas</h4>
             <ul className="space-y-2 text-xs text-text-grey list-none p-0 m-0">
               <li><Link href="/real-weddings" className="hover:text-brand-primary hover:underline">Real Wedding Stories</Link></li>
-              <li><a href="#wedding-blogs" className="hover:text-brand-primary hover:underline">Latest Wedding Blog</a></li>
+              <li><Link href="/blog" className="hover:text-brand-primary hover:underline">Latest Wedding Blog</Link></li>
               <li><Link href="/gallery?category=outfit" className="hover:text-brand-primary hover:underline">Bridal Lehenga Trends</Link></li>
               <li><Link href="/gallery?category=decor-ideas" className="hover:text-brand-primary hover:underline">Mandap &amp; Decor Ideas</Link></li>
               <li><Link href="/gallery?category=wedding-photography" className="hover:text-brand-primary hover:underline">Pre-Wedding Shoots</Link></li>
@@ -129,9 +109,7 @@ export function PublicFooter() {
             <ul className="space-y-2 text-xs text-text-grey list-none p-0 m-0">
               <li><Link href="/signup?type=vendor" className="hover:text-brand-primary hover:underline">Register as a Vendor</Link></li>
               <li><Link href="/login" className="hover:text-brand-primary hover:underline">Vendor Dashboard Login</Link></li>
-              <li><Link href="/signup?type=vendor" className="hover:text-brand-primary hover:underline">Pricing &amp; Subscriptions</Link></li>
-              <li><Link href="/login" className="hover:text-brand-primary hover:underline">Vendor Lead Management</Link></li>
-              <li><Link href="/reviews/write" className="hover:text-brand-primary hover:underline">Review Guidelines</Link></li>
+              <li><Link href="/reviews/write" className="hover:text-brand-primary hover:underline">Write a Review</Link></li>
             </ul>
           </div>
 
@@ -147,18 +125,6 @@ export function PublicFooter() {
               <li><Link href="/search?keyword=Malappuram" className="hover:text-brand-primary hover:underline">Malappuram</Link></li>
             </ul>
           </div>
-
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-jet-black mb-3">Company &amp; Legal</h4>
-            <ul className="space-y-2 text-xs text-text-grey list-none p-0 m-0">
-              <li><Link href="/" className="hover:text-brand-primary hover:underline">About itsmyKalyanam</Link></li>
-              <li><Link href="/" className="hover:text-brand-primary hover:underline">Careers &amp; Press</Link></li>
-              <li><Link href="/reviews/write" className="hover:text-brand-primary hover:underline">Write a Review</Link></li>
-              <li><Link href="/" className="hover:text-brand-primary hover:underline">Terms of Service</Link></li>
-              <li><Link href="/" className="hover:text-brand-primary hover:underline">Privacy Policy</Link></li>
-              <li><Link href="/" className="hover:text-brand-primary hover:underline">Contact Support</Link></li>
-            </ul>
-          </div>
         </div>
 
         {/* Bottom Copyright Strip */}
@@ -167,11 +133,7 @@ export function PublicFooter() {
             &copy; {new Date().getFullYear()} itsmyKalyanam Technologies Pvt. Ltd. All rights reserved.
           </div>
           <div className="mt-3 flex items-center gap-4 sm:mt-0">
-            <Link href="/" className="hover:text-brand-primary hover:underline">Privacy Policy</Link>
-            <span>&bull;</span>
-            <Link href="/" className="hover:text-brand-primary hover:underline">Terms of Use</Link>
-            <span>&bull;</span>
-            <Link href="/" className="hover:text-brand-primary hover:underline">Sitemap</Link>
+            <a href="/sitemap.xml" className="hover:text-brand-primary hover:underline">Sitemap</a>
           </div>
         </div>
       </div>

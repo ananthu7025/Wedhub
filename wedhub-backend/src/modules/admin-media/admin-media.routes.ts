@@ -9,6 +9,7 @@ import {
   createAdminImageUploadRequestSchema,
   createAdminVendorUploadRequestSchema,
   createBlogCoverImageUploadRequestSchema,
+  createGalleryCategoryImageUploadRequestSchema,
   createInspirationImageUploadRequestSchema,
   createPopularSearchImageUploadRequestSchema,
 } from "./admin-media.schema";
@@ -79,4 +80,19 @@ adminMediaRouter.post(
 adminMediaRouter.post(
   "/inspiration-image-upload-requests/:id/confirm",
   asyncHandler(adminMediaController.confirmInspirationImageUpload),
+);
+
+// Admin uploading a real cover image for a GalleryCategory's homepage tile
+// (pinned Gallery Inspiration cover) — same platform-owned, no-vendor-owner
+// shape as the routes above, tagged GALLERY_CATEGORY_COVER_IMAGE instead of
+// CATEGORY_IMAGE/POPULAR_SEARCH_IMAGE/BLOG_COVER_IMAGE/INSPIRATION_PHOTO.
+adminMediaRouter.post(
+  "/gallery-category-image-upload-requests",
+  validateBody(createGalleryCategoryImageUploadRequestSchema),
+  asyncHandler(adminMediaController.createGalleryCategoryImageUploadRequest),
+);
+
+adminMediaRouter.post(
+  "/gallery-category-image-upload-requests/:id/confirm",
+  asyncHandler(adminMediaController.confirmGalleryCategoryImageUpload),
 );

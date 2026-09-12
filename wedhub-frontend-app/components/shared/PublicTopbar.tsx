@@ -82,7 +82,7 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>India&apos;s Favourite Wedding Planning Platform</span>
+            <span>Everything for your Kalyanam</span>
           </div>
           {!session && (
             <div className="flex items-center gap-5 font-medium">

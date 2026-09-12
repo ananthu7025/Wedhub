@@ -101,6 +101,7 @@ export async function updateGalleryCategory(id: string, input: UpdateGalleryCate
     name: input.name,
     sortOrder: input.sortOrder,
     isActive: input.isActive,
+    coverImageUrl: input.coverImageUrl,
   });
 }
 

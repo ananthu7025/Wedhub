@@ -28,18 +28,14 @@ async function loadChallenge(slug: string): Promise<Challenge> {
 
 export async function generateMetadata({ params }: RankingsPageProps): Promise<Metadata> {
   const { slug } = await params;
-  try {
-    const challenge = await loadChallenge(slug);
-    const canonicalPath = `/challenges/${challenge.slug}/rankings`;
-    return {
-      title: `Rankings — ${challenge.title}`,
-      alternates: { canonical: canonicalPath },
-      openGraph: { title: `Rankings — ${challenge.title}`, url: canonicalPath },
-      robots: { index: true, follow: true },
-    };
-  } catch {
-    return { title: "Rankings" };
-  }
+  const challenge = await loadChallenge(slug);
+  const canonicalPath = `/challenges/${challenge.slug}/rankings`;
+  return {
+    title: `Rankings — ${challenge.title}`,
+    alternates: { canonical: canonicalPath },
+    openGraph: { title: `Rankings — ${challenge.title}`, url: canonicalPath },
+    robots: { index: true, follow: true },
+  };
 }
 
 const PAGE_SIZE = 50;

@@ -5,6 +5,7 @@ import { PublicFooter } from "@/components/shared/PublicFooter";
 import { listCategories, listLocations, searchVendors } from "@/lib/api/catalog";
 import type { SearchSort } from "@/lib/api/vendors.types";
 import { getOptionalSession } from "@/lib/auth/dal";
+import { listMyShortlistedVendorIds } from "@/lib/api/shortlists";
 import { SearchFilterBar } from "./SearchFilterBar";
 import { SearchResultsView } from "./SearchResultsView";
 
@@ -79,6 +80,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const selectedCategory = categories.find((c) => c.id === params.categoryId);
   const selectedCity = cities.find((c) => c.id === params.cityId);
 
+  // Only fetched when logged in — an anonymous visitor can't have a
+  // shortlist, and VendorHeartButton itself gates favoriting on auth. Passed
+  // as an array (not a Set) across the server/client boundary — Set isn't a
+  // serializable React Server Component prop type.
+  const favoritedVendorIds = session !== null ? [...(await listMyShortlistedVendorIds())] : [];
+
   return (
     <div className="min-h-screen bg-[#fafbfc] flex flex-col justify-between">
       <div>
@@ -111,6 +118,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           page={page}
           totalPages={meta?.totalPages ?? 1}
           isAuthenticated={session !== null}
+          favoritedVendorIds={favoritedVendorIds}
         />
       </div>
 

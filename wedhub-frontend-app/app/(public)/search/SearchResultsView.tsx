@@ -22,6 +22,8 @@ interface SearchResultsViewProps {
   page: number;
   totalPages: number;
   isAuthenticated: boolean;
+  /** Vendor ids already in the caller's shortlist — seeds each card's heart button so it reflects real state on load. */
+  favoritedVendorIds?: string[];
 }
 
 export function SearchResultsView({
@@ -37,7 +39,9 @@ export function SearchResultsView({
   page,
   totalPages,
   isAuthenticated,
+  favoritedVendorIds = [],
 }: SearchResultsViewProps) {
+  const favoritedSet = new Set(favoritedVendorIds);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const searchParams = useSearchParams();
 
@@ -150,6 +154,7 @@ export function SearchResultsView({
               isAuthenticated={isAuthenticated}
               viewMode="list"
               cityName={selectedCity?.name}
+              initialFavorited={favoritedSet.has(vendor.id)}
             />
           ))}
         </div>
@@ -169,6 +174,7 @@ export function SearchResultsView({
               isAuthenticated={isAuthenticated}
               viewMode="grid"
               cityName={selectedCity?.name}
+              initialFavorited={favoritedSet.has(vendor.id)}
             />
           ))}
         </div>
