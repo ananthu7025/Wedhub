@@ -62,6 +62,9 @@ export function PortfolioManager({
   const [logoMediaId, setLogoMediaId] = useState(currentLogoMediaId);
   const [coverMediaId, setCoverMediaId] = useState(currentCoverMediaId);
   const [activeMediaId, setActiveMediaId] = useState<string | null>(null);
+  const [editingCaptionId, setEditingCaptionId] = useState<string | null>(null);
+  const [captionDraft, setCaptionDraft] = useState("");
+  const [savingCaption, setSavingCaption] = useState(false);
 
   const hasUnsettledMedia = media.some((m) => !SETTLED_STATUSES.has(m.status) && !isStuck(m));
 
@@ -218,6 +221,21 @@ export function PortfolioManager({
     const result = await upsertMyProfile({ coverMediaId: mediaId });
     if (!result.success) setCoverMediaId(previous);
     router.refresh();
+  }
+
+  function openCaptionEditor(item: MediaItem) {
+    setCaptionDraft(item.altText ?? "");
+    setEditingCaptionId(item.id);
+  }
+
+  async function handleSaveCaption(mediaId: string) {
+    setSavingCaption(true);
+    const result = await updateMedia(mediaId, { altText: captionDraft.trim() });
+    setSavingCaption(false);
+    if (result.success) {
+      setMedia((prev) => prev.map((m) => (m.id === mediaId ? { ...m, altText: captionDraft.trim() || null } : m)));
+      setEditingCaptionId(null);
+    }
   }
 
   return (
@@ -385,6 +403,19 @@ export function PortfolioManager({
                     COV
                   </button>
                 )}
+                {item.status === "READY" && (
+                  <button
+                    type="button"
+                    title="Edit caption"
+                    onClick={() => openCaptionEditor(item)}
+                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 text-text-dark"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z" />
+                    </svg>
+                  </button>
+                )}
                 <button
                   type="button"
                   title="Delete"
@@ -413,6 +444,45 @@ export function PortfolioManager({
 
       {media.length === 0 && uploads.length === 0 && (
         <p className="mt-4 text-center text-sm text-text-grey">No photos or videos yet — upload your first one above.</p>
+      )}
+
+      {editingCaptionId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setEditingCaptionId(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl bg-white p-5 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="mb-3 text-sm font-bold">Edit caption</h3>
+            <textarea
+              autoFocus
+              value={captionDraft}
+              onChange={(e) => setCaptionDraft(e.target.value)}
+              placeholder="Describe this photo or video…"
+              maxLength={250}
+              className="min-h-[70px] w-full rounded-md border border-border p-3 text-[13px]"
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingCaptionId(null)}
+                className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px] font-bold text-text-dark hover:bg-surface-input"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingCaption}
+                onClick={() => handleSaveCaption(editingCaptionId)}
+                className="rounded-md bg-brand-primary px-3.5 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

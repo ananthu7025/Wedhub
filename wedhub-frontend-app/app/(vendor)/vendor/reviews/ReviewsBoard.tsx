@@ -87,6 +87,11 @@ export function ReviewsBoard({
     setReplyDrafts((prev) => ({ ...prev, [reviewId]: "" }));
   }
 
+  function openReplyEditor(reviewId: string, existingText: string) {
+    setReplyDrafts((prev) => ({ ...prev, [reviewId]: prev[reviewId] ?? existingText }));
+    setOpenReplyId(openReplyId === reviewId ? null : reviewId);
+  }
+
   return (
     <div>
       <div className="mb-4 sm:mb-5">
@@ -178,19 +183,29 @@ export function ReviewsBoard({
                 </div>
               )}
 
-              {review.vendorResponse ? (
+              {review.vendorResponse && openReplyId !== review.id ? (
                 <div className="mt-2.5 rounded-md bg-surface-input p-3.5 text-[13px]">
-                  <strong className="mb-1 block text-xs">Response from {vendorName}</strong>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <strong className="block text-xs">Response from {vendorName}</strong>
+                    <button
+                      onClick={() => openReplyEditor(review.id, review.vendorResponse ?? "")}
+                      className="shrink-0 text-xs font-bold text-brand-primary hover:underline"
+                    >
+                      Edit reply
+                    </button>
+                  </div>
                   {review.vendorResponse}
                 </div>
               ) : (
                 <>
-                  <button
-                    onClick={() => setOpenReplyId(openReplyId === review.id ? null : review.id)}
-                    className="mt-2.5 rounded-md border border-border bg-white px-3.5 py-2 text-[13px] font-bold text-text-dark hover:bg-surface-input"
-                  >
-                    Respond
-                  </button>
+                  {!review.vendorResponse && (
+                    <button
+                      onClick={() => openReplyEditor(review.id, "")}
+                      className="mt-2.5 rounded-md border border-border bg-white px-3.5 py-2 text-[13px] font-bold text-text-dark hover:bg-surface-input"
+                    >
+                      Respond
+                    </button>
+                  )}
                   {openReplyId === review.id && (
                     <div className="mt-3">
                       <textarea
@@ -200,13 +215,23 @@ export function ReviewsBoard({
                         maxLength={2000}
                         className="min-h-[70px] w-full rounded-md border border-border p-3 text-[13px]"
                       />
-                      <button
-                        onClick={() => handleReply(review.id)}
-                        disabled={saving === review.id || !replyDrafts[review.id]?.trim()}
-                        className="mt-2.5 rounded-md bg-brand-primary px-4 py-2 text-[13px] font-bold text-white disabled:opacity-50"
-                      >
-                        Post reply
-                      </button>
+                      <div className="mt-2.5 flex gap-2">
+                        <button
+                          onClick={() => handleReply(review.id)}
+                          disabled={saving === review.id || !replyDrafts[review.id]?.trim()}
+                          className="rounded-md bg-brand-primary px-4 py-2 text-[13px] font-bold text-white disabled:opacity-50"
+                        >
+                          {review.vendorResponse ? "Save changes" : "Post reply"}
+                        </button>
+                        {review.vendorResponse && (
+                          <button
+                            onClick={() => setOpenReplyId(null)}
+                            className="rounded-md border border-border bg-white px-4 py-2 text-[13px] font-bold text-text-dark hover:bg-surface-input"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </>
