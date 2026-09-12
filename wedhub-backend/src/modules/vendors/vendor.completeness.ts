@@ -18,7 +18,7 @@ interface WeightedCheck {
 }
 
 const CHECKS: WeightedCheck[] = [
-  { label: "Business name", weight: 10, isMet: (v) => v.businessName.length > 0 },
+  { label: "Business name", weight: 20, isMet: (v) => v.businessName.length > 0 },
   { label: "Short description", weight: 10, isMet: (v) => !!v.profile?.shortDescription },
   { label: "Full description", weight: 10, isMet: (v) => !!v.profile?.description },
   { label: "Primary category", weight: 15, isMet: (v) => v.categories.some((c) => c.isPrimary) },

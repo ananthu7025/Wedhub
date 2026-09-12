@@ -325,7 +325,7 @@ export interface UpdateMediaBody {
 
 // ---- Completeness (computed server-side, exposed only via Vendor.profileCompleteness) ----
 export const COMPLETENESS_CHECKS: Array<{ label: string; weight: number; requiredForSubmission: boolean }> = [
-  { label: "Business name", weight: 10, requiredForSubmission: true },
+  { label: "Business name", weight: 20, requiredForSubmission: true },
   { label: "Short description", weight: 10, requiredForSubmission: false },
   { label: "Full description", weight: 10, requiredForSubmission: true },
   { label: "Primary category", weight: 15, requiredForSubmission: true },

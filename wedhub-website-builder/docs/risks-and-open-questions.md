@@ -1,0 +1,22 @@
+# Risks and Open Questions
+
+## Open decisions (not yet made — do not guess these during implementation, surface them for a decision when reached)
+
+- **Hosting target.** Deliberately left hosting-agnostic per the original planning conversation — the project is structured as a standalone deployable specifically so this can be decided later without re-architecting. Do not hardcode assumptions about a specific host/provider anywhere in the codebase.
+- **Admin authoring UI location.** Whether admin template authoring (including `custom_html`/`scrub_sequence` creation and video upload) lives inside `wedhub-frontend-app`'s existing `(admin)` route group, or as a separate lightweight internal tool, is not yet decided. Tracked as a Phase 3 question — see [tasks/phase-3-admin-authoring.md](tasks/phase-3-admin-authoring.md).
+- **Public read wiring (Option A vs B).** Direct `wedhub-frontend-app` → `wedhub-website-builder` calls, vs. a `wedhub-backend` proxy for the public `/wedding/[slug]` route. Current default assumption is Option A (direct) — see [architecture/05-integration-with-wedhub-backend.md](architecture/05-integration-with-wedhub-backend.md). Finalize once both services exist to test against, in Phase 6.
+- **`Template.description` field.** Not yet decided whether template card descriptions (for the gallery) live as a dedicated `Template.description` column or are derived from the content JSON itself. Decide during Phase 5.
+- **Core Web Vitals thresholds for scrub-heavy pages.** No specific numeric target set yet — should be informed by real device-testing results from Phase 4 rather than picked in the abstract now.
+
+## Known risks
+
+- **Scroll-scrub performance is the single biggest technical risk in this project.** Frame-sequence preloading, canvas painting performance on lower-end mobile devices, and getting the fallback logic (`prefers-reduced-motion`, slow-connection) actually correct are all things that can only be verified by hands-on device testing, not unit tests. See [architecture/06-performance-and-fallbacks.md](architecture/06-performance-and-fallbacks.md) and Phase 4/6's done criteria.
+- **`custom_html` sanitization coverage.** DOMPurify/`rehype-sanitize` reduces but does not eliminate XSS risk from admin-authored HTML. Since it's admin-only, the risk is "an admin's own mistake" rather than an adversarial user, but the sanitization step must not be skipped or treated as optional — see [architecture/03-block-registry.md](architecture/03-block-registry.md).
+- **ffmpeg operational dependency.** This is a new runtime dependency not present anywhere else in the WedHub stack. Ensure it's correctly installed in every environment (local dev, CI if tests exercise it, Docker runtime stage) — easy to miss since `wedhub-backend`'s existing Dockerfile has no equivalent need. See [backend/03-jobs-and-workers.md](backend/03-jobs-and-workers.md).
+- **Two-database consistency.** Because `WeddingWebsite` (in `wedhub-backend`) and `WebsiteContent` (in this service) are different databases linked only by a UUID pointer and an eventually-consistent webhook, there is an inherent (small, bounded) window where the two can be briefly out of sync. This is an accepted tradeoff for the isolation this architecture buys — see [architecture/05-integration-with-wedhub-backend.md](architecture/05-integration-with-wedhub-backend.md) — but any future feature relying on strong cross-service consistency should be designed with this in mind.
+
+## Explicit non-goals (recorded here so they aren't accidentally reintroduced later)
+
+- **Telegram integration.** Permanently out of scope for this project — see [architecture/01-overview.md](architecture/01-overview.md). The Telegram bot flow is slated for a complete separate revamp later; this project must not couple to it in any way.
+- **End-user raw-HTML/freeform authoring.** Not planned. If requested later, it needs its own locked-down mini-DSL or sanitized rich-text editor, not an extension of the admin-only `custom_html` escape hatch to end users — see [architecture/03-block-registry.md](architecture/03-block-registry.md).
+- **Free-form absolute-position canvas editing** (true pixel-level drag-anywhere, Canva's own internal model). Explicitly rejected in favor of the structured JSON section/block tree — see [architecture/01-overview.md](architecture/01-overview.md) and the original design conversation's format comparison. Revisit only if a concrete product need emerges that the block model genuinely cannot express.

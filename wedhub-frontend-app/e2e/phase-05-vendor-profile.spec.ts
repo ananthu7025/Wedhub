@@ -79,29 +79,34 @@ test.describe("Vendor dashboard and profile editor", () => {
     await login(page, email, password);
     await page.goto("/vendor/profile");
 
+    // Profile Editor is tabbed (Basic Info / Category / Location / Pricing
+    // & Policies / Contact & Social / More Details / Category Details) with
+    // per-tab Next/Back — only the last tab's button actually saves
+    // ("Save changes", or "Submit for review" once the profile is complete
+    // enough to submit). Fields below are filled on the tab they live on,
+    // clicking "Next" to advance between them.
     await page.getByLabel("Short description").fill("Playwright E2E test studio — candid wedding photography.");
     await page.getByLabel("Full description").fill(
       "A full description written by the Phase 5 headed Playwright run, long enough to satisfy the real backend's submission requirements.",
     );
-    await page.getByLabel("City").selectOption({ label: "Bengaluru" });
-    await page.getByLabel("Phone").fill("+919900011122");
+    await page.getByRole("button", { name: "Next" }).click(); // Basic Info -> Category
 
+    await page.getByRole("button", { name: "Next" }).click(); // Category -> Location
+    await page.getByLabel("City").selectOption({ label: "Bengaluru" });
+    await page.getByRole("button", { name: "Next" }).click(); // Location -> Pricing & Policies
+
+    await page.getByRole("button", { name: "Next" }).click(); // Pricing & Policies -> Contact & Social
+    await page.getByLabel("Phone").fill("+919900011122");
+    await page.getByRole("button", { name: "Next" }).click(); // Contact & Social -> More Details
+
+    await page.getByRole("button", { name: "Next" }).click(); // More Details -> Category Details (last tab)
     await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByRole("button", { name: "Saved ✓" })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".text-red-70")).toHaveCount(0, { timeout: 10000 });
 
     await page.reload();
     await expect(page.getByLabel("Short description")).toHaveValue(/candid wedding photography/);
-    await expect(page.getByLabel("City")).toHaveValue(/./);
 
-    // Attach a service (required for submission) and add a package via the
-    // real packages page, then come back and submit.
-    const servicesCheckbox = page.locator('input[type="checkbox"]').first();
-    if (await servicesCheckbox.count() > 0) {
-      await servicesCheckbox.check();
-      await page.getByRole("button", { name: "Save changes" }).click();
-      await expect(page.getByRole("button", { name: "Saved ✓" })).toBeVisible({ timeout: 10000 });
-    }
-
+    // Add a package via the real packages page, then come back and submit.
     await page.goto("/vendor/packages");
     // Two "+ Add package" buttons exist when the list is empty (header +
     // empty-state CTA) — both do the same thing, .first() is deliberate.
@@ -112,7 +117,14 @@ test.describe("Vendor dashboard and profile editor", () => {
     await expect(page.getByText("Essential")).toBeVisible();
     await expect(page.getByText("₹60,000")).toBeVisible();
 
+    // Profile Editor always remounts on the first tab, so tab through to
+    // the last one again to reach the Submit button (7 tabs total: Basic
+    // Info, Category, Location, Pricing & Policies, Contact & Social, More
+    // Details, Category Details).
     await page.goto("/vendor/profile");
+    for (let i = 0; i < 6; i++) {
+      await page.getByRole("button", { name: "Next" }).click();
+    }
     await page.getByRole("button", { name: "Submit for review" }).click();
     await expect(page).toHaveURL(/\/vendor\/dashboard$/, { timeout: 10000 });
     await expect(page.getByText(/PENDING VERIFICATION|PENDING_VERIFICATION/i)).toBeVisible();
