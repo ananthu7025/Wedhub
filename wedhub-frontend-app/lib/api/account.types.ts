@@ -43,7 +43,6 @@ export interface MyEnquiry {
   source: string;
   categoryId: string | null;
   cityId: string | null;
-  serviceId: string | null;
   contactName: string;
   contactEmail: string;
   contactPhone: string | null;
@@ -74,7 +73,6 @@ export interface MyReview {
   id: string;
   userId: string;
   vendorId: string;
-  serviceId: string | null;
   rating: number;
   title: string | null;
   content: string | null;
@@ -90,7 +88,6 @@ export interface MyReview {
 
 export interface CreateReviewBody {
   vendorId: string;
-  serviceId?: string;
   rating: number;
   title?: string;
   content?: string;

@@ -8,7 +8,6 @@ export interface CreateEnquiryData {
   source: "WEB" | "TELEGRAM" | "ADMIN" | "FUTURE_WHATSAPP";
   categoryId: string | undefined;
   cityId: string | undefined;
-  serviceId: string | undefined;
   contactName: string;
   contactEmail: string;
   contactPhone: string | undefined;
@@ -29,7 +28,6 @@ export function createEnquiryWithLeads(
     userId: enquiryData.userId,
     categoryId: enquiryData.categoryId,
     cityId: enquiryData.cityId,
-    serviceId: enquiryData.serviceId,
     contactPhone: enquiryData.contactPhone,
     preferredContactMethod: enquiryData.preferredContactMethod as
       | Prisma.EnquiryCreateInput["preferredContactMethod"]

@@ -118,15 +118,6 @@ export interface CategoryAttributeSelf {
   sortOrder: number;
 }
 
-export interface ServiceSelf {
-  id: string;
-  categoryId: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  isActive: boolean;
-}
-
 export interface CategorySelf {
   id: string;
   name: string;
@@ -135,7 +126,6 @@ export interface CategorySelf {
   parentId: string | null;
   hasStoreEnabled?: boolean;
   attributes: CategoryAttributeSelf[];
-  services: ServiceSelf[];
   children?: CategorySelf[];
 }
 
@@ -196,7 +186,6 @@ export interface VendorSelf {
   profile: VendorProfileSelf | null;
   categories: Array<{ vendorId: string; categoryId: string; isPrimary: boolean; category: CategorySelf }>;
   serviceAreas: Array<{ vendorId: string; locationId: string; location: LocationSelf }>;
-  services: Array<{ vendorId: string; serviceId: string; note: string | null; service: ServiceSelf }>;
   packages: PackageSelf[];
   attributeValues: VendorAttributeValueSelf[];
   city: LocationSelf | null;
@@ -261,11 +250,6 @@ export interface SetServiceAreasBody {
 
 export interface SetAttributesBody {
   values: Array<{ attributeId: string; value: string | number | boolean | string[] | AttributeValueJson }>;
-}
-
-export interface AttachServiceBody {
-  serviceId: string;
-  note?: string;
 }
 
 // ---- POST/PATCH /vendors/me/packages ----
@@ -349,7 +333,6 @@ export const COMPLETENESS_CHECKS: Array<{ label: string; weight: number; require
   { label: "At least one service area", weight: 5, requiredForSubmission: false },
   { label: "Pricing information", weight: 10, requiredForSubmission: false },
   { label: "At least one package", weight: 5, requiredForSubmission: false },
-  { label: "At least one service", weight: 10, requiredForSubmission: true },
   { label: "A contact method", weight: 10, requiredForSubmission: true },
   { label: "Category attribute values", weight: 5, requiredForSubmission: false },
 ];

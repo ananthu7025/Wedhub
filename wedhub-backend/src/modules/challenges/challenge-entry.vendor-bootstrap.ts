@@ -56,7 +56,7 @@ export async function bootstrapVendorForChallenge(
 ): Promise<BootstrapResult> {
   const category = await prisma.category.findUnique({
     where: { id: challenge.categoryId },
-    include: { attributes: { orderBy: { sortOrder: "asc" } }, services: { where: { isActive: true }, take: 1 } },
+    include: { attributes: { orderBy: { sortOrder: "asc" } } },
   });
   if (!category) {
     throw new ValidationError("This challenge's category is no longer available");
@@ -115,23 +115,19 @@ export async function bootstrapVendorForChallenge(
   await vendorService.setCategories(vendor.id, { primaryCategoryId: challenge.categoryId, subcategoryIds: [] });
   await vendorService.setServiceAreas(vendor.id, { locationIds: [fields.cityId] });
 
-  const defaultService = category.services[0];
-  if (defaultService) {
-    await vendorService.attachService(vendor.id, defaultService.id, undefined);
-    // Only create a default package when the entrant actually supplied a
-    // price — a persisted Package with price: 0 is indistinguishable from a
-    // vendor who genuinely charges ₹0 once this profile is public (audit
-    // rule: never invent a price).
-    if (fields.startingPrice !== undefined) {
-      await vendorService.createPackage(vendor.id, {
-        name: defaultService.name,
-        description: fields.shortDescription,
-        price: fields.startingPrice,
-        currency: undefined,
-        inclusions: undefined,
-        imageMediaId: undefined,
-      });
-    }
+  // Only create a default package when the entrant actually supplied a
+  // price — a persisted Package with price: 0 is indistinguishable from a
+  // vendor who genuinely charges ₹0 once this profile is public (audit
+  // rule: never invent a price).
+  if (fields.startingPrice !== undefined) {
+    await vendorService.createPackage(vendor.id, {
+      name: category.name,
+      description: fields.shortDescription,
+      price: fields.startingPrice,
+      currency: undefined,
+      inclusions: undefined,
+      imageMediaId: undefined,
+    });
   }
 
   await attachSensibleAttributeDefaults(vendor.id, category);

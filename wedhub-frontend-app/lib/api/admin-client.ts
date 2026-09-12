@@ -24,7 +24,6 @@ import type {
   AdminCreatePopularSearchCardBody,
   AdminCreatePopularSearchImageUploadRequestBody,
   AdminCreateSeoOverrideBody,
-  AdminCreateServiceBody,
   AdminCreateVendorBody,
   AdminCreateWeddingStoryBody,
   AdminFeaturedMedia,
@@ -57,7 +56,6 @@ import type {
   AdminUpdatePlanBody,
   AdminUpdatePopularSearchCardBody,
   AdminUpdateSeoOverrideBody,
-  AdminUpdateServiceBody,
   AdminUpdateVendorBody,
   AdminUpdateWeddingStoryBody,
   AdminVendorInvitation,
@@ -66,7 +64,7 @@ import type {
   AdminVendorUploadRequestResult,
   AdminWeddingStory,
 } from "./admin.types";
-import type { Category, CategoryAttribute, GalleryCategory, Location, LocationType, Service } from "./vendors.types";
+import type { Category, CategoryAttribute, GalleryCategory, Location, LocationType } from "./vendors.types";
 
 /**
  * Client-side calls through the generic authenticated proxy for the admin
@@ -151,18 +149,6 @@ export function deleteAdminAttribute(categoryId: string, attributeId: string) {
 
 export function reorderAdminAttributes(categoryId: string, body: AdminReorderAttributesBody) {
   return call<CategoryAttribute[]>(`/categories/${categoryId}/attributes/reorder`, "PUT", body);
-}
-
-export function createAdminService(categoryId: string, body: AdminCreateServiceBody) {
-  return call<Service>(`/categories/${categoryId}/services`, "POST", body);
-}
-
-export function updateAdminService(categoryId: string, serviceId: string, body: AdminUpdateServiceBody) {
-  return call<Service>(`/categories/${categoryId}/services/${serviceId}`, "PATCH", body);
-}
-
-export function deleteAdminService(categoryId: string, serviceId: string) {
-  return call<{ deleted: true }>(`/categories/${categoryId}/services/${serviceId}`, "DELETE");
 }
 
 export function createAdminGalleryCategory(body: AdminCreateGalleryCategoryBody) {

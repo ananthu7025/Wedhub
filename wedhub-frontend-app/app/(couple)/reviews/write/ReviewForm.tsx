@@ -15,17 +15,14 @@ type PhotoUploadState = "pending" | "done" | "error";
 
 export function ReviewForm({
   vendorId,
-  services,
 }: {
   vendorId: string;
-  services: Array<{ id: string; name: string }>;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
-  const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [content, setContent] = useState("");
   const [photos, setPhotos] = useState<
     Array<{ id: string; file: File; state: PhotoUploadState; mediaId?: string }>
@@ -118,7 +115,6 @@ export function ReviewForm({
     setStatus("submitting");
     const result = await createReview({
       vendorId,
-      serviceId: serviceId || undefined,
       rating,
       content: content || undefined,
       mediaIds: mediaIds.length > 0 ? mediaIds : undefined,
@@ -153,23 +149,6 @@ export function ReviewForm({
           </button>
         ))}
       </div>
-
-      {services.length > 0 && (
-        <label className="mb-4 block text-sm">
-          <span className="mb-1.5 block font-bold text-[13px]">Which service?</span>
-          <select
-            value={serviceId}
-            onChange={(e) => setServiceId(e.target.value)}
-            className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
-          >
-            {services.map((service) => (
-              <option key={service.id} value={service.id}>
-                {service.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
 
       <label className="mb-4 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">Your review</span>

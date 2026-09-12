@@ -1,14 +1,7 @@
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
 import * as categoriesRepository from "./categories.repository";
-import type {
-  CreateAttributeInput,
-  CreateCategoryInput,
-  CreateServiceInput,
-  UpdateAttributeInput,
-  UpdateCategoryInput,
-  UpdateServiceInput,
-} from "./categories.types";
+import type { CreateAttributeInput, CreateCategoryInput, UpdateAttributeInput, UpdateCategoryInput } from "./categories.types";
 
 export function listCategories() {
   return categoriesRepository.findActiveCategories();
@@ -131,44 +124,6 @@ export async function reorderAttributes(categoryId: string, attributeIds: string
 
   await categoriesRepository.reorderAttributes(categoryId, attributeIds);
   return categoriesRepository.findAttributesByCategoryId(categoryId);
-}
-
-export async function createService(categoryId: string, input: CreateServiceInput) {
-  const category = await categoriesRepository.findCategoryById(categoryId);
-  if (!category) {
-    throw new NotFoundError("Category not found");
-  }
-
-  const slug = await generateUniqueSlug(slugify(input.name), async (candidate) =>
-    Boolean(await categoriesRepository.findServiceBySlug(categoryId, candidate)),
-  );
-
-  return categoriesRepository.createService(categoryId, {
-    name: input.name,
-    slug,
-    description: input.description,
-  });
-}
-
-export async function updateService(serviceId: string, input: UpdateServiceInput) {
-  const existing = await categoriesRepository.findServiceById(serviceId);
-  if (!existing) {
-    throw new NotFoundError("Service not found");
-  }
-
-  return categoriesRepository.updateService(serviceId, {
-    name: input.name,
-    description: input.description,
-    isActive: input.isActive,
-  });
-}
-
-export async function deleteService(serviceId: string): Promise<void> {
-  const existing = await categoriesRepository.findServiceById(serviceId);
-  if (!existing) {
-    throw new NotFoundError("Service not found");
-  }
-  await categoriesRepository.deleteService(serviceId);
 }
 
 function isUniqueConstraintViolation(err: unknown): boolean {

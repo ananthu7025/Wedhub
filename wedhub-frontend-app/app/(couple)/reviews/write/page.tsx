@@ -74,7 +74,7 @@ export default async function WriteReviewPage({ searchParams }: WriteReviewPageP
             </div>
           </div>
 
-          <ReviewForm vendorId={vendor.id} services={vendor.services.map((s) => ({ id: s.serviceId, name: s.service.name }))} />
+          <ReviewForm vendorId={vendor.id} />
         </div>
       </div>
       <PublicFooter />

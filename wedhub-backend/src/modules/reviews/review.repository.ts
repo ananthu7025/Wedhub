@@ -21,7 +21,6 @@ export function hasAnyLeadWithVendor(userId: string, vendorId: string) {
 export function createReview(data: {
   userId: string;
   vendorId: string;
-  serviceId: string | undefined;
   rating: number;
   title: string | undefined;
   content: string | undefined;
@@ -29,7 +28,6 @@ export function createReview(data: {
   verifiedInteraction: boolean;
 }) {
   const fields = omitUndefined({
-    serviceId: data.serviceId,
     title: data.title,
     content: data.content,
     eventDate: data.eventDate,

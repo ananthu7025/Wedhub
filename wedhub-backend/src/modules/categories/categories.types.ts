@@ -58,14 +58,3 @@ export interface UpdateAttributeInput {
   aspectRatio: string | null | undefined;
   sortOrder: number | undefined;
 }
-
-export interface CreateServiceInput {
-  name: string;
-  description: string | undefined;
-}
-
-export interface UpdateServiceInput {
-  name: string | undefined;
-  description: string | null | undefined;
-  isActive: boolean | undefined;
-}

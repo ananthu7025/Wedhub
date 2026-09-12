@@ -296,7 +296,6 @@ async function advanceEnquiryConversation(
         preferredContactMethod: undefined,
         weddingDate: data.weddingDate ? new Date(data.weddingDate) : undefined,
         weddingLocation: data.cityName,
-        serviceId: undefined,
         budget: data.budget,
         guestCount: data.guestCount,
         message: undefined,

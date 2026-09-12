@@ -8,7 +8,6 @@ import { formatApiError } from "@/lib/utils/error";
 import { LocationTree } from "./LocationTree";
 import { CategoryImagePicker } from "./CategoryImagePicker";
 import { CategoryAttributesPanel } from "./CategoryAttributesPanel";
-import { CategoryServicesPanel } from "./CategoryServicesPanel";
 
 /**
  * Categories & Locations admin page (Frontend Arch Phase 9, extended
@@ -16,7 +15,7 @@ import { CategoryServicesPanel } from "./CategoryServicesPanel";
  * again 2026-09-11 to a stat-card + tabbed detail panel per a reference
  * screenshot's UX). Same underlying data/actions as before (create,
  * rename/describe, enable/disable, feature on homepage, store toggle,
- * homepage image & price, attributes, services) — nothing added or removed,
+ * homepage image & price, attributes) — nothing added or removed,
  * only rearranged. Real gaps vs. any mockup, confirmed via backend research:
  * no reorder-specific endpoint (dragging isn't wired — sortOrder edits would
  * need a dedicated numeric input); no per-category location assignment or
@@ -83,7 +82,6 @@ export function CatalogBoard({
   const featured = categories
     .filter((c) => c.isFeaturedOnHomepage)
     .sort((a, b) => a.homepageSortOrder - b.homepageSortOrder);
-  const totalServices = categories.reduce((n, c) => n + c.services.length, 0);
 
   async function handleCreateCategory(event: React.FormEvent) {
     event.preventDefault();
@@ -96,7 +94,7 @@ export function CatalogBoard({
       setError(formatApiError(result.error));
       return;
     }
-    setCategories((prev) => [...prev, { ...result.data, attributes: [], services: [] }]);
+    setCategories((prev) => [...prev, { ...result.data, attributes: [] }]);
     setNewCategoryName("");
     setSelectedId(result.data.id);
   }
@@ -170,10 +168,6 @@ export function CatalogBoard({
     setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, attributes } : c)));
   }
 
-  function handleServicesChange(categoryId: string, services: Category["services"]) {
-    setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, services } : c)));
-  }
-
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
@@ -225,7 +219,7 @@ export function CatalogBoard({
 
       {tab === "categories" && (
         <>
-          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-border bg-white p-4">
               <p className="text-xs font-semibold text-text-grey">Total categories</p>
               <p className="mt-1 text-2xl font-bold">{categories.length}</p>
@@ -233,10 +227,6 @@ export function CatalogBoard({
             <div className="rounded-xl border border-border bg-white p-4">
               <p className="text-xs font-semibold text-text-grey">Featured on homepage</p>
               <p className="mt-1 text-2xl font-bold">{featured.length}</p>
-            </div>
-            <div className="rounded-xl border border-border bg-white p-4">
-              <p className="text-xs font-semibold text-text-grey">Total services</p>
-              <p className="mt-1 text-2xl font-bold">{totalServices}</p>
             </div>
             <button
               type="button"
@@ -364,8 +354,6 @@ export function CatalogBoard({
                             <div className="truncate text-sm font-bold text-text-dark">{category.name}</div>
                             <div className="text-xs text-text-grey">
                               {category.attributes.length} attribute{category.attributes.length === 1 ? "" : "s"}
-                              {" · "}
-                              {category.services.length} service{category.services.length === 1 ? "" : "s"}
                             </div>
                           </div>
                           <Badge variant={category.isActive ? "green" : "grey"}>{category.isActive ? "Active" : "Disabled"}</Badge>
@@ -390,7 +378,6 @@ export function CatalogBoard({
                   onToggleStore={() => handleToggleStore(selected)}
                   onSaveHomepageFields={(imageUrl, priceLabel) => handleSaveHomepageFields(selected, imageUrl, priceLabel)}
                   onAttributesChange={(attributes) => handleAttributesChange(selected.id, attributes)}
-                  onServicesChange={(services) => handleServicesChange(selected.id, services)}
                 />
               ) : (
                 <div className="hidden h-full min-h-[300px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white p-6 text-center lg:flex">
@@ -408,7 +395,7 @@ export function CatalogBoard({
   );
 }
 
-type DetailTab = "overview" | "attributes" | "services" | "homepage" | "settings";
+type DetailTab = "overview" | "attributes" | "homepage" | "settings";
 
 function ToggleSwitch({
   checked,
@@ -440,7 +427,6 @@ function CategoryDetailPanel({
   onToggleStore,
   onSaveHomepageFields,
   onAttributesChange,
-  onServicesChange,
 }: {
   category: Category;
   pending: boolean;
@@ -451,7 +437,6 @@ function CategoryDetailPanel({
   onToggleStore: () => void;
   onSaveHomepageFields: (imageUrl: string | null, startingPriceLabel: string) => void;
   onAttributesChange: (attributes: Category["attributes"]) => void;
-  onServicesChange: (services: Category["services"]) => void;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [name, setName] = useState(category.name);
@@ -462,7 +447,6 @@ function CategoryDetailPanel({
   const TABS: Array<{ id: DetailTab; label: string }> = [
     { id: "overview", label: "Overview" },
     { id: "attributes", label: `Attributes (${category.attributes.length})` },
-    { id: "services", label: `Services (${category.services.length})` },
     { id: "homepage", label: "Homepage" },
     { id: "settings", label: "Settings" },
   ];
@@ -492,8 +476,7 @@ function CategoryDetailPanel({
               <Badge variant={category.isActive ? "green" : "grey"}>{category.isActive ? "Active" : "Disabled"}</Badge>
             </div>
             <p className="text-xs text-text-grey">
-              {category.attributes.length} attribute{category.attributes.length === 1 ? "" : "s"} · {category.services.length} service
-              {category.services.length === 1 ? "" : "s"}
+              {category.attributes.length} attribute{category.attributes.length === 1 ? "" : "s"}
               {category.isFeaturedOnHomepage && " · Featured on homepage"}
             </p>
           </div>
@@ -573,7 +556,7 @@ function CategoryDetailPanel({
 
           <div className="rounded-xl border border-border bg-white p-5">
             <h3 className="mb-3 text-sm font-bold">Quick actions</h3>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <button
                 type="button"
                 onClick={() => setActiveTab("attributes")}
@@ -581,14 +564,6 @@ function CategoryDetailPanel({
               >
                 <p className="text-sm font-bold">Manage attributes</p>
                 <p className="mt-0.5 text-xs text-text-grey">Add or edit vendor profile fields</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("services")}
-                className="rounded-xl border border-border bg-white p-4 text-left hover:border-brand-primary hover:bg-surface-input"
-              >
-                <p className="text-sm font-bold">Add services</p>
-                <p className="mt-0.5 text-xs text-text-grey">Create offerings for vendors</p>
               </button>
               <button
                 type="button"
@@ -627,10 +602,6 @@ function CategoryDetailPanel({
 
       {activeTab === "attributes" && (
         <CategoryAttributesPanel categoryId={category.id} attributes={category.attributes} onAttributesChange={onAttributesChange} />
-      )}
-
-      {activeTab === "services" && (
-        <CategoryServicesPanel categoryId={category.id} services={category.services} onServicesChange={onServicesChange} />
       )}
 
       {activeTab === "homepage" && (

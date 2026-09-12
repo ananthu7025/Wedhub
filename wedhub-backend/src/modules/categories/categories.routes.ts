@@ -8,11 +8,9 @@ import * as categoriesController from "./categories.controller";
 import {
   createAttributeSchema,
   createCategorySchema,
-  createServiceSchema,
   reorderAttributesSchema,
   updateAttributeSchema,
   updateCategorySchema,
-  updateServiceSchema,
 } from "./categories.schema";
 
 export const categoriesRouter = Router();
@@ -71,27 +69,4 @@ categoriesRouter.put(
   authorize(Role.ADMIN),
   validateBody(reorderAttributesSchema),
   asyncHandler(categoriesController.reorderAttributes),
-);
-
-categoriesRouter.post(
-  "/:id/services",
-  authenticateMiddleware,
-  authorize(Role.ADMIN),
-  validateBody(createServiceSchema),
-  asyncHandler(categoriesController.createService),
-);
-
-categoriesRouter.patch(
-  "/:id/services/:serviceId",
-  authenticateMiddleware,
-  authorize(Role.ADMIN),
-  validateBody(updateServiceSchema),
-  asyncHandler(categoriesController.updateService),
-);
-
-categoriesRouter.delete(
-  "/:id/services/:serviceId",
-  authenticateMiddleware,
-  authorize(Role.ADMIN),
-  asyncHandler(categoriesController.deleteService),
 );

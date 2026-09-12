@@ -347,21 +347,6 @@ export async function resolveImageAttributeMedia(
   return result;
 }
 
-export async function attachService(vendorId: string, serviceId: string, note: string | undefined) {
-  const service = await vendorRepository.findServiceById(serviceId);
-  if (!service) {
-    throw new NotFoundError("Service not found");
-  }
-  const result = await vendorRepository.attachService(vendorId, serviceId, note);
-  await recalculateCompleteness(vendorId);
-  return result;
-}
-
-export async function detachService(vendorId: string, serviceId: string): Promise<void> {
-  await vendorRepository.detachService(vendorId, serviceId);
-  await recalculateCompleteness(vendorId);
-}
-
 export async function createPackage(vendorId: string, input: CreatePackageInput) {
   await assertOwnReadyMediaOrNull(vendorId, input.imageMediaId, "imageMediaId");
   const pkg = await vendorRepository.createPackage(vendorId, input);

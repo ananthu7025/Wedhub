@@ -22,7 +22,6 @@ export interface LeadEnquiry {
   source: string;
   categoryId: string | null;
   cityId: string | null;
-  serviceId: string | null;
   contactName: string;
   contactEmail: string;
   contactPhone: string | null;

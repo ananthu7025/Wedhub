@@ -4,11 +4,9 @@ import * as categoriesService from "./categories.service";
 import type {
   CreateAttributeBody,
   CreateCategoryBody,
-  CreateServiceBody,
   ReorderAttributesBody,
   UpdateAttributeBody,
   UpdateCategoryBody,
-  UpdateServiceBody,
 } from "./categories.schema";
 
 export async function listCategories(req: Request, res: Response): Promise<void> {
@@ -106,26 +104,3 @@ export async function reorderAttributes(req: Request, res: Response): Promise<vo
   res.json(successResponse(attributes));
 }
 
-export async function createService(req: Request, res: Response): Promise<void> {
-  const body = req.body as CreateServiceBody;
-  const service = await categoriesService.createService(req.params.id as string, {
-    name: body.name,
-    description: body.description,
-  });
-  res.status(201).json(successResponse(service));
-}
-
-export async function updateService(req: Request, res: Response): Promise<void> {
-  const body = req.body as UpdateServiceBody;
-  const service = await categoriesService.updateService(req.params.serviceId as string, {
-    name: body.name,
-    description: body.description,
-    isActive: body.isActive,
-  });
-  res.json(successResponse(service));
-}
-
-export async function deleteService(req: Request, res: Response): Promise<void> {
-  await categoriesService.deleteService(req.params.serviceId as string);
-  res.json(successResponse({ deleted: true }));
-}

@@ -13,7 +13,7 @@ import { GalleryCategoryImagePicker } from "./GalleryCategoryImagePicker";
  * previously could only be created by editing the hardcoded
  * GALLERY_CATEGORIES array in prisma/seed.ts and re-running the seed
  * script — this panel adds real admin CRUD, mirroring
- * CategoryServicesPanel.tsx. A new/edited category has no effect on
+ * CategoryAttributesPanel.tsx. A new/edited category has no effect on
  * existing FeaturedMedia rows; it only becomes a new option in the
  * category picker below and a new pill on /gallery once a photo is
  * tagged with it.

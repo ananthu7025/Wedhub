@@ -22,7 +22,7 @@ import { uniqueTestEmail, registerTestUser, deleteTestUser } from "./support/tes
  *  - POST /shortlists/favorites/items is NOT idempotent (409 on duplicate
  *    add) — the heart button's optimistic UI relies on this being handled.
  *  - POST /enquiries/single-vendor has a 15-minute dedupe window keyed on
- *    userId|vendorId|contactEmail|contactPhone|weddingDate|serviceId — so
+ *    userId|vendorId|contactEmail|contactPhone|weddingDate — so
  *    submitting the exact same enquiry twice in one run would 409. Each
  *    enquiry test uses a distinct message/budget where it matters, and the
  *    suite only submits one real enquiry to avoid tripping this.

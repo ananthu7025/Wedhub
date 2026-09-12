@@ -7,7 +7,6 @@ const baseFields = {
   preferredContactMethod: z.enum(["EMAIL", "PHONE", "WHATSAPP"]).optional(),
   weddingDate: z.coerce.date().optional(),
   weddingLocation: z.string().trim().max(300).optional(),
-  serviceId: z.string().uuid().optional(),
   budget: z.coerce.number().min(0).optional(),
   guestCount: z.coerce.number().int().min(0).optional(),
   message: z.string().trim().max(2000).optional(),

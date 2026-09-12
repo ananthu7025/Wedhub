@@ -2,7 +2,6 @@ import type {
   CategorySelf,
   LocationSelf,
   PackageSelf,
-  ServiceSelf,
   VendorAttributeValueSelf,
   VendorProfileSelf,
   VendorStatus,
@@ -77,7 +76,6 @@ export interface AdminVendor {
   profile: VendorProfileSelf | null;
   categories: Array<{ vendorId: string; categoryId: string; isPrimary: boolean; category: CategorySelf }>;
   serviceAreas: Array<{ vendorId: string; locationId: string; location: LocationSelf }>;
-  services: Array<{ vendorId: string; serviceId: string; note: string | null; service: ServiceSelf }>;
   packages: PackageSelf[];
   attributeValues: VendorAttributeValueSelf[];
   city: LocationSelf | null;
@@ -96,7 +94,7 @@ export interface AdminVendorDetail extends AdminVendor {
 // which both assume the full relation set.
 export type AdminVendorScalarOnly = Omit<
   AdminVendor,
-  "profile" | "categories" | "serviceAreas" | "services" | "packages" | "attributeValues" | "city"
+  "profile" | "categories" | "serviceAreas" | "packages" | "attributeValues" | "city"
 >;
 
 export interface AdminVendorStatusHistoryEntry {
@@ -264,19 +262,6 @@ export interface AdminReorderAttributesBody {
   attributeIds: string[];
 }
 
-// ---- POST /categories/:id/services (ADMIN) ----
-export interface AdminCreateServiceBody {
-  name: string;
-  description?: string;
-}
-
-// ---- PATCH /categories/:id/services/:serviceId (ADMIN) ----
-export interface AdminUpdateServiceBody {
-  name?: string;
-  description?: string | null;
-  isActive?: boolean;
-}
-
 // ---- POST /admin/gallery-categories (ADMIN) ----
 export interface AdminCreateGalleryCategoryBody {
   name: string;
@@ -370,7 +355,6 @@ interface AdminReviewBase {
   id: string;
   userId: string;
   vendorId: string;
-  serviceId: string | null;
   rating: number;
   title: string | null;
   content: string | null;
@@ -413,7 +397,6 @@ export interface AdminReviewStatusUpdateResult {
   id: string;
   userId: string;
   vendorId: string;
-  serviceId: string | null;
   rating: number;
   title: string | null;
   content: string | null;

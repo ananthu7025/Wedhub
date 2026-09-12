@@ -16,13 +16,12 @@ export interface EnquiryContactInput {
   preferredContactMethod: "EMAIL" | "PHONE" | "WHATSAPP" | undefined;
   weddingDate: Date | undefined;
   weddingLocation: string | undefined;
-  serviceId: string | undefined;
   budget: number | undefined;
   guestCount: number | undefined;
   message: string | undefined;
 }
 
-// product.md §21: dedupe on user/vendor/contact-info/wedding-date/service +
+// product.md §21: dedupe on user/vendor/contact-info/wedding-date +
 // a recent-submission window. There is no static uniqueness here — the
 // "window" is time-relative, so this can't be a DB unique constraint; the
 // service checks for a recent Lead with the same key before creating a new
@@ -33,7 +32,6 @@ function buildDedupeKey(input: {
   contactEmail: string;
   contactPhone: string | undefined;
   weddingDate: Date | undefined;
-  serviceId: string | undefined;
 }): string {
   const parts = [
     input.userId ?? "anon",
@@ -41,7 +39,6 @@ function buildDedupeKey(input: {
     input.contactEmail.toLowerCase(),
     input.contactPhone ?? "",
     input.weddingDate?.toISOString() ?? "",
-    input.serviceId ?? "",
   ];
   return createHash("sha256").update(parts.join("|")).digest("hex");
 }
@@ -124,7 +121,6 @@ export async function createSingleVendorEnquiry(
     contactEmail: input.contactEmail,
     contactPhone: input.contactPhone,
     weddingDate: input.weddingDate,
-    serviceId: input.serviceId,
   });
   await assertNotDuplicate(dedupeKey);
 
@@ -135,7 +131,6 @@ export async function createSingleVendorEnquiry(
       source: input.source ?? "WEB",
       categoryId: input.categoryId,
       cityId: input.cityId,
-      serviceId: input.serviceId,
       contactName: input.contactName,
       contactEmail: input.contactEmail,
       contactPhone: input.contactPhone,
@@ -200,7 +195,6 @@ export async function createMultiVendorEnquiry(
         contactEmail: input.contactEmail,
         contactPhone: input.contactPhone,
         weddingDate: input.weddingDate,
-        serviceId: input.serviceId,
       }),
     ]),
   );
@@ -216,7 +210,6 @@ export async function createMultiVendorEnquiry(
       source: "WEB",
       categoryId: input.categoryId,
       cityId: input.cityId,
-      serviceId: input.serviceId,
       contactName: input.contactName,
       contactEmail: input.contactEmail,
       contactPhone: input.contactPhone,

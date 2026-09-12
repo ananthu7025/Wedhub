@@ -6,7 +6,6 @@ type VendorWithRelations = Prisma.VendorGetPayload<{
     profile: true;
     categories: true;
     serviceAreas: true;
-    services: true;
     packages: true;
     attributeValues: true;
   };
@@ -31,7 +30,6 @@ const CHECKS: WeightedCheck[] = [
     isMet: (v) => v.profile?.startingPrice != null || !!v.profile?.customQuoteAvailable,
   },
   { label: "At least one package", weight: 5, isMet: (v) => v.packages.length > 0 },
-  { label: "At least one service", weight: 10, isMet: (v) => v.services.length > 0 },
   {
     label: "A contact method",
     weight: 10,
@@ -50,7 +48,6 @@ export const REQUIRED_FOR_SUBMISSION_LABELS = [
   "Primary category",
   "Primary city",
   "A contact method",
-  "At least one service",
 ];
 
 export function calculateCompleteness(vendor: VendorWithRelations): CompletenessResult {

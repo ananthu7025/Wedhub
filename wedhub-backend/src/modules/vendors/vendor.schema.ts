@@ -92,11 +92,6 @@ export const setAttributesSchema = z.object({
     .max(100),
 });
 
-export const attachServiceSchema = z.object({
-  serviceId: z.string().uuid(),
-  note: z.string().max(300).optional(),
-});
-
 export const createPackageSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
@@ -130,7 +125,6 @@ export type UpsertProfileBody = z.infer<typeof upsertProfileSchema>;
 export type SetCategoriesBody = z.infer<typeof setCategoriesSchema>;
 export type SetServiceAreasBody = z.infer<typeof setServiceAreasSchema>;
 export type SetAttributesBody = z.infer<typeof setAttributesSchema>;
-export type AttachServiceBody = z.infer<typeof attachServiceSchema>;
 export type CreatePackageBody = z.infer<typeof createPackageSchema>;
 export type UpdatePackageBody = z.infer<typeof updatePackageSchema>;
 export type ListVendorsQuery = z.infer<typeof listVendorsQuerySchema>;

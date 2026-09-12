@@ -24,7 +24,6 @@ export async function createReview(req: Request, res: Response): Promise<void> {
   const body = req.body as CreateReviewBody;
   const review = await reviewService.createReview(userId, {
     vendorId: body.vendorId,
-    serviceId: body.serviceId,
     rating: body.rating,
     title: body.title,
     content: body.content,

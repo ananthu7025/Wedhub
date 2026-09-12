@@ -7,7 +7,6 @@ import { getOwnedVendorOrThrow } from "./vendor.policy";
 import * as vendorService from "./vendor.service";
 import * as vendorRepository from "./vendor.repository";
 import type {
-  AttachServiceBody,
   CreatePackageBody,
   CreateVendorBody,
   ListVendorsQuery,
@@ -120,21 +119,6 @@ export async function setAttributes(req: Request, res: Response): Promise<void> 
   const body = req.body as SetAttributesBody;
   const vendor = await vendorService.setAttributeValues(owned.id, body.values);
   res.json(successResponse(vendor));
-}
-
-export async function attachService(req: Request, res: Response): Promise<void> {
-  const userId = requireUserId(req);
-  const owned = await getOwnedVendorOrThrow(userId);
-  const body = req.body as AttachServiceBody;
-  const result = await vendorService.attachService(owned.id, body.serviceId, body.note);
-  res.status(201).json(successResponse(result));
-}
-
-export async function detachService(req: Request, res: Response): Promise<void> {
-  const userId = requireUserId(req);
-  const owned = await getOwnedVendorOrThrow(userId);
-  await vendorService.detachService(owned.id, req.params.serviceId as string);
-  res.json(successResponse({ detached: true }));
 }
 
 export async function createPackage(req: Request, res: Response): Promise<void> {

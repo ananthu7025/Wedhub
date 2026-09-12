@@ -6,7 +6,6 @@ import { authorize } from "../../common/middleware/authorize.middleware";
 import { Role } from "../../common/enums/roles.enum";
 import * as vendorController from "./vendor.controller";
 import {
-  attachServiceSchema,
   createPackageSchema,
   createVendorSchema,
   listVendorsQuerySchema,
@@ -70,19 +69,6 @@ vendorRouter.put(
   authenticateMiddleware,
   validateBody(setAttributesSchema),
   asyncHandler(vendorController.setAttributes),
-);
-
-vendorRouter.post(
-  "/me/services",
-  authenticateMiddleware,
-  validateBody(attachServiceSchema),
-  asyncHandler(vendorController.attachService),
-);
-
-vendorRouter.delete(
-  "/me/services/:serviceId",
-  authenticateMiddleware,
-  asyncHandler(vendorController.detachService),
 );
 
 vendorRouter.post(

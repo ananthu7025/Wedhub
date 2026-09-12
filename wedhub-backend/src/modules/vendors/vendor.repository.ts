@@ -7,7 +7,6 @@ export const VENDOR_FULL_INCLUDE = {
   profile: { include: { logoMedia: true, coverMedia: true } },
   categories: { include: { category: true } },
   serviceAreas: { include: { location: true } },
-  services: { include: { service: true } },
   packages: { include: { image: true } },
   attributeValues: { include: { attribute: true } },
   city: true,
@@ -26,7 +25,6 @@ export const VENDOR_COMPLETENESS_INCLUDE = {
   profile: true,
   categories: true,
   serviceAreas: true,
-  services: true,
   packages: true,
   attributeValues: true,
 } satisfies Prisma.VendorInclude;
@@ -239,23 +237,6 @@ export function replaceAttributeValues(vendorId: string, rows: AttributeValueRow
       })),
     }),
   ]);
-}
-
-export function findServiceById(serviceId: string) {
-  return prisma.service.findUnique({ where: { id: serviceId } });
-}
-
-export function attachService(vendorId: string, serviceId: string, note: string | undefined) {
-  const fields = omitUndefined({ note });
-  return prisma.vendorService.upsert({
-    where: { vendorId_serviceId: { vendorId, serviceId } },
-    create: { vendorId, serviceId, ...fields },
-    update: fields,
-  });
-}
-
-export function detachService(vendorId: string, serviceId: string) {
-  return prisma.vendorService.delete({ where: { vendorId_serviceId: { vendorId, serviceId } } });
 }
 
 export function createPackage(vendorId: string, data: {

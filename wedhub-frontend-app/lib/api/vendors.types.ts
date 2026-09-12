@@ -77,15 +77,6 @@ export interface CategoryAttribute {
   sortOrder: number;
 }
 
-export interface Service {
-  id: string;
-  categoryId: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  isActive: boolean;
-}
-
 export interface Category {
   id: string;
   name: string;
@@ -100,7 +91,6 @@ export interface Category {
   homepageSortOrder: number;
   startingPriceLabel: string | null;
   attributes: CategoryAttribute[];
-  services: Service[];
   children?: Category[];
 }
 
@@ -201,7 +191,6 @@ export interface VendorDetail {
   profile: VendorProfile | null;
   categories: Array<{ vendorId: string; categoryId: string; isPrimary: boolean; category: Category }>;
   serviceAreas: Array<{ vendorId: string; locationId: string; location: Location }>;
-  services: Array<{ vendorId: string; serviceId: string; note: string | null; service: { id: string; name: string; slug: string } }>;
   packages: VendorPackage[];
   attributeValues: VendorAttributeValue[];
   city: Location | null;
@@ -341,7 +330,6 @@ export interface VendorReview {
   id: string;
   userId: string;
   vendorId: string;
-  serviceId: string | null;
   rating: number;
   title: string | null;
   content: string | null;

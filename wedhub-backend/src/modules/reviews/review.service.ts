@@ -16,7 +16,6 @@ export async function createReview(
   userId: string,
   input: {
     vendorId: string;
-    serviceId: string | undefined;
     rating: number;
     title: string | undefined;
     content: string | undefined;
@@ -46,7 +45,6 @@ export async function createReview(
   const review = await reviewRepository.createReview({
     userId,
     vendorId: input.vendorId,
-    serviceId: input.serviceId,
     rating: input.rating,
     title: input.title,
     content: input.content,

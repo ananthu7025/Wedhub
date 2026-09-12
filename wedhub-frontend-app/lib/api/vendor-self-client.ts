@@ -2,7 +2,6 @@
 
 import type { ApiResponse } from "./types";
 import type {
-  AttachServiceBody,
   CreatePackageBody,
   CreateUploadRequestBody,
   MediaItem,
@@ -52,14 +51,6 @@ export function setMyServiceAreas(body: SetServiceAreasBody) {
 
 export function setMyAttributes(body: SetAttributesBody) {
   return call<VendorSelf>("/vendors/me/attributes", "PUT", body);
-}
-
-export function attachMyService(body: AttachServiceBody) {
-  return call("/vendors/me/services", "POST", body);
-}
-
-export function detachMyService(serviceId: string) {
-  return call<{ detached: true }>(`/vendors/me/services/${serviceId}`, "DELETE");
 }
 
 export function createMyPackage(body: CreatePackageBody) {

@@ -54,7 +54,6 @@ export interface CreateSingleVendorEnquiryBody {
   preferredContactMethod?: PreferredContactMethod;
   weddingDate?: string;
   weddingLocation?: string;
-  serviceId?: string;
   budget?: number;
   guestCount?: number;
   message?: string;

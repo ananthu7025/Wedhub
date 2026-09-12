@@ -3,8 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
-  attachMyService,
-  detachMyService,
   setMyAttributes,
   setMyCategories,
   setMyServiceAreas,
@@ -17,11 +15,10 @@ import { getPublicMediaUrl } from "@/lib/media/url";
 import { Badge } from "@/components/ui/Badge";
 import { AttributesSection, type AttributeValue, type AttributeValueMap } from "./AttributesSection";
 import { LogoCoverPicker } from "./LogoCoverPicker";
-import { ServicesSection } from "./ServicesSection";
 
 type TabId =
   | "basic-info"
-  | "services-categories"
+  | "category"
   | "location"
   | "pricing-policies"
   | "contact-social"
@@ -30,7 +27,7 @@ type TabId =
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: "basic-info", label: "Basic Info" },
-  { id: "services-categories", label: "Services & Categories" },
+  { id: "category", label: "Category" },
   { id: "location", label: "Location" },
   { id: "pricing-policies", label: "Pricing & Policies" },
   { id: "contact-social", label: "Contact & Social" },
@@ -93,8 +90,6 @@ export function ProfileEditor({
 
   const [primaryCategoryId, setPrimaryCategoryId] = useState(primaryCategory?.id ?? categories[0]?.id ?? "");
   const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState<Set<string>>(new Set(subcategoryIds));
-  const originalServiceIds = new Set(vendor.services.map((s) => s.serviceId));
-  const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set(originalServiceIds));
   const [tags, setTags] = useState(profile?.tags.join(", ") ?? "");
   const [vendorType, setVendorType] = useState(profile?.vendorType ?? "");
 
@@ -168,7 +163,6 @@ export function ProfileEditor({
     { label: "At least one service area", met: serviceAreaIds.size > 0 },
     { label: "Pricing information", met: !!startingPrice || customQuoteAvailable },
     { label: "At least one package", met: vendor.packages.length > 0 },
-    { label: "At least one service", met: selectedServiceIds.size > 0 },
     { label: "A contact method", met: !!(phone || email || website) },
     { label: "Category attribute values", met: Object.keys(attributeValues).length > 0 },
   ];
@@ -285,27 +279,6 @@ export function ProfileEditor({
       setStatus("error");
       setError(formatApiError(serviceAreasResult.error));
       return false;
-    }
-
-    // No bulk "set services" endpoint exists — attach/detach are individual
-    // calls, so only the diff against what was originally loaded is synced.
-    const toAttach = Array.from(selectedServiceIds).filter((id) => !originalServiceIds.has(id));
-    const toDetach = Array.from(originalServiceIds).filter((id) => !selectedServiceIds.has(id));
-    for (const serviceId of toAttach) {
-      const result = await attachMyService({ serviceId });
-      if (!result.success) {
-        setStatus("error");
-        setError(formatApiError(result.error));
-        return false;
-      }
-    }
-    for (const serviceId of toDetach) {
-      const result = await detachMyService(serviceId);
-      if (!result.success) {
-        setStatus("error");
-        setError(formatApiError(result.error));
-        return false;
-      }
     }
 
     const attributesResult = await setMyAttributes({
@@ -426,9 +399,9 @@ export function ProfileEditor({
           </section>
           )}
 
-          {activeTab === "services-categories" && (
+          {activeTab === "category" && (
           <section className="rounded-xl border border-border bg-white p-6">
-            <h3 className="mb-4 text-base font-bold">Services &amp; categories</h3>
+            <h3 className="mb-4 text-base font-bold">Category</h3>
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Category</span>
               <select
@@ -436,7 +409,6 @@ export function ProfileEditor({
                 onChange={(e) => {
                   setPrimaryCategoryId(e.target.value);
                   setSelectedSubcategoryIds(new Set());
-                  setSelectedServiceIds(new Set());
                 }}
                 className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
               >
@@ -452,14 +424,6 @@ export function ProfileEditor({
                 </p>
               )}
             </label>
-
-            {selectedCategory && (
-              <ServicesSection
-                category={selectedCategory}
-                selectedServiceIds={selectedServiceIds}
-                onChange={setSelectedServiceIds}
-              />
-            )}
 
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">Tags</span>
