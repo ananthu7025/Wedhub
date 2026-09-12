@@ -10,6 +10,7 @@ import {
   confirmMediaUpload,
 } from "@/lib/api/vendor-self-client";
 import { compressImageIfPossible } from "@/lib/media/compress-image";
+import { UPLOAD_CACHE_CONTROL } from "@/lib/media/upload";
 import type {
   StoreItemType,
   VendorStoreItem,
@@ -97,6 +98,7 @@ export function StoreItemModal({
           method: "PUT",
           headers: {
             "Content-Type": file.type || "image/jpeg",
+            "Cache-Control": UPLOAD_CACHE_CONTROL,
           },
           body: file,
         });

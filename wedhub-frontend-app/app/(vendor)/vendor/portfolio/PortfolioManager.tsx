@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/vendor-self-client";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { compressImageIfPossible } from "@/lib/media/compress-image";
+import { UPLOAD_CACHE_CONTROL } from "@/lib/media/upload";
 import { runWithConcurrencyLimit } from "@/lib/utils/concurrency";
 import type { MediaItem } from "@/lib/api/vendor-self.types";
 import { formatApiError } from "@/lib/utils/error";
@@ -105,7 +106,7 @@ export function PortfolioManager({
     }
 
     const { mediaId, uploadUrl } = requestResult.data;
-    const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": compressed.type }, body: compressed });
+    const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": compressed.type, "Cache-Control": UPLOAD_CACHE_CONTROL }, body: compressed });
     if (!putResponse.ok) {
       setUploads((prev) => prev.map((u) => (u.tempId === tempId ? { ...u, progress: "error", error: "Upload to storage failed" } : u)));
       return;

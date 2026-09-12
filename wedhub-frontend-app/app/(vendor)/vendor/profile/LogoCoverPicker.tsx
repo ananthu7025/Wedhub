@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { confirmMediaUpload, createMediaUploadRequest } from "@/lib/api/vendor-self-client";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { compressImageIfPossible } from "@/lib/media/compress-image";
+import { UPLOAD_CACHE_CONTROL } from "@/lib/media/upload";
 import type { MediaType } from "@/lib/api/vendor-self.types";
 import { formatApiError } from "@/lib/utils/error";
 
@@ -75,7 +76,7 @@ export function LogoCoverPicker({
     }
 
     const { mediaId: newMediaId, uploadUrl } = requestResult.data;
-    const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+    const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type, "Cache-Control": UPLOAD_CACHE_CONTROL }, body: file });
     if (!putResponse.ok) {
       setError("Upload to storage failed");
       setUploading(false);

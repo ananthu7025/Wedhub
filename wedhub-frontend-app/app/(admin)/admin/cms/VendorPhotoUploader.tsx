@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { confirmAdminVendorUpload, createAdminVendorUploadRequest } from "@/lib/api/admin-client";
 import type { AdminVendorListItem } from "@/lib/api/admin.types";
 import { compressImageIfPossible } from "@/lib/media/compress-image";
+import { UPLOAD_CACHE_CONTROL } from "@/lib/media/upload";
 import { formatApiError } from "@/lib/utils/error";
 
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -52,7 +53,7 @@ export function VendorPhotoUploader({
     }
 
     const { mediaId, uploadUrl } = requestResult.data;
-    const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+    const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type, "Cache-Control": UPLOAD_CACHE_CONTROL }, body: file });
     if (!putResponse.ok) {
       return `${selectedFile.name}: upload to storage failed`;
     }

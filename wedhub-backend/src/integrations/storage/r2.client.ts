@@ -56,16 +56,11 @@ export function isStorageConfigured(): boolean {
 // A vendor "changing" a photo produces a brand-new Media row/object key,
 // not an overwrite, so there is no stale-cache risk to guard against.
 //
-// NOT applied to getSignedUploadUrl's PutObjectCommand below: any param
-// added to a presigned command becomes part of what the client's actual
-// PUT request must replicate exactly for the SigV4 signature to validate
-// (lib/media/upload.ts's browser-side PUT only ever sends Content-Type
-// today) — changing that safely requires updating every upload call site
-// in lockstep, which is out of scope here. Instead applied only to
-// uploadObject, used exclusively by the media-processing worker
-// (media-processing.processor.ts) to write the derived variants — a
-// server-to-server call this backend fully controls, no client coordination
-// needed.
+// Also applied to getSignedUploadUrl's PutObjectCommand below: this param
+// becomes part of what the client's actual PUT request must replicate
+// exactly for the SigV4 signature to validate, so every browser-side PUT
+// call site sends this exact literal as its Cache-Control header (see
+// lib/media/upload.ts's UPLOAD_CACHE_CONTROL constant and its callers).
 const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 export async function getSignedUploadUrl(objectKey: string, mimeType: string): Promise<string> {
@@ -73,6 +68,7 @@ export async function getSignedUploadUrl(objectKey: string, mimeType: string): P
     Bucket: env.R2_BUCKET,
     Key: objectKey,
     ContentType: mimeType,
+    CacheControl: IMMUTABLE_CACHE_CONTROL,
   });
   return getSignedUrl(getClient(), command, { expiresIn: UPLOAD_URL_TTL_SECONDS });
 }

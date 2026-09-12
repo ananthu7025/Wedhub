@@ -5,6 +5,14 @@ import { confirmChallengeEntryPhotoUpload, createChallengeEntryPhotoUploadReques
 import { compressImageIfPossible } from "@/lib/media/compress-image";
 import { formatApiError } from "@/lib/utils/error";
 
+/**
+ * Must exactly match the CacheControl baked into the presigned PUT's SigV4
+ * signature in the backend's getSignedUploadUrl (r2.client.ts) — every
+ * direct-to-R2 upload PUT must send this literal as its Cache-Control
+ * header or R2 rejects the request with a signature mismatch.
+ */
+export const UPLOAD_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
 /** Uploads a single File directly to R2 via a presigned URL, then confirms it. Returns the resulting mediaId. */
 export async function uploadReviewPhoto(file: File): Promise<string> {
   const compressed = await compressImageIfPossible(file);
@@ -17,7 +25,7 @@ export async function uploadReviewPhoto(file: File): Promise<string> {
 
   const putResponse = await fetch(uploadUrl, {
     method: "PUT",
-    headers: { "Content-Type": compressed.type },
+    headers: { "Content-Type": compressed.type, "Cache-Control": UPLOAD_CACHE_CONTROL },
     body: compressed,
   });
   if (!putResponse.ok) {
@@ -44,7 +52,7 @@ export async function uploadChallengeEntryPhoto(file: File): Promise<string> {
 
   const putResponse = await fetch(uploadUrl, {
     method: "PUT",
-    headers: { "Content-Type": compressed.type },
+    headers: { "Content-Type": compressed.type, "Cache-Control": UPLOAD_CACHE_CONTROL },
     body: compressed,
   });
   if (!putResponse.ok) {
