@@ -14,14 +14,18 @@ export const metadata: Metadata = {
 export default async function VendorOnboardingPage() {
   await requireRole("VENDOR");
 
-  // If the vendor profile row is already set up, jump straight to the dashboard.
+  // If the vendor profile row is already set up, jump straight to the
+  // dashboard. redirect() throws internally to signal Next.js's render
+  // pipeline — it must stay outside the try/catch below, or its own throw
+  // gets swallowed by the catch meant only for getMyVendor()'s expected 404.
+  let existing: Awaited<ReturnType<typeof getMyVendor>> | null = null;
   try {
-    const existing = await getMyVendor();
-    if (existing?.data?.id) {
-      redirect("/vendor/dashboard");
-    }
+    existing = await getMyVendor();
   } catch {
     // 404 expected when no vendor profile exists yet — continue to render the onboarding form.
+  }
+  if (existing?.data?.id) {
+    redirect("/vendor/dashboard");
   }
 
   return (

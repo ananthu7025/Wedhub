@@ -10,6 +10,16 @@ import { execFileSync } from "node:child_process";
 
 const API_URL = process.env.API_URL ?? "http://localhost:4000";
 
+// Defaults match the project's local docker-compose Postgres. Override with
+// PGHOST/PGPORT/PGUSER/PGDATABASE/PGPASSWORD (standard psql/libpq env vars)
+// to point this whole suite at a different Postgres — e.g. a remote test
+// server's DB when no local Docker stack is available.
+const PG_HOST = process.env.PGHOST ?? "localhost";
+const PG_PORT = process.env.PGPORT ?? "5433";
+const PG_USER = process.env.PGUSER ?? "wedhub";
+const PG_DATABASE = process.env.PGDATABASE ?? "wedhub_dev";
+const PG_PASSWORD = process.env.PGPASSWORD ?? "wedhub_dev_password";
+
 export function uniqueTestEmail(label: string): string {
   return `e2e-${label}-${Date.now()}@wedhub.dev`;
 }
@@ -26,12 +36,12 @@ export async function registerTestUser(email: string, password: string, role: "E
   }
 }
 
+function psqlArgs(extra: string[]): string[] {
+  return ["-h", PG_HOST, "-p", PG_PORT, "-U", PG_USER, "-d", PG_DATABASE, ...extra];
+}
+
 function runPsql(sql: string): void {
-  execFileSync(
-    "psql",
-    ["-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev", "-c", sql],
-    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
-  );
+  execFileSync("psql", psqlArgs(["-c", sql]), { env: { ...process.env, PGPASSWORD: PG_PASSWORD }, stdio: "pipe" });
 }
 
 /**
@@ -55,17 +65,12 @@ export async function createAdminUser(email: string, password: string): Promise<
 
 /**
  * Deletes a test user directly via psql — mirrors the manual cleanup already
- * used during Frontend Arch Phase 0/1 verification. Requires PGPASSWORD/psql
- * to be available on PATH and pointed at the same dev DB the backend uses
- * (see wedhub-backend/.env's DATABASE_URL for the connection details this
- * assumes: localhost:5433, db wedhub_dev, user wedhub).
+ * used during Frontend Arch Phase 0/1 verification. Requires psql on PATH,
+ * pointed at whichever Postgres the backend under test is using — see this
+ * file's PG_HOST/PG_PORT/etc. defaults and their env var overrides above.
  */
 export function deleteTestUser(email: string): void {
-  execFileSync(
-    "psql",
-    ["-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev", "-c", `DELETE FROM users WHERE email = '${email}';`],
-    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
-  );
+  runPsql(`DELETE FROM users WHERE email = '${email}';`);
 }
 
 /**
@@ -76,14 +81,7 @@ export function deleteTestUser(email: string): void {
  * scripting the full admin-review UI, which doesn't exist yet.
  */
 export function approveVendor(vendorId: string): void {
-  execFileSync(
-    "psql",
-    [
-      "-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev",
-      "-c", `UPDATE vendors SET status = 'APPROVED', approved_at = now() WHERE id = '${vendorId}';`,
-    ],
-    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
-  );
+  runPsql(`UPDATE vendors SET status = 'APPROVED', approved_at = now() WHERE id = '${vendorId}';`);
 }
 
 /**
@@ -97,11 +95,7 @@ export function approveVendor(vendorId: string): void {
  * invited_by_admin_id is ON DELETE RESTRICT, so this must run first.
  */
 export function deleteVendorByBusinessName(businessName: string): void {
-  execFileSync(
-    "psql",
-    ["-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev", "-c", `DELETE FROM vendors WHERE business_name = '${businessName}';`],
-    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
-  );
+  runPsql(`DELETE FROM vendors WHERE business_name = '${businessName}';`);
 }
 
 /**
@@ -116,11 +110,7 @@ export function deleteVendorByBusinessName(businessName: string): void {
  * every time. Call this BEFORE deleting the owner.
  */
 export function deleteVendorById(vendorId: string): void {
-  execFileSync(
-    "psql",
-    ["-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev", "-c", `DELETE FROM vendors WHERE id = '${vendorId}';`],
-    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
-  );
+  runPsql(`DELETE FROM vendors WHERE id = '${vendorId}';`);
 }
 
 /**
@@ -132,11 +122,7 @@ export function deleteVendorById(vendorId: string): void {
  * deleteVendorByBusinessName.
  */
 export function deleteCategoryByName(name: string): void {
-  execFileSync(
-    "psql",
-    ["-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev", "-c", `DELETE FROM categories WHERE name = '${name}';`],
-    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
-  );
+  runPsql(`DELETE FROM categories WHERE name = '${name}';`);
 }
 
 /**
@@ -156,23 +142,16 @@ export function enableStoreForVendorCategory(vendorId: string, categoryName: str
   const insertCategorySql =
     `INSERT INTO categories (id, name, slug, has_store_enabled, is_active, created_at, updated_at) ` +
     `VALUES (gen_random_uuid(), '${categoryName}', '${slug}', true, true, now(), now()) RETURNING id;`;
-  const out = execFileSync(
-    "psql",
-    ["-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev", "-t", "-A", "-c", insertCategorySql],
-    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
-  )
+  const out = execFileSync("psql", psqlArgs(["-t", "-A", "-c", insertCategorySql]), {
+    env: { ...process.env, PGPASSWORD: PG_PASSWORD },
+    stdio: "pipe",
+  })
     .toString()
     .trim();
   const categoryId = out.split("\n")[0]!.trim();
 
-  execFileSync(
-    "psql",
-    [
-      "-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev",
-      "-c",
-      `INSERT INTO vendor_categories (vendor_id, category_id, is_primary, created_at) VALUES ('${vendorId}', '${categoryId}', true, now());`,
-    ],
-    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
+  runPsql(
+    `INSERT INTO vendor_categories (vendor_id, category_id, is_primary, created_at) VALUES ('${vendorId}', '${categoryId}', true, now());`,
   );
 
   return categoryId;
@@ -189,15 +168,9 @@ export function enableStoreForVendorCategory(vendorId: string, categoryName: str
  * onboarding in the e2e spec goes through the real dashboard.
  */
 export function activateVendorPaymentAccountForTest(vendorId: string): void {
-  execFileSync(
-    "psql",
-    [
-      "-h", "localhost", "-p", "5433", "-U", "wedhub", "-d", "wedhub_dev",
-      "-c",
-      `UPDATE vendor_payment_accounts SET status = 'ACTIVE', charges_enabled = true, payouts_enabled = true, ` +
-        `bank_verification_status = 'VERIFIED', route_activation_status = 'activated', transfer_eligible_at = now() - interval '1 hour' ` +
-        `WHERE vendor_id = '${vendorId}';`,
-    ],
-    { env: { ...process.env, PGPASSWORD: "wedhub_dev_password" }, stdio: "pipe" },
+  runPsql(
+    `UPDATE vendor_payment_accounts SET status = 'ACTIVE', charges_enabled = true, payouts_enabled = true, ` +
+      `bank_verification_status = 'VERIFIED', route_activation_status = 'activated', transfer_eligible_at = now() - interval '1 hour' ` +
+      `WHERE vendor_id = '${vendorId}';`,
   );
 }
