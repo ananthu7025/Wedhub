@@ -78,6 +78,15 @@ export async function logout(req: Request, res: Response): Promise<void> {
   res.json(successResponse({ loggedOut: true }));
 }
 
+export async function logoutAll(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AuthenticationError();
+  }
+  await authService.logoutAllDevices(req.user.id);
+  clearRefreshCookie(res);
+  res.json(successResponse({ loggedOut: true }));
+}
+
 export async function verifyEmail(req: Request, res: Response): Promise<void> {
   const body = req.body as VerifyEmailBody;
   await authService.verifyEmail(body.token);

@@ -82,6 +82,18 @@ export async function objectExists(objectKey: string): Promise<boolean> {
   }
 }
 
+// R2/S3 records whatever Content-Type the PUT request declared (see
+// getSignedUploadUrl's ContentType above) — the browser upload could send a
+// different Content-Type header than the one the signed URL was minted for
+// without invalidating the SigV4 signature, since ContentType is part of
+// what must match but a malicious client controls both ends of its own
+// request. This returns what's actually stored so callers can cross-check
+// it against the mimeType recorded in the Media row at request time.
+export async function getStoredContentType(objectKey: string): Promise<string | undefined> {
+  const result = await getClient().send(new HeadObjectCommand({ Bucket: env.R2_BUCKET, Key: objectKey }));
+  return result.ContentType;
+}
+
 export async function downloadObject(objectKey: string): Promise<Buffer> {
   const result = await getClient().send(new GetObjectCommand({ Bucket: env.R2_BUCKET, Key: objectKey }));
   const chunks: Buffer[] = [];

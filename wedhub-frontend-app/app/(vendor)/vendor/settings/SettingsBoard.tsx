@@ -6,7 +6,7 @@ import { updateMyVendorDetail, upsertMyProfile } from "@/lib/api/vendor-self-cli
 import { updateMyProfile } from "@/lib/api/users-client";
 import { setNotificationPreference } from "@/lib/api/notification-preferences-client";
 import { deactivateAccount } from "@/lib/api/account-client";
-import { logout } from "@/lib/api/auth-client";
+import { logout, logoutAllDevices } from "@/lib/api/auth-client";
 import type { VendorSelf } from "@/lib/api/vendor-self.types";
 import type { MeResponse } from "@/lib/api/account.types";
 import type { NotificationChannel, NotificationEventType, NotificationPreference } from "@/lib/api/notification-preferences.types";
@@ -71,6 +71,9 @@ export function SettingsBoard({
   const [deactivating, setDeactivating] = useState(false);
   const [confirmingDeactivate, setConfirmingDeactivate] = useState(false);
 
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
+  const [logoutAllError, setLogoutAllError] = useState<string | null>(null);
+
   async function handleSaveBusiness(event: React.FormEvent) {
     event.preventDefault();
     setSavingBusiness(true);
@@ -132,6 +135,18 @@ export function SettingsBoard({
     }
     setDeactivating(false);
     setSaveError(formatApiError(result.error));
+  }
+
+  async function handleLogoutAllDevices() {
+    setLoggingOutAll(true);
+    setLogoutAllError(null);
+    const result = await logoutAllDevices();
+    if (result.success) {
+      router.push("/login");
+      return;
+    }
+    setLoggingOutAll(false);
+    setLogoutAllError(formatApiError(result.error));
   }
 
   return (
@@ -227,6 +242,22 @@ export function SettingsBoard({
             </div>
           );
         })}
+      </div>
+
+      <div className="mb-5 rounded-xl border border-border bg-white p-6">
+        <h3 className="mb-3 text-base font-bold">Security</h3>
+        <p className="mb-4 text-[13.5px] text-text-grey">
+          Signed in on a device you don&apos;t recognize, or lost access to one? Log out everywhere to end every
+          active session, including this one — you&apos;ll need to sign in again.
+        </p>
+        {logoutAllError && <p className="mb-3 rounded-md bg-red-10 p-3 text-[13px] text-red-70">{logoutAllError}</p>}
+        <button
+          onClick={handleLogoutAllDevices}
+          disabled={loggingOutAll}
+          className="rounded-md border border-border bg-white px-4 py-2.5 text-sm font-bold text-text-dark disabled:opacity-60"
+        >
+          {loggingOutAll ? "Logging out everywhere…" : "Log out of all devices"}
+        </button>
       </div>
 
       <div className="rounded-xl border border-red-10 bg-white p-6">

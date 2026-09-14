@@ -315,6 +315,10 @@ export async function logout(presentedToken: string): Promise<void> {
   }
 }
 
+export async function logoutAllDevices(userId: string): Promise<void> {
+  await authRepository.revokeAllRefreshTokensForUser(userId);
+}
+
 export async function verifyEmail(presentedToken: string): Promise<void> {
   const tokenHash = hashToken(presentedToken);
   const existing = await authRepository.findEmailVerificationTokenByHash(tokenHash);

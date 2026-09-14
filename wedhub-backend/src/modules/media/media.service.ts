@@ -1,7 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { env } from "../../config/env";
 import { NotFoundError, ConflictError, ValidationError } from "../../common/errors";
-import { getPublicUrl, getSignedUploadUrl, objectExists, deleteObject } from "../../integrations/storage/r2.client";
+import {
+  getPublicUrl,
+  getSignedUploadUrl,
+  getStoredContentType,
+  objectExists,
+  deleteObject,
+} from "../../integrations/storage/r2.client";
 import { enqueueMediaProcessing } from "../../jobs/queues/media-processing.queue";
 import * as entitlementService from "../entitlements/entitlement.service";
 import * as mediaRepository from "./media.repository";
@@ -79,6 +85,22 @@ export async function confirmUpload(vendorId: string, mediaId: string) {
   const exists = await objectExists(media.originalObjectKey);
   if (!exists) {
     throw new ValidationError("Upload not found in storage yet — has the browser upload completed?");
+  }
+
+  // The signed PUT URL only binds the ContentType that was minted for it —
+  // it does not stop a client from uploading a different file (e.g. an
+  // uploaded HTML/script payload declared as image/jpeg to pass the
+  // createUploadRequest MIME check, later served from the public bucket).
+  // Cross-checking what R2 actually recorded against the declared family
+  // (image vs video) here catches that class of MIME-declaration spoofing
+  // before the object is queued for processing / made publicly reachable.
+  const storedContentType = await getStoredContentType(media.originalObjectKey);
+  const declaredIsVideo = VIDEO_MIME_TYPES.includes(media.mimeType);
+  const storedIsVideo = storedContentType ? VIDEO_MIME_TYPES.includes(storedContentType) : false;
+  const storedIsImage = storedContentType ? IMAGE_MIME_TYPES.includes(storedContentType) : false;
+  const storedFamilyMatches = declaredIsVideo ? storedIsVideo : storedIsImage;
+  if (!storedContentType || !storedFamilyMatches) {
+    throw new ValidationError("Uploaded file does not match the declared file type");
   }
 
   await mediaRepository.updateMediaStatus(mediaId, "PROCESSING");

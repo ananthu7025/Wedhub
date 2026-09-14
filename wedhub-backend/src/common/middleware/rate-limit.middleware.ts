@@ -43,6 +43,15 @@ export const registerRateLimiter = createRateLimiter({
   message: "Too many registration attempts. Please try again later.",
 });
 
+// Vendor-creation is a one-time-per-user action, same abuse shape as
+// registration (scripted account/listing farming), so it mirrors
+// registerRateLimiter's window/default rather than a generic per-minute cap.
+export const vendorCreateRateLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: process.env.VENDOR_CREATE_RATE_LIMIT_MAX ? Number(process.env.VENDOR_CREATE_RATE_LIMIT_MAX) : 20,
+  message: "Too many vendor listing creation attempts. Please try again later.",
+});
+
 export const searchRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   max: 60,

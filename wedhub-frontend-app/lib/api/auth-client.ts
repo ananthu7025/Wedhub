@@ -38,3 +38,10 @@ export function register(email: string, password: string, role: Extract<UserRole
 export function logout() {
   return postJson<{ loggedOut: true }>("/api/auth/logout", {});
 }
+
+// Revokes every refresh token for the current user (all devices/sessions),
+// not just this browser's — see wedhub-backend's auth.service.ts
+// logoutAllDevices / POST /auth/logout-all.
+export function logoutAllDevices() {
+  return postJson<{ loggedOut: true }>("/api/auth/logout-all", {});
+}

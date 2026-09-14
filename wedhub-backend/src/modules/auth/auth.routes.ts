@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../../common/utils/async-handler.util";
 import { validateBody } from "../../common/middleware/validate.middleware";
+import { authenticateMiddleware } from "../../common/middleware/authenticate.middleware";
 import {
   forgotPasswordRateLimiter,
   googleLoginRateLimiter,
@@ -36,6 +37,8 @@ authRouter.post(
 );
 
 authRouter.post("/logout", asyncHandler(authController.logout));
+
+authRouter.post("/logout-all", authenticateMiddleware, asyncHandler(authController.logoutAll));
 
 authRouter.post("/refresh", asyncHandler(authController.refresh));
 

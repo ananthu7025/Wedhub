@@ -1,10 +1,32 @@
 import { z } from "zod";
 import { Role } from "../../common/enums/roles.enum";
 
+// A small, deliberately short blocklist of the most commonly breached/guessed
+// passwords — not a full breach-corpus lookup (that would need an external
+// API call on the login-adjacent register/reset path, out of scope here).
+const COMMON_PASSWORDS = new Set([
+  "password",
+  "password1",
+  "password123",
+  "12345678",
+  "123456789",
+  "qwerty123",
+  "letmein123",
+  "welcome123",
+  "admin1234",
+  "iloveyou1",
+]);
+
 const passwordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters")
-  .max(128, "Password must be at most 128 characters");
+  .max(128, "Password must be at most 128 characters")
+  .refine((value) => /[A-Za-z]/.test(value) && /[0-9]/.test(value), {
+    message: "Password must contain at least one letter and one number",
+  })
+  .refine((value) => !COMMON_PASSWORDS.has(value.toLowerCase()), {
+    message: "This password is too common. Please choose a stronger password",
+  });
 
 export const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
