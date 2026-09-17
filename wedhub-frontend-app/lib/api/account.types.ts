@@ -120,7 +120,10 @@ export type NotificationEventType =
   | "PAYMENT_FAILED"
   | "SUBSCRIPTION_EXPIRING"
   | "FEATURED_CAMPAIGN_STARTED"
-  | "FEATURED_CAMPAIGN_ENDING";
+  | "FEATURED_CAMPAIGN_ENDING"
+  | "LEAD_STATUS_UPDATED"
+  | "ACCOUNT_LINKED"
+  | "EMAIL_CHANGE_CONFIRMATION";
 
 export interface NotificationItem {
   id: string;

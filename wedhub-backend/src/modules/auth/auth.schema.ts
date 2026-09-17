@@ -61,9 +61,20 @@ export const resetPasswordSchema = z.object({
   password: passwordSchema,
 });
 
+export const changeEmailSchema = z.object({
+  newEmail: z.string().email("Invalid email address"),
+  currentPassword: z.string().min(1, "Current password is required"),
+});
+
+export const confirmEmailChangeSchema = z.object({
+  token: z.string().min(1),
+});
+
 export type RegisterBody = z.infer<typeof registerSchema>;
 export type LoginBody = z.infer<typeof loginSchema>;
 export type GoogleLoginBody = z.infer<typeof googleLoginSchema>;
 export type VerifyEmailBody = z.infer<typeof verifyEmailSchema>;
 export type ForgotPasswordBody = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordBody = z.infer<typeof resetPasswordSchema>;
+export type ChangeEmailBody = z.infer<typeof changeEmailSchema>;
+export type ConfirmEmailChangeBody = z.infer<typeof confirmEmailChangeSchema>;

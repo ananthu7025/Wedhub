@@ -17,10 +17,15 @@ function decodeAccessToken(token: string): Session | null {
     const payloadSegment = token.split(".")[1];
     if (!payloadSegment) return null;
     const json = Buffer.from(payloadSegment, "base64url").toString("utf8");
-    const payload = JSON.parse(json) as { sub?: string; role?: UserRole; exp?: number };
+    const payload = JSON.parse(json) as {
+      sub?: string;
+      role?: UserRole;
+      exp?: number;
+      emailVerified?: boolean;
+    };
     if (!payload.sub || !payload.role) return null;
     if (payload.exp && payload.exp * 1000 < Date.now()) return null;
-    return { userId: payload.sub, role: payload.role };
+    return { userId: payload.sub, role: payload.role, emailVerified: payload.emailVerified ?? false };
   } catch {
     return null;
   }

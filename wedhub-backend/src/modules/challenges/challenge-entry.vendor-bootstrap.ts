@@ -72,7 +72,7 @@ export async function bootstrapVendorForChallenge(
     // claimByRegistering does for a brand-new vendor account, so the
     // frontend can swap it in immediately after this response.
     await prisma.user.update({ where: { id: userId }, data: { role: Role.VENDOR } });
-    refreshedTokens = await issueTokenPair(userId, Role.VENDOR, requestContext);
+    refreshedTokens = await issueTokenPair(userId, Role.VENDOR, requestContext, user.emailVerifiedAt);
   }
 
   const vendor = await vendorService.createVendorForOwner(userId, { businessName: fields.businessName });

@@ -1,40 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { register, login } from "@/lib/api/auth-client";
+import { register, login, resendVerificationEmail, refreshSession } from "@/lib/api/auth-client";
 import { updateMyProfile } from "@/lib/api/users-client";
-import { createVendor } from "@/lib/api/vendor-onboarding-client";
 import { GoogleSignInButton } from "@/components/shared/GoogleSignInButton";
-import type { UserRole } from "@/lib/auth/types";
 import { formatApiError } from "@/lib/utils/error";
 import { trackEvent } from "@/lib/analytics/track";
 
 type AccountType = "END_USER" | "VENDOR";
-type Step = "credentials" | "profile" | "done";
-
-const roleHomeRoute: Record<UserRole, string> = {
-  END_USER: "/shortlist",
-  VENDOR: "/vendor/profile",
-  ADMIN: "/admin/dashboard",
-};
+type Step = "credentials" | "verify" | "profile";
 
 // Account type comes from where the user entered signup (the footer's
 // "Register as a Vendor" link is the only vendor entry point; every other
 // signup link/button is couple-only) rather than an in-flow picker — per
 // user decision, 2026-09-03: normal registration is end-user only, vendors
 // get a distinct, separately-linked flow.
+//
+// Both roles end this wizard by redirecting into their own full profile-
+// setup wizard rather than a "You're all set!" screen — VENDOR straight to
+// /vendor-onboarding (item 3), END_USER to /profile-setup after this
+// wizard's own quick name step (item 2, confirmed 2026-09-16: couples go
+// through profile setup immediately after signup, before reaching the
+// site, to maximize completion vs. leaving it as a some-day account-page
+// task) — so there is no reachable "done" step left in this component.
 export function SignupWizard({ accountType }: { accountType: AccountType }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [businessName, setBusinessName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -63,33 +61,29 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
     }
 
     setPending(false);
-    setStep("profile");
+    // A brand-new password-based account is always unverified at this point
+    // (register() never stamps emailVerifiedAt — only Google sign-in and
+    // verify-email confirmation do). Item 1: profile setup only happens
+    // after verification, for both roles — see requireVerifiedMiddleware on
+    // the backend (POST /vendors, PUT /users/me/wedding-profile), which
+    // would otherwise 403 if this step were skipped straight to "profile".
+    setStep("verify");
   }
 
+  // Couple-only now — a vendor never reaches this step at all (see the
+  // "verify" step and GoogleSignInButton's onSuccess below, both of which
+  // route a VENDOR straight to /vendor-onboarding's full wizard instead).
+  // On success, routes straight into /profile-setup (item 2's wedding-
+  // details wizard) rather than "done" — confirmed 2026-09-16: a couple
+  // goes through profile setup immediately after this quick name step,
+  // before ever reaching the site, to maximize how many actually complete
+  // it (vs. leaving it as a some-day account-page task).
   async function handleProfileSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError(null);
 
-    if (accountType === "VENDOR") {
-      const result = await createVendor(businessName.trim());
-      if (!result.success) {
-        // A returning vendor who re-authenticated via this page's Google
-        // button (rather than actually signing up) already has a vendor
-        // profile — send them to it instead of showing this as an error.
-        if (result.error?.code === "CONFLICT") {
-          // See goToDashboard's comment below — push() alone already fetches
-          // a fresh server render for the destination route; the extra
-          // refresh() raced it and could leave a blank page on this route.
-          router.push(roleHomeRoute.VENDOR);
-          return;
-        }
-        setError(formatApiError(result.error));
-        setPending(false);
-        return;
-      }
-      trackEvent({ eventType: "vendor_registration_completed" });
-    } else if (firstName || lastName) {
+    if (firstName || lastName) {
       const result = await updateMyProfile({
         firstName: firstName.trim() || undefined,
         lastName: lastName.trim() || undefined,
@@ -102,19 +96,7 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
     }
 
     setPending(false);
-    setStep("done");
-  }
-
-  function goToDashboard() {
-    const next = searchParams.get("next") || searchParams.get("redirect");
-    // router.refresh() previously ran right after push() here — refresh()
-    // re-renders the CURRENT route from the server, which raced push()'s own
-    // in-flight navigation to the new route and could leave the browser
-    // stuck with a blank page until a manual reload (same bug as
-    // LoginForm.tsx's goToDestination). push() alone already fetches a
-    // fresh server render for the destination route, so refresh() was
-    // redundant.
-    router.push(next ?? roleHomeRoute[accountType]);
+    router.push("/profile-setup");
   }
 
   if (step === "credentials") {
@@ -169,38 +151,48 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
           <span className="h-px flex-1 bg-border" />
         </div>
 
-        <GoogleSignInButton role={accountType} onSuccess={() => setStep("profile")} />
+        <GoogleSignInButton
+          role={accountType}
+          onSuccess={() => {
+            // Google-authenticated accounts are pre-verified (see
+            // auth.service.ts's createUserWithLinkedIdentity), so they skip
+            // the "verify" step entirely — same vendor-onboarding routing
+            // decision as that step's onVerified above applies here too.
+            if (accountType === "VENDOR") {
+              router.push("/vendor-onboarding");
+              return;
+            }
+            setStep("profile");
+          }}
+        />
       </form>
     );
   }
 
-  if (step === "profile") {
-    if (accountType === "VENDOR") {
-      return (
-        <form onSubmit={handleProfileSubmit} className="w-full max-w-md">
-          {error && (
-            <div className="mb-4 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">
-              {error}
-            </div>
-          )}
-          <div className="mb-4.5">
-            <span className="mb-2 block text-[13px] font-bold">Business name</span>
-            <Input
-              value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              placeholder="e.g. Frame & Co. Photography"
-              maxLength={200}
-              required
-            />
-            <p className="mt-1.5 text-xs text-text-grey">You can add photos, packages and more details next.</p>
-          </div>
-          <Button type="submit" variant="primary" block disabled={pending}>
-            {pending ? "Creating your listing…" : "Continue"}
-          </Button>
-        </form>
-      );
-    }
+  if (step === "verify") {
+    return (
+      <VerifyEmailStep
+        email={email}
+        onVerified={() => {
+          // Item 3, 2026-09-16: vendor onboarding is now a full multi-step
+          // wizard (business name, category, city, pricing, description —
+          // see (auth)/vendor-onboarding/VendorOnboardingForm.tsx), not just
+          // a business-name field. Routing a freshly-verified vendor there
+          // directly (instead of this wizard's own inline "profile" step,
+          // which only ever collected business name) means every vendor
+          // signs up through that one richer flow — no separate, thinner
+          // vendor-creation path left to keep in sync with it.
+          if (accountType === "VENDOR") {
+            router.push("/vendor-onboarding");
+            return;
+          }
+          setStep("profile");
+        }}
+      />
+    );
+  }
 
+  if (step === "profile") {
     return (
       <form onSubmit={handleProfileSubmit} className="w-full max-w-md">
         {error && (
@@ -233,20 +225,83 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
     );
   }
 
+  return null;
+}
+
+const RESEND_COOLDOWN_SECONDS = 30;
+
+// Shown right after registration, before profile setup — item 1: profile
+// setup only happens after email verification, for both roles. Clicking the
+// emailed link (verify-email/page.tsx) is what actually verifies the
+// account; onVerified below is triggered by refreshSession() re-minting an
+// access token that reflects the now-current emailVerifiedAt (see
+// verify-email/pending/VerifyEmailPendingPanel.tsx's identical pattern,
+// which this mirrors for the case where the user never leaves this wizard).
+function VerifyEmailStep({ email, onVerified }: { email: string; onVerified: () => void }) {
+  const [pending, setPending] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [sentMessage, setSentMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleResend() {
+    setPending(true);
+    setError(null);
+    setSentMessage(null);
+    const result = await resendVerificationEmail();
+    setPending(false);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    setSentMessage(`Verification email sent to ${email}.`);
+    setCooldown(RESEND_COOLDOWN_SECONDS);
+    const interval = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+  }
+
+  async function handleCheckAgain() {
+    setChecking(true);
+    setError(null);
+    const result = await refreshSession();
+    setChecking(false);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    onVerified();
+  }
+
   return (
     <div className="w-full max-w-md text-center">
-      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-10 text-emerald-70">
-        ✓
-      </div>
-      <h2 className="mb-2.5 text-2xl font-bold">You&apos;re all set!</h2>
-      <p className="mb-7 text-[15px] text-text-grey">
-        {accountType === "VENDOR"
-          ? "Your free listing is live. Complete your profile so couples can find and trust you."
-          : "Start exploring vendors near you or tell us what you're looking for."}
+      <h1 className="mb-2 text-xl font-bold">Verify your email</h1>
+      <p className="mb-7 text-[13px] text-text-grey">
+        We&apos;ve sent a verification link to <span className="font-semibold text-text-dark">{email}</span>. Check
+        your inbox and click the link to continue.
       </p>
-      <Button variant="primary" block onClick={goToDashboard}>
-        {accountType === "VENDOR" ? "Complete your profile" : "Go to home"}
+
+      {error && <div className="mb-4 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">{error}</div>}
+      {sentMessage && (
+        <div className="mb-4 rounded-md bg-emerald-10 px-4 py-3 text-[13px] font-semibold text-emerald-70">
+          {sentMessage}
+        </div>
+      )}
+
+      <Button type="button" variant="primary" block disabled={checking} onClick={handleCheckAgain}>
+        {checking ? "Checking…" : "I've verified — continue"}
       </Button>
+      <div className="mt-3">
+        <Button type="button" variant="secondary" block disabled={pending || cooldown > 0} onClick={handleResend}>
+          {pending ? "Sending…" : cooldown > 0 ? `Resend email (${cooldown}s)` : "Resend verification email"}
+        </Button>
+      </div>
     </div>
   );
 }

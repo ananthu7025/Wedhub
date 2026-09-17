@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { requireRole } from "@/lib/auth/dal";
+import { requireVerifiedRole } from "@/lib/auth/dal";
 import { getMyVendor } from "@/lib/api/vendor-self";
 import { BrandLogo } from "@/components/shared/BrandLogo";
 import { VendorOnboardingForm } from "./VendorOnboardingForm";
@@ -12,7 +12,11 @@ export const metadata: Metadata = {
 };
 
 export default async function VendorOnboardingPage() {
-  await requireRole("VENDOR");
+  // Item 1's verification gate applies to vendor onboarding too — see
+  // requireVerifiedRole (lib/auth/dal.ts), which redirects to
+  // /verify-email/pending instead of rendering the form for an unverified
+  // vendor account.
+  await requireVerifiedRole("VENDOR");
 
   // If the vendor profile row is already set up, jump straight to the
   // dashboard. redirect() throws internally to signal Next.js's render

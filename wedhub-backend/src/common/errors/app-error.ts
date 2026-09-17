@@ -31,6 +31,15 @@ export class AuthorizationError extends AppError {
   }
 }
 
+// Distinct from AuthorizationError (a permission problem) so the frontend can
+// route this to a "verify your email" screen instead of a generic
+// permission-denied message. Thrown by requireVerifiedMiddleware.
+export class EmailNotVerifiedError extends AppError {
+  constructor(message = "Please verify your email address before continuing") {
+    super(403, "EMAIL_NOT_VERIFIED", message);
+  }
+}
+
 export class NotFoundError extends AppError {
   constructor(message = "Resource not found") {
     super(404, "NOT_FOUND", message);

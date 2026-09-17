@@ -43,6 +43,22 @@ export const registerRateLimiter = createRateLimiter({
   message: "Too many registration attempts. Please try again later.",
 });
 
+// Authenticated resend, but still capped — otherwise a "Resend email" button
+// left un-throttled on the client becomes a way to spam one inbox.
+export const resendVerificationRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.RESEND_VERIFICATION_RATE_LIMIT_MAX ? Number(process.env.RESEND_VERIFICATION_RATE_LIMIT_MAX) : 5,
+  message: "Too many verification email requests. Please try again later.",
+});
+
+// Same shape as forgotPasswordRateLimiter — a security-relevant action that
+// also emails an address the caller doesn't necessarily control yet.
+export const changeEmailRateLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: process.env.CHANGE_EMAIL_RATE_LIMIT_MAX ? Number(process.env.CHANGE_EMAIL_RATE_LIMIT_MAX) : 5,
+  message: "Too many email change requests. Please try again later.",
+});
+
 // Vendor-creation is a one-time-per-user action, same abuse shape as
 // registration (scripted account/listing farming), so it mirrors
 // registerRateLimiter's window/default rather than a generic per-minute cap.

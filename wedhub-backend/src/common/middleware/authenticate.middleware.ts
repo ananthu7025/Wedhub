@@ -9,6 +9,10 @@ declare module "express-serve-static-core" {
     user?: {
       id: string;
       role: Role;
+      // Mirrors the access token's emailVerified claim (see token.util.ts's
+      // AccessTokenPayload doc comment) — checked by
+      // requireVerifiedMiddleware, not by this middleware itself.
+      emailVerified: boolean;
     };
   }
 }
@@ -24,7 +28,7 @@ export function authenticateMiddleware(req: Request, _res: Response, next: NextF
 
   try {
     const payload = verifyAccessToken(token);
-    req.user = { id: payload.sub, role: payload.role };
+    req.user = { id: payload.sub, role: payload.role, emailVerified: payload.emailVerified };
     next();
   } catch (err) {
     if (err instanceof jwt.TokenExpiredError) {
@@ -50,7 +54,7 @@ export function optionalAuthenticateMiddleware(req: Request, _res: Response, nex
 
   try {
     const payload = verifyAccessToken(token);
-    req.user = { id: payload.sub, role: payload.role };
+    req.user = { id: payload.sub, role: payload.role, emailVerified: payload.emailVerified };
   } catch {
     // ignore invalid/expired tokens on optional-auth routes
   }

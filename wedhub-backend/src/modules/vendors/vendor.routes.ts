@@ -3,6 +3,7 @@ import { asyncHandler } from "../../common/utils/async-handler.util";
 import { validateBody, validateQuery } from "../../common/middleware/validate.middleware";
 import { authenticateMiddleware, optionalAuthenticateMiddleware } from "../../common/middleware/authenticate.middleware";
 import { authorize } from "../../common/middleware/authorize.middleware";
+import { requireVerifiedMiddleware } from "../../common/middleware/require-verified.middleware";
 import { vendorCreateRateLimiter } from "../../common/middleware/rate-limit.middleware";
 import { Role } from "../../common/enums/roles.enum";
 import * as vendorController from "./vendor.controller";
@@ -29,6 +30,7 @@ vendorRouter.post(
   "/",
   authenticateMiddleware,
   authorize(Role.VENDOR),
+  requireVerifiedMiddleware,
   vendorCreateRateLimiter,
   validateBody(createVendorSchema),
   asyncHandler(vendorController.createVendor),

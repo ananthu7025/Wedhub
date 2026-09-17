@@ -28,6 +28,24 @@ export const requireRole = cache(async (...roles: UserRole[]): Promise<Session> 
   return session;
 });
 
+/**
+ * Same as requireRole, plus redirects an unverified user to the "verify your
+ * email" holding page instead of letting them reach profile setup — item 1
+ * of the 2026-09-16 request: profile setup, for either role, only happens
+ * after email verification. Mirrors the backend's requireVerifiedMiddleware
+ * (wedhub-backend/src/common/middleware/require-verified.middleware.ts);
+ * this is the page-level enforcement, not the only one — the backend gate is
+ * what actually matters for security, this just avoids showing the form at
+ * all to someone who'd immediately get a 403 submitting it.
+ */
+export const requireVerifiedRole = cache(async (...roles: UserRole[]): Promise<Session> => {
+  const session = await requireRole(...roles);
+  if (!session.emailVerified) {
+    redirect("/verify-email/pending");
+  }
+  return session;
+});
+
 /** Non-redirecting variant for optional/public-but-personalized pages (e.g. home shows a different CTA if logged in). */
 export const getOptionalSession = cache(async (): Promise<Session | null> => {
   return getSession();

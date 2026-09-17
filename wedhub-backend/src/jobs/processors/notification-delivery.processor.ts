@@ -8,13 +8,40 @@ import { renderEmailHtml } from "../../modules/notifications/notification.templa
 import * as notificationRepository from "../../modules/notifications/notification.repository";
 import type { NotificationDeliveryJobData } from "../queues/notification-delivery.queue";
 
-async function deliverEmail(notification: { id: string; userId: string; title: string; body: string }): Promise<void> {
-  const user = await notificationRepository.findUserById(notification.userId);
-  if (!user) {
-    throw new Error(`Notification ${notification.id} references a user that no longer exists`);
+async function deliverEmail(notification: {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  data: unknown;
+}): Promise<void> {
+  // Almost every event delivers to the account's own (current) email via
+  // user.email. The one exception: a pending email-change confirmation
+  // (auth.service.ts's changeEmail()) must reach the NEW, not-yet-confirmed
+  // address instead — that's exactly the address ownership is being proven
+  // for, and it may differ from user.email for as long as the change is
+  // pending. That override rides in the same Notification.data JSON blob
+  // every other event's template data already uses (see notify()'s
+  // `data: input.data` passthrough) rather than adding a dedicated column,
+  // since this is a one-field, one-caller exception, not a new concept.
+  const overrideEmail =
+    typeof notification.data === "object" && notification.data !== null && "overrideEmail" in notification.data
+      ? (notification.data as { overrideEmail?: unknown }).overrideEmail
+      : undefined;
+
+  let to: string;
+  if (typeof overrideEmail === "string" && overrideEmail.length > 0) {
+    to = overrideEmail;
+  } else {
+    const user = await notificationRepository.findUserById(notification.userId);
+    if (!user) {
+      throw new Error(`Notification ${notification.id} references a user that no longer exists`);
+    }
+    to = user.email;
   }
+
   await sendEmail({
-    to: user.email,
+    to,
     subject: notification.title,
     html: renderEmailHtml({ title: notification.title, body: notification.body }),
   });

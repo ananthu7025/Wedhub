@@ -42,6 +42,10 @@ export const DEFAULT_CHANNELS: Record<NotificationEventType, NotificationChannel
   // reasoning: the point is to reach the owner's inbox even if they never
   // open the app again after this happens.
   ACCOUNT_LINKED: ["EMAIL"],
+  // Email-only, same reasoning as PASSWORD_RESET/VERIFICATION: this goes to
+  // the new address (via Notification.data.overrideEmail), which by
+  // definition has no existing in-app session to show an IN_APP row to yet.
+  EMAIL_CHANGE_CONFIRMATION: ["EMAIL"],
 };
 
 export const MAX_DELIVERY_ATTEMPTS = 3;

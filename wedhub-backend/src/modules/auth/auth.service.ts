@@ -28,6 +28,7 @@ const MAX_FAILED_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+const EMAIL_CHANGE_TTL_MS = 24 * 60 * 60 * 1000;
 
 function toAuthenticatedUserView(user: {
   id: string;
@@ -38,8 +39,13 @@ function toAuthenticatedUserView(user: {
   return { id: user.id, email: user.email, phone: user.phone, role: user.role as Role };
 }
 
-export async function issueTokenPair(userId: string, role: Role, context: RequestContext): Promise<TokenPair> {
-  const accessToken = signAccessToken({ sub: userId, role });
+export async function issueTokenPair(
+  userId: string,
+  role: Role,
+  context: RequestContext,
+  emailVerifiedAt: Date | null = null,
+): Promise<TokenPair> {
+  const accessToken = signAccessToken({ sub: userId, role, emailVerified: emailVerifiedAt != null });
   const refreshToken = generateOpaqueToken();
   const refreshTokenExpiresAt = refreshTokenExpiryDate();
 
@@ -52,6 +58,26 @@ export async function issueTokenPair(userId: string, role: Role, context: Reques
   });
 
   return { accessToken, refreshToken, refreshTokenExpiresAt };
+}
+
+// Shared by register() and resendVerificationEmail() — issues a fresh
+// verification token and fires the VERIFICATION notification. Never throws
+// on the notify() call (notificationService.notify's own contract), so a
+// notification-delivery failure never blocks registration or a resend
+// request from otherwise succeeding.
+async function issueVerificationEmail(userId: string): Promise<void> {
+  const verificationToken = generateOpaqueToken();
+  await authRepository.createEmailVerificationToken({
+    userId,
+    tokenHash: hashToken(verificationToken),
+    expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
+  });
+
+  await notificationService.notify({
+    userId,
+    eventType: "VERIFICATION",
+    data: { token: verificationToken },
+  });
 }
 
 export async function register(
@@ -77,20 +103,25 @@ export async function register(
     role: input.role,
   });
 
-  const verificationToken = generateOpaqueToken();
-  await authRepository.createEmailVerificationToken({
-    userId: user.id,
-    tokenHash: hashToken(verificationToken),
-    expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
-  });
-
-  await notificationService.notify({
-    userId: user.id,
-    eventType: "VERIFICATION",
-    data: { token: verificationToken },
-  });
+  await issueVerificationEmail(user.id);
 
   return { user: toAuthenticatedUserView(user) };
+}
+
+// Authenticated resend — used by the post-signup "verify your email"
+// interstitial's "Resend email" button. Rate-limited at the route level
+// (resendVerificationRateLimiter) since a user could otherwise spam this.
+// Silently no-ops (does not throw) if the account is already verified or
+// uses Google sign-in (passwordHash null implies emailVerifiedAt is already
+// set per auth.repository.ts's createUserWithLinkedIdentity) — resending a
+// verification email to an already-verified account is a harmless no-op
+// from the caller's point of view, not an error state worth surfacing.
+export async function resendVerificationEmail(userId: string): Promise<void> {
+  const user = await authRepository.findUserById(userId);
+  if (!user || user.emailVerifiedAt) {
+    return;
+  }
+  await issueVerificationEmail(user.id);
 }
 
 export async function login(
@@ -137,7 +168,7 @@ export async function login(
   }
 
   await authRepository.recordSuccessfulLogin(user.id);
-  const tokens = await issueTokenPair(user.id, user.role as Role, context);
+  const tokens = await issueTokenPair(user.id, user.role as Role, context, user.emailVerifiedAt);
 
   return { user: toAuthenticatedUserView(user), tokens };
 }
@@ -232,12 +263,13 @@ export async function loginWithGoogle(
         throw new AuthenticationError("This account has been suspended. Contact support for assistance.");
       }
 
+      const stampEmailVerified = !existingByEmail.emailVerifiedAt;
       await authRepository.linkIdentityToExistingUser({
         userId: existingByEmail.id,
         provider: GOOGLE_PROVIDER,
         providerAccountId: googleSub,
         email: googleEmail,
-        stampEmailVerified: !existingByEmail.emailVerifiedAt,
+        stampEmailVerified,
       });
 
       // Fire-and-forget tripwire: notify() never throws, matching the
@@ -248,12 +280,16 @@ export async function loginWithGoogle(
         data: {},
       });
 
-      user = existingByEmail;
+      // existingByEmail was fetched before linkIdentityToExistingUser's own
+      // conditional stamp above — reflect that stamp here too, or the
+      // token's emailVerified claim would wrongly read stale/unverified for
+      // an account this call just verified.
+      user = { ...existingByEmail, emailVerifiedAt: stampEmailVerified ? new Date() : existingByEmail.emailVerifiedAt };
     }
   }
 
   await authRepository.recordSuccessfulLogin(user.id);
-  const tokens = await issueTokenPair(user.id, user.role as Role, context);
+  const tokens = await issueTokenPair(user.id, user.role as Role, context, user.emailVerifiedAt);
 
   return { user: toAuthenticatedUserView(user), tokens };
 }
@@ -285,7 +321,11 @@ export async function refresh(
     throw new AuthenticationError("Invalid refresh token");
   }
 
-  const newAccessToken = signAccessToken({ sub: user.id, role: user.role as Role });
+  const newAccessToken = signAccessToken({
+    sub: user.id,
+    role: user.role as Role,
+    emailVerified: user.emailVerifiedAt != null,
+  });
   const newRefreshToken = generateOpaqueToken();
   const newRefreshTokenExpiresAt = refreshTokenExpiryDate();
 
@@ -370,4 +410,76 @@ export async function resetPassword(presentedToken: string, newPassword: string)
   await authRepository.updatePasswordHash(user.id, passwordHash);
   await authRepository.markPasswordResetTokenUsed(existing.id);
   await authRepository.revokeAllRefreshTokensForUser(user.id);
+}
+
+// Starts an email change. Deliberately does NOT touch User.email yet — only
+// once the link mailed to newEmail is actually clicked (confirmEmailChange
+// below) does the account's real email move. This is what stops a mistyped
+// or not-actually-owned new address from ever locking the account out or
+// handing it to someone else: the old email stays fully usable for login
+// the entire time a change is pending.
+export async function changeEmail(
+  userId: string,
+  input: { newEmail: string; currentPassword: string },
+): Promise<void> {
+  const user = await authRepository.findUserById(userId);
+  if (!user) {
+    throw new AuthenticationError();
+  }
+
+  if (!user.passwordHash) {
+    throw new ValidationError("This account uses Google sign-in and has no password to verify — email cannot be changed this way.");
+  }
+
+  const passwordMatches = await comparePassword(input.currentPassword, user.passwordHash);
+  if (!passwordMatches) {
+    throw new AuthenticationError("Incorrect password");
+  }
+
+  if (input.newEmail === user.email) {
+    throw new ValidationError("This is already your current email address");
+  }
+
+  const existingByEmail = await authRepository.findUserByEmail(input.newEmail);
+  if (existingByEmail) {
+    throw new ConflictError("An account with this email already exists");
+  }
+
+  const changeToken = generateOpaqueToken();
+  await authRepository.createEmailChangeToken({
+    userId: user.id,
+    newEmail: input.newEmail,
+    tokenHash: hashToken(changeToken),
+    expiresAt: new Date(Date.now() + EMAIL_CHANGE_TTL_MS),
+  });
+
+  // overrideEmail (see notification-delivery.processor.ts's deliverEmail) is
+  // what routes this to the pending NEW address instead of user.email — the
+  // whole point of this step is proving that address is real and owned by
+  // this user before anything on the account actually changes.
+  await notificationService.notify({
+    userId: user.id,
+    eventType: "EMAIL_CHANGE_CONFIRMATION",
+    data: { token: changeToken, overrideEmail: input.newEmail },
+  });
+}
+
+export async function confirmEmailChange(presentedToken: string): Promise<{ email: string }> {
+  const tokenHash = hashToken(presentedToken);
+  const existing = await authRepository.findEmailChangeTokenByHash(tokenHash);
+
+  if (!existing || existing.usedAt || existing.expiresAt < new Date()) {
+    throw new ValidationError("Invalid or expired email change link");
+  }
+
+  // Re-check uniqueness at confirmation time too, not just at request time —
+  // another account could have taken this email address in the time since
+  // the link was issued (up to EMAIL_CHANGE_TTL_MS later).
+  const collision = await authRepository.findUserByEmail(existing.newEmail);
+  if (collision && collision.id !== existing.userId) {
+    throw new ConflictError("An account with this email already exists");
+  }
+
+  await authRepository.applyEmailChange(existing.id, existing.userId, existing.newEmail);
+  return { email: existing.newEmail };
 }

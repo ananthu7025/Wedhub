@@ -3,6 +3,7 @@ export {
   ValidationError,
   AuthenticationError,
   AuthorizationError,
+  EmailNotVerifiedError,
   NotFoundError,
   ConflictError,
   RateLimitError,

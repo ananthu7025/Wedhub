@@ -60,9 +60,13 @@ const TEMPLATES: Record<NotificationEventType, (data: TemplateData) => Notificat
     title: "High-intent lead",
     body: "You have a lead showing strong booking intent — respond quickly.",
   }),
-  NEW_MESSAGE: () => ({
-    title: "New message",
-    body: "You have a new message.",
+  // data.senderName / data.preview are populated by messaging.service.ts's
+  // sendMessage() — role-agnostic (fires for both couple->vendor and
+  // vendor->couple sends), unlike USER_REPLIED above which is specifically
+  // the vendor-facing "a couple replied to your lead" framing.
+  NEW_MESSAGE: (data) => ({
+    title: `New message${data.senderName ? ` from ${data.senderName}` : ""}`,
+    body: data.preview ? String(data.preview) : "You have a new message.",
   }),
   REVIEW_RECEIVED: (data) => ({
     title: "New review received",
@@ -95,6 +99,10 @@ const TEMPLATES: Record<NotificationEventType, (data: TemplateData) => Notificat
   ACCOUNT_LINKED: () => ({
     title: "Your account was linked to Google sign-in",
     body: "Someone just signed in to your itsmyKalyanam account using Google for the first time. If this was you, no action is needed. If it wasn't, reset your password immediately.",
+  }),
+  EMAIL_CHANGE_CONFIRMATION: (data) => ({
+    title: "Confirm your new email address",
+    body: `Confirm this email address to finish changing your itsmyKalyanam account email: ${env.FRONTEND_URL}/confirm-email-change?token=${data.token ?? ""}. Your current email stays active until you confirm. If you didn't request this, you can ignore this email.`,
   }),
 };
 

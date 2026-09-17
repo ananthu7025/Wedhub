@@ -3,13 +3,17 @@ import { asyncHandler } from "../../common/utils/async-handler.util";
 import { validateBody } from "../../common/middleware/validate.middleware";
 import { authenticateMiddleware } from "../../common/middleware/authenticate.middleware";
 import {
+  changeEmailRateLimiter,
   forgotPasswordRateLimiter,
   googleLoginRateLimiter,
   loginRateLimiter,
   registerRateLimiter,
+  resendVerificationRateLimiter,
 } from "../../common/middleware/rate-limit.middleware";
 import * as authController from "./auth.controller";
 import {
+  changeEmailSchema,
+  confirmEmailChangeSchema,
   forgotPasswordSchema,
   googleLoginSchema,
   loginSchema,
@@ -59,4 +63,25 @@ authRouter.post(
   "/reset-password",
   validateBody(resetPasswordSchema),
   asyncHandler(authController.resetPassword),
+);
+
+authRouter.post(
+  "/me/resend-verification",
+  authenticateMiddleware,
+  resendVerificationRateLimiter,
+  asyncHandler(authController.resendVerificationEmail),
+);
+
+authRouter.post(
+  "/me/change-email",
+  authenticateMiddleware,
+  changeEmailRateLimiter,
+  validateBody(changeEmailSchema),
+  asyncHandler(authController.changeEmail),
+);
+
+authRouter.post(
+  "/confirm-email-change",
+  validateBody(confirmEmailChangeSchema),
+  asyncHandler(authController.confirmEmailChange),
 );

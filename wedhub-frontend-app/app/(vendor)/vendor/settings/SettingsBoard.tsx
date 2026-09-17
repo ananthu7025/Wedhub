@@ -7,6 +7,7 @@ import { updateMyProfile } from "@/lib/api/users-client";
 import { setNotificationPreference } from "@/lib/api/notification-preferences-client";
 import { deactivateAccount } from "@/lib/api/account-client";
 import { logout, logoutAllDevices } from "@/lib/api/auth-client";
+import { ChangeEmailForm } from "@/components/shared/ChangeEmailForm";
 import type { VendorSelf } from "@/lib/api/vendor-self.types";
 import type { MeResponse } from "@/lib/api/account.types";
 import type { NotificationChannel, NotificationEventType, NotificationPreference } from "@/lib/api/notification-preferences.types";
@@ -191,10 +192,13 @@ export function SettingsBoard({
               className="w-full rounded-md border border-border px-3 py-2 text-sm"
             />
           </label>
-          <label className="block">
+          <div className="block">
             <span className="mb-1.5 block text-xs font-semibold text-text-grey">Email</span>
             <input type="email" value={me.email} disabled className="w-full rounded-md border border-border bg-surface-input px-3 py-2 text-sm text-text-grey" />
-          </label>
+            <div className="mt-1.5">
+              <ChangeEmailForm />
+            </div>
+          </div>
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold text-text-grey">Business phone</span>
             <input

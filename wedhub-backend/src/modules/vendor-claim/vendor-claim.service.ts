@@ -79,7 +79,7 @@ export async function claimByRegistering(
   });
 
   await completeClaim(invitation.id, invitation.vendorId, user.id);
-  const tokens = await issueTokenPair(user.id, Role.VENDOR, context);
+  const tokens = await issueTokenPair(user.id, Role.VENDOR, context, user.emailVerifiedAt);
 
   return { userId: user.id, vendorId: invitation.vendorId, tokens };
 }

@@ -184,3 +184,25 @@ export function findPasswordResetTokenByHash(tokenHash: string) {
 export function markPasswordResetTokenUsed(id: string) {
   return prisma.passwordResetToken.update({ where: { id }, data: { usedAt: new Date() } });
 }
+
+export function createEmailChangeToken(input: { userId: string; newEmail: string; tokenHash: string; expiresAt: Date }) {
+  return prisma.emailChangeToken.create({ data: input });
+}
+
+export function findEmailChangeTokenByHash(tokenHash: string) {
+  return prisma.emailChangeToken.findUnique({ where: { tokenHash } });
+}
+
+// One transaction: mark the token used, move User.email to the confirmed
+// new address, and stamp emailVerifiedAt (the new address was just proven
+// by clicking this link) — never leave the token consumed without the
+// email actually having moved, or vice versa.
+export function applyEmailChange(tokenId: string, userId: string, newEmail: string): Promise<User> {
+  return prisma.$transaction(async (tx) => {
+    await tx.emailChangeToken.update({ where: { id: tokenId }, data: { usedAt: new Date() } });
+    return tx.user.update({
+      where: { id: userId },
+      data: { email: newEmail, emailVerifiedAt: new Date() },
+    });
+  });
+}

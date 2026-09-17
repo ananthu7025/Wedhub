@@ -4,6 +4,7 @@ import { PublicFooter } from "@/components/shared/PublicFooter";
 import { getMe } from "@/lib/api/account";
 import { listMyNotificationPreferences } from "@/lib/api/notification-preferences";
 import { AccountActions, AccountDetailsForm, NotificationPreferencesForm, WeddingDetailsForm } from "./AccountForms";
+import { ChangeEmailForm } from "@/components/shared/ChangeEmailForm";
 
 export const metadata: Metadata = {
   title: "My Profile",
@@ -36,6 +37,9 @@ export default async function AccountPage() {
         <section className="mb-5 rounded-xl border border-border bg-white p-6">
           <h3 className="mb-4 text-base font-bold">Account</h3>
           <AccountDetailsForm me={me} />
+          <div className="mt-4 border-t border-border pt-4">
+            <ChangeEmailForm />
+          </div>
         </section>
 
         <section className="mb-5 rounded-xl border border-border bg-white p-6">

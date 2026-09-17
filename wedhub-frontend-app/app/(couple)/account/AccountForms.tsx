@@ -150,10 +150,10 @@ export function AccountDetailsForm({ me }: { me: MeResponse }) {
         <span className="mb-1.5 block font-bold text-[13px]">Phone</span>
         <input value={me.phone ?? "Not set"} disabled className="w-full rounded-md border border-border bg-surface-input px-3 py-2.5 text-sm text-text-grey" />
       </label>
-      <label className="mb-4 block text-sm">
+      <div className="mb-4">
         <span className="mb-1.5 block font-bold text-[13px]">Email</span>
         <input value={me.email} disabled className="w-full rounded-md border border-border bg-surface-input px-3 py-2.5 text-sm text-text-grey" />
-      </label>
+      </div>
       <button
         type="submit"
         disabled={saving}

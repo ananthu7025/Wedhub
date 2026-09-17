@@ -6,6 +6,14 @@ import type { Role } from "../enums/roles.enum";
 export interface AccessTokenPayload {
   sub: string;
   role: Role;
+  // Mirrors User.emailVerifiedAt at the moment the token was issued (login,
+  // refresh, or right after a verify-email/change-email confirmation) so
+  // requireVerifiedMiddleware can gate a request without an extra DB read
+  // per call. This can go stale for up to the access-token TTL if
+  // verification status changes mid-session — acceptable since refresh
+  // reissues it from the current DB row every time (see auth.service.ts's
+  // refresh()), so staleness never outlives one refresh cycle.
+  emailVerified: boolean;
 }
 
 export function signAccessToken(payload: AccessTokenPayload): string {

@@ -4,6 +4,8 @@ import { successResponse } from "../../common/utils/api-response.util";
 import { AuthenticationError, ValidationError } from "../../common/errors";
 import * as authService from "./auth.service";
 import type {
+  ChangeEmailBody,
+  ConfirmEmailChangeBody,
   ForgotPasswordBody,
   GoogleLoginBody,
   LoginBody,
@@ -106,4 +108,27 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
   }
   await authService.resetPassword(body.token, body.password);
   res.json(successResponse({ passwordReset: true }));
+}
+
+export async function resendVerificationEmail(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AuthenticationError();
+  }
+  await authService.resendVerificationEmail(req.user.id);
+  res.json(successResponse({ sent: true }));
+}
+
+export async function changeEmail(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AuthenticationError();
+  }
+  const body = req.body as ChangeEmailBody;
+  await authService.changeEmail(req.user.id, body);
+  res.json(successResponse({ pending: true }));
+}
+
+export async function confirmEmailChange(req: Request, res: Response): Promise<void> {
+  const body = req.body as ConfirmEmailChangeBody;
+  const result = await authService.confirmEmailChange(body.token);
+  res.json(successResponse(result));
 }
