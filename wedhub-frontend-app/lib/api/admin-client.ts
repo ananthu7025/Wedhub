@@ -66,6 +66,7 @@ import type {
   AdminWeddingStory,
 } from "./admin.types";
 import type { Category, CategoryAttribute, GalleryCategory, Location, LocationType } from "./vendors.types";
+import type { CommunityPost, ModerateCommunityPostBody } from "./community.types";
 
 /**
  * Client-side calls through the generic authenticated proxy for the admin
@@ -182,6 +183,10 @@ export function updateAdminLeadStatus(id: string, body: AdminUpdateLeadStatusBod
 
 export function moderateAdminReview(id: string, body: AdminModerateReviewBody) {
   return call<AdminReviewStatusUpdateResult>(`/admin/reviews/${id}/status`, "PATCH", body);
+}
+
+export function moderateAdminCommunityPost(id: string, body: ModerateCommunityPostBody) {
+  return call<CommunityPost>(`/admin/community/posts/${id}/status`, "PATCH", body);
 }
 
 /** Frontend Arch Phase 10 — Admin Monetization, Governance & Audit. */

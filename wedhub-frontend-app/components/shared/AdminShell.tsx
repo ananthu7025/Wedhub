@@ -103,6 +103,11 @@ const sections: NavSection[] = [
         icon: <path d="M12 17.3l-6.2 3.6 1.6-7-5.4-4.7 7.1-.6L12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7z" />,
       },
       {
+        href: "/admin/community",
+        label: "Community",
+        icon: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></>,
+      },
+      {
         href: "/admin/roles-permissions",
         label: "Roles & permissions",
         icon: <path d="M12 2l8 4v6c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6z" />,

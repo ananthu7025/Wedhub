@@ -24,6 +24,7 @@ const coupleNavLinks = [
   { href: "/shortlist", label: "Shortlist" },
   { href: "/enquiries", label: "My Enquiries" },
   { href: "/inbox", label: "Inbox" },
+  { href: "/community", label: "Community" },
   { href: "/wedding-website", label: "Wedding Website" },
 ];
 
@@ -238,6 +239,14 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
                   Real Weddings
                 </Link>
                 <Link
+                  href="/community"
+                  className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all ${
+                    activeHref === "/community" ? "bg-white/25 text-white" : "text-white/90 hover:bg-white/15 hover:text-white"
+                  }`}
+                >
+                  Community
+                </Link>
+                <Link
                   href="/login?next=/wedding-website"
                   className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all ${
                     activeHref === "/wedding-website" ? "bg-white/25 text-white" : "text-white/90 hover:bg-white/15 hover:text-white"
@@ -310,6 +319,8 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
             <span className="opacity-30">•</span>
             <Link href="/real-weddings" className="px-2.5 py-1 hover:text-white">Real Weddings</Link>
             <span className="opacity-30">•</span>
+            <Link href="/community" className="px-2.5 py-1 hover:text-white">Community</Link>
+            <span className="opacity-30">•</span>
             <Link href="/wedding-website" className="px-2.5 py-1 hover:text-white">Wedding Website</Link>
           </>
         ) : (
@@ -319,6 +330,8 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
             <Link href="/gallery" className="px-2.5 py-1 hover:text-white">Photos</Link>
             <span className="opacity-30">•</span>
             <Link href="/real-weddings" className="px-2.5 py-1 hover:text-white">Real Weddings</Link>
+            <span className="opacity-30">•</span>
+            <Link href="/community" className="px-2.5 py-1 hover:text-white">Community</Link>
             <span className="opacity-30">•</span>
             <Link href="/login?next=/wedding-website" className="px-2.5 py-1 hover:text-white">Create Website</Link>
           </>

@@ -127,3 +127,25 @@ export const challengeEntryRateLimiter = createRateLimiter({
   message: "Too many challenge entries submitted. Please try again tomorrow.",
 });
 
+// Couples-only community feature — posting is throttled like reviews
+// (an intentional, considered action), while voting/commenting are cheap,
+// high-frequency browsing actions that need a looser cap, same reasoning as
+// challengeVoteRateLimiter vs challengeEntryRateLimiter above.
+export const communityPostRateLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: process.env.COMMUNITY_POST_RATE_LIMIT_MAX ? Number(process.env.COMMUNITY_POST_RATE_LIMIT_MAX) : 10,
+  message: "Too many posts submitted. Please try again later.",
+});
+
+export const communityVoteRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: process.env.COMMUNITY_VOTE_RATE_LIMIT_MAX ? Number(process.env.COMMUNITY_VOTE_RATE_LIMIT_MAX) : 30,
+  message: "Too many votes submitted. Please slow down.",
+});
+
+export const communityCommentRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: process.env.COMMUNITY_COMMENT_RATE_LIMIT_MAX ? Number(process.env.COMMUNITY_COMMENT_RATE_LIMIT_MAX) : 20,
+  message: "Too many comments submitted. Please slow down.",
+});
+

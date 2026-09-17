@@ -45,6 +45,8 @@ import {
   challengeEntryAdminRouter,
   challengeEntryMediaRouter,
 } from "../modules/challenges";
+import { communityAdminRouter, communityRouter } from "../modules/community";
+import { communityMediaRouter } from "../modules/community-media";
 
 export const apiV1Router = Router();
 
@@ -108,6 +110,9 @@ apiV1Router.use("/challenge-entry-media", challengeEntryMediaRouter);
 apiV1Router.use("/admin/challenge-entries", challengeEntryAdminRouter);
 apiV1Router.use("/admin/challenges", challengeAdminRouter);
 apiV1Router.use("/challenges", challengeRouter);
+apiV1Router.use("/community-media", communityMediaRouter);
+apiV1Router.use("/community", communityRouter);
+apiV1Router.use("/admin/community", communityAdminRouter);
 
 
 // Mounted BEFORE /vendors: vendorRouter's public GET /:slug would otherwise

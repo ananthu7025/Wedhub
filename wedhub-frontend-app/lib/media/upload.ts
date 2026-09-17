@@ -2,6 +2,7 @@
 
 import { confirmReviewPhotoUpload, createReviewPhotoUploadRequest } from "@/lib/api/account-client";
 import { confirmChallengeEntryPhotoUpload, createChallengeEntryPhotoUploadRequest } from "@/lib/api/challenges-client";
+import { confirmCommunityPhotoUpload, createCommunityPhotoUploadRequest } from "@/lib/api/community-client";
 import { compressImageIfPossible } from "@/lib/media/compress-image";
 import { formatApiError } from "@/lib/utils/error";
 
@@ -33,6 +34,33 @@ export async function uploadReviewPhoto(file: File): Promise<string> {
   }
 
   const confirmResult = await confirmReviewPhotoUpload(mediaId);
+  if (!confirmResult.success) {
+    throw new Error(formatApiError(confirmResult.error));
+  }
+
+  return mediaId;
+}
+
+/** Uploads a single File directly to R2 via a presigned URL, then confirms it, producing a COMMUNITY_POST_PHOTO Media row. Returns the resulting mediaId. */
+export async function uploadCommunityPostPhoto(file: File): Promise<string> {
+  const compressed = await compressImageIfPossible(file);
+
+  const requestResult = await createCommunityPhotoUploadRequest(compressed.name, compressed.type, compressed.size);
+  if (!requestResult.success) {
+    throw new Error(formatApiError(requestResult.error));
+  }
+  const { mediaId, uploadUrl } = requestResult.data;
+
+  const putResponse = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": compressed.type, "Cache-Control": UPLOAD_CACHE_CONTROL },
+    body: compressed,
+  });
+  if (!putResponse.ok) {
+    throw new Error("Photo upload to storage failed");
+  }
+
+  const confirmResult = await confirmCommunityPhotoUpload(mediaId);
   if (!confirmResult.success) {
     throw new Error(formatApiError(confirmResult.error));
   }

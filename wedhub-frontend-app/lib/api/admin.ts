@@ -33,6 +33,7 @@ import type {
 import type { VendorStatus, VerificationLevel } from "./vendor-self.types";
 import type { Category, Location, LocationType } from "./vendors.types";
 import type { LeadStatus } from "./account.types";
+import type { AdminCommunityPost } from "./community.types";
 
 /**
  * Server-only, authenticated reads for the admin platform (Frontend Arch
@@ -118,6 +119,12 @@ export function listAdminReviews(params: { status?: ReviewModerationStatus; page
 
 export function getAdminReviewDetail(id: string) {
   return apiFetch<AdminReviewDetail>(`/admin/reviews/${id}`);
+}
+
+export function listAdminFlaggedCommunityPosts(params: { page?: number; limit?: number } = {}) {
+  return apiFetch<AdminCommunityPost[], PaginationMeta>("/admin/community/flagged", {
+    query: { page: params.page ?? 1, limit: params.limit ?? 20 },
+  });
 }
 
 /**
