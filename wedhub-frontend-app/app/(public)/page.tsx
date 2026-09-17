@@ -23,7 +23,7 @@ import type { WeddingStory as RealWeddingStory } from "@/lib/api/vendors.types";
 const WEDDING_STORIES_SLOTS = 6;
 
 const HOME_DESCRIPTION =
-  "Discover wedding photographers, makeup artists, venues, planners, decorators, caterers and other trusted wedding vendors on itsmyKalyanam — starting in Kerala.";
+  "Discover wedding photographers, makeup artists, venues, planners, decorators, caterers and other trusted wedding vendors across Kerala on itsmyKalyanam.";
 
 export const metadata: Metadata = {
   // No brand suffix here — the root layout's title template
@@ -67,60 +67,67 @@ interface DisplayWeddingStory {
 // of these; once 6+ real stories exist, none of these render at all. Not
 // linked to any real vendor — hrefs go to /search, same as the section's
 // own "View All" link, since there's no real vendor to link to.
+//
+// All six are set in real Kerala districts (this platform is Kerala-only —
+// prisma/seed.ts, confirmed with the user 2026-09-06) spanning the
+// ceremony types the platform's own vendor-category taxonomy covers
+// (Hindu, Christian, Muslim, backwater/houseboat) — previously these were
+// scattered across Bengaluru/Jaipur/Goa/Udaipur/Jodhpur, which actively
+// undercut the Kerala positioning stated elsewhere on this same page.
 const SAMPLE_WEDDING_STORIES: DisplayWeddingStory[] = [
   {
     key: "sample-1",
     href: "/search",
-    coupleName: "Ananya & Rohan",
-    location: "Palace Grounds, Bengaluru",
-    tag: "South Indian Traditional · 120 Photos",
-    imageUrl: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&q=80",
-    snippet: "A grand floral celebration featuring traditional kanjeevaram silk and majestic temple-style decor.",
+    coupleName: "Anjali & Arjun",
+    location: "Backwater Resort, Alleppey",
+    tag: "Kerala Backwater Wedding · 140 Photos",
+    imageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80",
+    snippet: "A tranquil backwater ceremony with houseboat processions and a traditional sadhya feast.",
   },
   {
     key: "sample-2",
     href: "/search",
-    coupleName: "Pooja & Kabir",
-    location: "City Palace, Jaipur",
-    tag: "Royal Heritage Wedding · 85 Photos",
-    imageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&q=80",
-    snippet: "An opulent royal Rajasthani celebration with folk performances, royal processions, and palace courtyards.",
+    coupleName: "Meera & Vishnu",
+    location: "Guruvayur Temple, Thrissur",
+    tag: "Traditional Hindu Wedding · 110 Photos",
+    imageUrl: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&q=80",
+    snippet: "A traditional temple wedding with kasavu sarees, nadaswaram music, and time-honoured Kerala rituals.",
   },
   {
     key: "sample-3",
     href: "/search",
-    coupleName: "Meera & Siddharth",
-    location: "Heritage Village, Goa",
-    tag: "Beachside Destination · 95 Photos",
-    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80",
-    snippet: "A serene sunset beach ceremony filled with fairy-lit coconut groves, bohemian decor, and endless joy.",
+    coupleName: "Maria & Thomas",
+    location: "St. Mary's Cathedral, Ernakulam",
+    tag: "Kerala Christian Wedding · 130 Photos",
+    imageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&q=80",
+    snippet: "A grand church wedding followed by a reception with live music and a multi-cuisine feast.",
   },
   {
     key: "sample-4",
     href: "/search",
-    coupleName: "Kavya & Arjun",
-    location: "Backwater Resort, Alleppey",
-    tag: "Kerala Christian Wedding · 140 Photos",
-    imageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80",
-    snippet: "A tranquil backwater ceremony with houseboat processions and traditional sadhya feast.",
+    coupleName: "Fathima & Ashraf",
+    location: "Kappad Beach, Kozhikode",
+    tag: "Muslim Wedding (Nikah) · 95 Photos",
+    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80",
+    snippet: "An elegant nikah ceremony followed by a beachside reception with mehndi and traditional Malabar cuisine.",
   },
   {
     key: "sample-5",
     href: "/search",
-    coupleName: "Ishaan & Diya",
-    location: "The Leela, Udaipur",
-    tag: "Lakeside Luxury Wedding · 200 Photos",
+    coupleName: "Devika & Karthik",
+    location: "Munnar Hills Resort, Idukki",
+    tag: "Destination Hill Wedding · 105 Photos",
     imageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80",
-    snippet: "A three-day lakeside celebration with rooftop sangeet and a sunset lake-view mandap.",
+    snippet: "A misty hill-station celebration among tea plantations, with an intimate sunset ceremony.",
   },
   {
     key: "sample-6",
     href: "/search",
-    coupleName: "Nikhil & Sara",
-    location: "Heritage Haveli, Jodhpur",
-    tag: "Rajasthani Fusion · 110 Photos",
-    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80",
-    snippet: "A blue-city haveli wedding blending Rajasthani rituals with a modern fusion reception.",
+    coupleName: "Sneha & Rahul",
+    location: "Kovalam Beach Resort, Thiruvananthapuram",
+    tag: "Beachside Reception · 120 Photos",
+    imageUrl: "https://images.unsplash.com/photo-1606800052052-a08af7148866?w=600&q=80",
+    snippet: "A sunset beach reception on Kerala's coast, with fairy lights and a live band by the shore.",
   },
 ];
 
