@@ -4,7 +4,10 @@ import { omitUndefined } from "../../common/utils/object.util";
 
 export interface CreateEnquiryData {
   userId: string | undefined;
-  routingMode: "SINGLE_VENDOR" | "MULTI_VENDOR";
+  // CATEGORY_REQUEST added 2026-09-16 for matching.service.ts's
+  // auto-matched-prospect enquiries (item 8) — was already a real Prisma
+  // enum value (EnquiryRoutingMode) with no code path using it until now.
+  routingMode: "SINGLE_VENDOR" | "MULTI_VENDOR" | "CATEGORY_REQUEST";
   source: "WEB" | "TELEGRAM" | "ADMIN" | "FUTURE_WHATSAPP";
   categoryId: string | undefined;
   cityId: string | undefined;

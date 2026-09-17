@@ -42,6 +42,31 @@ export function findCategoryById(id: string) {
   return prisma.category.findUnique({ where: { id } });
 }
 
+// Used by users.service.ts's profile-setup submission to validate every
+// categoryId a couple submitted actually exists (and is active) before
+// writing WeddingProfileCategoryPreference rows — the FK constraint alone
+// would reject an invalid id, but with a raw DB error instead of a clean
+// validation message.
+export async function findActiveCategoryIds(ids: string[]): Promise<Set<string>> {
+  const rows = await prisma.category.findMany({
+    where: { id: { in: ids }, isActive: true },
+    select: { id: true },
+  });
+  return new Set(rows.map((row) => row.id));
+}
+
+// Used by matching.service.ts to compose a matched-prospect message's
+// "we're exploring {category} vendors" text — separate from
+// findActiveCategoryIds above, which is a membership-check-only helper for
+// validation and shouldn't be repurposed to also carry display names.
+export async function findCategoryNamesByIds(ids: string[]): Promise<Map<string, string>> {
+  const rows = await prisma.category.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, name: true },
+  });
+  return new Map(rows.map((row) => [row.id, row.name]));
+}
+
 export function findCategoryBySlugAnyCase(slug: string) {
   return prisma.category.findFirst({ where: { slug } });
 }
