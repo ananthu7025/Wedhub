@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getOptionalSession } from "@/lib/auth/dal";
 import { listCategories } from "@/lib/api/catalog";
 import { getMe, getMyUnreadNotificationCount } from "@/lib/api/account";
+import { getMyUnreadMessageCount } from "@/lib/api/messaging";
 import { BrandLogo } from "@/components/shared/BrandLogo";
 
 interface PublicTopbarProps {
@@ -21,6 +22,7 @@ const coupleNavLinks = [
   { href: "/search", label: "Find Vendors" },
   { href: "/shortlist", label: "Shortlist" },
   { href: "/enquiries", label: "My Enquiries" },
+  { href: "/inbox", label: "Inbox" },
   { href: "/wedding-website", label: "Wedding Website" },
 ];
 
@@ -45,6 +47,11 @@ const coupleBottomNavLinks = [
     icon: <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />,
   },
   {
+    href: "/inbox",
+    label: "Inbox",
+    icon: <><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" /></>,
+  },
+  {
     href: "/account",
     label: "Profile",
     icon: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a8 8 0 0116 0v1" /></>,
@@ -56,16 +63,19 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
   // unconditionally here costs logged-in couples nothing extra in practice
   // — simpler than threading a conditional through Promise.all's tuple type.
   const [session, { data: categories }] = await Promise.all([getOptionalSession(), listCategories()]);
-  const [unreadCount, me] = session
+  const [unreadCount, unreadMessageCount, me] = session
     ? await Promise.all([
         getMyUnreadNotificationCount()
+          .then((r) => r.data.count)
+          .catch(() => 0),
+        getMyUnreadMessageCount()
           .then((r) => r.data.count)
           .catch(() => 0),
         getMe()
           .then((r) => r.data)
           .catch(() => null),
       ])
-    : [0, null];
+    : [0, 0, null];
   const initials = me ? initialsFrom(me.profile?.firstName ?? null, me.profile?.lastName ?? null, me.email) : "";
 
   const isBrand = variant === "brand";
@@ -190,6 +200,17 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
 
           {session ? (
             <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href="/inbox"
+                aria-label={unreadMessageCount > 0 ? `Inbox (${unreadMessageCount} unread)` : "Inbox"}
+                className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 shrink-0"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+                  <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
+                </svg>
+                {unreadMessageCount > 0 && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#e00b41]" />}
+              </Link>
               <Link
                 href="/notifications"
                 aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}

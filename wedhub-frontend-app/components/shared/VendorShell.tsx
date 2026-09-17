@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getMyUnreadNotificationCount } from "@/lib/api/account";
+import { getMyUnreadMessageCount } from "@/lib/api/messaging";
 import { getMyVendor } from "@/lib/api/vendor-self";
 import { BrandLogo } from "./BrandLogo";
 import { VendorLogoutButton } from "./VendorLogoutButton";
@@ -65,6 +66,11 @@ const navLinks = [
     icon: <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />,
   },
   {
+    href: "/vendor/inbox",
+    label: "Inbox",
+    icon: <><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" /></>,
+  },
+  {
     href: "/vendor/reviews",
     label: "Reviews",
     icon: <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />,
@@ -103,8 +109,11 @@ export async function VendorShell({
   vendorSlug?: string;
 }) {
   const initials = vendorName.slice(0, 2).toUpperCase();
-  const [unreadCount, vendorResult] = await Promise.all([
+  const [unreadCount, unreadMessageCount, vendorResult] = await Promise.all([
     getMyUnreadNotificationCount()
+      .then((r) => r.data.count)
+      .catch(() => 0),
+    getMyUnreadMessageCount()
       .then((r) => r.data.count)
       .catch(() => 0),
     // Always fetched now (previously only as a slug fallback) — status and
@@ -161,6 +170,21 @@ export async function VendorShell({
             <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
           )}
 
+          <Link
+            href="/vendor/inbox"
+            aria-label={unreadMessageCount > 0 ? `Inbox (${unreadMessageCount} unread)` : "Inbox"}
+            className={`relative flex h-9 w-9 items-center justify-center rounded-full ${
+              activeHref === "/vendor/inbox" ? "bg-brand-primary-soft text-brand-primary" : "text-text-grey hover:bg-surface-input"
+            }`}
+          >
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+              <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
+            </svg>
+            {unreadMessageCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red ring-2 ring-white" />
+            )}
+          </Link>
           <Link
             href="/vendor/notifications"
             aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
@@ -220,6 +244,7 @@ export async function VendorShell({
         vendorName={vendorName}
         vendorSlug={resolvedSlug}
         unreadCount={unreadCount}
+        unreadMessageCount={unreadMessageCount}
         hasStoreEligibleCategory={hasStoreEligibleCategory}
       />
     </div>

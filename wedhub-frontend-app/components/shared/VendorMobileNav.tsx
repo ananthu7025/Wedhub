@@ -9,6 +9,7 @@ interface VendorMobileNavProps {
   vendorName: string;
   vendorSlug?: string;
   unreadCount?: number;
+  unreadMessageCount?: number;
   hasStoreEligibleCategory?: boolean;
 }
 
@@ -114,9 +115,20 @@ const SECONDARY_SECTIONS = [
         ),
       },
       {
+        href: "/vendor/inbox",
+        label: "Inbox",
+        badgeCount: "messages" as const,
+        icon: (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+            <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
+          </svg>
+        ),
+      },
+      {
         href: "/vendor/notifications",
         label: "Notifications",
-        badgeCount: true,
+        badgeCount: "notifications" as const,
         icon: (
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -178,6 +190,7 @@ export function VendorMobileNav({
   vendorName,
   vendorSlug,
   unreadCount = 0,
+  unreadMessageCount = 0,
   hasStoreEligibleCategory = false,
 }: VendorMobileNavProps) {
   const pathname = usePathname();
@@ -291,7 +304,7 @@ export function VendorMobileNav({
                   <rect x="3" y="14" width="7" height="7" rx="1.5" />
                 </svg>
               </span>
-              {unreadCount > 0 && (
+              {(unreadCount > 0 || unreadMessageCount > 0) && (
                 <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-brand-primary ring-2 ring-white" />
               )}
             </div>
@@ -373,9 +386,14 @@ export function VendorMobileNav({
                             <span>{link.label}</span>
                           </div>
 
-                          {link.badgeCount && unreadCount > 0 && (
+                          {link.badgeCount === "notifications" && unreadCount > 0 && (
                             <span className="rounded-full bg-brand-primary px-2 py-0.5 text-xs font-bold text-white">
                               {unreadCount}
+                            </span>
+                          )}
+                          {link.badgeCount === "messages" && unreadMessageCount > 0 && (
+                            <span className="rounded-full bg-brand-primary px-2 py-0.5 text-xs font-bold text-white">
+                              {unreadMessageCount}
                             </span>
                           )}
                         </Link>

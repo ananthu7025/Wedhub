@@ -21,6 +21,7 @@ import { subscriptionAdminRouter, subscriptionRouter } from "../modules/subscrip
 import { webhookRouter } from "../modules/webhooks";
 import { featuredListingAdminRouter, featuredListingRouter } from "../modules/featured-listings";
 import { notificationRouter } from "../modules/notifications";
+import { messagingRouter } from "../modules/messaging";
 import { telegramAdminRouter, telegramRouter } from "../modules/telegram";
 import { adminUsersRouter } from "../modules/admin-users";
 import { adminAuditLogsRouter } from "../modules/admin-audit-logs";
@@ -75,6 +76,7 @@ apiV1Router.use("/webhooks", webhookRouter);
 apiV1Router.use("/featured-listings", featuredListingRouter);
 apiV1Router.use("/admin/featured-listings", featuredListingAdminRouter);
 apiV1Router.use("/notifications", notificationRouter);
+apiV1Router.use("/messaging", messagingRouter);
 apiV1Router.use("/telegram", telegramRouter);
 apiV1Router.use("/admin/telegram", telegramAdminRouter);
 apiV1Router.use("/admin/users", adminUsersRouter);
