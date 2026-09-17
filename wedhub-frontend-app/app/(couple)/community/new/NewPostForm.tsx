@@ -6,6 +6,7 @@ import { createCommunityPost } from "@/lib/api/community-client";
 import { uploadCommunityPostPhoto } from "@/lib/media/upload";
 import { formatApiError } from "@/lib/utils/error";
 import type { CommunityTag } from "@/lib/api/community.types";
+import { CloseIcon } from "@/app/(public)/community/icons";
 
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_POLL_OPTIONS = 6;
@@ -185,7 +186,7 @@ export function NewPostForm({
                     aria-label="Remove option"
                     className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-border text-text-grey hover:bg-surface-input"
                   >
-                    ✕
+                    <CloseIcon className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
@@ -224,9 +225,9 @@ export function NewPostForm({
               type="button"
               onClick={() => setPhoto(null)}
               aria-label="Remove photo"
-              className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-[9px] text-white"
+              className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white"
             >
-              ✕
+              <CloseIcon className="h-2.5 w-2.5" />
             </button>
           </div>
         ) : (

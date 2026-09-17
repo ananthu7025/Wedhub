@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const PLACEMENT_TYPES = ["HOMEPAGE", "CATEGORY_PAGE", "CITY_PAGE", "SEARCH_RESULTS"] as const;
+const PLACEMENT_TYPES = ["HOMEPAGE", "CATEGORY_PAGE", "CITY_PAGE", "SEARCH_RESULTS", "COMMUNITY"] as const;
 const STATUSES = ["DRAFT", "SCHEDULED", "ACTIVE", "EXPIRED", "CANCELLED"] as const;
 
 export const createFeaturedListingSchema = z

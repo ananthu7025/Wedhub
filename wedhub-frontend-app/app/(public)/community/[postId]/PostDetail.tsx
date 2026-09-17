@@ -8,6 +8,7 @@ import { getPublicMediaUrl } from "@/lib/media/url";
 import { formatApiError } from "@/lib/utils/error";
 import type { CommunityComment, CommunityPost } from "@/lib/api/community.types";
 import { PollBlock } from "../PollBlock";
+import { HeartIcon } from "../icons";
 
 // Reddit-style anonymous handle — see CommunityFeedList.tsx's identical helper.
 function displayAuthorName(author: CommunityComment["author"]): string {
@@ -246,7 +247,7 @@ export function PostDetail({
               vote.voted ? "border-brand-primary bg-brand-primary-soft text-brand-primary" : "border-border bg-white text-text-grey hover:bg-surface-input"
             }`}
           >
-            <span aria-hidden>{vote.voted ? "❤️" : "🤍"}</span> {vote.voteCount}
+            <HeartIcon className="h-4 w-4" filled={vote.voted} /> {vote.voteCount}
           </button>
           {reportState === "idle" && (
             <button type="button" onClick={handleReportClick} className="text-xs font-bold text-text-grey hover:text-text-dark">

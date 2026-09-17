@@ -4,10 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
-import { toggleCommunityVote } from "@/lib/api/community-client";
+import { listCommunityFeedClient, toggleCommunityVote } from "@/lib/api/community-client";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import type { CommunityPost } from "@/lib/api/community.types";
 import { PollBlock } from "./PollBlock";
+import { CommentIcon, HeartIcon } from "./icons";
+
+const PAGE_LIMIT = 20;
 
 // Reddit-style anonymous handle — never the poster's real name (the
 // backend never sends one). Falls back to "A couple" only for the
@@ -82,7 +85,7 @@ function VoteButton({
           : "border-border bg-white text-text-grey hover:bg-surface-input"
       }`}
     >
-      <span aria-hidden>{state.voted ? "❤️" : "🤍"}</span>
+      <HeartIcon className="h-3.5 w-3.5" filled={state.voted} />
       <span>{state.voteCount}</span>
     </button>
   );
@@ -120,14 +123,34 @@ function PhotoGrid({ photoKeys }: { photoKeys: string[] }) {
 
 export function CommunityFeedList({
   initialPosts,
+  initialTotal,
+  sort,
+  tagId,
   isAuthenticated,
 }: {
   initialPosts: CommunityPost[];
+  initialTotal: number;
+  sort: "hot" | "new";
+  tagId: string | undefined;
   isAuthenticated: boolean;
 }) {
   const router = useRouter();
+  const [posts, setPosts] = useState(initialPosts);
+  const [total, setTotal] = useState(initialTotal);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  if (initialPosts.length === 0) {
+  async function handleLoadMore() {
+    setLoadingMore(true);
+    const nextPage = Math.floor(posts.length / PAGE_LIMIT) + 1;
+    const result = await listCommunityFeedClient({ sort, tagId, page: nextPage, limit: PAGE_LIMIT });
+    setLoadingMore(false);
+    if (result.success) {
+      setPosts((prev) => [...prev, ...result.data]);
+      setTotal(result.meta?.total ?? total);
+    }
+  }
+
+  if (posts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-white px-6 py-18 text-center">
         <h3 className="mb-1.5 text-[15px] font-bold">No posts here yet</h3>
@@ -145,7 +168,7 @@ export function CommunityFeedList({
 
   return (
     <div className="flex flex-col gap-3">
-      {initialPosts.map((post) => {
+      {posts.map((post) => {
         const authorName = displayAuthorName(post);
         const photoKeys = post.media
           .map((m) => m.thumbnailObjectKey ?? m.optimizedObjectKey ?? m.originalObjectKey)
@@ -192,7 +215,7 @@ export function CommunityFeedList({
                 href={`/community/${post.id}`}
                 className="flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-xs font-bold text-text-grey no-underline hover:bg-surface-input"
               >
-                💬 {post.commentCount}
+                <CommentIcon className="h-3.5 w-3.5" /> {post.commentCount}
               </Link>
               <VoteButton
                 postId={post.id}
@@ -204,6 +227,17 @@ export function CommunityFeedList({
           </div>
         );
       })}
+
+      {posts.length < total && (
+        <button
+          type="button"
+          onClick={handleLoadMore}
+          disabled={loadingMore}
+          className="mx-auto rounded-full border border-border bg-white px-5 py-2.5 text-[13px] font-bold text-text-body hover:bg-surface-input disabled:opacity-60"
+        >
+          {loadingMore ? "Loading…" : "Load more"}
+        </button>
+      )}
     </div>
   );
 }

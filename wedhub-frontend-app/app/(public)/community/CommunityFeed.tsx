@@ -21,9 +21,17 @@ export async function CommunityFeed({
   isAuthenticated: boolean;
 }) {
   const tagId = tagSlug ? tags.find((t) => t.slug === tagSlug)?.id : undefined;
-  const { data: posts } = await listCommunityFeed({ sort, tagId, page: 1, limit: 20 });
+  const { data: posts, meta } = await listCommunityFeed({ sort, tagId, page: 1, limit: 20 });
 
-  return <CommunityFeedList initialPosts={posts} isAuthenticated={isAuthenticated} />;
+  return (
+    <CommunityFeedList
+      initialPosts={posts}
+      initialTotal={meta?.total ?? posts.length}
+      sort={sort}
+      tagId={tagId}
+      isAuthenticated={isAuthenticated}
+    />
+  );
 }
 
 export function CommunityFeedSkeleton() {

@@ -1813,6 +1813,10 @@ enum PlacementType {
   CATEGORY_PAGE
   CITY_PAGE
   SEARCH_RESULTS
+  // Sidebar ad slots on the couples-only community feed (app/(public)/
+  // community). Reuses this same paid-placement model rather than a
+  // separate ad mechanism — see FeaturedListing's own doc comment.
+  COMMUNITY
 }
 
 enum FeaturedListingStatus {

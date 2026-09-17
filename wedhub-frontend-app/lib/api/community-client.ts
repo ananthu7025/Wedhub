@@ -1,6 +1,6 @@
 "use client";
 
-import type { ApiResponse } from "./types";
+import type { ApiResponse, PaginationMeta } from "./types";
 import type {
   CastPollVoteResult,
   CommunityComment,
@@ -25,6 +25,24 @@ async function call<T>(path: string, method: "GET" | "POST" | "PATCH" | "PUT" | 
     credentials: "include",
   });
   return (await response.json()) as ApiResponse<T>;
+}
+
+async function callPaginated<T>(path: string): Promise<ApiResponse<T> & { meta?: PaginationMeta }> {
+  const response = await fetch(`/api${path}`, { credentials: "include" });
+  return (await response.json()) as ApiResponse<T> & { meta?: PaginationMeta };
+}
+
+// "Load more" on the feed fetches subsequent pages from a Client Component
+// — apiFetch (community.ts) is server-only (uses next/headers), same lesson
+// documented in catalog-client.ts/messaging-client.ts, so this duplicates
+// that one GET as a client-callable proxy call instead.
+export function listCommunityFeedClient(params: { tagId?: string; sort?: "hot" | "new"; page?: number; limit?: number }) {
+  const query = new URLSearchParams();
+  if (params.tagId) query.set("tagId", params.tagId);
+  if (params.sort) query.set("sort", params.sort);
+  if (params.page) query.set("page", String(params.page));
+  if (params.limit) query.set("limit", String(params.limit));
+  return callPaginated<CommunityPost[]>(`/community/posts?${query.toString()}`);
 }
 
 export function createCommunityPost(body: CreateCommunityPostBody) {

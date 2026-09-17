@@ -38,7 +38,7 @@ export async function createFeaturedListing(
   createdByUserId: string,
   input: {
     vendorId: string;
-    placementType: "HOMEPAGE" | "CATEGORY_PAGE" | "CITY_PAGE" | "SEARCH_RESULTS";
+    placementType: "HOMEPAGE" | "CATEGORY_PAGE" | "CITY_PAGE" | "SEARCH_RESULTS" | "COMMUNITY";
     categoryId: string | undefined;
     cityId: string | undefined;
     priority: number;
@@ -138,7 +138,7 @@ export function listFeaturedListingsAdmin(filter: {
 }
 
 export async function listActiveFeaturedListings(filter: {
-  placementType: "HOMEPAGE" | "CATEGORY_PAGE" | "CITY_PAGE" | "SEARCH_RESULTS" | undefined;
+  placementType: "HOMEPAGE" | "CATEGORY_PAGE" | "CITY_PAGE" | "SEARCH_RESULTS" | "COMMUNITY" | undefined;
   categoryId: string | undefined;
   cityId: string | undefined;
   page: number;

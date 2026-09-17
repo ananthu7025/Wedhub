@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PhotoIcon, PollIcon, QuestionIcon } from "./icons";
 
 /**
  * Always-visible inline composer bar sitting above the feed (mockup:
@@ -60,21 +61,21 @@ export function ComposerBar({ isAuthenticated, questionsTagId }: { isAuthenticat
           onClick={() => goToCompose({ mode: "photo" })}
           className="flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-bold text-text-body hover:bg-surface-input"
         >
-          🖼️ Photo
+          <PhotoIcon className="h-3.5 w-3.5" /> Photo
         </button>
         <button
           type="button"
           onClick={() => goToCompose({ mode: "poll" })}
           className="flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-bold text-text-body hover:bg-surface-input"
         >
-          📊 Poll
+          <PollIcon className="h-3.5 w-3.5" /> Poll
         </button>
         <button
           type="button"
           onClick={() => goToCompose({ tagId: questionsTagId })}
           className="flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-bold text-text-body hover:bg-surface-input"
         >
-          ❓ Ask a Question
+          <QuestionIcon className="h-3.5 w-3.5" /> Ask a Question
         </button>
       </div>
     </div>

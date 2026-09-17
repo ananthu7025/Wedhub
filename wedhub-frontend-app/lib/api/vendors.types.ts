@@ -358,7 +358,7 @@ export interface VendorReview {
 }
 
 // ---- GET /featured-listings ----
-export type FeaturedPlacementType = "HOMEPAGE" | "CATEGORY_PAGE" | "CITY_PAGE" | "SEARCH_RESULTS";
+export type FeaturedPlacementType = "HOMEPAGE" | "CATEGORY_PAGE" | "CITY_PAGE" | "SEARCH_RESULTS" | "COMMUNITY";
 
 export interface FeaturedListing {
   id: string;
