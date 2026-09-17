@@ -13,9 +13,11 @@ import { formatApiError } from "@/lib/utils/error";
  * VISIBLE and HIDDEN posts don't need a queue, they're either unremarkable
  * or already dealt with. Mirrors AdminReviewsBoard.tsx's structure.
  */
+// Admins see the same anonymous handle as everyone else — moderation
+// decisions are made on content, not identity, and the backend's
+// AUTHOR_SELECT never sends a real name/email for a community response.
 function authorName(author: AdminCommunityPost["author"]): string {
-  if (author.profile?.firstName) return `${author.profile.firstName} ${author.profile.lastName ?? ""}`.trim();
-  return author.email;
+  return author.profile?.communityUsername ?? "Unknown poster";
 }
 
 function formatRelativeTime(iso: string): string {
@@ -84,8 +86,21 @@ export function AdminCommunityBoard({ initialPosts, total }: { initialPosts: Adm
                   <Badge variant="red">FLAGGED</Badge>
                 </div>
 
-                <div className="mb-1 text-sm font-bold">{post.title}</div>
-                <p className="mb-2 text-[13px] leading-relaxed">{post.body}</p>
+                <div className="mb-1 flex items-center gap-2 text-sm font-bold">
+                  {post.title}
+                  {post.postType === "POLL" && <Badge variant="blue">POLL</Badge>}
+                </div>
+                {post.body && <p className="mb-2 text-[13px] leading-relaxed">{post.body}</p>}
+
+                {post.postType === "POLL" && (
+                  <ul className="mb-2 list-disc pl-5 text-[13px] text-text-grey">
+                    {post.pollOptions.map((option) => (
+                      <li key={option.id}>
+                        {option.label} — {option.voteCount} vote{option.voteCount === 1 ? "" : "s"}
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
                 {photoKey && (
                   // eslint-disable-next-line @next/next/no-img-element

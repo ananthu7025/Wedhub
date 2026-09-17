@@ -1,5 +1,6 @@
 import { NotFoundError, ValidationError } from "../../common/errors";
 import * as communityCommentRepository from "./community-comment.repository";
+import { getOrCreateCommunityUsername } from "./community-username.util";
 
 export interface CommentWithReplies {
   id: string;
@@ -8,7 +9,7 @@ export interface CommentWithReplies {
   parentId: string | null;
   body: string;
   createdAt: Date;
-  author: { id: string; email: string; profile: { firstName: string | null; lastName: string | null } | null };
+  author: { id: string; profile: { communityUsername: string | null } | null };
   replies: CommentWithReplies[];
 }
 
@@ -58,6 +59,8 @@ export async function createComment(
       throw new ValidationError("Replies can only be one level deep");
     }
   }
+
+  await getOrCreateCommunityUsername(authorUserId);
 
   return communityCommentRepository.createComment({
     postId,

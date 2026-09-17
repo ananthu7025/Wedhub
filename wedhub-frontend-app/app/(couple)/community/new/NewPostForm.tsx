@@ -8,13 +8,17 @@ import { formatApiError } from "@/lib/utils/error";
 import type { CommunityTag } from "@/lib/api/community.types";
 
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_POLL_OPTIONS = 6;
+const MIN_POLL_OPTIONS = 2;
 
 export function NewPostForm({ tags }: { tags: CommunityTag[] }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [postType, setPostType] = useState<"TEXT" | "POLL">("TEXT");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [pollOptions, setPollOptions] = useState(["", ""]);
   const [tagId, setTagId] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "uploading" | "submitting" | "error">("idle");
@@ -32,10 +36,35 @@ export function NewPostForm({ tags }: { tags: CommunityTag[] }) {
     setPhoto(file);
   }
 
+  function updatePollOption(index: number, value: string) {
+    setPollOptions((prev) => prev.map((o, i) => (i === index ? value : o)));
+  }
+
+  function addPollOption() {
+    setPollOptions((prev) => (prev.length < MAX_POLL_OPTIONS ? [...prev, ""] : prev));
+  }
+
+  function removePollOption(index: number) {
+    setPollOptions((prev) => (prev.length > MIN_POLL_OPTIONS ? prev.filter((_, i) => i !== index) : prev));
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!title.trim() || !body.trim()) {
-      setErrorMessage("Please add a title and a description");
+
+    if (!title.trim()) {
+      setErrorMessage("Please add a title");
+      setStatus("error");
+      return;
+    }
+
+    const trimmedOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (postType === "POLL" && trimmedOptions.length < MIN_POLL_OPTIONS) {
+      setErrorMessage(`Please add at least ${MIN_POLL_OPTIONS} poll options`);
+      setStatus("error");
+      return;
+    }
+    if (postType === "TEXT" && !body.trim()) {
+      setErrorMessage("Please add a description");
       setStatus("error");
       return;
     }
@@ -55,12 +84,11 @@ export function NewPostForm({ tags }: { tags: CommunityTag[] }) {
     }
 
     setStatus("submitting");
-    const result = await createCommunityPost({
-      title: title.trim(),
-      body: body.trim(),
-      tagId: tagId || undefined,
-      mediaId,
-    });
+    const result = await createCommunityPost(
+      postType === "POLL"
+        ? { postType: "POLL", title: title.trim(), body: body.trim() || undefined, tagId: tagId || undefined, mediaId, options: trimmedOptions }
+        : { postType: "TEXT", title: title.trim(), body: body.trim(), tagId: tagId || undefined, mediaId },
+    );
 
     if (result.success) {
       router.push(`/community/${result.data.id}`);
@@ -73,6 +101,21 @@ export function NewPostForm({ tags }: { tags: CommunityTag[] }) {
 
   return (
     <form onSubmit={handleSubmit}>
+      <div className="mb-4 flex gap-2">
+        {(["TEXT", "POLL"] as const).map((type) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => setPostType(type)}
+            className={`rounded-full px-4 py-1.5 text-[13px] font-bold ${
+              postType === type ? "bg-jet-black-90 text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
+            }`}
+          >
+            {type === "TEXT" ? "Post" : "Poll"}
+          </button>
+        ))}
+      </div>
+
       <label className="mb-4 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">Topic</span>
         <select
@@ -90,24 +133,62 @@ export function NewPostForm({ tags }: { tags: CommunityTag[] }) {
       </label>
 
       <label className="mb-4 block text-sm">
-        <span className="mb-1.5 block font-bold text-[13px]">Title</span>
+        <span className="mb-1.5 block font-bold text-[13px]">{postType === "POLL" ? "Question" : "Title"}</span>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           maxLength={200}
-          placeholder="What's on your mind?"
+          placeholder={postType === "POLL" ? "Ask couples a question…" : "What's on your mind?"}
           className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
         />
       </label>
 
+      {postType === "POLL" ? (
+        <div className="mb-4">
+          <span className="mb-1.5 block text-[13px] font-bold">
+            Options <span className="font-normal text-text-grey">(2-6)</span>
+          </span>
+          <div className="flex flex-col gap-2">
+            {pollOptions.map((option, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <input
+                  value={option}
+                  onChange={(e) => updatePollOption(index, e.target.value)}
+                  maxLength={100}
+                  placeholder={`Option ${index + 1}`}
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm"
+                />
+                {pollOptions.length > MIN_POLL_OPTIONS && (
+                  <button
+                    type="button"
+                    onClick={() => removePollOption(index)}
+                    aria-label="Remove option"
+                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-border text-text-grey hover:bg-surface-input"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {pollOptions.length < MAX_POLL_OPTIONS && (
+            <button type="button" onClick={addPollOption} className="mt-2 text-xs font-bold text-text-grey hover:text-text-dark">
+              + Add option
+            </button>
+          )}
+        </div>
+      ) : null}
+
       <label className="mb-4 block text-sm">
-        <span className="mb-1.5 block font-bold text-[13px]">Description</span>
+        <span className="mb-1.5 block font-bold text-[13px]">
+          {postType === "POLL" ? "Add context" : "Description"} {postType === "POLL" && <span className="font-normal text-text-grey">(optional)</span>}
+        </span>
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Share the details — other couples are here to help"
+          placeholder={postType === "POLL" ? "Any extra details…" : "Share the details — other couples are here to help"}
           maxLength={5000}
-          className="min-h-[140px] w-full rounded-md border border-border px-3 py-2.5 text-sm"
+          className="min-h-[100px] w-full rounded-md border border-border px-3 py-2.5 text-sm"
         />
       </label>
 
@@ -147,7 +228,7 @@ export function NewPostForm({ tags }: { tags: CommunityTag[] }) {
         disabled={status === "uploading" || status === "submitting"}
         className="mt-5 block w-full rounded-md bg-brand-primary py-3 text-center text-sm font-bold text-white disabled:opacity-60"
       >
-        {status === "uploading" ? "Uploading photo…" : status === "submitting" ? "Posting…" : "Post"}
+        {status === "uploading" ? "Uploading photo…" : status === "submitting" ? "Posting…" : postType === "POLL" ? "Post poll" : "Post"}
       </button>
     </form>
   );

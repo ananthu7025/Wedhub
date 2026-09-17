@@ -6,10 +6,11 @@ import { createCommunityComment, reportCommunityPost, toggleCommunityVote } from
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { formatApiError } from "@/lib/utils/error";
 import type { CommunityComment, CommunityPost } from "@/lib/api/community.types";
+import { PollBlock } from "../PollBlock";
 
+// Reddit-style anonymous handle — see CommunityFeedList.tsx's identical helper.
 function displayAuthorName(author: CommunityComment["author"]): string {
-  const name = [author.profile?.firstName, author.profile?.lastName].filter(Boolean).join(" ");
-  return name || "A couple";
+  return author.profile?.communityUsername ?? "A couple";
 }
 
 function formatRelativeTime(iso: string): string {
@@ -198,10 +199,24 @@ export function PostDetail({
           </span>
         </div>
         <h1 className="mb-2 text-xl font-bold">{post.title}</h1>
-        <p className="mb-3 whitespace-pre-wrap text-sm text-text-body">{post.body}</p>
-        {photoKey && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={getPublicMediaUrl(photoKey)} alt="" className="mb-3 max-h-[420px] w-full rounded-md object-cover" />
+        {post.postType === "POLL" ? (
+          <div className="mb-3">
+            <PollBlock
+              postId={post.id}
+              options={post.pollOptions}
+              myOptionId={post.pollVotes?.[0]?.optionId}
+              isAuthenticated={isAuthenticated}
+            />
+            {post.body && <p className="whitespace-pre-wrap text-sm text-text-body">{post.body}</p>}
+          </div>
+        ) : (
+          <>
+            {post.body && <p className="mb-3 whitespace-pre-wrap text-sm text-text-body">{post.body}</p>}
+            {photoKey && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={getPublicMediaUrl(photoKey)} alt="" className="mb-3 max-h-[420px] w-full rounded-md object-cover" />
+            )}
+          </>
         )}
         <div className="flex items-center gap-3">
           <button

@@ -72,6 +72,7 @@ model User {
   communityPostVotes       CommunityPostVote[]
   communityComments        CommunityComment[]       @relation("CommunityCommentAuthor")
   communityPostReports     CommunityPostReport[]
+  communityPollVotes       CommunityPollVote[]
 
   @@index([role])
   @@index([status])
@@ -87,6 +88,14 @@ model UserProfile {
   cityId        String?  @map("city_id") @db.Uuid
   bio           String?
   preferences   Json?
+  // Reddit-style anonymous handle shown everywhere in the community feature
+  // instead of the user's real name/email (community-post.repository.ts /
+  // community-comment.repository.ts never select firstName/lastName/email
+  // for a public author). Nullable — unset until the user's first
+  // post/comment/vote, generated lazily by
+  // community-username.util.ts::getOrCreateCommunityUsername, not at
+  // signup, since most users never touch community.
+  communityUsername String? @unique @map("community_username")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
@@ -2949,12 +2958,23 @@ model CommunityTag {
   @@map("community_tags")
 }
 
+enum CommunityPostType {
+  TEXT
+  POLL
+}
+
 model CommunityPost {
   id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   authorUserId String              @map("author_user_id") @db.Uuid
   tagId        String?             @map("tag_id") @db.Uuid
+  postType     CommunityPostType   @default(TEXT) @map("post_type")
   title        String
-  body         String
+  // Optional for a POLL post (the question lives in `title`, same as a
+  // TEXT post's title) — required at the application layer for TEXT posts,
+  // not enforced here since Prisma has no portable conditional-required
+  // column constraint (same precedent as Media's vendorId/userId nullable
+  // split, schema.prisma's Media model comment).
+  body         String?
   status       CommunityPostStatus @default(VISIBLE)
   // Atomic increment/decrement on vote toggle (community-vote.service.ts),
   // mirroring ChallengeEntry.voteCount — votes are insert/delete-only via a
@@ -2965,12 +2985,14 @@ model CommunityPost {
   createdAt    DateTime            @default(now()) @map("created_at")
   updatedAt    DateTime            @updatedAt @map("updated_at")
 
-  author   User                  @relation("CommunityPostAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
-  tag      CommunityTag?         @relation(fields: [tagId], references: [id])
-  votes    CommunityPostVote[]
-  comments CommunityComment[]
-  reports  CommunityPostReport[]
-  media    Media[]               @relation("CommunityPostPhoto")
+  author      User                  @relation("CommunityPostAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  tag         CommunityTag?         @relation(fields: [tagId], references: [id])
+  votes       CommunityPostVote[]
+  comments    CommunityComment[]
+  reports     CommunityPostReport[]
+  media       Media[]               @relation("CommunityPostPhoto")
+  pollOptions CommunityPollOption[]
+  pollVotes   CommunityPollVote[]
 
   // Two separate composite indexes for the feed's two sort modes (hot vs
   // new) rather than one combined index — Postgres can't efficiently use a
@@ -2980,6 +3002,44 @@ model CommunityPost {
   @@index([status, createdAt])
   @@index([tagId, status, createdAt])
   @@map("community_posts")
+}
+
+// A poll's options, created once at post-creation time and never added to
+// or reordered afterward (no edit-poll feature) — voteCount is atomically
+// incremented/decremented by community-poll.service.ts::castPollVote,
+// mirroring CommunityPost.voteCount's own O(1)-counter reasoning.
+model CommunityPollOption {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId    String @map("post_id") @db.Uuid
+  label     String
+  sortOrder Int    @default(0) @map("sort_order")
+  voteCount Int    @default(0) @map("vote_count")
+
+  post  CommunityPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  votes CommunityPollVote[]
+
+  @@index([postId])
+  @@map("community_poll_options")
+}
+
+// Single-choice, changeable: @@unique([postId, userId]) means a user has at
+// most one vote per poll — casting a new vote moves this row to the new
+// option (see castPollVote's transaction) rather than adding a second row,
+// which is what makes "change your vote" possible without a separate
+// "remove vote" action.
+model CommunityPollVote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  optionId  String   @map("option_id") @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  option CommunityPollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  post   CommunityPost       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("community_poll_votes")
 }
 
 model CommunityPostVote {

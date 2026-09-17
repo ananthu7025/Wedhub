@@ -1,10 +1,11 @@
 import { prisma } from "../../config/database";
 import { omitUndefined } from "../../common/utils/object.util";
 
+// Never selects email/firstName/lastName — see community-post.repository.ts's
+// identical AUTHOR_SELECT comment for the full rationale.
 const AUTHOR_SELECT = {
   id: true,
-  email: true,
-  profile: { select: { firstName: true, lastName: true } },
+  profile: { select: { communityUsername: true } },
 } as const;
 
 export function findPostForComment(postId: string) {

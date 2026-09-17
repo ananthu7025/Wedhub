@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/database";
 import { ConflictError, NotFoundError } from "../../common/errors";
+import { getOrCreateCommunityUsername } from "./community-username.util";
 
 // Same Prisma error code used by challenge-vote.service.ts for a Postgres
 // Serializable-transaction abort (SQLSTATE 40001).
@@ -18,6 +19,7 @@ export interface ToggleVoteResult {
 // serialization failure, so two near-simultaneous clicks from the same user
 // can't double-toggle the counter.
 export async function toggleVote(postId: string, userId: string): Promise<ToggleVoteResult> {
+  await getOrCreateCommunityUsername(userId);
   try {
     return await runToggleTransaction(postId, userId);
   } catch (err) {

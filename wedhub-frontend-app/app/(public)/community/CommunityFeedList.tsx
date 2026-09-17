@@ -6,10 +6,13 @@ import { Badge } from "@/components/ui/Badge";
 import { toggleCommunityVote } from "@/lib/api/community-client";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import type { CommunityPost } from "@/lib/api/community.types";
+import { PollBlock } from "./PollBlock";
 
+// Reddit-style anonymous handle — never the poster's real name (the
+// backend never sends one). Falls back to "A couple" only for the
+// theoretical case of a still-null handle (shouldn't occur post-generation).
 function displayAuthorName(post: CommunityPost): string {
-  const name = [post.author.profile?.firstName, post.author.profile?.lastName].filter(Boolean).join(" ");
-  return name || "A couple";
+  return post.author.profile?.communityUsername ?? "A couple";
 }
 
 function formatRelativeTime(iso: string): string {
@@ -119,10 +122,21 @@ export function CommunityFeedList({
               <Link href={`/community/${post.id}`} className="no-underline">
                 <h3 className="mb-1 text-[15px] font-bold text-text-dark">{post.title}</h3>
               </Link>
-              <p className="mb-2 line-clamp-2 text-[13px] text-text-grey">{post.body}</p>
-              {photoKey && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={getPublicMediaUrl(photoKey)} alt="" className="mb-2 h-32 w-full rounded-md object-cover" />
+              {post.postType === "POLL" ? (
+                <PollBlock
+                  postId={post.id}
+                  options={post.pollOptions}
+                  myOptionId={post.pollVotes?.[0]?.optionId}
+                  isAuthenticated={isAuthenticated}
+                />
+              ) : (
+                <>
+                  {post.body && <p className="mb-2 line-clamp-2 text-[13px] text-text-grey">{post.body}</p>}
+                  {photoKey && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={getPublicMediaUrl(photoKey)} alt="" className="mb-2 h-32 w-full rounded-md object-cover" />
+                  )}
+                </>
               )}
               <Link href={`/community/${post.id}`} className="text-xs font-bold text-text-grey no-underline hover:text-text-dark">
                 💬 {post.commentCount} comment{post.commentCount === 1 ? "" : "s"}

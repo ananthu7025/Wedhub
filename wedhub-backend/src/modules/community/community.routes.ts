@@ -11,6 +11,7 @@ import {
 import { Role } from "../../common/enums/roles.enum";
 import * as communityController from "./community.controller";
 import {
+  castPollVoteSchema,
   createCommentSchema,
   createPostSchema,
   listFeedQuerySchema,
@@ -67,6 +68,15 @@ communityRouter.post(
   authorize(Role.END_USER),
   communityVoteRateLimiter,
   asyncHandler(communityController.toggleVote),
+);
+
+communityRouter.post(
+  "/posts/:id/poll-vote",
+  authenticateMiddleware,
+  authorize(Role.END_USER),
+  communityVoteRateLimiter,
+  validateBody(castPollVoteSchema),
+  asyncHandler(communityController.castPollVote),
 );
 
 communityRouter.post(

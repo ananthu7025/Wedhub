@@ -10,16 +10,27 @@ const POST_PHOTO_INCLUDE = {
   media: { where: { status: "READY" as const }, orderBy: { createdAt: "asc" as const }, take: 1 },
 } as const;
 
+// Never selects email/firstName/lastName — a community author is shown
+// only as their anonymous communityUsername (see community-username.util.ts),
+// never their real identity, in every public-facing response (feed, post
+// detail, comments, admin queue).
 const AUTHOR_SELECT = {
   id: true,
-  email: true,
-  profile: { select: { firstName: true, lastName: true } },
+  profile: { select: { communityUsername: true } },
+} as const;
+
+// Options ordered by sortOrder (creation order) — vote counts are read
+// straight off the denormalized column (see community-poll.service.ts),
+// never aggregated from CommunityPollVote at read time.
+const POST_POLL_INCLUDE = {
+  pollOptions: { orderBy: { sortOrder: "asc" as const } },
 } as const;
 
 const POST_LIST_INCLUDE = {
   author: { select: AUTHOR_SELECT },
   tag: true,
   ...POST_PHOTO_INCLUDE,
+  ...POST_POLL_INCLUDE,
 } as const;
 
 export interface ListFeedFilter {
@@ -60,9 +71,13 @@ export function listFeed(filter: ListFeedFilter) {
       ...POST_LIST_INCLUDE,
       // Only ever selects the viewer's own vote row (at most one, unique
       // [postId, userId]) — lets the API tell the frontend "you upvoted
-      // this" without a separate per-post round trip.
+      // this" without a separate per-post round trip. Same shape for the
+      // viewer's own poll vote (also at most one row, unique [postId, userId]).
       ...(filter.viewerUserId
-        ? { votes: { where: { userId: filter.viewerUserId }, select: { id: true } } }
+        ? {
+            votes: { where: { userId: filter.viewerUserId }, select: { id: true } },
+            pollVotes: { where: { userId: filter.viewerUserId }, select: { optionId: true } },
+          }
         : {}),
     },
     orderBy,
@@ -79,18 +94,36 @@ export function findPostById(id: string, viewerUserId: string | undefined) {
     where: { id },
     include: {
       ...POST_LIST_INCLUDE,
-      ...(viewerUserId ? { votes: { where: { userId: viewerUserId }, select: { id: true } } } : {}),
+      ...(viewerUserId
+        ? {
+            votes: { where: { userId: viewerUserId }, select: { id: true } },
+            pollVotes: { where: { userId: viewerUserId }, select: { optionId: true } },
+          }
+        : {}),
     },
   });
 }
 
-export function createPost(data: { authorUserId: string; tagId: string | undefined; title: string; body: string }) {
+export function createPost(data: {
+  authorUserId: string;
+  tagId: string | undefined;
+  title: string;
+  body: string | undefined;
+  pollOptions: string[] | undefined;
+}) {
   return prisma.communityPost.create({
     data: {
       authorUserId: data.authorUserId,
       title: data.title,
-      body: data.body,
-      ...omitUndefined({ tagId: data.tagId }),
+      postType: data.pollOptions ? "POLL" : "TEXT",
+      ...omitUndefined({ tagId: data.tagId, body: data.body }),
+      ...(data.pollOptions
+        ? {
+            pollOptions: {
+              create: data.pollOptions.map((label, index) => ({ label, sortOrder: index })),
+            },
+          }
+        : {}),
     },
     include: POST_LIST_INCLUDE,
   });

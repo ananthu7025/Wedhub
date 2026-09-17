@@ -2,6 +2,7 @@
 
 import type { ApiResponse } from "./types";
 import type {
+  CastPollVoteResult,
   CommunityComment,
   CommunityMediaUploadRequest,
   CreateCommunityCommentBody,
@@ -32,6 +33,10 @@ export function createCommunityPost(body: CreateCommunityPostBody) {
 
 export function toggleCommunityVote(postId: string) {
   return call<ToggleVoteResult>(`/community/posts/${postId}/vote`, "POST");
+}
+
+export function castCommunityPollVote(postId: string, optionId: string) {
+  return call<CastPollVoteResult>(`/community/posts/${postId}/poll-vote`, "POST", { optionId });
 }
 
 export function createCommunityComment(postId: string, body: CreateCommunityCommentBody) {

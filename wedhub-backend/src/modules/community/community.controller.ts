@@ -4,8 +4,10 @@ import { AuthenticationError } from "../../common/errors";
 import * as communityPostService from "./community-post.service";
 import * as communityCommentService from "./community-comment.service";
 import * as communityVoteService from "./community-vote.service";
+import * as communityPollService from "./community-poll.service";
 import * as communityTagRepository from "./community-tag.repository";
 import type {
+  CastPollVoteBody,
   CreateCommentBody,
   CreatePostBody,
   ListFeedQuery,
@@ -58,6 +60,7 @@ export async function createPost(req: Request, res: Response): Promise<void> {
     title: body.title,
     body: body.body,
     mediaId: body.mediaId,
+    pollOptions: body.postType === "POLL" ? body.options : undefined,
   });
   res.status(201).json(successResponse(post));
 }
@@ -72,6 +75,13 @@ export async function reportPost(req: Request, res: Response): Promise<void> {
 export async function toggleVote(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
   const result = await communityVoteService.toggleVote(req.params.id as string, userId);
+  res.json(successResponse(result));
+}
+
+export async function castPollVote(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const body = req.body as CastPollVoteBody;
+  const result = await communityPollService.castPollVote(req.params.id as string, body.optionId, userId);
   res.json(successResponse(result));
 }
 

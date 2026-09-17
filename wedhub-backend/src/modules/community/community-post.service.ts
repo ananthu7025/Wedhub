@@ -4,6 +4,7 @@ import * as communityPostRepository from "./community-post.repository";
 import * as communityTagRepository from "./community-tag.repository";
 import * as communityReportRepository from "./community-report.repository";
 import { communityMediaService } from "../community-media";
+import { getOrCreateCommunityUsername } from "./community-username.util";
 
 // A HIDDEN post is never returned to a normal reader — only FLAGGED/VISIBLE
 // are publicly listed, mirroring Review's status gating (public reads only
@@ -37,7 +38,13 @@ export async function getPost(id: string, viewerUserId: string | undefined) {
 
 export async function createPost(
   authorUserId: string,
-  input: { tagId: string | undefined; title: string; body: string; mediaId: string | undefined },
+  input: {
+    tagId: string | undefined;
+    title: string;
+    body: string | undefined;
+    mediaId: string | undefined;
+    pollOptions: string[] | undefined;
+  },
 ) {
   if (input.tagId) {
     const tag = await communityTagRepository.findTagById(input.tagId);
@@ -46,11 +53,18 @@ export async function createPost(
     }
   }
 
+  // Assigns the poster's anonymous handle on their first-ever community
+  // write (idempotent past that point) — done before creating the post so
+  // the very first response already carries a real handle, not a
+  // still-null communityUsername the frontend would need to special-case.
+  await getOrCreateCommunityUsername(authorUserId);
+
   const post = await communityPostRepository.createPost({
     authorUserId,
     tagId: input.tagId,
     title: input.title,
     body: input.body,
+    pollOptions: input.pollOptions,
   });
 
   if (input.mediaId) {
