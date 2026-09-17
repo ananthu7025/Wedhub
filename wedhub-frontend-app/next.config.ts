@@ -15,8 +15,9 @@ import type { NextConfig } from "next";
 //   - images.unsplash.com — placeholder imagery, still referenced (e.g.
 //     app/(auth)/login/page.tsx) and already an allowed images.remotePatterns
 //     origin below.
-//   - pub-7116e74b9a3d44a1ab03594911f56ad8.r2.dev — the real R2 public
-//     media bucket, same origin already allowed in images.remotePatterns.
+//   - image.itsmykalyanam.com — the real R2 public media bucket's custom
+//     domain (itsmykalyanam-prod), same origin already allowed in
+//     images.remotePatterns.
 //   - accounts.google.com — Google Identity Services (GIS), loaded via
 //     <script src="https://accounts.google.com/gsi/client"> for the
 //     "Sign in with Google" button (GoogleSignInButton.tsx). GIS renders
@@ -64,7 +65,7 @@ const cspDirectives = [
     ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://accounts.google.com/gsi/client https://www.googletagmanager.com"
     : "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://accounts.google.com/gsi/client https://www.googletagmanager.com",
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
-  "img-src 'self' blob: data: https://images.unsplash.com https://pub-7116e74b9a3d44a1ab03594911f56ad8.r2.dev",
+  "img-src 'self' blob: data: https://images.unsplash.com https://image.itsmykalyanam.com",
   "font-src 'self' data:",
   "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://www.googletagmanager.com",
   "frame-src https://checkout.razorpay.com https://api.razorpay.com https://accounts.google.com",
@@ -86,9 +87,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "pub-7116e74b9a3d44a1ab03594911f56ad8.r2.dev",
-        // Real R2 public media bucket — see wedhub-backend/.env's
-        // R2_PUBLIC_BASE_URL and lib/media/url.ts's getPublicMediaUrl().
+        hostname: "image.itsmykalyanam.com",
+        // Real R2 public media bucket's custom domain — see
+        // wedhub-backend/.env's R2_PUBLIC_BASE_URL and lib/media/url.ts's
+        // getPublicMediaUrl().
       },
     ],
     // Every R2-hosted media object is a fresh randomUUID()-derived key,
