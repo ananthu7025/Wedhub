@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { successResponse } from "../../common/utils/api-response.util";
 import { AuthenticationError } from "../../common/errors";
 import * as usersService from "./users.service";
-import type { UpdateProfileBody, UpsertWeddingProfileBody } from "./users.schema";
+import type { SubmitProfileSetupBody, UpdateProfileBody, UpsertWeddingProfileBody } from "./users.schema";
 
 function requireUserId(req: Request): string {
   if (!req.user) {
@@ -59,6 +59,37 @@ export async function deleteWeddingProfile(req: Request, res: Response): Promise
   const userId = requireUserId(req);
   await usersService.deleteOwnWeddingProfile(userId);
   res.json(successResponse({ deleted: true }));
+}
+
+export async function submitProfileSetup(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const body = req.body as SubmitProfileSetupBody;
+  const weddingProfile = await usersService.submitProfileSetup(userId, {
+    cityId: body.cityId,
+    guestCount: body.guestCount,
+    weddingStyle: body.weddingStyle,
+    partnerName: body.partnerName,
+    notes: body.notes,
+    eventDates: body.eventDates.map((eventDate) => ({
+      functionType: eventDate.functionType,
+      otherLabel: eventDate.otherLabel,
+      date: eventDate.date,
+      time: eventDate.time,
+      guestCount: eventDate.guestCount,
+    })),
+    categoryPreferences: body.categoryPreferences.map((pref) => ({
+      categoryId: pref.categoryId,
+      budgetMin: pref.budgetMin,
+      budgetMax: pref.budgetMax,
+    })),
+  });
+  res.json(successResponse({ weddingProfile }));
+}
+
+export async function getProfileSetup(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const weddingProfile = await usersService.getOwnProfileSetup(userId);
+  res.json(successResponse({ weddingProfile }));
 }
 
 export async function deactivateMe(req: Request, res: Response): Promise<void> {

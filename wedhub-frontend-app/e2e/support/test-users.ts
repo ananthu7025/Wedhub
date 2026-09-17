@@ -14,7 +14,11 @@ const API_URL = process.env.API_URL ?? "http://localhost:4000";
 // PGHOST/PGPORT/PGUSER/PGDATABASE/PGPASSWORD (standard psql/libpq env vars)
 // to point this whole suite at a different Postgres — e.g. a remote test
 // server's DB when no local Docker stack is available.
-const PG_HOST = process.env.PGHOST ?? "localhost";
+// 127.0.0.1, not "localhost": on this project's Windows dev machines, Node/
+// libpq can resolve "localhost" to the IPv6 loopback (::1) first, where
+// nothing is listening even though Docker's port mapping is reachable over
+// IPv4 — same fix applied to wedhub-backend/.env's DATABASE_URL.
+const PG_HOST = process.env.PGHOST ?? "127.0.0.1";
 const PG_PORT = process.env.PGPORT ?? "5433";
 const PG_USER = process.env.PGUSER ?? "wedhub";
 const PG_DATABASE = process.env.PGDATABASE ?? "wedhub_dev";
@@ -71,6 +75,18 @@ export async function createAdminUser(email: string, password: string): Promise<
  */
 export function deleteTestUser(email: string): void {
   runPsql(`DELETE FROM users WHERE email = '${email}';`);
+}
+
+/**
+ * Directly stamps email_verified_at via psql — substitutes for actually
+ * clicking the emailed verification link, which no e2e test can do (real
+ * mail delivery isn't part of this suite). Same "substitute for a step with
+ * no scriptable UI" pattern as approveVendor()/activateVendorPaymentAccountForTest
+ * below. Needed since requireVerifiedMiddleware (2026-09-16) now gates
+ * POST /vendors and PUT /users/me/wedding-profile behind a verified email.
+ */
+export function verifyTestUserEmail(email: string): void {
+  runPsql(`UPDATE users SET email_verified_at = now() WHERE email = '${email}';`);
 }
 
 /**

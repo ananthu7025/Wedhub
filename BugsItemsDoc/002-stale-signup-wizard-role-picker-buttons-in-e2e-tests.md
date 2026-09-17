@@ -2,7 +2,7 @@
 
 **Found:** 2026-09-15, while writing/running phase-12-vendor-onboarding.spec.ts
 **Severity:** Low — test-suite staleness, not a product bug
-**Status:** Open, not fixed (out of scope for this task — flagging only)
+**Status:** Fixed 2026-09-16, while touching phase-01-auth.spec.ts for an unrelated task (email verification gate work) — per this doc's own note below ("should be corrected the next time that file is touched"). Both stale `"I'm a vendor"`/`"I'm planning a wedding"` clicks replaced with direct `/signup` and `/signup?type=vendor` navigation, matching phase-12's already-correct pattern.
 
 ## Summary
 

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ApiResponse, PaginationMeta } from "./types";
-import type { FeaturedMediaItem } from "./vendors.types";
+import type { Category, FeaturedMediaItem, Location, LocationType } from "./vendors.types";
 
 /**
  * Client-side call through the generic proxy (app/api/[...path]/route.ts) —
@@ -23,4 +23,24 @@ export async function listFeaturedGalleryMediaClient(params: {
     credentials: "include",
   });
   return (await response.json()) as ApiResponse<FeaturedMediaItem[], PaginationMeta>;
+}
+
+/**
+ * Client-side counterparts to lib/api/catalog.ts's listCategories/
+ * listLocations — that file is server-only (apiFetch imports next/headers),
+ * so any Client Component wizard (couple profile-setup, vendor onboarding)
+ * needing these lists at interaction time (not just initial server render)
+ * must use these instead. Same lesson as messaging-client.ts's
+ * listConversationMessagesClient — this bug class is invisible to
+ * `tsc --noEmit` and only shows up as a real Next.js build error at runtime.
+ */
+export async function listCategoriesClient(): Promise<ApiResponse<Category[]>> {
+  const response = await fetch("/api/categories");
+  return (await response.json()) as ApiResponse<Category[]>;
+}
+
+export async function listLocationsClient(type?: LocationType): Promise<ApiResponse<Location[]>> {
+  const query = type ? `?type=${type}` : "";
+  const response = await fetch(`/api/locations${query}`);
+  return (await response.json()) as ApiResponse<Location[]>;
 }
