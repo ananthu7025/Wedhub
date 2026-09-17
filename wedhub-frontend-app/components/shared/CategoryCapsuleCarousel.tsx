@@ -4,6 +4,7 @@ import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { FeaturedCategory } from "@/lib/api/vendors.types";
+import { resolveCategorySeoSlug } from "@/lib/seo/category-slug-map";
 
 /**
  * Wedding category carousel — real, admin-curated data from
@@ -79,7 +80,7 @@ export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCa
           {categories.map((category) => (
             <Link
               key={category.id}
-              href={`/search?categoryId=${category.id}`}
+              href={`/category/${resolveCategorySeoSlug(category.slug)}`}
               className="group flex-shrink-0 w-[145px] sm:w-[165px] no-underline"
             >
             <div

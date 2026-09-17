@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Category } from "@/lib/api/vendors.types";
+import { resolveCategorySeoSlug } from "@/lib/seo/category-slug-map";
 
 const PASTEL_PALETTE = [
   { bg: "bg-[#eef2ff]", border: "border-[#dce4ff]", text: "text-indigo-900" },
@@ -34,7 +35,7 @@ export function CategoryCardGrid({ categories }: { categories: Category[] }) {
         return (
           <Link
             key={category.id}
-            href={`/search?categoryId=${category.id}`}
+            href={`/category/${resolveCategorySeoSlug(category.slug)}`}
             className={`group relative flex h-[130px] sm:h-[145px] items-center justify-between overflow-hidden rounded-2xl border ${theme.border} ${theme.bg} p-4 sm:p-5 text-inherit no-underline transition-all duration-300 hover:-translate-y-1 hover:shadow-lg`}
           >
             {/* Left Content */}

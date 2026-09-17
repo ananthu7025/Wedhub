@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Category, Location, SearchSort } from "@/lib/api/vendors.types";
+import { resolveCategorySeoSlug } from "@/lib/seo/category-slug-map";
 
 interface SearchFilterBarProps {
   categories: Category[];
@@ -69,6 +70,44 @@ export function SearchFilterBar({
     setOpenDropdown(null);
   }
 
+  // Category/city selection navigates to the canonical SEO landing page
+  // (/category/<seoSlug>, /category/<seoSlug>/<citySlug>, or /city/<citySlug>)
+  // instead of staying on /search?categoryId=...&cityId=... (task item #4:
+  // "prefer /wedding-photographers/kochi over an ugly query-only URL").
+  // Secondary filters already in the URL (budget/verified/sort/etc.) are
+  // preserved as query params on the new path so the visitor's other
+  // choices aren't lost mid-navigation.
+  function navigateToSeoOrSearch(nextCategory: Category | undefined, nextCity: Location | undefined) {
+    setOpenDropdown(null);
+
+    if (!nextCategory && !nextCity) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("categoryId");
+      next.delete("cityId");
+      next.delete("page");
+      router.push(`/search?${next.toString()}`);
+      return;
+    }
+
+    const secondaryParams = new URLSearchParams(searchParams.toString());
+    secondaryParams.delete("categoryId");
+    secondaryParams.delete("cityId");
+    secondaryParams.delete("page");
+    const secondaryQuery = secondaryParams.toString();
+    const suffix = secondaryQuery ? `?${secondaryQuery}` : "";
+
+    let path: string;
+    if (nextCategory && nextCity) {
+      path = `/category/${resolveCategorySeoSlug(nextCategory.slug)}/${nextCity.slug}`;
+    } else if (nextCategory) {
+      path = `/category/${resolveCategorySeoSlug(nextCategory.slug)}`;
+    } else {
+      path = `/city/${nextCity!.slug}`;
+    }
+
+    router.push(`${path}${suffix}`);
+  }
+
   function toggleDropdown(name: string) {
     setOpenDropdown((prev) => (prev === name ? null : name));
   }
@@ -115,7 +154,7 @@ export function SearchFilterBar({
                 </div>
                 <button
                   type="button"
-                  onClick={() => updateQuery({ categoryId: undefined })}
+                  onClick={() => navigateToSeoOrSearch(undefined, currentCity)}
                   className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
                     !currentCategory ? "bg-gray-100 font-bold text-gray-900" : "text-gray-700 hover:bg-gray-50"
                   }`}
@@ -126,7 +165,7 @@ export function SearchFilterBar({
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => updateQuery({ categoryId: cat.id })}
+                    onClick={() => navigateToSeoOrSearch(cat, currentCity)}
                     className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
                       currentCategory?.id === cat.id
                         ? "bg-[#fff1f2] font-bold text-[#e00b41]"
@@ -172,7 +211,7 @@ export function SearchFilterBar({
                 </div>
                 <button
                   type="button"
-                  onClick={() => updateQuery({ cityId: undefined })}
+                  onClick={() => navigateToSeoOrSearch(currentCategory, undefined)}
                   className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
                     !currentCity ? "bg-gray-100 font-bold text-gray-900" : "text-gray-700 hover:bg-gray-50"
                   }`}
@@ -183,7 +222,7 @@ export function SearchFilterBar({
                   <button
                     key={city.id}
                     type="button"
-                    onClick={() => updateQuery({ cityId: city.id })}
+                    onClick={() => navigateToSeoOrSearch(currentCategory, city)}
                     className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
                       currentCity?.id === city.id
                         ? "bg-[#fff1f2] font-bold text-[#e00b41]"

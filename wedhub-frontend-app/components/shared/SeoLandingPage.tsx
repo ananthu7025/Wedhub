@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { PublicTopbar } from "@/components/shared/PublicTopbar";
+import { PublicFooter } from "@/components/shared/PublicFooter";
 import { VendorCard } from "@/components/shared/VendorCard";
 import { JsonLd } from "@/components/shared/JsonLd";
 import { ViewCategoryTracker } from "@/components/shared/ViewCategoryTracker";
-import { searchVendors } from "@/lib/api/catalog";
+import { listCategories, listLocations, searchVendors } from "@/lib/api/catalog";
 import type { SeoPageData } from "@/lib/api/vendors.types";
 import { getOptionalSession } from "@/lib/auth/dal";
 import { breadcrumbListJsonLd, vendorItemListJsonLd, type BreadcrumbItem } from "@/lib/seo/json-ld";
+import { resolveCategorySeoSlug } from "@/lib/seo/category-slug-map";
+
+// How many "Related Searches" links to show per group (task item #10/#17) —
+// kept small and genuinely useful rather than an exhaustive cross-product
+// of every category/city combination.
+const RELATED_LINKS_PER_GROUP = 4;
 
 // Shared render for all three SEO landing page types (Arch Phase 17):
 // /category/[categorySlug], /category/[categorySlug]/[citySlug],
@@ -16,7 +23,7 @@ import { breadcrumbListJsonLd, vendorItemListJsonLd, type BreadcrumbItem } from 
 // so results are always the same real inventory a visitor would get by
 // filtering search manually.
 export async function SeoLandingPage({ seo }: { seo: SeoPageData }) {
-  const [{ data: vendors, meta }, session] = await Promise.all([
+  const [{ data: vendors, meta }, session, { data: allCategories }, { data: allCities }] = await Promise.all([
     searchVendors({
       categoryId: seo.category?.id,
       cityId: seo.city?.id,
@@ -25,6 +32,8 @@ export async function SeoLandingPage({ seo }: { seo: SeoPageData }) {
       limit: 24,
     }),
     getOptionalSession(),
+    listCategories(),
+    listLocations("CITY"),
   ]);
 
   const searchHref = `/search?${new URLSearchParams({
@@ -32,11 +41,27 @@ export async function SeoLandingPage({ seo }: { seo: SeoPageData }) {
     ...(seo.city ? { cityId: seo.city.id } : {}),
   }).toString()}`;
 
+  const categorySeoSlug = seo.category ? resolveCategorySeoSlug(seo.category.slug) : null;
+
   const breadcrumbItems: BreadcrumbItem[] = [
     { name: "Home", path: "/" },
-    ...(seo.category ? [{ name: seo.category.name, path: `/category/${seo.category.slug}` }] : []),
+    ...(seo.category && categorySeoSlug ? [{ name: seo.category.name, path: `/category/${categorySeoSlug}` }] : []),
     ...(seo.city ? [{ name: seo.city.name, path: `/city/${seo.city.slug}` }] : []),
   ];
+
+  // Related Searches (task item #10/#17): crawlable internal links to
+  // (a) this same category in a few other real cities, and (b) a few other
+  // real categories in this same city — real catalog data, not invented
+  // combinations. Excludes the current page itself from both lists.
+  const relatedInOtherCities =
+    seo.category && seo.city
+      ? allCities.filter((c) => c.id !== seo.city!.id).slice(0, RELATED_LINKS_PER_GROUP)
+      : [];
+  const relatedOtherCategories =
+    seo.category && seo.city
+      ? allCategories.filter((c) => c.id !== seo.category!.id).slice(0, RELATED_LINKS_PER_GROUP)
+      : [];
+  const hasRelatedSearches = relatedInOtherCities.length > 0 || relatedOtherCategories.length > 0;
 
   return (
     <>
@@ -104,7 +129,35 @@ export async function SeoLandingPage({ seo }: { seo: SeoPageData }) {
             ))}
           </div>
         )}
+
+        {hasRelatedSearches && (
+          <div className="mt-10 border-t border-border pt-6">
+            <h2 className="mb-3 text-base font-bold text-text-dark">Related Searches</h2>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              {relatedInOtherCities.map((city) => (
+                <Link
+                  key={`city-${city.id}`}
+                  href={`/category/${categorySeoSlug}/${city.slug}`}
+                  className="text-brand-primary no-underline hover:underline"
+                >
+                  {seo.category!.name} in {city.name}
+                </Link>
+              ))}
+              {relatedOtherCategories.map((category) => (
+                <Link
+                  key={`category-${category.id}`}
+                  href={`/category/${resolveCategorySeoSlug(category.slug)}/${seo.city!.slug}`}
+                  className="text-brand-primary no-underline hover:underline"
+                >
+                  {category.name} in {seo.city!.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      <PublicFooter />
     </>
   );
 }

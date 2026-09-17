@@ -1,5 +1,6 @@
 import { NotFoundError, ValidationError } from "../../common/errors";
 import * as seoRepository from "./seo.repository";
+import { toSeoCategorySlug } from "./category-seo-slugs";
 import type { CreateSeoOverrideBody, UpdateSeoOverrideBody } from "./seo.schema";
 
 // product.md §44: "Avoid creating thin pages automatically. Only index
@@ -51,9 +52,18 @@ function templateDescription(categoryName: string | null, cityName: string | nul
 // segments at the same route level, and 14+ files already link to
 // /vendors/[slug]). /category and /city are the equivalent, non-colliding
 // routes actually implemented on the frontend.
+//
+// categorySlug here is the real Category.slug (e.g.
+// "photography-videography") — it's translated to its marketing SEO slug
+// (e.g. "wedding-photographers") via toSeoCategorySlug() so the canonical/
+// sitemap URL a real visitor and Google see is the human-friendly one, not
+// the raw database slug. The frontend route (still literally named
+// [categorySlug] in the App Router) accepts and resolves this SEO slug —
+// see wedhub-frontend-app/lib/seo/category-slug-map.ts.
 function canonicalPath(categorySlug: string | null, citySlug: string | null): string {
-  if (categorySlug && citySlug) return `/category/${categorySlug}/${citySlug}`;
-  if (categorySlug) return `/category/${categorySlug}`;
+  const seoCategorySlug = categorySlug ? toSeoCategorySlug(categorySlug) : null;
+  if (seoCategorySlug && citySlug) return `/category/${seoCategorySlug}/${citySlug}`;
+  if (seoCategorySlug) return `/category/${seoCategorySlug}`;
   return `/city/${citySlug}`;
 }
 

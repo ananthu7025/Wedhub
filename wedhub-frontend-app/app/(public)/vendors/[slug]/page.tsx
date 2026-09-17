@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/Badge";
 import { getOptionalSession } from "@/lib/auth/dal";
 import { listMyShortlistedVendorIds } from "@/lib/api/shortlists";
 import { breadcrumbListJsonLd, vendorLocalBusinessJsonLd } from "@/lib/seo/json-ld";
+import { resolveCategorySeoSlug } from "@/lib/seo/category-slug-map";
 
 interface VendorPageProps {
   params: Promise<{ slug: string }>;
@@ -127,7 +128,9 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
 
   const breadcrumbItems = [
     { name: "Home", path: "/" },
-    ...(primaryCategory ? [{ name: primaryCategory.name, path: `/category/${primaryCategory.slug}` }] : []),
+    ...(primaryCategory
+      ? [{ name: primaryCategory.name, path: `/category/${resolveCategorySeoSlug(primaryCategory.slug)}` }]
+      : []),
     ...(vendor.city ? [{ name: vendor.city.name, path: `/city/${vendor.city.slug}` }] : []),
     { name: vendor.businessName, path: `/vendors/${vendor.slug}` },
   ];
