@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Category, Location, SearchSort } from "@/lib/api/vendors.types";
 import { resolveCategorySeoSlug } from "@/lib/seo/category-slug-map";
+import { NearMeLink } from "@/components/shared/NearMeLink";
 
 interface SearchFilterBarProps {
   categories: Category[];
@@ -235,6 +236,12 @@ export function SearchFilterBar({
               </div>
             )}
           </div>
+
+          {/* Near Me — matches "photographers near me"-style intent to the
+              nearest real Kerala district via browser geolocation (consent
+              required), landing on the same SEO page a manual district
+              pick would reach. */}
+          <NearMeLink categorySeoSlug={currentCategory ? resolveCategorySeoSlug(currentCategory.slug) : undefined} />
 
           {/* Budget Popover */}
           <div className="relative inline-block text-left">

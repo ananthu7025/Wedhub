@@ -29,20 +29,27 @@ export interface SeoPageData {
 // template ("%s | itsmyKalyanam") already appends it to every page's
 // <title>, so including it here would double it up (e.g.
 // "Best Photography | itsmyKalyanam | itsmyKalyanam").
+//
+// "in Kerala" is added ONLY on the category-only page (no city) — that's
+// the one case where the page gives no location signal at all otherwise
+// (this platform is Kerala-only — prisma/seed.ts, confirmed with the user
+// 2026-09-06). The category+city case already names the real city, so
+// appending "Kerala" there too would be redundant keyword-stuffing
+// (product.md §44 / architecture explicitly warns against this).
 function templateTitle(categoryName: string | null, cityName: string | null): string {
   if (categoryName && cityName) return `Best ${categoryName} in ${cityName}`;
-  if (categoryName) return `Best ${categoryName}`;
+  if (categoryName) return `Best ${categoryName} in Kerala`;
   return `Wedding Vendors in ${cityName}`;
 }
 
 function templateH1(categoryName: string | null, cityName: string | null): string {
   if (categoryName && cityName) return `${categoryName} in ${cityName}`;
-  if (categoryName) return categoryName as string;
+  if (categoryName) return `${categoryName} in Kerala`;
   return `Wedding Vendors in ${cityName}`;
 }
 
 function templateDescription(categoryName: string | null, cityName: string | null, vendorCount: number): string {
-  const subject = categoryName && cityName ? `${categoryName.toLowerCase()} in ${cityName}` : categoryName ? categoryName.toLowerCase() : `wedding vendors in ${cityName}`;
+  const subject = categoryName && cityName ? `${categoryName.toLowerCase()} in ${cityName}` : categoryName ? `${categoryName.toLowerCase()} in Kerala` : `wedding vendors in ${cityName}`;
   return `Browse ${vendorCount} verified ${subject} on itsmyKalyanam. Compare portfolios, pricing, and reviews to find the right fit for your wedding.`;
 }
 

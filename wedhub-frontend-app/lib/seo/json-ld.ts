@@ -31,6 +31,11 @@ export function breadcrumbListJsonLd(items: BreadcrumbItem[]) {
   };
 }
 
+// This platform currently operates Kerala-only (all 14 real districts
+// seeded — prisma/seed.ts, confirmed with the user 2026-09-06), so
+// areaServed/address here are real, not aspirational — standard local-SEO
+// signal for a business that legitimately serves one Indian state, not a
+// fabricated national/global claim.
 export function organizationJsonLd() {
   return {
     "@context": "https://schema.org",
@@ -38,6 +43,15 @@ export function organizationJsonLd() {
     name: BRAND_NAME,
     url: SITE_URL,
     logo: absoluteUrl("/icon.png"),
+    areaServed: {
+      "@type": "State",
+      name: "Kerala",
+    },
+    address: {
+      "@type": "PostalAddress",
+      addressRegion: "Kerala",
+      addressCountry: "IN",
+    },
   };
 }
 
