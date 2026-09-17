@@ -5,6 +5,7 @@ import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { PublicFooter } from "@/components/shared/PublicFooter";
 import { getOptionalSession } from "@/lib/auth/dal";
 import { listCommunityTags } from "@/lib/api/community";
+import { ComposerBar } from "./ComposerBar";
 import { CommunityFeed, CommunityFeedSkeleton } from "./CommunityFeed";
 
 export const metadata: Metadata = {
@@ -17,58 +18,49 @@ interface CommunityPageProps {
 
 export default async function CommunityPage({ searchParams }: CommunityPageProps) {
   const { tag, sort: sortParam } = await searchParams;
-  const sort: "hot" | "new" = sortParam === "new" ? "new" : "hot";
+  // "Latest" is the mockup's only sort pill — chronological (sort=new) is
+  // the feed's default; "hot" (vote-ranked) stays reachable via ?sort=hot
+  // for a future top/trending pill without a schema/query change.
+  const sort: "hot" | "new" = sortParam === "hot" ? "hot" : "new";
 
   const [{ data: tags }, session] = await Promise.all([listCommunityTags(), getOptionalSession()]);
+  const questionsTagId = tags.find((t) => t.slug === "questions")?.id;
 
   return (
     <>
       <PublicTopbar activeHref="/community" />
       <div className="mx-auto max-w-[720px] px-10 py-7 max-[900px]:px-4">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        {/* Hero banner — matches the approved mockup's soft-pink community banner. */}
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-crimson-10 bg-gradient-to-r from-crimson-10 via-white to-crimson-10 px-6 py-5">
           <div>
-            <h1 className="text-2xl font-bold">Community</h1>
-            <p className="text-sm text-text-grey">Real questions and stories from couples planning their wedding</p>
+            <span className="mb-1 inline-block text-[11px] font-bold uppercase tracking-wide text-brand-primary">Community</span>
+            <h1 className="mb-1 text-xl font-bold text-text-dark">Real People. Real Weddings.</h1>
+            <p className="text-[13px] text-text-grey">
+              Ask questions, share experiences, get advice and be part of a community that celebrates every kalyanam.
+            </p>
           </div>
-          {session !== null && (
-            <Link
-              href="/community/new"
-              className="rounded-md bg-brand-primary px-4 py-2.5 text-[13px] font-bold text-white no-underline shadow-[0_4px_12px_rgba(224,11,65,0.18)] hover:bg-brand-primary-hover"
-            >
-              + New post
-            </Link>
-          )}
+          <span className="text-3xl" aria-hidden>
+            💍
+          </span>
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-2">
-          {(["hot", "new"] as const).map((option) => (
-            <Link
-              key={option}
-              href={`/community?sort=${option}${tag ? `&tag=${tag}` : ""}`}
-              className={`rounded-full px-4 py-2 text-[13px] font-bold no-underline ${
-                sort === option ? "bg-jet-black-90 text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
-              }`}
-            >
-              {option === "hot" ? "Hot" : "New"}
-            </Link>
-          ))}
-        </div>
+        <ComposerBar isAuthenticated={session !== null} questionsTagId={questionsTagId} />
 
         <div className="mb-5.5 flex flex-wrap gap-2">
           <Link
             href={`/community?sort=${sort}`}
             className={`rounded-full px-3.5 py-1.5 text-xs font-bold no-underline ${
-              !tag ? "bg-crimson-10 text-crimson-70" : "border border-border bg-white text-text-body hover:bg-surface-input"
+              !tag ? "bg-brand-primary text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
             }`}
           >
-            All topics
+            Latest
           </Link>
           {tags.map((t) => (
             <Link
               key={t.id}
               href={`/community?sort=${sort}&tag=${t.slug}`}
               className={`rounded-full px-3.5 py-1.5 text-xs font-bold no-underline ${
-                tag === t.slug ? "bg-crimson-10 text-crimson-70" : "border border-border bg-white text-text-body hover:bg-surface-input"
+                tag === t.slug ? "bg-brand-primary text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
               }`}
             >
               {t.name}

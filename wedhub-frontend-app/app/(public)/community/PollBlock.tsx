@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { castCommunityPollVote } from "@/lib/api/community-client";
 import type { CommunityPollOption } from "@/lib/api/community.types";
@@ -21,6 +22,7 @@ export function PollBlock({
   myOptionId: string | undefined;
   isAuthenticated: boolean;
 }) {
+  const router = useRouter();
   const [options, setOptions] = useState(initialOptions);
   const [myOptionId, setMyOptionId] = useState(initialMyOptionId);
   const [pending, setPending] = useState(false);
@@ -28,7 +30,11 @@ export function PollBlock({
   const total = options.reduce((sum, o) => sum + o.voteCount, 0);
 
   async function handleVote(optionId: string) {
-    if (!isAuthenticated || pending || optionId === myOptionId) return;
+    if (!isAuthenticated) {
+      router.push("/login?next=/community");
+      return;
+    }
+    if (pending || optionId === myOptionId) return;
     const previousOptions = options;
     const previousMyOptionId = myOptionId;
 
@@ -69,7 +75,7 @@ export function PollBlock({
             key={option.id}
             type="button"
             onClick={() => handleVote(option.id)}
-            disabled={!isAuthenticated || pending}
+            disabled={isAuthenticated && pending}
             title={isAuthenticated ? undefined : "Log in to vote"}
             className={`relative overflow-hidden rounded-md border px-3 py-2 text-left text-[13px] font-semibold disabled:cursor-not-allowed ${
               selected ? "border-brand-primary" : "border-border"

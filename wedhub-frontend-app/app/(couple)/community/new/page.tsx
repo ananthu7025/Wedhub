@@ -11,13 +11,21 @@ export const metadata: Metadata = {
   title: "New Post",
 };
 
-export default async function NewCommunityPostPage() {
+interface NewCommunityPostPageProps {
+  searchParams: Promise<{ mode?: string; tag?: string }>;
+}
+
+export default async function NewCommunityPostPage({ searchParams }: NewCommunityPostPageProps) {
   const session = await getOptionalSession();
   if (session === null) {
     redirect("/login?next=/community/new");
   }
 
+  const { mode, tag } = await searchParams;
   const { data: tags } = await listCommunityTags();
+  const initialPostType = mode === "poll" ? "POLL" : "TEXT";
+  const initialTagId = tag ? tags.find((t) => t.slug === tag)?.id : undefined;
+  const openPhotoPicker = mode === "photo";
 
   return (
     <>
@@ -30,7 +38,12 @@ export default async function NewCommunityPostPage() {
         <p className="mb-6 text-sm text-text-grey">Ask a question or share something with other couples</p>
 
         <div className="rounded-xl border border-border bg-white p-6">
-          <NewPostForm tags={tags} />
+          <NewPostForm
+            tags={tags}
+            initialPostType={initialPostType}
+            initialTagId={initialTagId}
+            openPhotoPicker={openPhotoPicker}
+          />
         </div>
       </div>
       <PublicFooter />

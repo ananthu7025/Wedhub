@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { createCommunityComment, reportCommunityPost, toggleCommunityVote } from "@/lib/api/community-client";
@@ -40,16 +41,17 @@ function CommentComposer({
   onCancel?: () => void;
   autoFocus?: boolean;
 }) {
+  const router = useRouter();
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  if (!isAuthenticated) {
-    return <p className="text-[13px] text-text-grey">Log in to join the conversation.</p>;
-  }
-
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (!isAuthenticated) {
+      router.push("/login?next=/community");
+      return;
+    }
     if (!body.trim()) return;
     setSubmitting(true);
     setError("");
@@ -69,16 +71,20 @@ function CommentComposer({
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
+        onFocus={() => {
+          if (!isAuthenticated) router.push("/login?next=/community");
+        }}
         placeholder={parentId ? "Write a reply…" : "Add a comment…"}
         maxLength={2000}
         autoFocus={autoFocus}
+        readOnly={!isAuthenticated}
         className="min-h-[70px] w-full rounded-md border border-border px-3 py-2 text-sm"
       />
       {error && <p className="text-xs text-red">{error}</p>}
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={submitting || !body.trim()}
+          disabled={submitting || (isAuthenticated && !body.trim())}
           className="rounded-md bg-brand-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
         >
           {submitting ? "Posting…" : parentId ? "Reply" : "Comment"}
@@ -157,6 +163,7 @@ export function PostDetail({
   initialComments: CommunityComment[];
   isAuthenticated: boolean;
 }) {
+  const router = useRouter();
   const [vote, setVote] = useState({ voted: Boolean(post.votes?.length), voteCount: post.voteCount });
   const [comments, setComments] = useState(initialComments);
   const [reportState, setReportState] = useState<"idle" | "open" | "sent">("idle");
@@ -164,7 +171,10 @@ export function PostDetail({
   const [reportError, setReportError] = useState("");
 
   async function handleVote() {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      router.push("/login?next=/community");
+      return;
+    }
     const previous = vote;
     setVote({ voted: !previous.voted, voteCount: previous.voteCount + (previous.voted ? -1 : 1) });
     const result = await toggleCommunityVote(post.id);
@@ -173,6 +183,14 @@ export function PostDetail({
     } else {
       setVote(previous);
     }
+  }
+
+  function handleReportClick() {
+    if (!isAuthenticated) {
+      router.push("/login?next=/community");
+      return;
+    }
+    setReportState("open");
   }
 
   async function handleReport(event: React.FormEvent) {
@@ -222,16 +240,16 @@ export function PostDetail({
           <button
             type="button"
             onClick={handleVote}
-            disabled={!isAuthenticated}
             aria-pressed={vote.voted}
-            className={`flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-bold disabled:cursor-not-allowed ${
+            title={isAuthenticated ? "Like" : "Log in to like"}
+            className={`flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-bold ${
               vote.voted ? "border-brand-primary bg-brand-primary-soft text-brand-primary" : "border-border bg-white text-text-grey hover:bg-surface-input"
             }`}
           >
-            <span aria-hidden>▲</span> {vote.voteCount}
+            <span aria-hidden>{vote.voted ? "❤️" : "🤍"}</span> {vote.voteCount}
           </button>
-          {isAuthenticated && reportState === "idle" && (
-            <button type="button" onClick={() => setReportState("open")} className="text-xs font-bold text-text-grey hover:text-text-dark">
+          {reportState === "idle" && (
+            <button type="button" onClick={handleReportClick} className="text-xs font-bold text-text-grey hover:text-text-dark">
               Report
             </button>
           )}

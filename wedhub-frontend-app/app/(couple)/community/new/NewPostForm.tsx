@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createCommunityPost } from "@/lib/api/community-client";
 import { uploadCommunityPostPhoto } from "@/lib/media/upload";
 import { formatApiError } from "@/lib/utils/error";
@@ -11,18 +11,38 @@ const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_POLL_OPTIONS = 6;
 const MIN_POLL_OPTIONS = 2;
 
-export function NewPostForm({ tags }: { tags: CommunityTag[] }) {
+export function NewPostForm({
+  tags,
+  initialPostType = "TEXT",
+  initialTagId,
+  openPhotoPicker = false,
+}: {
+  tags: CommunityTag[];
+  initialPostType?: "TEXT" | "POLL";
+  initialTagId?: string;
+  openPhotoPicker?: boolean;
+}) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [postType, setPostType] = useState<"TEXT" | "POLL">("TEXT");
+  const [postType, setPostType] = useState<"TEXT" | "POLL">(initialPostType);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [pollOptions, setPollOptions] = useState(["", ""]);
-  const [tagId, setTagId] = useState("");
+  const [tagId, setTagId] = useState(initialTagId ?? "");
   const [photo, setPhoto] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "uploading" | "submitting" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Opens the file picker immediately when arriving via the feed's "Photo"
+  // composer button (?mode=photo) — a one-time effect keyed by the prop
+  // rather than firing on every render.
+  useEffect(() => {
+    if (openPhotoPicker) {
+      fileInputRef.current?.click();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handlePhotoSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
