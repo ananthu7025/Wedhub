@@ -5,7 +5,12 @@ import { authenticateMiddleware } from "../../common/middleware/authenticate.mid
 import { authorize } from "../../common/middleware/authorize.middleware";
 import { Role } from "../../common/enums/roles.enum";
 import * as leadController from "./lead.controller";
-import { createLeadNoteSchema, listLeadsQuerySchema, updateLeadStatusSchema } from "./lead.schema";
+import {
+  createLeadNoteSchema,
+  listLeadsQuerySchema,
+  listProfileViewersQuerySchema,
+  updateLeadStatusSchema,
+} from "./lead.schema";
 
 export const leadRouter = Router();
 
@@ -13,6 +18,13 @@ leadRouter.use(authenticateMiddleware);
 
 leadRouter.get("/", validateQuery(listLeadsQuerySchema), asyncHandler(leadController.listOwnLeads));
 leadRouter.get("/analytics", asyncHandler(leadController.getAnalytics));
+// Item 17 — mounted before "/:id" so "profile-viewers" isn't swallowed by
+// the :id param route.
+leadRouter.get(
+  "/profile-viewers",
+  validateQuery(listProfileViewersQuerySchema),
+  asyncHandler(leadController.listProfileViewers),
+);
 leadRouter.get("/:id", asyncHandler(leadController.getOwnLead));
 leadRouter.patch(
   "/:id/status",

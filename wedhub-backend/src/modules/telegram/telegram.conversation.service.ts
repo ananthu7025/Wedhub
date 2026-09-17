@@ -131,6 +131,7 @@ async function promptVendorMatches(data: EnquiryCollectedData): Promise<StepResu
       priceMax: undefined,
       verified: undefined,
       attributes: undefined,
+      maxAvgResponseTimeMs: undefined,
       page: 1,
       limit: 20,
     },

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ApiResponse, PaginationMeta } from "./types";
-import type { Category, FeaturedMediaItem, Location, LocationType } from "./vendors.types";
+import type { Category, FeaturedMediaItem, Location, LocationType, VendorSearchResult } from "./vendors.types";
 
 /**
  * Client-side call through the generic proxy (app/api/[...path]/route.ts) —
@@ -43,4 +43,30 @@ export async function listLocationsClient(type?: LocationType): Promise<ApiRespo
   const query = type ? `?type=${type}` : "";
   const response = await fetch(`/api/locations${query}`);
   return (await response.json()) as ApiResponse<Location[]>;
+}
+
+// Items 10/11 — lets a vendor search other vendors by business name to tag
+// as a story collaborator (StoriesBoard.tsx), at interaction time (not
+// initial server render), same reasoning as the two functions above.
+export async function searchVendorsClient(params: { keyword?: string; limit?: number }): Promise<ApiResponse<VendorSearchResult[]>> {
+  const query = new URLSearchParams();
+  if (params.keyword) query.set("keyword", params.keyword);
+  query.set("limit", String(params.limit ?? 10));
+  const response = await fetch(`/api/search/vendors?${query.toString()}`, { credentials: "include" });
+  return (await response.json()) as ApiResponse<VendorSearchResult[]>;
+}
+
+// Vendor contact-details gating: GET /vendors/:slug never includes real
+// phone/email/website (backend redacts them — see vendor.controller.ts's
+// redactContactFields). This is the only way to fetch the real values,
+// called from VendorContactLinks.tsx only after the couple explicitly
+// clicks "Reveal contact details" — the backend requires a logged-in
+// session and logs the reveal as a contact_details_revealed analytics
+// event, which is what a vendor's "Recent profile viewers" list shows
+// distinctly from a plain view.
+export async function revealVendorContactClient(
+  slug: string,
+): Promise<ApiResponse<{ phone: string | null; email: string | null; website: string | null }>> {
+  const response = await fetch(`/api/vendors/${slug}/reveal-contact`, { method: "POST", credentials: "include" });
+  return (await response.json()) as ApiResponse<{ phone: string | null; email: string | null; website: string | null }>;
 }

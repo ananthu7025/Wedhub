@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { getOptionalSession } from "@/lib/auth/dal";
 import { listCategories } from "@/lib/api/catalog";
 import { getMe, getMyUnreadNotificationCount } from "@/lib/api/account";
@@ -58,25 +59,103 @@ const coupleBottomNavLinks = [
   },
 ];
 
+// Item 2: unread counts + the account initials are the only things in this
+// header that need a fresh, uncached per-request round trip to the backend
+// (three of them, previously all awaited inline before ANY of the topbar
+// could render, on every single page navigation — listCategories() below
+// is already cached hourly and costs nothing, so it was never the actual
+// bottleneck). Isolated into its own async component so <Suspense> can let
+// the rest of the header (logo, nav links) paint immediately while these
+// stream in a beat later, instead of the whole page waiting on them.
+async function AccountQuickActions() {
+  const [unreadCount, unreadMessageCount, me] = await Promise.all([
+    getMyUnreadNotificationCount()
+      .then((r) => r.data.count)
+      .catch(() => 0),
+    getMyUnreadMessageCount()
+      .then((r) => r.data.count)
+      .catch(() => 0),
+    getMe()
+      .then((r) => r.data)
+      .catch(() => null),
+  ]);
+  const initials = me ? initialsFrom(me.profile?.firstName ?? null, me.profile?.lastName ?? null, me.email) : "";
+
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      <Link
+        href="/inbox"
+        aria-label={unreadMessageCount > 0 ? `Inbox (${unreadMessageCount} unread)` : "Inbox"}
+        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 shrink-0"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+          <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
+        </svg>
+        {unreadMessageCount > 0 && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#e00b41]" />}
+      </Link>
+      <Link
+        href="/notifications"
+        aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
+        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 shrink-0"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 01-3.46 0" />
+        </svg>
+        {unreadCount > 0 && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#e00b41]" />}
+      </Link>
+      <Link
+        href="/account"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-white font-bold text-[#e00b41] shadow-sm ring-2 ring-white/40 transition-transform hover:scale-105 shrink-0"
+        title="My Account"
+      >
+        {initials}
+      </Link>
+    </div>
+  );
+}
+
+// Fallback shown while AccountQuickActions streams in — same layout/sizing
+// so nothing shifts when it resolves, just no unread dots yet and a blank
+// avatar instead of initials.
+function AccountQuickActionsFallback() {
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      <Link
+        href="/inbox"
+        aria-label="Inbox"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 shrink-0"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+          <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
+        </svg>
+      </Link>
+      <Link
+        href="/notifications"
+        aria-label="Notifications"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 shrink-0"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 01-3.46 0" />
+        </svg>
+      </Link>
+      <Link
+        href="/account"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/70 shadow-sm ring-2 ring-white/40 transition-transform hover:scale-105 shrink-0"
+        title="My Account"
+      />
+    </div>
+  );
+}
+
 export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopbarProps) {
   // listCategories() is revalidated hourly (see catalog.ts), so fetching it
   // unconditionally here costs logged-in couples nothing extra in practice
   // — simpler than threading a conditional through Promise.all's tuple type.
   const [session, { data: categories }] = await Promise.all([getOptionalSession(), listCategories()]);
-  const [unreadCount, unreadMessageCount, me] = session
-    ? await Promise.all([
-        getMyUnreadNotificationCount()
-          .then((r) => r.data.count)
-          .catch(() => 0),
-        getMyUnreadMessageCount()
-          .then((r) => r.data.count)
-          .catch(() => 0),
-        getMe()
-          .then((r) => r.data)
-          .catch(() => null),
-      ])
-    : [0, 0, null];
-  const initials = me ? initialsFrom(me.profile?.firstName ?? null, me.profile?.lastName ?? null, me.email) : "";
 
   const isBrand = variant === "brand";
   // "Venues" nav link needs a real Category.id, not a hardcoded string —
@@ -199,37 +278,9 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
           )}
 
           {session ? (
-            <div className="flex items-center gap-2 shrink-0">
-              <Link
-                href="/inbox"
-                aria-label={unreadMessageCount > 0 ? `Inbox (${unreadMessageCount} unread)` : "Inbox"}
-                className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 shrink-0"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 12h-6l-2 3h-4l-2-3H2" />
-                  <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
-                </svg>
-                {unreadMessageCount > 0 && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#e00b41]" />}
-              </Link>
-              <Link
-                href="/notifications"
-                aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
-                className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 shrink-0"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 01-3.46 0" />
-                </svg>
-                {unreadCount > 0 && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#e00b41]" />}
-              </Link>
-              <Link
-                href="/account"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white font-bold text-[#e00b41] shadow-sm ring-2 ring-white/40 transition-transform hover:scale-105 shrink-0"
-                title="My Account"
-              >
-                {initials}
-              </Link>
-            </div>
+            <Suspense fallback={<AccountQuickActionsFallback />}>
+              <AccountQuickActions />
+            </Suspense>
           ) : (
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <Link

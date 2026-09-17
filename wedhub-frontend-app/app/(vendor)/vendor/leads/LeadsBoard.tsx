@@ -6,17 +6,18 @@ import { Badge } from "@/components/ui/Badge";
 import { getMyLeadClient, updateMyLeadStatus, addMyLeadNote } from "@/lib/api/leads-client";
 import type { LeadStatus } from "@/lib/api/account.types";
 import { ALL_LEAD_STATUSES, TERMINAL_LEAD_STATUSES } from "@/lib/api/leads.types";
-import type { LeadNote, VendorLead, VendorLeadDetail } from "@/lib/api/leads.types";
+import type { LeadNote, ProfileViewer, VendorLead, VendorLeadDetail } from "@/lib/api/leads.types";
 import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Master-detail leads board (Frontend Arch Phase 6), matching
  * wedhub-frontend/vendor/leads.html's .leads-layout. Deliberately omits the
- * mockup's "Set follow-up reminder" and live "Conversation" chat thread —
- * neither has any backing data on the real backend (Lead has no reminder
- * field; LeadNote is a flat, vendor-only note, not a two-way message with
- * the couple — see lib/api/leads.types.ts). Internal notes ARE real and
- * wired up below.
+ * mockup's "Set follow-up reminder" — Lead has no reminder field. The live
+ * "Conversation" thread IS real (item 5/19): enquiry submission now opens an
+ * inbox conversation (see enquiry.service.ts::startConversationsForEnquiry),
+ * so a lead with one links straight into /vendor/inbox rather than
+ * duplicating a chat UI here. LeadNote remains a separate, flat,
+ * vendor-only internal note — not visible to the couple — wired up below.
  */
 
 function statusBadgeVariant(status: LeadStatus): "blue" | "amber" | "green" | "grey" | "crimson" | "red" {
@@ -62,7 +63,17 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
+// Item 17: a viewer's display name, same "first+last or fall back to
+// email" convention used across the app (e.g. messaging.service.ts's
+// displayName). No account means an anonymous visit, which never appears
+// here (see ProfileViewer's own comment).
+function displayViewerName(viewer: ProfileViewer): string {
+  if (!viewer.user) return "A couple";
+  const name = [viewer.user.profile?.firstName, viewer.user.profile?.lastName].filter(Boolean).join(" ");
+  return name || viewer.user.email;
+}
+
+export function LeadsBoard({ initialLeads, profileViewers }: { initialLeads: VendorLead[]; profileViewers: ProfileViewer[] }) {
   const [leads, setLeads] = useState(initialLeads);
   const [selectedId, setSelectedId] = useState<string | null>(initialLeads[0]?.id ?? null);
   const [detail, setDetail] = useState<VendorLeadDetail | null>(null);
@@ -244,18 +255,28 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
                       </p>
                     </div>
 
-                    <Link
-                      href={`/vendor/invoices/new?leadId=${detail.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-brand-primary bg-brand-primary-soft px-3 py-1.5 text-xs font-semibold text-brand-primary transition hover:bg-brand-primary hover:text-white"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="16" y1="13" x2="8" y2="13" />
-                        <line x1="16" y1="17" x2="8" y2="17" />
-                      </svg>
-                      Create Invoice
-                    </Link>
+                    <div className="flex flex-shrink-0 gap-2">
+                      {detail.conversations[0] && (
+                        <Link
+                          href={`/vendor/inbox?conversation=${detail.conversations[0].id}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-primary-hover"
+                        >
+                          Message couple
+                        </Link>
+                      )}
+                      <Link
+                        href={`/vendor/invoices/new?leadId=${detail.id}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-brand-primary bg-brand-primary-soft px-3 py-1.5 text-xs font-semibold text-brand-primary transition hover:bg-brand-primary hover:text-white"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                          <line x1="16" y1="13" x2="8" y2="13" />
+                          <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                        Create Invoice
+                      </Link>
+                    </div>
                   </div>
 
                   <div className="mb-4.5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-[13px]">
@@ -390,6 +411,38 @@ export function LeadsBoard({ initialLeads }: { initialLeads: VendorLead[] }) {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Item 17: lower-priority, read-only signal — never editable, no
+          status pipeline, deliberately kept visually distinct from real
+          Leads above (see ProfileViewer's own comment). A viewer who
+          clicked "Reveal contact details" (contact info is gated behind
+          that button on the public profile) is called out distinctly —
+          it's a stronger signal than a plain view. */}
+      {profileViewers.length > 0 && (
+        <div className="mt-5 rounded-xl border border-border bg-white p-4 sm:p-6">
+          <h3 className="mb-1 text-base font-bold">Recent profile viewers</h3>
+          <p className="mb-3.5 text-xs text-text-grey">
+            Couples who viewed your profile — a softer signal than a real enquiry, shown here for visibility only.
+          </p>
+          <div className="flex flex-col divide-y divide-neutral-grey-20">
+            {profileViewers.map((viewer) => (
+              <div key={viewer.userId} className="flex items-center justify-between py-2.5 text-[13px]">
+                <span className="font-semibold text-text-dark">
+                  {displayViewerName(viewer)}
+                  {viewer.kind === "REVEALED_CONTACT" ? (
+                    <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                      viewed your contact details
+                    </span>
+                  ) : (
+                    <span className="ml-2 text-[11px] font-normal text-text-grey">viewed your profile</span>
+                  )}
+                </span>
+                <span className="text-xs text-text-grey">{formatRelativeTime(viewer.createdAt)}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

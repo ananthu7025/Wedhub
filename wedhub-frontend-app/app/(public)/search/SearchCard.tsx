@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { VendorHeartButton } from "@/components/shared/VendorHeartButton";
 import { trackEvent } from "@/lib/analytics/track";
+import { formatResponseTimeBucket } from "@/lib/utils/response-time";
 import type { VerificationLevel } from "@/lib/api/vendors.types";
 
 interface SearchCardProps {
@@ -22,6 +23,11 @@ interface SearchCardProps {
   cityName?: string;
   /** Whether this vendor is already in the viewer's shortlist — seeds the heart button so it reflects real state instead of always starting unfavorited. */
   initialFavorited?: boolean;
+  /** Item 16: compare-selection checkbox, rendered as a sibling overlay (same pattern as ShortlistGrid.tsx) since the whole card is a <Link>. Omitted entirely when not provided, e.g. on pages that don't offer comparison. */
+  compareSelected?: boolean;
+  onToggleCompare?: () => void;
+  /** Item 4: null when the vendor has no responded leads yet — nothing rendered in that case. */
+  avgResponseTimeMs?: number | null;
 }
 
 export function SearchCard({
@@ -38,7 +44,11 @@ export function SearchCard({
   viewMode = "grid",
   cityName,
   initialFavorited,
+  compareSelected,
+  onToggleCompare,
+  avgResponseTimeMs,
 }: SearchCardProps) {
+  const responseTimeLabel = formatResponseTimeBucket(avgResponseTimeMs ?? null);
   const impressionFired = useRef(false);
 
   useEffect(() => {
@@ -61,6 +71,25 @@ export function SearchCard({
   }
 
   const isVerified = verificationLevel && verificationLevel !== "UNVERIFIED";
+
+  const compareCheckbox = onToggleCompare ? (
+    <label
+      className="absolute bottom-3 left-3.5 z-10 flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-1 text-[11px] font-semibold shadow-sm"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <input
+        type="checkbox"
+        checked={!!compareSelected}
+        onChange={(e) => {
+          e.stopPropagation();
+          onToggleCompare();
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className="accent-[#e00b41]"
+      />
+      Compare
+    </label>
+  ) : null;
 
   // List View Layout
   if (viewMode === "list") {
@@ -104,6 +133,8 @@ export function SearchCard({
             initialFavorited={initialFavorited}
             className="absolute top-3 right-3 z-10"
           />
+
+          {compareCheckbox}
         </div>
 
         {/* Content Details */}
@@ -139,6 +170,16 @@ export function SearchCard({
             {shortDescription && (
               <p className="mt-3 text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed">
                 {shortDescription}
+              </p>
+            )}
+
+            {responseTimeLabel && (
+              <p className="mt-2 flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+                {responseTimeLabel}
               </p>
             )}
           </div>
@@ -209,6 +250,8 @@ export function SearchCard({
           initialFavorited={initialFavorited}
           className="absolute top-3 right-3 z-10"
         />
+
+        {compareCheckbox}
       </div>
 
       {/* Card Body */}
@@ -229,6 +272,10 @@ export function SearchCard({
             <p className="mt-1 line-clamp-2 text-xs text-gray-500 leading-relaxed">
               {shortDescription}
             </p>
+          )}
+
+          {responseTimeLabel && (
+            <p className="mt-1.5 truncate text-[10px] font-medium text-emerald-700">{responseTimeLabel}</p>
           )}
         </div>
 

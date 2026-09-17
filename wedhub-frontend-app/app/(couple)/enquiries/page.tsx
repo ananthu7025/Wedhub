@@ -141,6 +141,14 @@ export default async function EnquiriesPage({ searchParams }: EnquiriesPageProps
                         Write a review
                       </Link>
                     )}
+                    {lead.conversations[0] && (
+                      <Link
+                        href={`/inbox?conversation=${lead.conversations[0].id}`}
+                        className="rounded-md bg-brand-primary px-3.5 py-2 text-[13px] font-bold text-white no-underline hover:bg-brand-primary-hover"
+                      >
+                        Message vendor
+                      </Link>
+                    )}
                     <Link
                       href={`/vendors/${lead.vendor.slug}`}
                       className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px] font-bold text-text-dark no-underline hover:bg-surface-input"

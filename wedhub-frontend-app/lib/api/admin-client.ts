@@ -58,6 +58,7 @@ import type {
   AdminUpdateSeoOverrideBody,
   AdminUpdateVendorBody,
   AdminUpdateWeddingStoryBody,
+  AdminUpdateWeddingStoryStatusBody,
   AdminVendorInvitation,
   AdminVendorScalarOnly,
   AdminVendorUploadConfirmResult,
@@ -324,6 +325,15 @@ export function updateAdminWeddingStory(id: string, body: AdminUpdateWeddingStor
 
 export function deleteAdminWeddingStory(id: string) {
   return call<{ deleted: true }>(`/admin/wedding-stories/${id}`, "DELETE");
+}
+
+// Items 10/11 — moderation queue for vendor-submitted stories.
+export function listPendingAdminWeddingStories() {
+  return call<AdminWeddingStory[]>("/admin/wedding-stories/pending", "GET");
+}
+
+export function updateAdminWeddingStoryStatus(id: string, body: AdminUpdateWeddingStoryStatusBody) {
+  return call<AdminWeddingStory>(`/admin/wedding-stories/${id}/status`, "PATCH", body);
 }
 
 export function createAdminFeaturedMedia(body: AdminCreateFeaturedMediaBody) {

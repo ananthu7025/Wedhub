@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { NotFoundError, ValidationError } from "../../common/errors";
+import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { hashPassword } from "../../common/utils/password.util";
 import * as categoriesRepository from "../categories/categories.repository";
 import { matchProfileToVendors } from "../matching";
@@ -15,6 +15,20 @@ export async function getOwnProfile(userId: string) {
 }
 
 export async function updateOwnProfile(userId: string, input: ProfileUpdateInput) {
+  // phone lives on User, not UserProfile — write it separately (and only
+  // when the caller actually sent the field) so an unrelated name/bio edit
+  // never touches it, and so a duplicate-phone conflict is reported
+  // clearly rather than surfacing as part of the UserProfile upsert.
+  if (input.phone !== undefined) {
+    if (input.phone !== null) {
+      const existing = await usersRepository.findUserByPhone(input.phone);
+      if (existing && existing.id !== userId) {
+        throw new ConflictError("An account with this phone number already exists");
+      }
+    }
+    await usersRepository.updateUserPhone(userId, input.phone);
+  }
+
   return usersRepository.upsertProfile(userId, {
     firstName: input.firstName,
     lastName: input.lastName,

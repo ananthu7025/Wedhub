@@ -102,6 +102,14 @@ const MY_ENQUIRY_INCLUDE = {
   leads: {
     include: {
       vendor: { select: { id: true, businessName: true, slug: true } },
+      // Item 5: lets the couple's enquiry list link straight into the
+      // matching inbox thread when Phase 1's enquiry->conversation wiring
+      // created one (see enquiry.service.ts::startConversationsForEnquiry).
+      // At most one row in practice — a Conversation's (coupleUserId,
+      // vendorId) uniqueness means a given lead can only ever be the
+      // provenance link for the one conversation between this couple and
+      // this vendor.
+      conversations: { select: { id: true }, take: 1 },
     },
     orderBy: { createdAt: "asc" as const },
   },

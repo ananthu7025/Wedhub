@@ -49,7 +49,7 @@ export function ShortlistGrid({ items }: { items: ShortlistItem[] }) {
   }
 
   function goToCompare() {
-    router.push(`/compare?vendorIds=${Array.from(selected).join(",")}`);
+    router.push(`/compare?vendorIds=${Array.from(selected).join(",")}&from=shortlist`);
   }
 
   if (visibleItems.length === 0) {

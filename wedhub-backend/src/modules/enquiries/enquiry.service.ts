@@ -1,9 +1,12 @@
 import { createHash } from "node:crypto";
 import { ConflictError, NotFoundError } from "../../common/errors";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
+import { logger } from "../../config/logger";
+import * as messagingService from "../messaging/messaging.service";
 import * as notificationService from "../notifications/notification.service";
 import * as searchRepository from "../search/search.repository";
 import { rankVendors } from "../search/vendor-ranking.service";
+import * as usersService from "../users/users.service";
 import * as enquiryRepository from "./enquiry.repository";
 
 const DEDUPE_WINDOW_MINUTES = 15;
@@ -53,10 +56,105 @@ async function assertNotDuplicate(dedupeKey: string): Promise<void> {
   }
 }
 
+// Item 20: a logged-in customer gets exactly one open enquiry per vendor,
+// ever — not the old 15-minute rolling dedupe, which only ever blocked
+// accidental double-submits and let the same pair re-enquire indefinitely
+// afterward (or the instant any contact detail changed, since the dedupe
+// hash is salted with email/phone/weddingDate). A Conversation's
+// (coupleUserId, vendorId) uniqueness already models "have we ever
+// connected" with no expiry, so it's reused as the source of truth here
+// rather than adding a parallel constraint on Lead (which has no direct
+// userId to key on). Anonymous enquiries have no coupleUserId to check
+// against and keep the existing time-windowed dedupe unchanged.
+async function assertNoExistingConversation(userId: string | undefined, vendorId: string): Promise<void> {
+  if (!userId) return;
+  const existingConversationId = await messagingService.findExistingConversation(userId, vendorId);
+  if (existingConversationId) {
+    throw new ConflictError("You've already enquired with this vendor — continue the conversation in your inbox instead.", {
+      conversationId: existingConversationId,
+    });
+  }
+}
+
 async function assertVendorIsPublic(vendorId: string): Promise<void> {
   const vendor = await enquiryRepository.findVendorStatus(vendorId);
   if (!vendor || vendor.status !== "APPROVED") {
     throw new NotFoundError("Vendor not found");
+  }
+}
+
+// Opens (or reuses — upsertConversation is idempotent) an in-app
+// conversation per lead so the customer's enquiry becomes a real,
+// followable-up thread rather than a one-shot form submission (items
+// 3/5/19). Mirrors matching.service.ts's matchOneCategory: only fires for
+// logged-in customers (an anonymous Enquiry has no userId to start a
+// conversation as) and vendors with a claimed owner account; a messaging
+// failure is logged and swallowed, never rolling back the already-committed
+// Lead/Enquiry, since this is a side effect of a successful submission, not
+// part of what makes the submission itself succeed.
+async function startConversationsForEnquiry(
+  userId: string | undefined,
+  enquiry: { id: string; contactName: string; message: string | null },
+  leads: { id: string; vendorId: string }[],
+): Promise<void> {
+  if (!userId) return;
+
+  const messageBody =
+    enquiry.message?.trim() ||
+    `Hi, I'm ${enquiry.contactName} and I just sent an enquiry — looking forward to hearing from you!`;
+
+  await Promise.all(
+    leads.map(async (lead) => {
+      try {
+        const conversation = await messagingService.startConversation(userId, {
+          vendorId: lead.vendorId,
+          leadId: lead.id,
+          enquiryId: enquiry.id,
+        });
+        await messagingService.sendMessage(conversation.id, userId, messageBody);
+      } catch (err) {
+        logger.error(
+          { err, userId, vendorId: lead.vendorId, leadId: lead.id },
+          "Failed to open inbox conversation for enquiry (lead/notification still created)",
+        );
+      }
+    }),
+  );
+}
+
+// Item 18 (write-back half): when a customer fills wedding date/budget/
+// guest count into the enquiry form ad hoc — most likely because they
+// skipped the profile-setup wizard entirely — persist whatever they typed
+// onto their own WeddingProfile, so it's remembered for future enquiries
+// and for search filtering, exactly like the wizard would have saved it.
+// Only fills in fields that are currently unset: a customer who already
+// completed the wizard has deliberately-set values there, and this enquiry
+// form's fields are a much rougher, single-vendor-specific signal that
+// should never silently overwrite them. Logged-in customers only — there's
+// no WeddingProfile to write to for an anonymous submission. Never allowed
+// to fail the enquiry itself: this is a side effect of a successful
+// submission, the same contract as queueNotificationsAndAnalytics and
+// startConversationsForEnquiry above.
+async function writeBackToWeddingProfile(
+  userId: string | undefined,
+  input: { weddingDate: Date | undefined; budget: number | undefined; guestCount: number | undefined },
+): Promise<void> {
+  if (!userId) return;
+  if (input.weddingDate === undefined && input.budget === undefined && input.guestCount === undefined) return;
+
+  try {
+    const user = await usersService.getOwnProfile(userId);
+    const existing = user.weddingProfile;
+    await usersService.upsertOwnWeddingProfile(userId, {
+      weddingDate: existing?.weddingDate == null && input.weddingDate ? input.weddingDate.toISOString() : undefined,
+      guestCount: existing?.guestCount == null ? input.guestCount : undefined,
+      estimatedBudget: existing?.estimatedBudget == null ? input.budget : undefined,
+      weddingStyle: undefined,
+      partnerName: undefined,
+      notes: undefined,
+    });
+  } catch (err) {
+    logger.error({ err, userId }, "Failed to write enquiry answers back to WeddingProfile (enquiry still created)");
   }
 }
 
@@ -114,6 +212,7 @@ export async function createSingleVendorEnquiry(
   },
 ) {
   await assertVendorIsPublic(input.vendorId);
+  await assertNoExistingConversation(userId, input.vendorId);
 
   const dedupeKey = buildDedupeKey({
     userId,
@@ -146,6 +245,12 @@ export async function createSingleVendorEnquiry(
   );
 
   await queueNotificationsAndAnalytics(enquiry.id, leads, userId, "SINGLE_VENDOR");
+  await startConversationsForEnquiry(userId, enquiry, leads);
+  await writeBackToWeddingProfile(userId, {
+    weddingDate: input.weddingDate,
+    budget: input.budget,
+    guestCount: input.guestCount,
+  });
 
   return { enquiry, leads };
 }
@@ -170,6 +275,7 @@ export async function createMultiVendorEnquiry(
       priceMax: undefined,
       verified: undefined,
       attributes: undefined,
+      maxAvgResponseTimeMs: undefined,
       page: 1,
       limit: 20,
     },
@@ -225,6 +331,7 @@ export async function createMultiVendorEnquiry(
   );
 
   await queueNotificationsAndAnalytics(enquiry.id, leads, userId, "MULTI_VENDOR");
+  await startConversationsForEnquiry(userId, enquiry, leads);
 
   return { enquiry, leads };
 }

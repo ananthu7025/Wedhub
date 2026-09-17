@@ -37,6 +37,7 @@ export async function updateMe(req: Request, res: Response): Promise<void> {
     avatarUrl: body.avatarUrl,
     bio: body.bio,
     preferences: body.preferences,
+    phone: body.phone,
   });
   res.json(successResponse({ profile }));
 }

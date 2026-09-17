@@ -74,29 +74,38 @@ test.describe("Vendor onboarding — full journey through real UI", () => {
     await page.getByRole("button", { name: "Complete your profile" }).click();
     await expect(page).toHaveURL(/\/vendor\/profile/);
 
-    // Basic Info
-    await page.getByLabel("Short description").fill("Full-journey Playwright test studio.");
+    // Item 12/21: general fields now live on /vendor/settings as
+    // independent collapsible sections (Profile is category-attributes-only).
+    await page.goto("/vendor/settings");
+
+    await page.getByLabel("Tagline / short description").fill("Full-journey Playwright test studio.");
     await page.getByLabel("Full description").fill(
       "A complete description written by the phase-12 onboarding spec, long enough to satisfy the backend's submission requirements.",
     );
-    await page.getByRole("button", { name: "Next" }).click(); // -> Category
+    await page.getByRole("button", { name: "Save changes" }).first().click();
+    await expect(page.getByText("Saved ✓").first()).toBeVisible({ timeout: 10_000 });
 
-    // Category — pick a category with a real, known required-attribute set
-    // (see prisma/seed.ts's CATEGORY_ATTRIBUTES) so the Category Details tab
-    // below is a genuine, non-trivial fill, not an empty no-op.
+    // Category & location — pick a category with a real, known
+    // required-attribute set (see prisma/seed.ts's CATEGORY_ATTRIBUTES) so
+    // the Profile page's attributes below are a genuine, non-trivial fill.
+    await page.getByText("Category & location").click(); // open the <details> section
     await page.getByLabel("Category").selectOption({ label: "Photography & Videography" });
-    await page.getByRole("button", { name: "Next" }).click(); // -> Location
-
     await page.getByLabel("City").selectOption({ label: "Thiruvananthapuram" });
-    await page.getByRole("button", { name: "Next" }).click(); // -> Pricing & Policies
+    await page.getByRole("button", { name: "Save changes" }).nth(1).click();
+    await expect(page.getByText("Saved ✓").nth(1)).toBeVisible({ timeout: 10_000 });
 
+    await page.getByText("Pricing & policies").click();
     await page.getByLabel("Starting price").fill("50000");
-    await page.getByRole("button", { name: "Next" }).click(); // -> Contact & Social
+    await page.getByRole("button", { name: "Save changes" }).nth(2).click();
+    await expect(page.getByText("Saved ✓").nth(2)).toBeVisible({ timeout: 10_000 });
 
+    await page.getByText("Contact & social").click();
     await page.getByLabel("Phone").fill("+919876543210");
-    await page.getByRole("button", { name: "Next" }).click(); // -> More Details
+    await page.getByRole("button", { name: "Save changes" }).nth(3).click();
+    await expect(page.getByText("Saved ✓").nth(3)).toBeVisible({ timeout: 10_000 });
 
-    await page.getByRole("button", { name: "Next" }).click(); // -> Category Details (last tab)
+    // Now fill the category-specific questions on Profile.
+    await page.goto("/vendor/profile");
 
     // Fill every required attribute for Photography & Videography for real —
     // the gap phase-05 leaves (it tabs past this section without filling it).
@@ -113,15 +122,17 @@ test.describe("Vendor onboarding — full journey through real UI", () => {
     await page.getByLabel("Number of Photographers / Videographers in Standard Team").selectOption({ label: "2-3 Crew" });
     await page.getByRole("checkbox", { name: "Full-frame Dual Card Slot Cameras" }).check();
 
-    // canSubmitForReview (ProfileEditor.tsx) is keyed only on vendor.status
-    // (DRAFT/REJECTED), not on completeness — so the last tab's button reads
-    // "Submit for review" from the very first save on a brand-new vendor,
-    // never "Save changes" first. Clicking it here calls handleSave() then
-    // submitMyVendor() together; no package exists yet, so the backend's
-    // completeness gate blocks the submit half while the save half still
-    // persists everything filled in so far — confirmed by the profile
-    // completion checklist showing attribute/profile fields already checked
-    // off even though this submit attempt fails.
+    // Item 12/21: attribute values save from this page's own button now,
+    // and "Submit for review" moved to /vendor/settings (see
+    // SettingsBoard.tsx's SubmitForReviewSection) — it's keyed only on
+    // vendor.status (DRAFT/REJECTED), not on completeness, so it's visible
+    // from the very first visit on a brand-new vendor. No package exists
+    // yet, so the backend's completeness gate blocks the submit even
+    // though the attributes above already saved successfully.
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Saved ✓")).toBeVisible({ timeout: 10_000 });
+
+    await page.goto("/vendor/settings");
     await page.getByRole("button", { name: "Submit for review" }).click();
     await expect(page.getByText(/not ready for submission|missing required/i)).toBeVisible({ timeout: 10_000 });
 
@@ -133,10 +144,7 @@ test.describe("Vendor onboarding — full journey through real UI", () => {
     await page.getByRole("button", { name: "Save package" }).click();
     await expect(page.getByText("Full Journey Package")).toBeVisible();
 
-    await page.goto("/vendor/profile");
-    for (let i = 0; i < 6; i++) {
-      await page.getByRole("button", { name: "Next" }).click();
-    }
+    await page.goto("/vendor/settings");
     await page.getByRole("button", { name: "Submit for review" }).click();
     await expect(page).toHaveURL(/\/vendor\/dashboard$/, { timeout: 10_000 });
     await expect(page.getByText(/PENDING VERIFICATION|PENDING_VERIFICATION|PENDING APPROVAL|PENDING_APPROVAL/i)).toBeVisible();
@@ -225,19 +233,16 @@ test.describe("Vendor onboarding — edge cases", () => {
       const detailJson = (await detailResponse.json()) as { data: { id: string } };
       vendorId = detailJson.data.id;
 
-      // No profile/category/city/contact ever filled — go straight to the
-      // last tab and try to submit.
-      await page.goto("/vendor/profile");
-      for (let i = 0; i < 6; i++) {
-        await page.getByRole("button", { name: "Next" }).click();
-      }
-      // canSubmitForReview is true for a brand-new DRAFT vendor, so the
-      // button reads "Submit for review" even though required fields are
-      // still empty — the backend's submitForReview is what actually
-      // enforces this (vendor.completeness.ts's REQUIRED_FOR_SUBMISSION_LABELS).
+      // No profile/category/city/contact ever filled — "Submit for review"
+      // lives on /vendor/settings now (item 12/21's restructure), visible
+      // from the first visit since canSubmitForReview is true for any
+      // brand-new DRAFT vendor regardless of completeness — the backend's
+      // submitForReview is what actually enforces this
+      // (vendor.completeness.ts's REQUIRED_FOR_SUBMISSION_LABELS).
+      await page.goto("/vendor/settings");
       await page.getByRole("button", { name: "Submit for review" }).click();
       await expect(page.getByText(/not ready for submission|missing required/i)).toBeVisible({ timeout: 10_000 });
-      await expect(page).toHaveURL(/\/vendor\/profile/); // never navigated away — submit was rejected
+      await expect(page).toHaveURL(/\/vendor\/settings/); // never navigated away — submit was rejected
     } finally {
       if (vendorId) deleteVendorById(vendorId);
       deleteTestUser(email);

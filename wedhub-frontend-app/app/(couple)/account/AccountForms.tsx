@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { deactivateAccount, deleteAccount, updateWeddingProfile } from "@/lib/api/account-client";
 import { updateMyProfile } from "@/lib/api/users-client";
-import { logout } from "@/lib/api/auth-client";
+import { logout, refreshSession } from "@/lib/api/auth-client";
 import { setNotificationPreference } from "@/lib/api/notification-preferences-client";
 import type { MeResponse } from "@/lib/api/account.types";
 import type { NotificationChannel, NotificationEventType, NotificationPreference } from "@/lib/api/notification-preferences.types";
@@ -40,11 +40,26 @@ export function WeddingDetailsForm({ me }: { me: MeResponse }) {
     }
 
     setSaving(true);
-    const result = await updateWeddingProfile({
+    const body = {
       weddingDate: parsedDate,
       partnerName: partnerName.trim() || undefined,
       guestCount: guestCount ? Number(guestCount) : undefined,
-    });
+    };
+    let result = await updateWeddingProfile(body);
+
+    // The access token can carry a stale emailVerified: false claim if the
+    // user verified their email in another tab/device since their last
+    // login/refresh (see require-verified.middleware.ts's staleness
+    // tradeoff comment). refreshSession() re-reads emailVerifiedAt from the
+    // database and re-mints the token — retry once before showing an error
+    // to an already-verified user. Mirrors VerifyEmailPendingPanel.tsx.
+    if (!result.success && result.error?.code === "EMAIL_NOT_VERIFIED") {
+      const refreshed = await refreshSession();
+      if (refreshed.success) {
+        result = await updateWeddingProfile(body);
+      }
+    }
+
     setSaving(false);
     if (result.success) {
       setSaved(true);
@@ -103,18 +118,25 @@ export function AccountDetailsForm({ me }: { me: MeResponse }) {
   const router = useRouter();
   const [firstName, setFirstName] = useState(me.profile?.firstName ?? "");
   const [lastName, setLastName] = useState(me.profile?.lastName ?? "");
+  const [phone, setPhone] = useState(me.phone ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone && trimmedPhone.length < 6) {
+      setError("Phone number must be at least 6 characters.");
+      return;
+    }
     setError(null);
     setSaving(true);
     setSaved(false);
     const result = await updateMyProfile({
       firstName: firstName.trim() || undefined,
       lastName: lastName.trim() || undefined,
+      phone: trimmedPhone || null,
     });
     setSaving(false);
     if (result.success) {
@@ -148,7 +170,15 @@ export function AccountDetailsForm({ me }: { me: MeResponse }) {
       </label>
       <label className="mb-3.5 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">Phone</span>
-        <input value={me.phone ?? "Not set"} disabled className="w-full rounded-md border border-border bg-surface-input px-3 py-2.5 text-sm text-text-grey" />
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          minLength={6}
+          maxLength={20}
+          placeholder="+91 98765 43210"
+          className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+        />
       </label>
       <div className="mb-4">
         <span className="mb-1.5 block font-bold text-[13px]">Email</span>

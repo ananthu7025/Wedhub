@@ -4,7 +4,7 @@ import { paginatedResponse, successResponse } from "../../common/utils/api-respo
 import { AuthenticationError } from "../../common/errors";
 import { getOwnedVendorOrThrow } from "../vendors/vendor.policy";
 import * as leadService from "./lead.service";
-import type { CreateLeadNoteBody, ListLeadsQuery, UpdateLeadStatusBody } from "./lead.schema";
+import type { CreateLeadNoteBody, ListLeadsQuery, ListProfileViewersQuery, UpdateLeadStatusBody } from "./lead.schema";
 
 function requireUserId(req: Request): string {
   if (!req.user) {
@@ -61,6 +61,22 @@ export async function getAnalytics(req: Request, res: Response): Promise<void> {
   const vendor = await getOwnedVendorOrThrow(userId);
   const analytics = await leadService.getAnalytics(vendor.id);
   res.json(successResponse(analytics));
+}
+
+// Item 17
+export async function listProfileViewers(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const vendor = await getOwnedVendorOrThrow(userId);
+  const query = req.validatedQuery as ListProfileViewersQuery;
+  const { rows, total } = await leadService.listProfileViewers(vendor.id, query.page, query.limit);
+  res.json(
+    paginatedResponse(rows, {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: Math.ceil(total / query.limit),
+    }),
+  );
 }
 
 export async function listAllLeadsAdmin(req: Request, res: Response): Promise<void> {

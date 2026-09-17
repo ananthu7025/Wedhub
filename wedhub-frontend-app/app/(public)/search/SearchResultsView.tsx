@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SearchControlsHeader } from "./SearchControlsHeader";
 import { SearchCard } from "./SearchCard";
 import { trackEvent } from "@/lib/analytics/track";
 import type { Category, Location, VendorSearchResult } from "@/lib/api/vendors.types";
+
+const MAX_COMPARE = 5;
 
 interface SearchResultsViewProps {
   vendors: VendorSearchResult[];
@@ -44,6 +46,32 @@ export function SearchResultsView({
   const favoritedSet = new Set(favoritedVendorIds);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Item 16: compare-from-search-results — not restricted to the
+  // shortlist. Category matching isn't checked here (VendorSearchResult
+  // carries no categoryId — see vendors.types.ts) since the backend already
+  // enforces "same primary category" and returns a clear error; selecting
+  // across categories surfaces that error as a popup instead of a page
+  // navigation, same principle ShortlistGrid.tsx already follows (trust the
+  // backend's rejection message rather than re-implementing the check).
+  const [compareSelected, setCompareSelected] = useState<Set<string>>(new Set());
+
+  function toggleCompare(vendorId: string) {
+    setCompareSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(vendorId)) {
+        next.delete(vendorId);
+      } else if (next.size < MAX_COMPARE) {
+        next.add(vendorId);
+      }
+      return next;
+    });
+  }
+
+  function goToCompare() {
+    router.push(`/compare?vendorIds=${Array.from(compareSelected).join(",")}&from=search`);
+  }
 
   // GA4 "search" event (Google's recommended-event name) — fires once per
   // rendered result set, i.e. once per real filter/keyword change, since
@@ -116,6 +144,24 @@ export function SearchResultsView({
         onToggleView={setViewMode}
       />
 
+      {/* Compare bar (item 16) */}
+      {vendors.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-5 py-3">
+          <span className="text-xs sm:text-sm text-gray-600">
+            <strong className="text-gray-900">{compareSelected.size}</strong> selected for comparison (2–5, same
+            category)
+          </span>
+          <button
+            type="button"
+            disabled={compareSelected.size < 2}
+            onClick={goToCompare}
+            className="rounded-full bg-[#e00b41] px-4 py-2 text-xs font-bold text-white shadow-xs disabled:opacity-40 hover:bg-[#c2185b]"
+          >
+            Compare selected
+          </button>
+        </div>
+      )}
+
       {/* Vendors List / Grid */}
       {vendors.length === 0 ? (
         <div className="my-12 flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-xs">
@@ -156,6 +202,9 @@ export function SearchResultsView({
               viewMode="list"
               cityName={selectedCity?.name}
               initialFavorited={favoritedSet.has(vendor.id)}
+              compareSelected={compareSelected.has(vendor.id)}
+              onToggleCompare={() => toggleCompare(vendor.id)}
+              avgResponseTimeMs={vendor.avgResponseTimeMs}
             />
           ))}
         </div>
@@ -177,6 +226,9 @@ export function SearchResultsView({
               viewMode="grid"
               cityName={selectedCity?.name}
               initialFavorited={favoritedSet.has(vendor.id)}
+              compareSelected={compareSelected.has(vendor.id)}
+              onToggleCompare={() => toggleCompare(vendor.id)}
+              avgResponseTimeMs={vendor.avgResponseTimeMs}
             />
           ))}
         </div>

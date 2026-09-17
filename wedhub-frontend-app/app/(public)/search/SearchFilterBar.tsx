@@ -12,6 +12,8 @@ interface SearchFilterBarProps {
   priceMin?: number;
   priceMax?: number;
   verified?: boolean;
+  /** Item 4: "replies within N hours" cutoff, whole hours. */
+  maxReplyHours?: number;
   sort?: SearchSort;
 }
 
@@ -23,6 +25,7 @@ export function SearchFilterBar({
   priceMin,
   priceMax,
   verified,
+  maxReplyHours,
   sort = "relevance",
 }: SearchFilterBarProps) {
   const router = useRouter();
@@ -299,6 +302,31 @@ export function SearchFilterBar({
             </svg>
             <span>Verified Only</span>
           </button>
+
+          {/* Item 4: coarse reply-speed filter — "within 24h" rather than an exact threshold */}
+          <button
+            type="button"
+            onClick={() => updateQuery({ maxReplyHours: maxReplyHours ? undefined : "24" })}
+            className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 transition-all whitespace-nowrap cursor-pointer ${
+              maxReplyHours
+                ? "border-[#e00b41] bg-[#fff1f2] font-semibold text-[#e00b41]"
+                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              className={maxReplyHours ? "text-[#e00b41]" : "text-gray-400"}
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            <span>Fast Replies</span>
+          </button>
         </div>
 
         {/* Right Sort Dropdown */}
@@ -316,6 +344,8 @@ export function SearchFilterBar({
                 ? "Price: High to Low"
                 : sort === "newest"
                 ? "Newest"
+                : sort === "fastest_reply"
+                ? "Fastest to Reply"
                 : "Recommended"}
             </span>
             <svg
@@ -338,6 +368,7 @@ export function SearchFilterBar({
                 { id: "price_low", label: "Price: Low to High" },
                 { id: "price_high", label: "Price: High to Low" },
                 { id: "newest", label: "Newest" },
+                { id: "fastest_reply", label: "Fastest to Reply" },
               ].map((opt) => (
                 <button
                   key={opt.id}

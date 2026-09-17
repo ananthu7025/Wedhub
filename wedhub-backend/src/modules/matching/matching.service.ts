@@ -64,6 +64,7 @@ async function matchOneCategory(
       priceMax: undefined,
       verified: undefined,
       attributes: undefined,
+      maxAvgResponseTimeMs: undefined,
       page: 1,
       limit: 20,
     },

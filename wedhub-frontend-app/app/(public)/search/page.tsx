@@ -33,6 +33,8 @@ interface SearchPageProps {
     priceMin?: string;
     priceMax?: string;
     verified?: string;
+    // Item 4: "replies within N hours" — coarse filter, whole hours.
+    maxReplyHours?: string;
     sort?: string;
     page?: string;
   }>;
@@ -59,6 +61,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const priceMin = typeof rawPriceMin === "number" && !isNaN(rawPriceMin) && rawPriceMin >= 0 ? rawPriceMin : undefined;
   const rawPriceMax = params.priceMax ? Number(params.priceMax) : undefined;
   const priceMax = typeof rawPriceMax === "number" && !isNaN(rawPriceMax) && rawPriceMax >= 0 ? rawPriceMax : undefined;
+  const rawMaxReplyHours = params.maxReplyHours ? Number(params.maxReplyHours) : undefined;
+  const maxReplyHours =
+    typeof rawMaxReplyHours === "number" && !isNaN(rawMaxReplyHours) && rawMaxReplyHours > 0 ? rawMaxReplyHours : undefined;
 
   const [{ data: vendors, meta }, { data: categories }, { data: cities }, session] = await Promise.all([
     searchVendors({
@@ -68,6 +73,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       priceMin,
       priceMax,
       verified: params.verified === "true" ? true : undefined,
+      maxReplyHours,
       sort: (params.sort as SearchSort) || undefined,
       page,
       limit: 20,
@@ -100,6 +106,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           priceMin={priceMin}
           priceMax={priceMax}
           verified={params.verified === "true"}
+          maxReplyHours={maxReplyHours}
           sort={(params.sort as SearchSort) || "relevance"}
         />
 

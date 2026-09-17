@@ -11,7 +11,10 @@ export const metadata: Metadata = {
 };
 
 interface ComparePageProps {
-  searchParams: Promise<{ vendorIds?: string }>;
+  // Item 16: comparison is no longer shortlist-only — `from` tells the page
+  // which back-link/nav context to show (shortlist vs. search results),
+  // defaulting to shortlist for any old/bookmarked link with no `from`.
+  searchParams: Promise<{ vendorIds?: string; from?: string }>;
 }
 
 function formatAttributeValue(value: string | number | boolean | string[] | null): string {
@@ -22,14 +25,16 @@ function formatAttributeValue(value: string | number | boolean | string[] | null
 }
 
 export default async function ComparePage({ searchParams }: ComparePageProps) {
-  const { vendorIds: vendorIdsParam } = await searchParams;
+  const { vendorIds: vendorIdsParam, from } = await searchParams;
   const vendorIds = vendorIdsParam ? vendorIdsParam.split(",").filter(Boolean) : [];
+  const backHref = from === "search" ? "/search" : "/shortlist";
+  const backLabel = from === "search" ? "← Back to search" : "← Back to shortlist";
 
   let errorMessage: string | null = null;
   let result: Awaited<ReturnType<typeof compareVendors>>["data"] | null = null;
 
   if (vendorIds.length < 2) {
-    errorMessage = "Select at least 2 vendors from your shortlist to compare.";
+    errorMessage = "Select at least 2 vendors to compare.";
   } else if (vendorIds.length > 5) {
     errorMessage = "You can compare up to 5 vendors at a time.";
   } else {
@@ -37,13 +42,18 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
       const response = await compareVendors(vendorIds);
       result = response.data;
     } catch (error) {
+      // Item 16: this is where the backend's "must share the same primary
+      // category" rejection (comparison.service.ts) actually surfaces —
+      // vendors picked from anywhere (search results, not just the
+      // shortlist) can now span categories, so this is a real, reachable
+      // error state rather than a defensive fallback.
       errorMessage = error instanceof ApiRequestError ? error.message : "Could not load comparison.";
     }
   }
 
   return (
     <>
-      <PublicTopbar activeHref="/shortlist" />
+      <PublicTopbar activeHref={backHref} />
       <div className="mx-auto max-w-[1200px] px-10 py-7 max-[900px]:px-4">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -54,8 +64,8 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
               </p>
             )}
           </div>
-          <Link href="/shortlist" className="rounded-md border border-border bg-white px-4 py-2.5 text-sm font-bold no-underline">
-            ← Back to shortlist
+          <Link href={backHref} className="rounded-md border border-border bg-white px-4 py-2.5 text-sm font-bold no-underline">
+            {backLabel}
           </Link>
         </div>
 
@@ -138,7 +148,7 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
         )}
       </div>
       <PublicFooter />
-      <CoupleBottomNav activeHref="/shortlist" />
+      <CoupleBottomNav activeHref={backHref} />
     </>
   );
 }

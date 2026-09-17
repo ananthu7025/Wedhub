@@ -138,6 +138,79 @@ export interface LocationSelf {
   isActive: boolean;
 }
 
+// ---- GET/POST/PATCH/DELETE /vendors/me/albums (items 10/11) ----
+export interface VendorAlbumSelf {
+  id: string;
+  vendorId: string;
+  name: string;
+  description: string | null;
+  coverMediaId: string | null;
+  visibility: "PUBLIC" | "PRIVATE";
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  media: MediaItem[];
+}
+
+export interface CreateAlbumBody {
+  name: string;
+  description?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
+}
+
+export interface UpdateAlbumBody {
+  name?: string;
+  description?: string;
+  coverMediaId?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
+  sortOrder?: number;
+}
+
+// ---- /vendors/me/wedding-stories (items 10/11) ----
+export type WeddingStoryStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type StoryCollaboratorStatus = "PENDING" | "CONFIRMED" | "DECLINED";
+
+export interface StoryCollaboratorSelf {
+  id: string;
+  weddingStoryId: string;
+  vendorId: string;
+  status: StoryCollaboratorStatus;
+  vendor: { id: string; businessName: string; slug: string };
+}
+
+export interface WeddingStorySelf {
+  id: string;
+  albumId: string;
+  coupleName: string;
+  location: string;
+  tag: string;
+  snippet: string;
+  isFeatured: boolean;
+  sortOrder: number;
+  submittedByVendorId: string | null;
+  status: WeddingStoryStatus;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  album: {
+    id: string;
+    name: string;
+    vendor: { id: string; businessName: string; slug: string; city?: string | null };
+    coverMedia: MediaItem | null;
+    media?: MediaItem[];
+  };
+  collaborators: StoryCollaboratorSelf[];
+}
+
+export interface SubmitWeddingStoryBody {
+  albumId: string;
+  coupleName: string;
+  location: string;
+  tag: string;
+  snippet: string;
+  collaboratorVendorIds?: string[];
+}
+
 export interface PackageSelf {
   id: string;
   vendorId: string;
@@ -204,12 +277,15 @@ export interface VendorSelf {
 export const EVENTS_COMPLETED_RANGES = ["Under 50", "50-100", "100-250", "250-500", "500+"] as const;
 
 // ---- PUT /vendors/me/profile ----
+// Nullable fields accept an explicit `null` to clear a previously-set value
+// (mirrors wedhub-backend's vendor.schema.ts) — `undefined`/omitted still
+// means "leave this field alone", the same as before.
 export interface UpsertProfileBody {
-  shortDescription?: string;
-  description?: string;
-  vendorType?: string;
+  shortDescription?: string | null;
+  description?: string | null;
+  vendorType?: string | null;
   tags?: string[];
-  address?: string;
+  address?: string | null;
   latitude?: number;
   longitude?: number;
   startingPrice?: number;
@@ -220,10 +296,10 @@ export interface UpsertProfileBody {
   yearsExperience?: number;
   teamSize?: number;
   languages?: string[];
-  travelPolicy?: string;
-  website?: string;
-  phone?: string;
-  email?: string;
+  travelPolicy?: string | null;
+  website?: string | null;
+  phone?: string | null;
+  email?: string | null;
   socialLinks?: Record<string, string>;
   businessHours?: Record<string, string>;
   availabilityNotes?: string;
@@ -235,7 +311,7 @@ export interface UpsertProfileBody {
   coverMediaId?: string | null;
   willingToTravel?: boolean;
   advanceBookingPercent?: number;
-  cancellationPolicy?: string;
+  cancellationPolicy?: string | null;
   eventsCompletedRange?: string;
 }
 

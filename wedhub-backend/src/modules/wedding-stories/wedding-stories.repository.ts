@@ -25,7 +25,11 @@ const PUBLIC_STORY_INCLUDE = {
 
 export function findFeaturedStories() {
   return prisma.weddingStory.findMany({
-    where: { isFeatured: true, album: { visibility: "PUBLIC" } },
+    // Item 10/11: status = APPROVED added so a vendor-submitted story
+    // never appears here before an admin has reviewed it — a no-op filter
+    // for the pre-existing admin-authored rows, which the migration
+    // backfilled to APPROVED.
+    where: { isFeatured: true, status: "APPROVED", album: { visibility: "PUBLIC" } },
     orderBy: { sortOrder: "asc" },
     include: PUBLIC_STORY_INCLUDE,
   });
@@ -46,6 +50,8 @@ export async function findPublicStories(params: FindPublicStoriesParams) {
   const skip = (page - 1) * limit;
 
   const where: any = {
+    // Item 10/11: see findFeaturedStories' comment on why this is here.
+    status: "APPROVED",
     album: { visibility: "PUBLIC" },
   };
 
@@ -101,7 +107,7 @@ export async function findPublicStories(params: FindPublicStoriesParams) {
 
 export async function findDistinctFilterOptions() {
   const publicStories = await prisma.weddingStory.findMany({
-    where: { album: { visibility: "PUBLIC" } },
+    where: { status: "APPROVED", album: { visibility: "PUBLIC" } },
     select: { location: true, tag: true },
   });
 
@@ -121,18 +127,18 @@ export async function findDistinctFilterOptions() {
 
 export function findAllStoriesAdmin() {
   return prisma.weddingStory.findMany({
-    orderBy: { sortOrder: "asc" },
-    include: PUBLIC_STORY_INCLUDE,
+    orderBy: [{ status: "asc" }, { sortOrder: "asc" }],
+    include: OWN_STORY_INCLUDE,
   });
 }
 
 export function findStoryById(id: string) {
-  return prisma.weddingStory.findUnique({ where: { id }, include: PUBLIC_STORY_INCLUDE });
+  return prisma.weddingStory.findUnique({ where: { id }, include: OWN_STORY_INCLUDE });
 }
 
 export function findPublicStoryById(id: string) {
   return prisma.weddingStory.findFirst({
-    where: { id, album: { visibility: "PUBLIC" } },
+    where: { id, status: "APPROVED", album: { visibility: "PUBLIC" } },
     include: {
       album: {
         include: {
@@ -159,6 +165,120 @@ export function findPublicStoryById(id: string) {
 
 export function findAlbumForStory(albumId: string) {
   return prisma.album.findUnique({ where: { id: albumId }, select: { id: true, visibility: true, coverMediaId: true } });
+}
+
+// Item 10/11 — vendor-facing additions below. Ownership check for
+// submitStoryForVendor: a vendor may only submit a story against their own
+// album, unlike the admin path (createStory above), which trusts any
+// albumId since the caller is already admin-gated.
+export function findOwnAlbumForStory(vendorId: string, albumId: string) {
+  return prisma.album.findFirst({
+    where: { id: albumId, vendorId },
+    select: { id: true, vendorId: true, visibility: true, coverMediaId: true },
+  });
+}
+
+export function findVendorsByIds(vendorIds: string[]) {
+  return prisma.vendor.findMany({ where: { id: { in: vendorIds } }, select: { id: true, businessName: true } });
+}
+
+// Submission + auto-confirmed submitter collaborator row in one
+// transaction — the submitting vendor doesn't need to separately "confirm"
+// their own participation (see WeddingStoryVendor's own schema comment).
+export function createStoryForVendor(data: {
+  vendorId: string;
+  albumId: string;
+  coupleName: string;
+  location: string;
+  tag: string;
+  snippet: string;
+  collaboratorVendorIds: string[];
+}) {
+  return prisma.$transaction(async (tx) => {
+    const story = await tx.weddingStory.create({
+      data: {
+        albumId: data.albumId,
+        coupleName: data.coupleName,
+        location: data.location,
+        tag: data.tag,
+        snippet: data.snippet,
+        submittedByVendorId: data.vendorId,
+        status: "PENDING",
+      },
+    });
+    await tx.weddingStoryVendor.create({
+      data: { weddingStoryId: story.id, vendorId: data.vendorId, status: "CONFIRMED" },
+    });
+    if (data.collaboratorVendorIds.length > 0) {
+      await tx.weddingStoryVendor.createMany({
+        data: data.collaboratorVendorIds.map((vendorId) => ({
+          weddingStoryId: story.id,
+          vendorId,
+          status: "PENDING" as const,
+        })),
+      });
+    }
+    return tx.weddingStory.findUniqueOrThrow({
+      where: { id: story.id },
+      include: { ...PUBLIC_STORY_INCLUDE, collaborators: { include: { vendor: { select: { id: true, businessName: true, slug: true } } } } },
+    });
+  });
+}
+
+const OWN_STORY_INCLUDE = {
+  ...PUBLIC_STORY_INCLUDE,
+  collaborators: { include: { vendor: { select: { id: true, businessName: true, slug: true } } } },
+} as const;
+
+export function findOwnSubmittedStories(vendorId: string) {
+  return prisma.weddingStory.findMany({
+    where: { submittedByVendorId: vendorId },
+    orderBy: { createdAt: "desc" },
+    include: OWN_STORY_INCLUDE,
+  });
+}
+
+// Stories where this vendor was tagged as a collaborator by someone else
+// (never includes stories they submitted themselves — those are covered
+// by findOwnSubmittedStories, and the submitter's own row there is always
+// CONFIRMED already, nothing to act on).
+export function findStoriesAwaitingMyConfirmation(vendorId: string) {
+  return prisma.weddingStory.findMany({
+    where: { collaborators: { some: { vendorId, status: "PENDING" } } },
+    orderBy: { createdAt: "desc" },
+    include: OWN_STORY_INCLUDE,
+  });
+}
+
+export function findCollaboratorRow(weddingStoryId: string, vendorId: string) {
+  return prisma.weddingStoryVendor.findUnique({
+    where: { weddingStoryId_vendorId: { weddingStoryId, vendorId } },
+  });
+}
+
+export function updateCollaboratorStatus(weddingStoryId: string, vendorId: string, status: "CONFIRMED" | "DECLINED") {
+  return prisma.weddingStoryVendor.update({
+    where: { weddingStoryId_vendorId: { weddingStoryId, vendorId } },
+    data: { status },
+  });
+}
+
+// Admin moderation queue — stories a vendor submitted, still awaiting a
+// decision.
+export function findPendingStoriesAdmin() {
+  return prisma.weddingStory.findMany({
+    where: { status: "PENDING" },
+    orderBy: { createdAt: "asc" },
+    include: OWN_STORY_INCLUDE,
+  });
+}
+
+export function updateStoryStatus(id: string, status: "APPROVED" | "REJECTED", rejectionReason: string | undefined) {
+  return prisma.weddingStory.update({
+    where: { id },
+    data: { status, rejectionReason: status === "REJECTED" ? (rejectionReason ?? null) : null },
+    include: PUBLIC_STORY_INCLUDE,
+  });
 }
 
 export function createStory(data: {

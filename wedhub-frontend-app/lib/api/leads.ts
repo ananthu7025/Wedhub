@@ -1,7 +1,7 @@
 import { apiFetch } from "./client";
 import type { PaginationMeta } from "./types";
 import type { LeadStatus } from "./account.types";
-import type { LeadAnalytics, VendorLead, VendorLeadDetail } from "./leads.types";
+import type { LeadAnalytics, ProfileViewer, VendorLead, VendorLeadDetail } from "./leads.types";
 
 /**
  * Server-only, authenticated reads for the vendor-facing leads module
@@ -23,4 +23,12 @@ export function getMyLead(leadId: string) {
 
 export function getMyLeadAnalytics() {
   return apiFetch<LeadAnalytics>("/leads/analytics");
+}
+
+// Item 17 — see ProfileViewer's own comment for why this is deliberately
+// separate from listMyLeads.
+export function listMyProfileViewers(params: { page?: number; limit?: number } = {}) {
+  return apiFetch<ProfileViewer[], PaginationMeta>("/leads/profile-viewers", {
+    query: { page: params.page ?? 1, limit: params.limit ?? 20 },
+  });
 }

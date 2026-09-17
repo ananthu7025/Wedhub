@@ -75,38 +75,38 @@ test.describe("Vendor dashboard and profile editor", () => {
     await expect(page.getByText("At least one package")).toBeVisible();
   });
 
-  test("saving the profile editor persists real fields, and submitting for review works end-to-end", async ({ page }) => {
+  test("saving Settings' sections persists real fields, and submitting for review works end-to-end", async ({ page }) => {
+    // Item 12/21: general fields (business info, category, location,
+    // pricing, contact) now live on /vendor/settings as independent
+    // collapsible sections, each with its own save button — not on
+    // /vendor/profile, which is now category-attributes-only. "Submit for
+    // review" also moved to Settings, since that's where the
+    // submission-blocking fields (description, category, city, contact
+    // method) live.
     await login(page, email, password);
-    await page.goto("/vendor/profile");
+    await page.goto("/vendor/settings");
 
-    // Profile Editor is tabbed (Basic Info / Category / Location / Pricing
-    // & Policies / Contact & Social / More Details / Category Details) with
-    // per-tab Next/Back — only the last tab's button actually saves
-    // ("Save changes", or "Submit for review" once the profile is complete
-    // enough to submit). Fields below are filled on the tab they live on,
-    // clicking "Next" to advance between them.
-    await page.getByLabel("Short description").fill("Playwright E2E test studio — candid wedding photography.");
+    await page.getByLabel("Tagline / short description").fill("Playwright E2E test studio — candid wedding photography.");
     await page.getByLabel("Full description").fill(
       "A full description written by the Phase 5 headed Playwright run, long enough to satisfy the real backend's submission requirements.",
     );
-    await page.getByRole("button", { name: "Next" }).click(); // Basic Info -> Category
+    await page.getByRole("button", { name: "Save changes" }).first().click();
+    await expect(page.getByText("Saved ✓").first()).toBeVisible({ timeout: 10000 });
 
-    await page.getByRole("button", { name: "Next" }).click(); // Category -> Location
+    await page.getByText("Category & location").click(); // open the <details> section
     await page.getByLabel("City").selectOption({ label: "Bengaluru" });
-    await page.getByRole("button", { name: "Next" }).click(); // Location -> Pricing & Policies
+    await page.getByRole("button", { name: "Save changes" }).nth(1).click();
+    await expect(page.getByText("Saved ✓").nth(1)).toBeVisible({ timeout: 10000 });
 
-    await page.getByRole("button", { name: "Next" }).click(); // Pricing & Policies -> Contact & Social
+    await page.getByText("Contact & social").click();
     await page.getByLabel("Phone").fill("+919900011122");
-    await page.getByRole("button", { name: "Next" }).click(); // Contact & Social -> More Details
-
-    await page.getByRole("button", { name: "Next" }).click(); // More Details -> Category Details (last tab)
-    await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.locator(".text-red-70")).toHaveCount(0, { timeout: 10000 });
+    await page.getByRole("button", { name: "Save changes" }).nth(3).click();
+    await expect(page.getByText("Saved ✓").nth(3)).toBeVisible({ timeout: 10000 });
 
     await page.reload();
-    await expect(page.getByLabel("Short description")).toHaveValue(/candid wedding photography/);
+    await expect(page.getByLabel("Tagline / short description")).toHaveValue(/candid wedding photography/);
 
-    // Add a package via the real packages page, then come back and submit.
+    // Add a package via the real packages page.
     await page.goto("/vendor/packages");
     // Two "+ Add package" buttons exist when the list is empty (header +
     // empty-state CTA) — both do the same thing, .first() is deliberate.
@@ -117,14 +117,7 @@ test.describe("Vendor dashboard and profile editor", () => {
     await expect(page.getByText("Essential")).toBeVisible();
     await expect(page.getByText("₹60,000")).toBeVisible();
 
-    // Profile Editor always remounts on the first tab, so tab through to
-    // the last one again to reach the Submit button (7 tabs total: Basic
-    // Info, Category, Location, Pricing & Policies, Contact & Social, More
-    // Details, Category Details).
-    await page.goto("/vendor/profile");
-    for (let i = 0; i < 6; i++) {
-      await page.getByRole("button", { name: "Next" }).click();
-    }
+    await page.goto("/vendor/settings");
     await page.getByRole("button", { name: "Submit for review" }).click();
     await expect(page).toHaveURL(/\/vendor\/dashboard$/, { timeout: 10000 });
     await expect(page.getByText(/PENDING VERIFICATION|PENDING_VERIFICATION/i)).toBeVisible();

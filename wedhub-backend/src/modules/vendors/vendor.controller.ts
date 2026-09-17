@@ -174,6 +174,22 @@ export async function getMyAnalytics(req: Request, res: Response): Promise<void>
   res.json(successResponse(analytics));
 }
 
+// Contact fields (phone/email/website) are never sent in the public vendor
+// payload — a browser inspecting the page source or network response can't
+// read them just because the profile page loaded. They're only returned by
+// the separate revealVendorContact endpoint below, which requires an
+// explicit reveal action and logs it server-side as a stronger-intent
+// signal (contact_details_revealed) than a plain view. `hasContactInfo`
+// tells the frontend whether to render the "Reveal contact details" button
+// at all, without leaking which fields are actually set.
+function redactContactFields<
+  T extends { profile: { phone: string | null; email: string | null; website: string | null } | null },
+>(vendor: T): T & { profile: (T["profile"] & { hasContactInfo: boolean }) | null } {
+  if (!vendor.profile) return { ...vendor, profile: null };
+  const hasContactInfo = Boolean(vendor.profile.phone || vendor.profile.email || vendor.profile.website);
+  return { ...vendor, profile: { ...vendor.profile, phone: null, email: null, website: null, hasContactInfo } };
+}
+
 export async function getPublicVendor(req: Request, res: Response): Promise<void> {
   const vendor = await vendorRepository.findApprovedVendorBySlug(req.params.slug as string);
   if (!vendor) {
@@ -182,7 +198,31 @@ export async function getPublicVendor(req: Request, res: Response): Promise<void
   // Feeds the vendor's own basic/advanced analytics view (Arch Phase 12) —
   // best-effort, never blocks the response (see logAnalyticsEvent).
   void logAnalyticsEvent({ userId: req.user?.id, eventType: "vendor_profile_viewed", vendorId: vendor.id });
-  res.json(successResponse(vendor));
+  res.json(successResponse(redactContactFields(vendor)));
+}
+
+// Explicit "Reveal contact details" action from the public profile —
+// requires a logged-in couple (anonymous visitors have no identity to
+// attribute the reveal to, and the button is only rendered for logged-in
+// couples). Logs contact_details_revealed server-side so a vendor's
+// "Recent profile viewers" list can distinguish a real contact reveal from
+// a plain page view (see lead.repository.ts::listProfileViewers) — logged
+// here rather than trusted from a client-fired analytics beacon, since this
+// signal directly gates access to real contact info.
+export async function revealVendorContact(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const vendor = await vendorRepository.findApprovedVendorBySlug(req.params.slug as string);
+  if (!vendor) {
+    throw new NotFoundError("Vendor not found");
+  }
+  void logAnalyticsEvent({ userId, eventType: "contact_details_revealed", vendorId: vendor.id });
+  res.json(
+    successResponse({
+      phone: vendor.profile?.phone ?? null,
+      email: vendor.profile?.email ?? null,
+      website: vendor.profile?.website ?? null,
+    }),
+  );
 }
 
 export async function listPublicVendors(req: Request, res: Response): Promise<void> {

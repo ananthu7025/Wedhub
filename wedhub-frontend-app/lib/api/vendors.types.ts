@@ -40,9 +40,12 @@ export interface VendorSearchResult {
   currency: string | null;
   logoUrl: string | null;
   logoBlurDataUrl: string | null;
+  // Item 4: all-time average, denormalized on Vendor — null until the
+  // vendor has at least one responded lead.
+  avgResponseTimeMs: number | null;
 }
 
-export const SEARCH_SORT_OPTIONS = ["relevance", "price_low", "price_high", "newest", "recommended"] as const;
+export const SEARCH_SORT_OPTIONS = ["relevance", "price_low", "price_high", "newest", "recommended", "fastest_reply"] as const;
 export type SearchSort = (typeof SEARCH_SORT_OPTIONS)[number];
 
 export interface SearchVendorsParams {
@@ -54,6 +57,8 @@ export interface SearchVendorsParams {
   priceMax?: number;
   verified?: boolean;
   attr?: Record<string, string>;
+  // Item 4: coarse "replies within N hours" filter.
+  maxReplyHours?: number;
   sort?: SearchSort;
   page?: number;
   limit?: number;
@@ -168,6 +173,13 @@ export interface VendorProfile {
   website: string | null;
   phone: string | null;
   email: string | null;
+  // Public reads of VendorDetail (GET /vendors/:slug) always null out
+  // phone/email/website server-side and set this instead — see
+  // vendor.controller.ts's redactContactFields. Only the authenticated
+  // POST /vendors/:slug/reveal-contact returns the real values; it's not
+  // part of this type since it's a distinct, narrower response shape (see
+  // catalog-client.ts's revealVendorContactClient).
+  hasContactInfo?: boolean;
   socialLinks: Record<string, string> | null;
   businessHours: Record<string, string> | null;
   availabilityNotes: string | null;
@@ -186,6 +198,9 @@ export interface VendorDetail {
   profileCompleteness: number;
   averageRating: string;
   reviewCount: number;
+  // Item 4: all-time average, denormalized on Vendor — null until the
+  // vendor has at least one responded lead.
+  avgResponseTimeMs: number | null;
   createdAt: string;
 
   profile: VendorProfile | null;

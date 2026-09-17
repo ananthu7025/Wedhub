@@ -28,7 +28,7 @@ import { adminAuditLogsRouter } from "../modules/admin-audit-logs";
 import { adminRolesRouter } from "../modules/admin-roles";
 import { adminDashboardRouter } from "../modules/admin-dashboard";
 import { adminMediaRouter } from "../modules/admin-media";
-import { weddingStoriesAdminRouter, weddingStoriesRouter } from "../modules/wedding-stories";
+import { weddingStoriesAdminRouter, weddingStoriesRouter, weddingStorySelfRouter } from "../modules/wedding-stories";
 import { featuredMediaAdminRouter, featuredMediaRouter, galleryCategoriesAdminRouter } from "../modules/featured-media";
 import { popularSearchCardsAdminRouter, popularSearchCardsRouter } from "../modules/popular-search-cards";
 import { blogAdminRouter, blogRouter } from "../modules/blog";
@@ -115,6 +115,7 @@ apiV1Router.use("/challenges", challengeRouter);
 // /vendors/:vendorId/reviews style paths first.
 apiV1Router.use("/vendors/claim", vendorClaimRouter);
 apiV1Router.use("/vendors/me/albums", albumSelfRouter);
+apiV1Router.use("/vendors/me/wedding-stories", weddingStorySelfRouter);
 apiV1Router.use("/vendors/:slug/albums", albumPublicRouter);
 apiV1Router.use("/vendors/:vendorId/reviews", vendorReviewsPublicRouter);
 apiV1Router.use("/vendors", vendorRouter);

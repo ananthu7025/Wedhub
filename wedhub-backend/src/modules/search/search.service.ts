@@ -21,6 +21,7 @@ function toPublicVendorSummary(row: VendorSearchRow) {
     currency: row.currency,
     logoUrl: row.logoObjectKey ? getPublicUrl(row.logoObjectKey) : null,
     logoBlurDataUrl: row.logoBlurDataUrl,
+    avgResponseTimeMs: row.avgResponseTimeMs,
   };
 }
 
@@ -37,6 +38,7 @@ export async function searchVendors(
     priceMax: query.priceMax,
     verified: query.verified,
     attributes: query.attr,
+    maxAvgResponseTimeMs: query.maxReplyHours !== undefined ? query.maxReplyHours * 60 * 60 * 1000 : undefined,
     page: query.page,
     limit: query.limit,
   };

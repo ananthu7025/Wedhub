@@ -15,6 +15,7 @@ export interface ProfileUpdateInput {
   avatarUrl: string | undefined;
   bio: string | undefined;
   preferences: UserPreferences | undefined;
+  phone: string | null | undefined;
 }
 
 export interface WeddingProfileUpsertInput {

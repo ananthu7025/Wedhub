@@ -39,6 +39,13 @@ export interface ProfileSetupDraft {
   weddingStyle: string;
   partnerName: string;
   notes: string;
+  // Item 7 (2026-09-17): collected here for customers completing the
+  // wizard, but written via updateMyProfile — this is User.phone, a
+  // separate model from WeddingProfile, so it's not part of
+  // submitProfileSetup's own payload. Prefilled from GET /users/me when
+  // already on file (see ProfileSetupWizard.tsx), so revisiting the wizard
+  // never clears an already-saved number.
+  phone: string;
   eventDates: EventDateDraft[];
   categoryPreferences: CategoryPreferenceDraft[];
 }
@@ -49,6 +56,7 @@ export const EMPTY_PROFILE_SETUP_DRAFT: ProfileSetupDraft = {
   weddingStyle: "",
   partnerName: "",
   notes: "",
+  phone: "",
   eventDates: [],
   categoryPreferences: [],
 };

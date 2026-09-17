@@ -8,6 +8,7 @@ import { WizardGuard } from "@/components/shared/WizardGuard";
 import { useWizardDraft } from "@/lib/hooks/useWizardDraft";
 import { listCategoriesClient, listLocationsClient } from "@/lib/api/catalog-client";
 import { submitProfileSetup } from "@/lib/api/profile-setup-client";
+import { updateMyProfile } from "@/lib/api/users-client";
 import type { Category, Location } from "@/lib/api/vendors.types";
 import {
   EMPTY_PROFILE_SETUP_DRAFT,
@@ -48,12 +49,28 @@ export function ProfileSetupWizard() {
     void listLocationsClient("CITY").then((result) => {
       if (result.success) setCities(result.data);
     });
+    // Item 7: prefill phone if the customer already has one on file (set at
+    // signup, or edited on the account page) — same client-side prefill
+    // pattern EnquiryModal.tsx already uses for this same endpoint. Only
+    // fills in when the draft doesn't already have a value, so it never
+    // clobbers something the customer just typed on this visit.
+    fetch("/api/users/me", { credentials: "include" })
+      .then((res) => res.json())
+      .then((json: { success: boolean; data?: { phone: string | null } }) => {
+        if (!json.success || !json.data?.phone) return;
+        setState((prev) => (prev.phone ? prev : { ...prev, phone: json.data!.phone! }));
+      })
+      .catch(() => {
+        // Prefill is a convenience, not a requirement — leave blank on failure.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // A wizard with zero event dates, zero categories, and no city selected
   // yet has nothing worth prompting to save — WizardGuard should stay quiet
   // until there's real progress.
-  const hasUnsavedChanges = state.eventDates.length > 0 || state.categoryPreferences.length > 0 || state.cityId.length > 0;
+  const hasUnsavedChanges =
+    state.eventDates.length > 0 || state.categoryPreferences.length > 0 || state.cityId.length > 0 || state.phone.length > 0;
 
   function updateField<K extends keyof ProfileSetupDraft>(key: K, value: ProfileSetupDraft[K]) {
     setState((prev) => ({ ...prev, [key]: value }));
@@ -117,6 +134,9 @@ export function ProfileSetupWizard() {
       if (state.guestCount && (Number(state.guestCount) < 0 || Number(state.guestCount) > 100000)) {
         errors.guestCount = "Enter a realistic guest count";
       }
+      if (state.phone.trim() && state.phone.trim().length < 6) {
+        errors.phone = "Phone number must be at least 6 characters";
+      }
     }
 
     if (currentStep === 2) {
@@ -157,6 +177,19 @@ export function ProfileSetupWizard() {
     }
     setSubmitting(true);
     setSubmitError(null);
+
+    // Phone lives on User, not WeddingProfile, so it's a separate call —
+    // only fired when the customer actually typed something, so leaving it
+    // blank never clears an already-saved phone number.
+    const trimmedPhone = state.phone.trim();
+    if (trimmedPhone) {
+      const phoneResult = await updateMyProfile({ phone: trimmedPhone });
+      if (!phoneResult.success) {
+        setSubmitting(false);
+        setSubmitError(formatApiError(phoneResult.error));
+        return;
+      }
+    }
 
     const result = await submitProfileSetup({
       cityId: state.cityId,
@@ -311,6 +344,18 @@ export function ProfileSetupWizard() {
               {fieldErrors.guestCount && <p className="mt-1 text-[12px] text-red-70">{fieldErrors.guestCount}</p>}
             </label>
             <label className="mb-4 block text-sm">
+              <span className="mb-1.5 block text-[13px] font-bold">Phone number</span>
+              <Input
+                type="tel"
+                placeholder="+91 98765 43210"
+                value={state.phone}
+                onChange={(e) => updateField("phone", e.target.value)}
+                maxLength={20}
+              />
+              {fieldErrors.phone && <p className="mt-1 text-[12px] text-red-70">{fieldErrors.phone}</p>}
+              <p className="mt-1.5 text-xs text-text-grey">So vendors can reach you directly if you prefer a call.</p>
+            </label>
+            <label className="mb-4 block text-sm">
               <span className="mb-1.5 block text-[13px] font-bold">Wedding style (optional)</span>
               <Input placeholder="e.g. Traditional Kerala, Destination, Modern" value={state.weddingStyle} onChange={(e) => updateField("weddingStyle", e.target.value)} maxLength={100} />
             </label>
@@ -403,6 +448,10 @@ export function ProfileSetupWizard() {
             <div className="mb-4 text-[13px]">
               <p className="font-bold">Total guests</p>
               <p className="text-text-grey">{state.guestCount || "Not specified"}</p>
+            </div>
+            <div className="mb-4 text-[13px]">
+              <p className="font-bold">Phone number</p>
+              <p className="text-text-grey">{state.phone || "Not specified"}</p>
             </div>
             <div className="text-[13px]">
               <p className="mb-1 font-bold">Categories &amp; budget</p>

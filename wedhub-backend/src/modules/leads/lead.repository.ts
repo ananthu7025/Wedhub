@@ -7,6 +7,12 @@ const LEAD_DETAIL_INCLUDE = {
   vendor: { select: { businessName: true } },
   notes: { orderBy: { createdAt: "desc" as const }, include: { author: { select: { id: true, email: true } } } },
   statusHistory: { orderBy: { createdAt: "desc" as const } },
+  // Item 5: lets the vendor's lead detail view link straight into the
+  // matching inbox thread, if the enquiry that created this lead also
+  // opened one (see enquiry.service.ts::startConversationsForEnquiry). At
+  // most one row in practice — see the identical comment on
+  // enquiry.repository.ts's MY_ENQUIRY_INCLUDE.
+  conversations: { select: { id: true }, take: 1 },
 } satisfies Prisma.LeadInclude;
 
 export function findLeadById(id: string) {
@@ -163,4 +169,97 @@ export async function getVendorLeadAnalytics(vendorId: string, since?: Date) {
     lostLeads: lost,
     conversionRate: received > 0 ? won / received : 0,
   };
+}
+
+// Item 17: a lower-priority, separate signal from real enquiry-based
+// Leads — deliberately never creates a Lead row (confirmed with the user:
+// silently turning every profile view into an equal CRM lead would dilute
+// and misrepresent real enquiry intent, and anonymous visits have no
+// contact info to build a Lead from anyway). Reads straight off the
+// existing vendor_profile_viewed AnalyticsEvent (vendor.controller.ts's
+// getPublicVendor), scoped to logged-in visitors only (userId is nullable
+// on AnalyticsEvent for anonymous visits).
+//
+// Contact-reveal gating addition: the public profile no longer shows
+// phone/email/website directly — a "Reveal contact details" button fires
+// a separate `contact_details_revealed` event on click (VendorContactLinks),
+// which is a stronger intent signal than a plain view. Both event types are
+// merged into one per-viewer timeline here rather than two separate lists:
+// each viewer gets `kind: "REVEALED_CONTACT"` if they ever revealed contact
+// info for this vendor, else `kind: "VIEWED"`, and `createdAt` is their most
+// recent activity of either kind. `distinct: ["userId"]` ordered by
+// createdAt desc gives one row per viewer per event type, which the merge
+// step below then collapses to one row per viewer.
+export async function listProfileViewers(vendorId: string, page: number, limit: number) {
+  const baseWhere = { vendorId, userId: { not: null } } as const;
+  const [viewRows, revealRows] = await Promise.all([
+    prisma.analyticsEvent.findMany({
+      where: { ...baseWhere, eventType: "vendor_profile_viewed" },
+      distinct: ["userId"],
+      orderBy: { createdAt: "desc" },
+      select: {
+        userId: true,
+        createdAt: true,
+        user: { select: { id: true, email: true, profile: { select: { firstName: true, lastName: true } } } },
+      },
+    }),
+    prisma.analyticsEvent.findMany({
+      where: { ...baseWhere, eventType: "contact_details_revealed" },
+      distinct: ["userId"],
+      orderBy: { createdAt: "desc" },
+      select: {
+        userId: true,
+        createdAt: true,
+        user: { select: { id: true, email: true, profile: { select: { firstName: true, lastName: true } } } },
+      },
+    }),
+  ]);
+
+  const merged = new Map<
+    string,
+    { userId: string; createdAt: Date; kind: "VIEWED" | "REVEALED_CONTACT"; user: (typeof viewRows)[number]["user"] }
+  >();
+
+  for (const row of viewRows) {
+    if (!row.userId) continue;
+    merged.set(row.userId, { userId: row.userId, createdAt: row.createdAt, kind: "VIEWED", user: row.user });
+  }
+  for (const row of revealRows) {
+    if (!row.userId) continue;
+    const existing = merged.get(row.userId);
+    merged.set(row.userId, {
+      userId: row.userId,
+      createdAt: existing && existing.createdAt > row.createdAt ? existing.createdAt : row.createdAt,
+      kind: "REVEALED_CONTACT",
+      user: row.user,
+    });
+  }
+
+  const all = Array.from(merged.values()).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  const total = all.length;
+  const rows = all.slice((page - 1) * limit, (page - 1) * limit + limit);
+  return { rows, total };
+}
+
+// Item 4: denormalizes an all-time average reply time onto Vendor itself,
+// mirroring review.repository.ts's averageRating/reviewCount pattern —
+// recomputed on the event that changes it (a lead marked RESPONDED, see
+// lead.service.ts::updateStatus) rather than a scheduled job or a live
+// aggregate at search/read time, which getVendorLeadAnalytics above is too
+// expensive for (unbounded per-vendor findMany, no index on respondedAt).
+// Deliberately all-time, not windowed — Vendor.avgResponseTimeMs is a
+// single denormalized column, not a per-window metric like the tiered
+// analytics endpoint's `since` param.
+export async function recalculateAvgResponseTime(vendorId: string): Promise<void> {
+  const respondedLeads = await prisma.lead.findMany({
+    where: { vendorId, respondedAt: { not: null } },
+    select: { createdAt: true, respondedAt: true },
+  });
+  const responseTimesMs = respondedLeads
+    .map((l) => (l.respondedAt ? l.respondedAt.getTime() - l.createdAt.getTime() : null))
+    .filter((ms): ms is number => ms !== null);
+  const avgResponseTimeMs =
+    responseTimesMs.length > 0 ? Math.round(responseTimesMs.reduce((a, b) => a + b, 0) / responseTimesMs.length) : null;
+
+  await prisma.vendor.update({ where: { id: vendorId }, data: { avgResponseTimeMs } });
 }

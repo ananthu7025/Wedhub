@@ -59,6 +59,7 @@ export function searchVendors(params: SearchVendorsParams) {
     priceMin: params.priceMin,
     priceMax: params.priceMax,
     verified: params.verified,
+    maxReplyHours: params.maxReplyHours,
     sort: params.sort,
     page: params.page,
     limit: params.limit,

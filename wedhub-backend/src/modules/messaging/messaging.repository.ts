@@ -27,6 +27,17 @@ export function findConversationById(id: string) {
   });
 }
 
+// Read-only lookup by the same (coupleUserId, vendorId) unique pair
+// upsertConversation keys on — used by enquiry.service.ts to detect "this
+// couple has already reached this vendor" (item 20) without creating
+// anything, unlike upsertConversation which always creates on a miss.
+export function findConversationByCoupleAndVendor(coupleUserId: string, vendorId: string) {
+  return prisma.conversation.findUnique({
+    where: { coupleUserId_vendorId: { coupleUserId, vendorId } },
+    select: { id: true },
+  });
+}
+
 // Idempotent by design — the (coupleUserId, vendorId) unique constraint
 // means a second "start conversation" call for the same pair returns the
 // existing thread instead of erroring or creating a duplicate. leadId/

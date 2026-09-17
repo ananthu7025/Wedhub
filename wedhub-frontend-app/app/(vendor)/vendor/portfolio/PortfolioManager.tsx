@@ -32,7 +32,12 @@ function isStuck(item: MediaItem): boolean {
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime"];
 const MAX_FILE_SIZE_MB = 50;
-const MAX_CONCURRENT_UPLOADS = 3;
+// Item 14: raised from 3 — compression itself now runs in a Web Worker
+// (compress-image.ts), so the main thread is no longer the bottleneck for
+// running more uploads in parallel; the actual limit is upload bandwidth
+// and the backend's own per-request handling, both of which tolerate more
+// than 3 concurrent presigned-URL uploads comfortably.
+const MAX_CONCURRENT_UPLOADS = 5;
 
 interface UploadingItem {
   tempId: string;

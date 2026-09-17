@@ -103,6 +103,13 @@ function buildWhere(filters: VendorSearchFilters, keywordCategoryIds: string[], 
     conditions.push(Prisma.sql`v.verification_level != 'UNVERIFIED'`);
   }
 
+  if (filters.maxAvgResponseTimeMs !== undefined) {
+    // NULL (no responded leads yet) never matches — same principle as
+    // priceMin/priceMax already excluding vendors with no startingPrice
+    // set: a vendor with no signal yet doesn't get to claim a fast one.
+    conditions.push(Prisma.sql`v.avg_response_time_ms IS NOT NULL AND v.avg_response_time_ms <= ${filters.maxAvgResponseTimeMs}`);
+  }
+
   if (filters.keyword) {
     conditions.push(
       Prisma.sql`(
@@ -185,6 +192,9 @@ const SORT_CLAUSES: Record<string, Prisma.Sql> = {
   // page in-application for "recommended" without re-querying.
   relevance: Prisma.sql`similarity DESC, "profileCompleteness" DESC`,
   recommended: Prisma.sql`similarity DESC, "profileCompleteness" DESC`,
+  // Item 4 — vendors with no responded leads yet (NULL) sort last, same
+  // NULLS LAST convention as price_low/price_high above.
+  fastest_reply: Prisma.sql`"avgResponseTimeMs" ASC NULLS LAST, "profileCompleteness" DESC`,
 };
 
 export async function searchVendors(
@@ -241,6 +251,7 @@ export async function searchVendors(
           COALESCE(logo.thumbnail_object_key, logo.optimized_object_key, logo.original_object_key) AS "logoObjectKey",
           logo.blur_data_url AS "logoBlurDataUrl",
           v.created_at AS "createdAt",
+          v.avg_response_time_ms AS "avgResponseTimeMs",
           (${similarity})::float AS similarity,
           ${categoryMatch} AS "categoryMatch",
           ${cityMatch} AS "cityMatch"

@@ -8,6 +8,7 @@ import {
   deleteAdminWeddingStory,
   updateAdminAlbum,
   updateAdminWeddingStory,
+  updateAdminWeddingStoryStatus,
 } from "@/lib/api/admin-client";
 import type { AdminAlbum, AdminVendorListItem, AdminWeddingStory } from "@/lib/api/admin.types";
 import { getPublicMediaUrl, getObjectKeyFromPublicMediaUrl } from "@/lib/media/url";
@@ -98,14 +99,49 @@ export function WeddingStoriesBoard({
     setStories((prev) => prev.filter((s) => s.id !== story.id));
   }
 
+  // Items 10/11 — vendor-submitted stories land PENDING; admin-authored
+  // ones (created via the form below) are immediately APPROVED, so this
+  // section only ever shows vendor submissions awaiting a decision.
+  async function handleModerate(story: AdminWeddingStory, status: "APPROVED" | "REJECTED", rejectionReason?: string) {
+    setPendingId(story.id);
+    setError(null);
+    const result = await updateAdminWeddingStoryStatus(story.id, { status, rejectionReason });
+    setPendingId(null);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    setStories((prev) => prev.map((s) => (s.id === story.id ? result.data : s)));
+  }
+
+  const pendingStories = stories.filter((s) => s.status === "PENDING");
+  const decidedStories = stories.filter((s) => s.status !== "PENDING");
+
   return (
     <div>
       {error && <div className="mb-3 rounded-md bg-red-10 p-2.5 text-[13px] text-red-70">{error}</div>}
 
-      {stories.length === 0 && !adding && <p className="mb-3 text-sm text-text-grey">No wedding stories yet.</p>}
+      {pendingStories.length > 0 && (
+        <div className="mb-5 rounded-md border border-amber-30 bg-amber-10/30 p-3">
+          <h3 className="mb-2.5 text-sm font-bold">Pending vendor submissions ({pendingStories.length})</h3>
+          <div className="flex flex-col gap-2.5">
+            {pendingStories.map((story) => (
+              <PendingStoryRow
+                key={story.id}
+                story={story}
+                pending={pendingId === story.id}
+                onApprove={() => handleModerate(story, "APPROVED")}
+                onReject={(reason) => handleModerate(story, "REJECTED", reason)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {decidedStories.length === 0 && !adding && <p className="mb-3 text-sm text-text-grey">No wedding stories yet.</p>}
 
       <div className="mb-3 flex flex-col gap-3">
-        {stories.map((story) =>
+        {decidedStories.map((story) =>
           editingId === story.id ? (
             <StoryForm
               key={story.id}
@@ -133,6 +169,14 @@ export function WeddingStoriesBoard({
                   {story.isFeatured && (
                     <span className="rounded-full bg-emerald-10 px-2 py-0.5 text-[10px] font-bold text-emerald-70">
                       Featured on homepage
+                    </span>
+                  )}
+                  {story.status === "REJECTED" && (
+                    <span className="rounded-full bg-red-10 px-2 py-0.5 text-[10px] font-bold text-red-70">Rejected</span>
+                  )}
+                  {story.submittedByVendorId && (
+                    <span className="rounded-full bg-neutral-grey-20 px-2 py-0.5 text-[10px] font-bold text-text-grey">
+                      Vendor-submitted
                     </span>
                   )}
                 </div>
@@ -220,6 +264,97 @@ export function WeddingStoriesBoard({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// Items 10/11 — one row in the moderation queue. Rejecting requires typing
+// a reason (surfaced back to the vendor in StoriesBoard.tsx), matching the
+// backend's own requirement (wedding-stories.service.ts's updateStoryStatus).
+function PendingStoryRow({
+  story,
+  pending,
+  onApprove,
+  onReject,
+}: {
+  story: AdminWeddingStory;
+  pending: boolean;
+  onApprove: () => void;
+  onReject: (reason: string) => void;
+}) {
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
+
+  return (
+    <div className="rounded-md border border-border bg-white p-3">
+      <div className="flex items-center gap-3">
+        <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-surface-input">
+          <Image
+            src={getPublicMediaUrl(story.album.coverMedia.optimizedObjectKey ?? story.album.coverMedia.originalObjectKey)}
+            alt={story.coupleName}
+            fill
+            className="object-cover"
+            sizes="56px"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-bold">{story.coupleName}</div>
+          <div className="truncate text-xs text-text-grey">
+            {story.location} · {story.tag} · submitted by {story.album.vendor.businessName}
+          </div>
+          {story.collaborators.length > 1 && (
+            <div className="mt-0.5 truncate text-[11px] text-text-grey">
+              Collaborators: {story.collaborators.map((c) => `${c.vendor.businessName} (${c.status.toLowerCase()})`).join(", ")}
+            </div>
+          )}
+        </div>
+        {!rejecting && (
+          <div className="flex flex-shrink-0 gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={onApprove}
+              className="rounded-md bg-brand-primary px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+            >
+              Approve
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setRejecting(true)}
+              className="rounded-md border border-border bg-white px-3 py-1.5 text-[11px] font-bold text-text-dark disabled:opacity-60"
+            >
+              Reject
+            </button>
+          </div>
+        )}
+      </div>
+      {rejecting && (
+        <div className="mt-2.5 flex gap-2">
+          <input
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Reason for rejecting (shown to the vendor)"
+            maxLength={500}
+            className="flex-1 rounded-md border border-border px-2.5 py-1.5 text-xs"
+          />
+          <button
+            type="button"
+            disabled={pending || !reason.trim()}
+            onClick={() => onReject(reason.trim())}
+            className="rounded-md bg-red px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+          >
+            Confirm reject
+          </button>
+          <button
+            type="button"
+            onClick={() => setRejecting(false)}
+            className="rounded-md border border-border bg-white px-3 py-1.5 text-[11px] font-bold text-text-dark"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }

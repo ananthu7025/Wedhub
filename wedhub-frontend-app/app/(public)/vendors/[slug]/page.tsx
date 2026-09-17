@@ -10,6 +10,7 @@ import { JsonLd } from "@/components/shared/JsonLd";
 import { VendorContactLinks } from "@/components/shared/VendorContactLinks";
 import { getVendorAlbums, getVendorBySlug, getVendorReviews } from "@/lib/api/catalog";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import { formatResponseTimeBucket } from "@/lib/utils/response-time";
 import { ApiRequestError } from "@/lib/api/types";
 import { Badge } from "@/components/ui/Badge";
 import { getOptionalSession } from "@/lib/auth/dal";
@@ -122,6 +123,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
 
   const verificationLabel = VERIFICATION_LABEL[vendor.verificationLevel];
   const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? vendor.categories[0]?.category;
+  const responseTimeLabel = formatResponseTimeBucket(vendor.avgResponseTimeMs);
 
   const breadcrumbItems = [
     { name: "Home", path: "/" },
@@ -143,8 +145,6 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
           cityName: vendor.city?.name,
           latitude: vendor.profile?.latitude,
           longitude: vendor.profile?.longitude,
-          phone: vendor.profile?.phone,
-          website: vendor.profile?.website,
           imageUrl: heroImageUrl,
           priceRangeMin: vendor.profile?.priceRangeMin,
           priceRangeMax: vendor.profile?.priceRangeMax,
@@ -198,6 +198,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                 <> · {vendor.profile.yearsExperience} yrs experience</>
               )}
             </p>
+            {responseTimeLabel && <p className="mt-1 text-[12px] font-medium text-emerald-700">{responseTimeLabel}</p>}
           </div>
           <div className="flex items-center gap-2.5 pb-2">
             <VendorHeartButton
@@ -370,10 +371,10 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
               <div className="mt-5 border-t border-border pt-4">
                 <VendorContactLinks
                   vendorId={vendor.id}
+                  vendorSlug={vendor.slug}
                   businessName={vendor.businessName}
-                  phone={vendor.profile?.phone}
-                  email={vendor.profile?.email}
-                  website={vendor.profile?.website}
+                  isAuthenticated={session !== null}
+                  hasAnyContactInfo={Boolean(vendor.profile?.hasContactInfo)}
                 />
               </div>
             </div>

@@ -7,6 +7,10 @@ export interface VendorSearchFilters {
   priceMax: number | undefined;
   verified: boolean | undefined;
   attributes: Record<string, string> | undefined;
+  // Item 4: coarse reply-speed filter — "replies within 24h" rather than an
+  // exact millisecond threshold, since avgResponseTimeMs is an all-time
+  // average, not a guarantee. Value is the cutoff in milliseconds.
+  maxAvgResponseTimeMs: number | undefined;
   page: number;
   limit: number;
 }
@@ -28,4 +32,5 @@ export interface VendorSearchRow {
   similarity: number;
   categoryMatch: boolean;
   cityMatch: boolean;
+  avgResponseTimeMs: number | null;
 }

@@ -1,1 +1,1 @@
-export { weddingStoriesRouter, weddingStoriesAdminRouter } from "./wedding-stories.routes";
+export { weddingStoriesRouter, weddingStoriesAdminRouter, weddingStorySelfRouter } from "./wedding-stories.routes";

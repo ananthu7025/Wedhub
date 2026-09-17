@@ -29,7 +29,14 @@ export const listLeadsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+// Item 17
+export const listProfileViewersQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 export type UpdateLeadStatusBody = z.infer<typeof updateLeadStatusSchema>;
 export type CreateLeadNoteBody = z.infer<typeof createLeadNoteSchema>;
 export type ListLeadsQuery = z.infer<typeof listLeadsQuerySchema>;
+export type ListProfileViewersQuery = z.infer<typeof listProfileViewersQuerySchema>;
 export { LEAD_STATUSES };

@@ -17,6 +17,12 @@ export const updateProfileSchema = z.object({
   avatarUrl: z.string().url().optional(),
   bio: z.string().max(2000).optional(),
   preferences: preferencesSchema.optional(),
+  // User.phone, not UserProfile — item 7: previously collected at signup
+  // but never editable afterward (account page rendered it as a disabled
+  // input). Nullable so a customer can clear a phone they no longer want
+  // on file, same "omitUndefined only strips undefined" pattern as
+  // upsertProfileSchema's nullable fields elsewhere in the codebase.
+  phone: z.string().min(6).max(20).nullable().optional(),
 });
 
 export const upsertWeddingProfileSchema = z.object({

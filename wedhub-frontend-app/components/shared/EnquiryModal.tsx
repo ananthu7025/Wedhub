@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createSingleVendorEnquiry } from "@/lib/api/shortlists-client";
 import { trackEvent } from "@/lib/analytics/track";
 import { formatApiError } from "@/lib/utils/error";
+import type { WeddingProfileWithDetails as ProfileSetupResponse } from "@/lib/api/profile-setup.types";
 
 interface MeResponse {
   email: string;
@@ -54,8 +56,9 @@ function EnquiryModalContent({
   const [budget, setBudget] = useState("");
   const [guestCount, setGuestCount] = useState("");
   const [message, setMessage] = useState("");
-  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error" | "already-enquired">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [existingConversationId, setExistingConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/users/me", { credentials: "include" })
@@ -67,6 +70,36 @@ function EnquiryModalContent({
         setContactName((prev) => prev || fullName);
         setContactEmail((prev) => prev || email);
         setContactPhone((prev) => prev || phone || "");
+      })
+      .catch(() => {
+        // Prefill is a convenience, not a requirement — leave fields blank on failure.
+      });
+
+    // Item 18: wedding date/budget/guest count were previously left blank
+    // even though GET /users/me/profile-setup already has them from the
+    // couple's own profile-setup wizard. Wedding date and budget don't live
+    // as single scalars on WeddingProfile (date is per-event, budget is
+    // per-category) — earliest upcoming event date and the first category
+    // preference's budget are reasonable single-value stand-ins for a
+    // pre-fill, not a hard source of truth.
+    fetch("/api/users/me/profile-setup", { credentials: "include" })
+      .then((res) => res.json())
+      .then((json: { success: boolean; data?: { weddingProfile: ProfileSetupResponse | null } }) => {
+        const weddingProfile = json.success ? json.data?.weddingProfile : null;
+        if (!weddingProfile) return;
+        if (weddingProfile.guestCount != null) {
+          setGuestCount((prev) => prev || String(weddingProfile.guestCount));
+        }
+        const earliestDate = weddingProfile.eventDates
+          .map((ed) => ed.date)
+          .sort()[0];
+        if (earliestDate) {
+          setWeddingDate((prev) => prev || earliestDate.slice(0, 10));
+        }
+        const firstBudget = weddingProfile.categoryPreferences.find((cp) => cp.budgetMin || cp.budgetMax);
+        if (firstBudget) {
+          setBudget((prev) => prev || firstBudget.budgetMax || firstBudget.budgetMin || "");
+        }
       })
       .catch(() => {
         // Prefill is a convenience, not a requirement — leave fields blank on failure.
@@ -117,6 +150,11 @@ function EnquiryModalContent({
 
     if (result.success) {
       setStatus("success");
+    } else if (result.error?.code === "CONFLICT" && typeof result.error.details?.conversationId === "string") {
+      // Item 20: this pair already has an open conversation — surface it as
+      // "already enquired, here's the thread" rather than a raw error.
+      setExistingConversationId(result.error.details.conversationId);
+      setStatus("already-enquired");
     } else {
       setStatus("error");
       setErrorMessage(formatApiError(result.error));
@@ -145,7 +183,7 @@ function EnquiryModalContent({
           <div className="py-6 text-center">
             <h2 className="mb-2 text-lg font-bold">Enquiry sent!</h2>
             <p className="mb-6 text-sm text-text-grey">
-              {vendorName} will get back to you at {contactEmail}.
+              {vendorName} has been notified. Check your Inbox for their reply — we&apos;ll notify you there.
             </p>
             <button
               type="button"
@@ -154,6 +192,20 @@ function EnquiryModalContent({
             >
               Done
             </button>
+          </div>
+        ) : status === "already-enquired" ? (
+          <div className="py-6 text-center">
+            <h2 className="mb-2 text-lg font-bold">You&apos;ve already enquired</h2>
+            <p className="mb-6 text-sm text-text-grey">
+              You&apos;ve already reached out to {vendorName}. Wait for them to reply, or follow up in your existing conversation.
+            </p>
+            <Link
+              href={existingConversationId ? `/inbox?conversation=${existingConversationId}` : "/inbox"}
+              onClick={onClose}
+              className="block w-full rounded-md bg-brand-primary py-3 text-sm font-bold text-white no-underline"
+            >
+              Go to conversation
+            </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>

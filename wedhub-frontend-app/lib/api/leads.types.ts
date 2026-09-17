@@ -85,6 +85,10 @@ export interface LeadStatusHistoryEntry {
 export interface VendorLeadDetail extends VendorLead {
   notes: LeadNote[];
   statusHistory: LeadStatusHistoryEntry[];
+  // Populated when the enquiry that created this lead also opened an inbox
+  // conversation — empty for anonymous enquiries or before the couple's
+  // account exists to message.
+  conversations: { id: string }[];
 }
 
 // ---- PATCH /leads/:id/status ----
@@ -108,4 +112,22 @@ export interface LeadAnalytics {
   wonLeads: number;
   lostLeads: number;
   conversionRate: number;
+}
+
+// ---- GET /leads/profile-viewers (item 17) ----
+// Deliberately separate from VendorLead/Lead — a profile view is a much
+// lower-intent, higher-frequency signal than a real enquiry, so it's
+// surfaced as its own read-only list rather than diluting the Leads
+// pipeline. Anonymous visits never appear here (no account to attribute
+// the view to).
+//
+// `kind` distinguishes a plain profile view from a viewer who clicked
+// "Reveal contact details" on the public profile (contact info is gated
+// behind that button rather than shown directly) — the latter is a
+// materially stronger intent signal and is labeled differently in the UI.
+export interface ProfileViewer {
+  userId: string;
+  createdAt: string;
+  kind: "VIEWED" | "REVEALED_CONTACT";
+  user: { id: string; email: string; profile: { firstName: string | null; lastName: string | null } | null } | null;
 }

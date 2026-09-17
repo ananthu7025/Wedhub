@@ -2,6 +2,7 @@
 
 import type { ApiResponse } from "./types";
 import type {
+  CreateAlbumBody,
   CreatePackageBody,
   CreateUploadRequestBody,
   MediaItem,
@@ -9,12 +10,17 @@ import type {
   SetAttributesBody,
   SetCategoriesBody,
   SetServiceAreasBody,
+  StoryCollaboratorSelf,
+  SubmitWeddingStoryBody,
+  UpdateAlbumBody,
   UpdateMediaBody,
   UpdatePackageBody,
   UploadRequestResult,
   UpsertProfileBody,
+  VendorAlbumSelf,
   VendorProfileSelf,
   VendorSelf,
+  WeddingStorySelf,
 } from "./vendor-self.types";
 
 /**
@@ -87,4 +93,30 @@ export function updateMedia(mediaId: string, body: UpdateMediaBody) {
 
 export function deleteMedia(mediaId: string) {
   return call<{ deleted: true }>(`/media/${mediaId}`, "DELETE");
+}
+
+// Items 10/11 — vendor album management, a prerequisite for submitting a
+// wedding story (see (vendor)/vendor/stories/).
+export function createMyAlbum(body: CreateAlbumBody) {
+  return call<VendorAlbumSelf>("/vendors/me/albums", "POST", body);
+}
+
+export function listMyAlbumsClient() {
+  return call<VendorAlbumSelf[]>("/vendors/me/albums", "GET");
+}
+
+export function updateMyAlbum(albumId: string, body: UpdateAlbumBody) {
+  return call<VendorAlbumSelf>(`/vendors/me/albums/${albumId}`, "PATCH", body);
+}
+
+export function deleteMyAlbum(albumId: string) {
+  return call<{ deleted: true }>(`/vendors/me/albums/${albumId}`, "DELETE");
+}
+
+export function submitMyWeddingStory(body: SubmitWeddingStoryBody) {
+  return call<WeddingStorySelf>("/vendors/me/wedding-stories", "POST", body);
+}
+
+export function respondToStoryCollaboration(storyId: string, decision: "CONFIRMED" | "DECLINED") {
+  return call<StoryCollaboratorSelf>(`/vendors/me/wedding-stories/${storyId}/respond`, "POST", { decision });
 }

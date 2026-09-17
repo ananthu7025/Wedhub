@@ -19,14 +19,21 @@ export const EVENTS_COMPLETED_RANGES = [
   "500+",
 ] as const;
 
+// Nullable (not just optional) on every free-text field a vendor might
+// reasonably want to blank out again after setting it once — omitUndefined
+// in the repository layer only strips `undefined`, so `null` passes through
+// as a real "unset this" write, the same pattern already proven by
+// logoMediaId/coverMediaId below. Arrays (tags, languages) and numeric
+// fields aren't included here: an empty array or omitting the field already
+// expresses "no value" for those without needing a third nullable state.
 export const upsertProfileSchema = z.object({
   // Tightened from 300 to 150 to match the "Tagline / Short Description"
   // spec (Business Information section).
-  shortDescription: z.string().max(150).optional(),
-  description: z.string().max(5000).optional(),
-  vendorType: z.string().max(100).optional(),
+  shortDescription: z.string().max(150).nullable().optional(),
+  description: z.string().max(5000).nullable().optional(),
+  vendorType: z.string().max(100).nullable().optional(),
   tags: z.array(z.string().min(1).max(50)).max(20).optional(),
-  address: z.string().max(300).optional(),
+  address: z.string().max(300).nullable().optional(),
   latitude: z.coerce.number().min(-90).max(90).optional(),
   longitude: z.coerce.number().min(-180).max(180).optional(),
   startingPrice: z.coerce.number().min(0).optional(),
@@ -37,10 +44,10 @@ export const upsertProfileSchema = z.object({
   yearsExperience: z.coerce.number().int().min(0).max(100).optional(),
   teamSize: z.coerce.number().int().min(0).max(10000).optional(),
   languages: z.array(z.string().min(1).max(50)).max(20).optional(),
-  travelPolicy: z.string().max(500).optional(),
-  website: z.string().url().optional(),
-  phone: z.string().min(6).max(20).optional(),
-  email: z.string().email().optional(),
+  travelPolicy: z.string().max(500).nullable().optional(),
+  website: z.string().url().nullable().optional(),
+  phone: z.string().min(6).max(20).nullable().optional(),
+  email: z.string().email().nullable().optional(),
   socialLinks: z.record(z.string(), z.string()).optional(),
   businessHours: z.record(z.string(), z.string()).optional(),
   availabilityNotes: z.string().max(1000).optional(),
@@ -48,15 +55,11 @@ export const upsertProfileSchema = z.object({
   seoDescription: z.string().max(300).optional(),
   canonicalUrl: z.string().url().optional(),
   cityId: z.string().uuid().optional(),
-  // Nullable (not just optional) so a vendor can explicitly clear a
-  // previously-set logo/cover, not just set one — omitUndefined in the
-  // repository layer only strips `undefined`, so `null` passes through as a
-  // real "unset this" write.
   logoMediaId: z.string().uuid().nullable().optional(),
   coverMediaId: z.string().uuid().nullable().optional(),
   willingToTravel: z.boolean().optional(),
   advanceBookingPercent: z.coerce.number().int().min(0).max(100).optional(),
-  cancellationPolicy: z.string().max(1000).optional(),
+  cancellationPolicy: z.string().max(1000).nullable().optional(),
   eventsCompletedRange: z.enum(EVENTS_COMPLETED_RANGES).optional(),
 });
 

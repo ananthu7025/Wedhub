@@ -77,6 +77,13 @@ export async function updateStatus(
   });
   await notifyCoupleOfStatusChange(lead, nextStatus);
 
+  // Item 4: this is the one event that can change avgResponseTimeMs —
+  // recompute right after, but only when respondedAt was actually just
+  // set this call (timestamps.respondedAt), not on every status change.
+  if (timestamps.respondedAt) {
+    await leadRepository.recalculateAvgResponseTime(vendorId);
+  }
+
   return updated;
 }
 
@@ -107,6 +114,12 @@ export async function addNote(vendorId: string, authorId: string, leadId: string
 
 export function getAnalytics(vendorId: string) {
   return leadRepository.getVendorLeadAnalytics(vendorId);
+}
+
+// Item 17: separate, lower-priority read model — see the repository
+// function's own comment for why this is deliberately not a Lead.
+export function listProfileViewers(vendorId: string, page: number, limit: number) {
+  return leadRepository.listProfileViewers(vendorId, page, limit);
 }
 
 // Admin oversight — no ownership check, but every transition is still

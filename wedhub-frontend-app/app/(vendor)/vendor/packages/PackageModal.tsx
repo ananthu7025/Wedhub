@@ -50,14 +50,23 @@ export function PackageModal({
     }
     setSaving(true);
     setError("");
+    // Flush whatever's still sitting in the "add item" input — otherwise a
+    // vendor who types an inclusion and clicks Save without pressing Enter
+    // or "+ Add item" first silently loses it (docs/bugs.md item #15).
+    const pendingInclusion = newInclusion.trim();
+    const finalInclusions =
+      pendingInclusion && pendingInclusion.length <= 200 && inclusions.length < 50
+        ? [...inclusions, pendingInclusion]
+        : inclusions;
     const saveResult = await onSave({
       name: name.trim(),
       description: description.trim(),
       price: Number(price),
-      inclusions,
+      inclusions: finalInclusions,
       imageMediaId,
     });
     if (saveResult.success) {
+      setNewInclusion("");
       onClose();
     } else {
       setSaving(false);

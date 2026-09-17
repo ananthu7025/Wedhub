@@ -168,7 +168,7 @@ export function DashboardInteractiveSections({
               <div className="py-6 text-center text-text-grey">
                 <p className="font-semibold text-text-dark text-xs">No leads recorded in this view</p>
                 <Link
-                  href="/vendor/profile"
+                  href="/vendor/settings"
                   className="mt-2.5 inline-block rounded-full bg-surface-input px-3.5 py-1 text-xs font-bold text-text-dark"
                 >
                   Complete Profile to Get Leads
@@ -233,7 +233,7 @@ export function DashboardInteractiveSections({
                         When couples contact your business or request quotes, their details appear here in real-time.
                       </p>
                       <Link
-                        href="/vendor/profile"
+                        href="/vendor/settings"
                         className="mt-3 inline-block rounded-full bg-surface-input px-4 py-1.5 text-xs font-bold text-text-dark hover:bg-neutral-grey-20"
                       >
                         Complete Profile to Get Leads

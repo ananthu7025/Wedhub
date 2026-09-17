@@ -10,6 +10,16 @@ export function findUserWithProfile(userId: string) {
   });
 }
 
+// Item 7: User.phone is a separate table from UserProfile, and is globally
+// unique (schema.prisma) — mirrors auth.service.ts's registration-time
+// check (findUserByPhone there) so a duplicate phone number surfaces as a
+// friendly 409, not a raw Prisma constraint violation. Kept local to this
+// module rather than importing the auth module's repository, per this
+// codebase's module-layering convention.
+export function findUserByPhone(phone: string) {
+  return prisma.user.findUnique({ where: { phone } });
+}
+
 export interface ProfileFields {
   firstName: string | undefined;
   lastName: string | undefined;
@@ -31,6 +41,15 @@ export function upsertProfile(userId: string, data: ProfileFields) {
     create: { userId, ...fields },
     update: fields,
   });
+}
+
+// Separate write from upsertProfile above — User.phone lives on the User
+// row itself, not UserProfile. `undefined` leaves it untouched (omitted
+// entirely, no query at all); `null`/a string both go through as a real
+// write, since phone is nullable and the caller (users.service.ts) already
+// decided this update should happen.
+export function updateUserPhone(userId: string, phone: string | null) {
+  return prisma.user.update({ where: { id: userId }, data: { phone } });
 }
 
 export interface WeddingProfileFields {

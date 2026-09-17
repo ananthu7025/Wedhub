@@ -25,6 +25,15 @@ export const vendorRouter = Router();
 vendorRouter.get("/", validateQuery(listVendorsQuerySchema), asyncHandler(vendorController.listPublicVendors));
 vendorRouter.get("/:slug", optionalAuthenticateMiddleware, asyncHandler(vendorController.getPublicVendor));
 
+// Requires a logged-in couple — contact details are only ever revealed to
+// an identified viewer, never anonymously (see revealVendorContact's doc
+// comment).
+vendorRouter.post(
+  "/:slug/reveal-contact",
+  authenticateMiddleware,
+  asyncHandler(vendorController.revealVendorContact),
+);
+
 // Vendor self-service routes
 vendorRouter.post(
   "/",

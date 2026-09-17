@@ -17,6 +17,9 @@ interface UpdateProfileBody {
     };
     preferredCategories: string[];
   };
+  // User.phone, not UserProfile (item 7) — null clears a previously-set
+  // phone number, undefined/omitted leaves it untouched.
+  phone?: string | null;
 }
 
 export async function updateMyProfile(body: UpdateProfileBody): Promise<ApiResponse<unknown>> {

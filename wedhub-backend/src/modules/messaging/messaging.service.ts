@@ -57,6 +57,16 @@ export async function startConversation(
   });
 }
 
+// Item 20: "has this couple already enquired with this vendor" — a real
+// answer, not the old time-windowed dedupe hash, since a Conversation is
+// keyed on the pair itself and never expires. Returns the existing
+// conversation's id so the caller can link straight into it, or null if
+// they've never been connected.
+export async function findExistingConversation(coupleUserId: string, vendorId: string): Promise<string | null> {
+  const conversation = await messagingRepository.findConversationByCoupleAndVendor(coupleUserId, vendorId);
+  return conversation?.id ?? null;
+}
+
 export async function listMyConversations(viewerUserId: string, viewerRole: "END_USER" | "VENDOR", page: number, limit: number) {
   if (viewerRole === "VENDOR") {
     const vendor = await vendorPolicy.getOwnedVendorOrThrow(viewerUserId);

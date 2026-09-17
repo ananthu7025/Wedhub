@@ -690,6 +690,13 @@ export interface AdminApprovedMedia {
 }
 
 // ---- /admin/wedding-stories ----
+// Items 10/11: status/rejectionReason/submittedByVendorId/collaborators
+// added — a vendor-submitted story lands PENDING and needs admin review,
+// unlike the pre-existing admin-authored path (still supported below via
+// createAdminWeddingStory), which is immediately APPROVED.
+export type AdminWeddingStoryStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type AdminStoryCollaboratorStatus = "PENDING" | "CONFIRMED" | "DECLINED";
+
 export interface AdminWeddingStory {
   id: string;
   albumId: string;
@@ -699,12 +706,26 @@ export interface AdminWeddingStory {
   snippet: string;
   isFeatured: boolean;
   sortOrder: number;
+  submittedByVendorId: string | null;
+  status: AdminWeddingStoryStatus;
+  rejectionReason: string | null;
   album: {
     id: string;
     name: string;
     vendor: { id: string; businessName: string; slug: string };
     coverMedia: { id: string; optimizedObjectKey: string | null; thumbnailObjectKey: string | null; originalObjectKey: string };
   };
+  collaborators: Array<{
+    id: string;
+    vendorId: string;
+    status: AdminStoryCollaboratorStatus;
+    vendor: { id: string; businessName: string; slug: string };
+  }>;
+}
+
+export interface AdminUpdateWeddingStoryStatusBody {
+  status: "APPROVED" | "REJECTED";
+  rejectionReason?: string;
 }
 
 export interface AdminCreateWeddingStoryBody {

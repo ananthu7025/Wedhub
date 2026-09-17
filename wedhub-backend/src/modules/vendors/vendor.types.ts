@@ -7,11 +7,11 @@ export interface UpdateVendorInput {
 }
 
 export interface UpsertVendorProfileInput {
-  shortDescription: string | undefined;
-  description: string | undefined;
-  vendorType: string | undefined;
+  shortDescription: string | null | undefined;
+  description: string | null | undefined;
+  vendorType: string | null | undefined;
   tags: string[] | undefined;
-  address: string | undefined;
+  address: string | null | undefined;
   latitude: number | undefined;
   longitude: number | undefined;
   startingPrice: number | undefined;
@@ -22,10 +22,10 @@ export interface UpsertVendorProfileInput {
   yearsExperience: number | undefined;
   teamSize: number | undefined;
   languages: string[] | undefined;
-  travelPolicy: string | undefined;
-  website: string | undefined;
-  phone: string | undefined;
-  email: string | undefined;
+  travelPolicy: string | null | undefined;
+  website: string | null | undefined;
+  phone: string | null | undefined;
+  email: string | null | undefined;
   socialLinks: Record<string, string> | undefined;
   businessHours: Record<string, string> | undefined;
   availabilityNotes: string | undefined;
@@ -37,7 +37,7 @@ export interface UpsertVendorProfileInput {
   coverMediaId: string | null | undefined;
   willingToTravel: boolean | undefined;
   advanceBookingPercent: number | undefined;
-  cancellationPolicy: string | undefined;
+  cancellationPolicy: string | null | undefined;
   eventsCompletedRange: string | undefined;
 }
 

@@ -34,6 +34,11 @@ export interface MyEnquiryLead {
   createdAt: string;
   updatedAt: string;
   vendor: { id: string; businessName: string; slug: string };
+  // Populated when the enquiry that created this lead also opened an inbox
+  // conversation (see enquiry.service.ts::startConversationsForEnquiry) —
+  // empty for anonymous enquiries or admin-created unclaimed vendors, which
+  // never get one.
+  conversations: { id: string }[];
 }
 
 export interface MyEnquiry {

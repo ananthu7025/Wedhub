@@ -387,7 +387,7 @@ export default async function VendorDashboardPage() {
 
             <div className="mt-5 flex justify-end">
               <Link
-                href="/vendor/profile"
+                href="/vendor/settings"
                 className="rounded-md bg-brand-primary px-6 py-2.5 text-xs font-bold text-white shadow-[0_4px_12px_rgba(224,11,65,0.18)] transition-all hover:bg-brand-primary-hover"
               >
                 Complete your profile →
