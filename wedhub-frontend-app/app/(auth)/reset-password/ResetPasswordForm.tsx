@@ -1,23 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import type { ApiResponse } from "@/lib/api/types";
 import { formatApiError } from "@/lib/utils/error";
+import { passwordSchema, validateField } from "@/lib/validation/auth-schemas";
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
   const [pending, setPending] = useState(false);
+
+  const passwordError = useMemo(() => validateField(passwordSchema, password), [password]);
+  const isFormValid = !passwordError;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setPending(true);
+    setTouched(true);
+    if (!isFormValid) return;
 
+    setPending(true);
     const response = await fetch("/api/auth/reset-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -26,31 +34,33 @@ export function ResetPasswordForm({ token }: { token: string }) {
     const json = (await response.json()) as ApiResponse<{ passwordReset: true }>;
 
     if (!json.success) {
-      setError(formatApiError(json.error));
+      showToast(formatApiError(json.error), "error");
       setPending(false);
       return;
     }
 
+    showToast("Password reset. Please log in.", "success");
     router.push("/login");
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-sm">
-      {error && (
-        <div className="mb-4 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">
-          {error}
-        </div>
-      )}
+    <form onSubmit={handleSubmit} className="w-full max-w-sm" noValidate>
       <div className="mb-4.5">
         <Input
           type="password"
-          placeholder="New password (min. 8 characters)"
+          placeholder="New password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          minLength={8}
-          maxLength={128}
-          required
+          onBlur={() => setTouched(true)}
+          invalid={touched && !!passwordError}
         />
+        {touched ? (
+          <FieldError message={passwordError} />
+        ) : (
+          <p className="mt-1.5 text-xs text-text-grey">
+            8+ characters, with uppercase, lowercase, a number, and a special character.
+          </p>
+        )}
       </div>
       <Button type="submit" variant="primary" block disabled={pending}>
         {pending ? "Resetting…" : "Reset password"}

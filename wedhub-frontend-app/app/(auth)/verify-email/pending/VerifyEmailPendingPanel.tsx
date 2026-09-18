@@ -4,28 +4,26 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout, refreshSession, resendVerificationEmail } from "@/lib/api/auth-client";
 import { formatApiError } from "@/lib/utils/error";
+import { useToast } from "@/components/ui/Toast";
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
 export function VerifyEmailPendingPanel({ email }: { email: string }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [pending, setPending] = useState(false);
   const [checking, setChecking] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [sentMessage, setSentMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleResend() {
     setPending(true);
-    setError(null);
-    setSentMessage(null);
     const result = await resendVerificationEmail();
     setPending(false);
     if (!result.success) {
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
-    setSentMessage(`Verification email sent to ${email}.`);
+    showToast(`Verification email sent to ${email}.`, "success");
     setCooldown(RESEND_COOLDOWN_SECONDS);
     const interval = setInterval(() => {
       setCooldown((c) => {
@@ -54,11 +52,10 @@ export function VerifyEmailPendingPanel({ email }: { email: string }) {
   // redirects onward once verifySession sees emailVerified: true.
   async function handleCheckAgain() {
     setChecking(true);
-    setError(null);
     const result = await refreshSession();
     setChecking(false);
     if (!result.success) {
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
     router.refresh();
@@ -72,11 +69,6 @@ export function VerifyEmailPendingPanel({ email }: { email: string }) {
 
   return (
     <div>
-      {error && <p className="mb-4 rounded-md bg-red-10 p-2.5 text-[13px] text-red-70">{error}</p>}
-      {sentMessage && (
-        <p className="mb-4 rounded-md bg-emerald-10 p-2.5 text-[13px] text-emerald-70">{sentMessage}</p>
-      )}
-
       <button
         type="button"
         onClick={handleCheckAgain}

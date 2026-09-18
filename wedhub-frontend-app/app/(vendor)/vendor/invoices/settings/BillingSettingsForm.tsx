@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
+import { useToast } from "@/components/ui/Toast";
 import { upsertMyBillingProfile } from "@/lib/api/vendor-invoices-client";
 import type { VendorBillingProfile } from "@/lib/api/vendor-invoices.types";
 import {
@@ -10,6 +13,7 @@ import {
   formatApiError,
   validateEmail,
   validateGstin,
+  validateIfsc,
   validatePan,
   validatePincode,
 } from "@/lib/utils/gst";
@@ -19,11 +23,21 @@ interface BillingSettingsFormProps {
   vendorBusinessName: string;
 }
 
+type FieldName =
+  | "gstin"
+  | "pan"
+  | "pincode"
+  | "email"
+  | "phone"
+  | "invoicePrefix"
+  | "ifscCode";
+
 export function BillingSettingsForm({
   initialProfile,
   vendorBusinessName,
 }: BillingSettingsFormProps) {
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [legalName, setLegalName] = useState(initialProfile.legalName ?? vendorBusinessName);
   const [tradeName, setTradeName] = useState(initialProfile.tradeName ?? vendorBusinessName);
@@ -47,9 +61,12 @@ export function BillingSettingsForm({
   const [defaultTerms, setDefaultTerms] = useState(initialProfile.defaultTerms ?? "");
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
+  const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
   const [saving, setSaving] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  function markTouched(field: FieldName) {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  }
 
   function handleStateChange(selectedCode: string) {
     setStateCode(selectedCode);
@@ -70,6 +87,9 @@ export function BillingSettingsForm({
     const emailErr = validateEmail(email);
     if (emailErr) errs.email = emailErr;
 
+    const ifscErr = validateIfsc(ifscCode);
+    if (ifscErr) errs.ifscCode = ifscErr;
+
     if (phone.trim() && phone.trim().length > 20) {
       errs.phone = "Phone number must be at most 20 characters";
     }
@@ -84,15 +104,23 @@ export function BillingSettingsForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSuccessMsg(null);
-    setErrorMsg(null);
 
     // Run client-side validation
     const errs = validateAllFields();
     setFieldErrors(errs);
 
     if (Object.keys(errs).length > 0) {
-      setErrorMsg("Please fix the validation errors highlighted below before saving.");
+      // Reveal every field's red border/message, not just the ones already touched.
+      setTouched({
+        gstin: true,
+        pan: true,
+        pincode: true,
+        email: true,
+        phone: true,
+        invoicePrefix: true,
+        ifscCode: true,
+      });
+      showToast("Please fix the validation errors highlighted below before saving.", "error");
       return;
     }
 
@@ -125,12 +153,11 @@ export function BillingSettingsForm({
     setSaving(false);
 
     if (result.success) {
-      setSuccessMsg("Billing settings saved successfully!");
+      showToast("Billing settings saved successfully!", "success");
       setFieldErrors({});
       router.refresh();
-      setTimeout(() => setSuccessMsg(null), 3500);
     } else {
-      setErrorMsg(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
     }
   }
 
@@ -151,50 +178,38 @@ export function BillingSettingsForm({
         </div>
       </div>
 
-      {successMsg && (
-        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-semibold text-emerald-800">
-          ✓ {successMsg}
-        </div>
-      )}
-
-      {errorMsg && (
-        <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800">
-          ✕ {errorMsg}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-8" noValidate>
         {/* Business & Tax Identification */}
         <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-base font-bold text-text-dark">1. Business & Tax Identification</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Legal Business Name</label>
-              <input
+              <Input
                 type="text"
                 value={legalName}
                 maxLength={150}
                 onChange={(e) => setLegalName(e.target.value)}
                 placeholder="e.g. Royal Moments LLP"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
+                className="rounded-lg px-3.5 py-2.5 text-xs"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Trade / Brand Name</label>
-              <input
+              <Input
                 type="text"
                 value={tradeName}
                 maxLength={150}
                 onChange={(e) => setTradeName(e.target.value)}
                 placeholder="e.g. Royal Moments Photography"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
+                className="rounded-lg px-3.5 py-2.5 text-xs"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">
                 GSTIN (15-digit GST Number)
               </label>
-              <input
+              <Input
                 type="text"
                 value={gstin}
                 onChange={(e) => {
@@ -202,14 +217,14 @@ export function BillingSettingsForm({
                   setGstin(val);
                   setFieldErrors((prev) => ({ ...prev, gstin: validateGstin(val) }));
                 }}
+                onBlur={() => markTouched("gstin")}
                 placeholder="29ABCDE1234F1Z5"
                 maxLength={15}
-                className={`w-full uppercase rounded-lg border px-3.5 py-2.5 text-xs font-mono outline-none focus:border-brand-primary ${
-                  fieldErrors.gstin ? "border-rose-400 bg-rose-50/20" : "border-gray-200"
-                }`}
+                invalid={touched.gstin && !!fieldErrors.gstin}
+                className="rounded-lg px-3.5 py-2.5 text-xs font-mono uppercase"
               />
-              {fieldErrors.gstin ? (
-                <p className="mt-1 text-[11px] font-medium text-rose-600">{fieldErrors.gstin}</p>
+              {touched.gstin && fieldErrors.gstin ? (
+                <FieldError message={fieldErrors.gstin} />
               ) : (
                 <p className="mt-1 text-[11px] text-text-grey">Leave blank if not GST registered.</p>
               )}
@@ -218,7 +233,7 @@ export function BillingSettingsForm({
               <label className="mb-1 block text-xs font-semibold text-text-grey">
                 PAN (Permanent Account Number)
               </label>
-              <input
+              <Input
                 type="text"
                 value={pan}
                 onChange={(e) => {
@@ -226,15 +241,13 @@ export function BillingSettingsForm({
                   setPan(val);
                   setFieldErrors((prev) => ({ ...prev, pan: validatePan(val) }));
                 }}
+                onBlur={() => markTouched("pan")}
                 placeholder="ABCDE1234F"
                 maxLength={10}
-                className={`w-full uppercase rounded-lg border px-3.5 py-2.5 text-xs font-mono outline-none focus:border-brand-primary ${
-                  fieldErrors.pan ? "border-rose-400 bg-rose-50/20" : "border-gray-200"
-                }`}
+                invalid={touched.pan && !!fieldErrors.pan}
+                className="rounded-lg px-3.5 py-2.5 text-xs font-mono uppercase"
               />
-              {fieldErrors.pan && (
-                <p className="mt-1 text-[11px] font-medium text-rose-600">{fieldErrors.pan}</p>
-              )}
+              {touched.pan && <FieldError message={fieldErrors.pan} />}
             </div>
           </div>
         </div>
@@ -245,24 +258,24 @@ export function BillingSettingsForm({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
               <label className="mb-1 block text-xs font-semibold text-text-grey">Address Line</label>
-              <input
+              <Input
                 type="text"
                 value={address}
                 maxLength={300}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Suite 402, Wedding Towers, MG Road"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
+                className="rounded-lg px-3.5 py-2.5 text-xs"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">City</label>
-              <input
+              <Input
                 type="text"
                 value={city}
                 maxLength={100}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="Bengaluru"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
+                className="rounded-lg px-3.5 py-2.5 text-xs"
               />
             </div>
             <div>
@@ -270,7 +283,7 @@ export function BillingSettingsForm({
               <select
                 value={stateCode}
                 onChange={(e) => handleStateChange(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
+                className="w-full rounded-lg border border-border bg-white px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
               >
                 <option value="">Select State</option>
                 {INDIAN_STATES.map((s) => (
@@ -283,7 +296,7 @@ export function BillingSettingsForm({
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Pincode</label>
-              <input
+              <Input
                 type="text"
                 value={pincode}
                 onChange={(e) => {
@@ -291,33 +304,38 @@ export function BillingSettingsForm({
                   setPincode(val);
                   setFieldErrors((prev) => ({ ...prev, pincode: validatePincode(val) }));
                 }}
+                onBlur={() => markTouched("pincode")}
                 placeholder="560001"
                 maxLength={6}
-                className={`w-full rounded-lg border px-3.5 py-2.5 text-xs font-mono outline-none focus:border-brand-primary ${
-                  fieldErrors.pincode ? "border-rose-400 bg-rose-50/20" : "border-gray-200"
-                }`}
+                invalid={touched.pincode && !!fieldErrors.pincode}
+                className="rounded-lg px-3.5 py-2.5 text-xs font-mono"
               />
-              {fieldErrors.pincode && (
-                <p className="mt-1 text-[11px] font-medium text-rose-600">{fieldErrors.pincode}</p>
-              )}
+              {touched.pincode && <FieldError message={fieldErrors.pincode} />}
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Billing Phone</label>
-              <input
+              <Input
                 type="tel"
                 value={phone}
                 maxLength={20}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPhone(val);
+                  setFieldErrors((prev) => ({
+                    ...prev,
+                    phone: val.trim().length > 20 ? "Phone number must be at most 20 characters" : null,
+                  }));
+                }}
+                onBlur={() => markTouched("phone")}
                 placeholder="+91 9876543210"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
+                invalid={touched.phone && !!fieldErrors.phone}
+                className="rounded-lg px-3.5 py-2.5 text-xs"
               />
-              {fieldErrors.phone && (
-                <p className="mt-1 text-[11px] font-medium text-rose-600">{fieldErrors.phone}</p>
-              )}
+              {touched.phone && <FieldError message={fieldErrors.phone} />}
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Billing Email</label>
-              <input
+              <Input
                 type="email"
                 value={email}
                 onChange={(e) => {
@@ -325,14 +343,12 @@ export function BillingSettingsForm({
                   setEmail(val);
                   setFieldErrors((prev) => ({ ...prev, email: validateEmail(val) }));
                 }}
+                onBlur={() => markTouched("email")}
                 placeholder="billing@royalmoments.com"
-                className={`w-full rounded-lg border px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary ${
-                  fieldErrors.email ? "border-rose-400 bg-rose-50/20" : "border-gray-200"
-                }`}
+                invalid={touched.email && !!fieldErrors.email}
+                className="rounded-lg px-3.5 py-2.5 text-xs"
               />
-              {fieldErrors.email && (
-                <p className="mt-1 text-[11px] font-medium text-rose-600">{fieldErrors.email}</p>
-              )}
+              {touched.email && <FieldError message={fieldErrors.email} />}
             </div>
           </div>
         </div>
@@ -346,57 +362,64 @@ export function BillingSettingsForm({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Bank Name</label>
-              <input
+              <Input
                 type="text"
                 value={bankName}
                 maxLength={100}
                 onChange={(e) => setBankName(e.target.value)}
                 placeholder="HDFC Bank"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
+                className="rounded-lg px-3.5 py-2.5 text-xs"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Account Holder Name</label>
-              <input
+              <Input
                 type="text"
                 value={accountName}
                 maxLength={150}
                 onChange={(e) => setAccountName(e.target.value)}
                 placeholder="Royal Moments LLP"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
+                className="rounded-lg px-3.5 py-2.5 text-xs"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Account Number</label>
-              <input
+              <Input
                 type="text"
                 value={accountNumber}
                 maxLength={50}
                 onChange={(e) => setAccountNumber(e.target.value)}
                 placeholder="50200012345678"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-brand-primary"
+                className="rounded-lg px-3.5 py-2.5 text-xs font-mono"
               />
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">IFSC Code</label>
-              <input
+              <Input
                 type="text"
                 value={ifscCode}
-                onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase();
+                  setIfscCode(val);
+                  setFieldErrors((prev) => ({ ...prev, ifscCode: validateIfsc(val) }));
+                }}
+                onBlur={() => markTouched("ifscCode")}
                 placeholder="HDFC0001234"
                 maxLength={20}
-                className="w-full uppercase rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-brand-primary"
+                invalid={touched.ifscCode && !!fieldErrors.ifscCode}
+                className="rounded-lg px-3.5 py-2.5 text-xs font-mono uppercase"
               />
+              {touched.ifscCode && <FieldError message={fieldErrors.ifscCode} />}
             </div>
             <div className="md:col-span-2">
               <label className="mb-1 block text-xs font-semibold text-text-grey">UPI ID / VPA</label>
-              <input
+              <Input
                 type="text"
                 value={upiId}
                 maxLength={100}
                 onChange={(e) => setUpiId(e.target.value)}
                 placeholder="royalmoments@okhdfcbank"
-                className="w-full rounded-lg border border-gray-200 px-3.5 py-2.5 text-xs outline-none focus:border-brand-primary"
+                className="rounded-lg px-3.5 py-2.5 text-xs"
               />
             </div>
           </div>
@@ -408,7 +431,7 @@ export function BillingSettingsForm({
           <div className="space-y-4">
             <div>
               <label className="mb-1 block text-xs font-semibold text-text-grey">Invoice Prefix</label>
-              <input
+              <Input
                 type="text"
                 value={invoicePrefix}
                 onChange={(e) => {
@@ -422,16 +445,14 @@ export function BillingSettingsForm({
                         : null,
                   }));
                 }}
+                onBlur={() => markTouched("invoicePrefix")}
                 placeholder="INV"
                 maxLength={10}
-                className={`w-32 uppercase rounded-lg border px-3.5 py-2.5 text-xs font-mono font-bold outline-none focus:border-brand-primary ${
-                  fieldErrors.invoicePrefix ? "border-rose-400 bg-rose-50/20" : "border-gray-200"
-                }`}
+                invalid={touched.invoicePrefix && !!fieldErrors.invoicePrefix}
+                className="w-32 rounded-lg px-3.5 py-2.5 text-xs font-mono font-bold uppercase"
               />
-              {fieldErrors.invoicePrefix ? (
-                <p className="mt-1 text-[11px] font-medium text-rose-600">
-                  {fieldErrors.invoicePrefix}
-                </p>
+              {touched.invoicePrefix && fieldErrors.invoicePrefix ? (
+                <FieldError message={fieldErrors.invoicePrefix} />
               ) : (
                 <p className="mt-1 text-[11px] text-text-grey">
                   Used to format invoice numbers (e.g. {invoicePrefix || "INV"}-2026-0001).

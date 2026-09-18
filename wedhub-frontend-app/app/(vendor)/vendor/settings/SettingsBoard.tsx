@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   setMyCategories,
@@ -18,6 +18,9 @@ import { EVENTS_COMPLETED_RANGES, type CategorySelf, type LocationSelf, type Ven
 import type { MeResponse } from "@/lib/api/account.types";
 import type { NotificationChannel, NotificationEventType, NotificationPreference } from "@/lib/api/notification-preferences.types";
 import { formatApiError } from "@/lib/utils/error";
+import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
+import { emailSchema, optionalPhoneSchema, validateField } from "@/lib/validation/auth-schemas";
 
 /**
  * Settings page (Frontend Arch Phase 7, restructured item 12/21/13/1). Now
@@ -131,12 +134,24 @@ function BusinessInfoSection({ vendor, me }: { vendor: VendorSelf; me: MeRespons
   const [lastName, setLastName] = useState(me.profile?.lastName ?? "");
   const [shortDescription, setShortDescription] = useState(profile?.shortDescription ?? "");
   const [description, setDescription] = useState(profile?.description ?? "");
+  const [touched, setTouched] = useState<{ businessName?: boolean }>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Backend requires a non-empty business name (vendor.schema.ts: min(1)) —
+  // this mirrors that so a vendor sees the problem before the save round-trip.
+  const businessNameError = useMemo(
+    () => (businessName.trim().length === 0 ? "Business name is required" : null),
+    [businessName],
+  );
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (businessNameError) {
+      setTouched({ businessName: true });
+      return;
+    }
     setSaving(true);
     setSaved(false);
     setError(null);
@@ -164,17 +179,20 @@ function BusinessInfoSection({ vendor, me }: { vendor: VendorSelf; me: MeRespons
 
   return (
     <SectionShell title="Business info" description="Your name, description, and owner details" defaultOpen>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <div className="mb-4 grid grid-cols-2 gap-4 max-[700px]:grid-cols-1">
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold text-text-grey">Business name</span>
-            <input
+            <Input
               type="text"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, businessName: true }))}
+              invalid={touched.businessName && !!businessNameError}
               maxLength={200}
-              className="w-full rounded-md border border-border px-3 py-2 text-sm"
+              className="px-3 py-2"
             />
+            {touched.businessName && <FieldError message={businessNameError} />}
           </label>
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold text-text-grey">Owner first name</span>
@@ -436,12 +454,24 @@ function PricingPoliciesSection({ vendor }: { vendor: VendorSelf }) {
   const [customQuoteAvailable, setCustomQuoteAvailable] = useState(profile?.customQuoteAvailable ?? false);
   const [advanceBookingPercent, setAdvanceBookingPercent] = useState(profile?.advanceBookingPercent?.toString() ?? "");
   const [cancellationPolicy, setCancellationPolicy] = useState(profile?.cancellationPolicy ?? "");
+  const [touched, setTouched] = useState<{ priceRangeMax?: boolean }>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // A max below min is never meaningful — same "range" idea the
+  // vendor-onboarding form checks before letting the price range through.
+  const priceRangeError = useMemo(() => {
+    if (priceRangeMin === "" || priceRangeMax === "") return null;
+    return Number(priceRangeMax) < Number(priceRangeMin) ? "Max must be greater than or equal to min" : null;
+  }, [priceRangeMin, priceRangeMax]);
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (priceRangeError) {
+      setTouched({ priceRangeMax: true });
+      return;
+    }
     setSaving(true);
     setSaved(false);
     setError(null);
@@ -466,7 +496,7 @@ function PricingPoliciesSection({ vendor }: { vendor: VendorSelf }) {
 
   return (
     <SectionShell title="Pricing & policies" description="Starting price, range, and cancellation terms">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <label className="mb-3.5 block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">Starting price (₹)</span>
           <input type="number" min="0" value={startingPrice} onChange={(e) => setStartingPrice(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
@@ -474,11 +504,27 @@ function PricingPoliciesSection({ vendor }: { vendor: VendorSelf }) {
         <div className="mb-3.5 grid grid-cols-2 gap-3">
           <label className="block text-sm">
             <span className="mb-1.5 block font-bold text-[13px]">Price range min (₹)</span>
-            <input type="number" min="0" value={priceRangeMin} onChange={(e) => setPriceRangeMin(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+            <input
+              type="number"
+              min="0"
+              value={priceRangeMin}
+              onChange={(e) => setPriceRangeMin(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, priceRangeMax: true }))}
+              className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+            />
           </label>
           <label className="block text-sm">
             <span className="mb-1.5 block font-bold text-[13px]">Price range max (₹)</span>
-            <input type="number" min="0" value={priceRangeMax} onChange={(e) => setPriceRangeMax(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+            <Input
+              type="number"
+              min="0"
+              value={priceRangeMax}
+              onChange={(e) => setPriceRangeMax(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, priceRangeMax: true }))}
+              invalid={touched.priceRangeMax && !!priceRangeError}
+              className="px-3 py-2.5"
+            />
+            {touched.priceRangeMax && <FieldError message={priceRangeError} />}
           </label>
         </div>
         <label className="flex items-center justify-between gap-4 py-2">
@@ -522,6 +568,30 @@ function PricingPoliciesSection({ vendor }: { vendor: VendorSelf }) {
   );
 }
 
+// Website/social fields are stored as free-text, then normalized to a full
+// https:// URL on save (see normalizeUrl) — so what's actually validatable
+// client-side is that the normalized result is at least a plausible URL,
+// not the raw text the vendor typed (which may just be "example.com").
+function optionalUrlError(rawValue: string): string | null {
+  const trimmed = rawValue.trim();
+  if (!trimmed) return null;
+  const normalized = normalizeUrl(trimmed);
+  try {
+    new URL(normalized);
+    return null;
+  } catch {
+    return "Enter a valid URL";
+  }
+}
+
+// Email here is optional (unlike the account email in BusinessInfoSection) —
+// empty is valid, anything non-empty must pass the same shape check as
+// emailSchema without forcing the field to be filled in.
+function optionalEmailError(rawValue: string): string | null {
+  if (!rawValue.trim()) return null;
+  return validateField(emailSchema, rawValue);
+}
+
 function ContactSocialSection({ vendor }: { vendor: VendorSelf }) {
   const router = useRouter();
   const profile = vendor.profile;
@@ -531,21 +601,37 @@ function ContactSocialSection({ vendor }: { vendor: VendorSelf }) {
   const [instagram, setInstagram] = useState(profile?.socialLinks?.instagram ?? "");
   const [facebook, setFacebook] = useState(profile?.socialLinks?.facebook ?? "");
   const [youtube, setYoutube] = useState(profile?.socialLinks?.youtube ?? "");
+  const [touched, setTouched] = useState<{
+    website?: boolean;
+    phone?: boolean;
+    email?: boolean;
+    instagram?: boolean;
+    facebook?: boolean;
+    youtube?: boolean;
+  }>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const websiteError = useMemo(() => optionalUrlError(website), [website]);
+  const phoneError = useMemo(() => validateField(optionalPhoneSchema, phone), [phone]);
+  const emailError = useMemo(() => optionalEmailError(email), [email]);
+  const instagramError = useMemo(() => optionalUrlError(instagram), [instagram]);
+  const facebookError = useMemo(() => optionalUrlError(facebook), [facebook]);
+  const youtubeError = useMemo(() => optionalUrlError(youtube), [youtube]);
+  const isFormValid = !websiteError && !phoneError && !emailError && !instagramError && !facebookError && !youtubeError;
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    const trimmedPhone = phone.trim();
-    if (trimmedPhone && trimmedPhone.length < 6) {
-      setError("Phone number must be at least 6 characters.");
+    if (!isFormValid) {
+      setTouched({ website: true, phone: true, email: true, instagram: true, facebook: true, youtube: true });
       return;
     }
     setSaving(true);
     setSaved(false);
     setError(null);
 
+    const trimmedPhone = phone.trim();
     const result = await upsertMyProfile({
       website: website.trim() ? normalizeUrl(website) : null,
       phone: trimmedPhone || null,
@@ -564,45 +650,82 @@ function ContactSocialSection({ vendor }: { vendor: VendorSelf }) {
 
   return (
     <SectionShell title="Contact & social" description="How couples reach you, and your social links">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <label className="mb-3.5 block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">Website</span>
-          <input
+          <Input
             type="text"
             value={website}
             onChange={(e) => setWebsite(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, website: true }))}
+            invalid={touched.website && !!websiteError}
             placeholder="https://example.com"
-            className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+            className="px-3 py-2.5"
           />
+          {touched.website && <FieldError message={websiteError} />}
         </label>
         <div className="mb-3.5 grid grid-cols-2 gap-3">
           <label className="block text-sm">
             <span className="mb-1.5 block font-bold text-[13px]">Phone</span>
-            <input
+            <Input
               type="tel"
-              minLength={6}
               maxLength={20}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+              onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
+              invalid={touched.phone && !!phoneError}
+              className="px-3 py-2.5"
             />
+            {touched.phone && <FieldError message={phoneError} />}
           </label>
           <label className="block text-sm">
             <span className="mb-1.5 block font-bold text-[13px]">Email</span>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+              invalid={touched.email && !!emailError}
+              className="px-3 py-2.5"
+            />
+            {touched.email && <FieldError message={emailError} />}
           </label>
         </div>
         <label className="mb-3.5 block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">Instagram</span>
-          <input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="instagram.com/yourhandle" className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+          <Input
+            value={instagram}
+            onChange={(e) => setInstagram(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, instagram: true }))}
+            invalid={touched.instagram && !!instagramError}
+            placeholder="instagram.com/yourhandle"
+            className="px-3 py-2.5"
+          />
+          {touched.instagram && <FieldError message={instagramError} />}
         </label>
         <label className="mb-3.5 block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">Facebook</span>
-          <input value={facebook} onChange={(e) => setFacebook(e.target.value)} placeholder="facebook.com/yourpage" className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+          <Input
+            value={facebook}
+            onChange={(e) => setFacebook(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, facebook: true }))}
+            invalid={touched.facebook && !!facebookError}
+            placeholder="facebook.com/yourpage"
+            className="px-3 py-2.5"
+          />
+          {touched.facebook && <FieldError message={facebookError} />}
         </label>
         <label className="mb-4 block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">YouTube / Vimeo</span>
-          <input value={youtube} onChange={(e) => setYoutube(e.target.value)} placeholder="youtube.com/@yourchannel" className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+          <Input
+            value={youtube}
+            onChange={(e) => setYoutube(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, youtube: true }))}
+            invalid={touched.youtube && !!youtubeError}
+            placeholder="youtube.com/@yourchannel"
+            className="px-3 py-2.5"
+          />
+          {touched.youtube && <FieldError message={youtubeError} />}
         </label>
         <SectionStatus saving={saving} saved={saved} error={error} />
       </form>
@@ -619,15 +742,23 @@ function MoreDetailsSection({ vendor }: { vendor: VendorSelf }) {
   const [travelPolicy, setTravelPolicy] = useState(profile?.travelPolicy ?? "");
   const [languages, setLanguages] = useState(profile?.languages.join(", ") ?? "");
   const [teamSize, setTeamSize] = useState(profile?.teamSize?.toString() ?? "");
+  const [touched, setTouched] = useState<{ languages?: boolean }>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const languagesError = useMemo(() => {
+    const languageList = languages ? toStringList(languages) : [];
+    if (languageList.length > 20) return "Up to 20 languages allowed";
+    if (languageList.some((l) => l.length > 50)) return "Each language must be 50 characters or fewer";
+    return null;
+  }, [languages]);
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const languageList = languages ? toStringList(languages) : [];
-    if (languageList.length > 20 || languageList.some((l) => l.length > 50)) {
-      setError("Languages: up to 20 languages, 50 characters each.");
+    if (languagesError) {
+      setTouched({ languages: true });
       return;
     }
     setSaving(true);
@@ -654,7 +785,7 @@ function MoreDetailsSection({ vendor }: { vendor: VendorSelf }) {
 
   return (
     <SectionShell title="More details" description="Experience, business hours, and team">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <div className="mb-3.5">
           <span className="mb-1.5 block text-[13px] font-bold">Verification status</span>
           <span className="inline-block rounded-full bg-neutral-grey-20 px-2.5 py-1 text-[11px] font-bold uppercase text-text-grey">
@@ -703,7 +834,15 @@ function MoreDetailsSection({ vendor }: { vendor: VendorSelf }) {
         </label>
         <label className="mb-3.5 block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">Languages spoken</span>
-          <input value={languages} onChange={(e) => setLanguages(e.target.value)} placeholder="English, Hindi, Kannada" className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+          <Input
+            value={languages}
+            onChange={(e) => setLanguages(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, languages: true }))}
+            invalid={touched.languages && !!languagesError}
+            placeholder="English, Hindi, Kannada"
+            className="px-3 py-2.5"
+          />
+          {touched.languages && <FieldError message={languagesError} />}
         </label>
         <label className="mb-4 block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">Team size</span>

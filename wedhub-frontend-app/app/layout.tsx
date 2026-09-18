@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { PageViewTracker } from "@/components/shared/PageViewTracker";
 import { GoogleAnalytics } from "@/components/shared/GoogleAnalytics";
 import { JsonLd } from "@/components/shared/JsonLd";
+import { ToastProvider } from "@/components/ui/Toast";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld";
 import { DEFAULT_DESCRIPTION, DEFAULT_OG_IMAGE, SITE_URL } from "@/lib/seo/site";
 import "./globals.css";
@@ -54,7 +55,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <JsonLd data={websiteJsonLd()} />
         <GoogleAnalytics />
         <PageViewTracker />
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

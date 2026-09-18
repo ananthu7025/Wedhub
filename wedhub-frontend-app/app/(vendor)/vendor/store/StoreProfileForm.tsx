@@ -1,17 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
+import { useToast } from "@/components/ui/Toast";
+import { formatApiError } from "@/lib/utils/error";
 import { updateMyStoreProfile } from "@/lib/api/vendor-store-client";
 import type { StoreAccentColor, VendorStoreProfile } from "@/lib/api/vendor-store.types";
 import { STORE_ACCENT_COLOR_LABELS, STORE_THEMES } from "@/components/vendor-store/store-theme";
 
 const ACCENT_COLOR_OPTIONS: StoreAccentColor[] = ["CRIMSON", "EMERALD", "NAVY", "AMBER", "PLUM", "SLATE"];
 
+// Accepts a bare 10-digit Indian mobile number or the same prefixed with a
+// "+91"/"91"/"0" country/trunk code, with optional spaces/hyphens/parens —
+// unlike the strict auth phoneSchema, WhatsApp order numbers are commonly
+// pasted in with a country code (see placeholder: "+91 98765 43210").
+const WHATSAPP_PHONE_REGEX = /^(?:\+?91|0)?[6-9]\d{9}$/;
+
+function validateStoreName(value: string): string | null {
+  if (!value.trim()) return "Store display name is required";
+  if (value.trim().length > 150) return "Store display name must be at most 150 characters";
+  return null;
+}
+
+function validateWhatsappPhone(value: string): string | null {
+  const digitsOnly = value.trim().replace(/[\s()-]/g, "");
+  if (!digitsOnly) return null; // optional field
+  if (!WHATSAPP_PHONE_REGEX.test(digitsOnly)) {
+    return "Enter a valid 10-digit Indian mobile number";
+  }
+  return null;
+}
+
+function validateMinOrderValue(value: number | string): string | null {
+  if (value === "") return null; // optional field
+  const num = Number(value);
+  if (Number.isNaN(num) || num < 0) {
+    return "Minimum order value must be a positive number";
+  }
+  return null;
+}
+
 export function StoreProfileForm({
   initialProfile,
 }: {
   initialProfile: VendorStoreProfile;
 }) {
+  const { showToast } = useToast();
   const [profile, setProfile] = useState<VendorStoreProfile>(initialProfile);
   const [storeName, setStoreName] = useState(initialProfile.storeName ?? "");
   const [tagline, setTagline] = useState(initialProfile.tagline ?? "");
@@ -33,15 +68,27 @@ export function StoreProfileForm({
     initialProfile.accentColor ?? "CRIMSON",
   );
 
+  const [touched, setTouched] = useState<{
+    storeName?: boolean;
+    whatsappOrderPhone?: boolean;
+    minOrderValue?: boolean;
+  }>({});
   const [saving, setSaving] = useState(false);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const storeNameError = useMemo(() => validateStoreName(storeName), [storeName]);
+  const whatsappPhoneError = useMemo(
+    () => validateWhatsappPhone(whatsappOrderPhone),
+    [whatsappOrderPhone],
+  );
+  const minOrderValueError = useMemo(() => validateMinOrderValue(minOrderValue), [minOrderValue]);
+  const isFormValid = !storeNameError && !whatsappPhoneError && !minOrderValueError;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setTouched({ storeName: true, whatsappOrderPhone: true, minOrderValue: true });
+    if (!isFormValid) return;
+
     setSaving(true);
-    setSuccessMsg(null);
-    setErrorMsg(null);
 
     const minValNum = minOrderValue === "" ? null : Number(minOrderValue);
 
@@ -59,21 +106,16 @@ export function StoreProfileForm({
 
     setSaving(false);
     if (!res.success) {
-      setErrorMsg(
-        typeof res.error === "string"
-          ? res.error
-          : res.error?.message || "Failed to update store settings",
-      );
+      showToast(formatApiError(res.error), "error");
       return;
     }
 
     setProfile(res.data);
-    setSuccessMsg("Store settings updated successfully!");
-    setTimeout(() => setSuccessMsg(null), 4000);
+    showToast("Store settings updated successfully!", "success");
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
       {!profile.isEligible && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
           <div className="flex items-start gap-3">
@@ -90,24 +132,6 @@ export function StoreProfileForm({
         </div>
       )}
 
-      {successMsg && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-800 flex items-center gap-2">
-          <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-          </svg>
-          {successMsg}
-        </div>
-      )}
-
-      {errorMsg && (
-        <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-800 flex items-center gap-2">
-          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          {errorMsg}
-        </div>
-      )}
-
       {/* Main Settings Card */}
       <div className="rounded-xl border border-border bg-white p-6">
         <h3 className="text-base font-bold text-text-dark border-b border-border pb-3 mb-5">
@@ -119,18 +143,23 @@ export function StoreProfileForm({
             <label className="block text-xs font-semibold text-text-grey mb-1">
               Store Display Name <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               type="text"
               value={storeName}
               onChange={(e) => setStoreName(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, storeName: true }))}
               placeholder="e.g. Aiswarya Floral & Decors"
               maxLength={150}
-              required
-              className="w-full rounded-lg border border-border px-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
+              invalid={touched.storeName && !!storeNameError}
+              className="rounded-lg px-3.5 py-2 text-sm"
             />
-            <p className="mt-1 text-[11px] text-text-grey">
-              The customer-facing title for your storefront header.
-            </p>
+            {touched.storeName && storeNameError ? (
+              <FieldError message={storeNameError} />
+            ) : (
+              <p className="mt-1 text-[11px] text-text-grey">
+                The customer-facing title for your storefront header.
+              </p>
+            )}
           </div>
 
           <div>
@@ -161,13 +190,13 @@ export function StoreProfileForm({
             <label className="block text-xs font-semibold text-text-grey mb-1">
               Store Tagline
             </label>
-            <input
+            <Input
               type="text"
               value={tagline}
               onChange={(e) => setTagline(e.target.value)}
               placeholder="e.g. Handcrafted floral garlands, bridal bouquets & fresh wedding decor"
               maxLength={300}
-              className="w-full rounded-lg border border-border px-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
+              className="rounded-lg px-3.5 py-2 text-sm"
             />
           </div>
 
@@ -235,17 +264,23 @@ export function StoreProfileForm({
             </label>
             <div className="relative">
               <span className="absolute left-3 top-2 text-sm text-text-grey">📱</span>
-              <input
+              <Input
                 type="tel"
                 value={whatsappOrderPhone}
                 onChange={(e) => setWhatsappOrderPhone(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, whatsappOrderPhone: true }))}
                 placeholder="9876543210 or +91 98765 43210"
-                className="w-full rounded-lg border border-border pl-9 pr-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
+                invalid={touched.whatsappOrderPhone && !!whatsappPhoneError}
+                className="rounded-lg pl-9 pr-3.5 py-2 text-sm"
               />
             </div>
-            <p className="mt-1 text-[11px] text-text-grey">
-              Incoming customer orders and cart confirmations will be sent directly to this WhatsApp number.
-            </p>
+            {touched.whatsappOrderPhone && whatsappPhoneError ? (
+              <FieldError message={whatsappPhoneError} />
+            ) : (
+              <p className="mt-1 text-[11px] text-text-grey">
+                Incoming customer orders and cart confirmations will be sent directly to this WhatsApp number.
+              </p>
+            )}
           </div>
 
           <div>
@@ -254,19 +289,25 @@ export function StoreProfileForm({
             </label>
             <div className="relative">
               <span className="absolute left-3 top-2 text-sm text-text-grey">₹</span>
-              <input
+              <Input
                 type="number"
                 min="0"
                 step="1"
                 value={minOrderValue}
                 onChange={(e) => setMinOrderValue(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, minOrderValue: true }))}
                 placeholder="e.g. 500 (leave blank for no minimum)"
-                className="w-full rounded-lg border border-border pl-8 pr-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
+                invalid={touched.minOrderValue && !!minOrderValueError}
+                className="rounded-lg pl-8 pr-3.5 py-2 text-sm"
               />
             </div>
-            <p className="mt-1 text-[11px] text-text-grey">
-              Carts below this amount cannot place an order.
-            </p>
+            {touched.minOrderValue && minOrderValueError ? (
+              <FieldError message={minOrderValueError} />
+            ) : (
+              <p className="mt-1 text-[11px] text-text-grey">
+                Carts below this amount cannot place an order.
+              </p>
+            )}
           </div>
 
           <div>

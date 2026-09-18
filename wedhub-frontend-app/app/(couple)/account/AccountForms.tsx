@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { deactivateAccount, deleteAccount, updateWeddingProfile } from "@/lib/api/account-client";
 import { updateMyProfile } from "@/lib/api/users-client";
 import { logout, refreshSession } from "@/lib/api/auth-client";
@@ -9,6 +9,9 @@ import { setNotificationPreference } from "@/lib/api/notification-preferences-cl
 import type { MeResponse } from "@/lib/api/account.types";
 import type { NotificationChannel, NotificationEventType, NotificationPreference } from "@/lib/api/notification-preferences.types";
 import { formatApiError } from "@/lib/utils/error";
+import { useToast } from "@/components/ui/Toast";
+import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
 
 function toDateInputValue(iso: string | null): string {
   if (!iso) return "";
@@ -17,26 +20,33 @@ function toDateInputValue(iso: string | null): string {
 
 export function WeddingDetailsForm({ me }: { me: MeResponse }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [weddingDate, setWeddingDate] = useState(toDateInputValue(me.weddingProfile?.weddingDate ?? null));
   const [partnerName, setPartnerName] = useState(me.weddingProfile?.partnerName ?? "");
   const [guestCount, setGuestCount] = useState(me.weddingProfile?.guestCount?.toString() ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<{ weddingDate?: boolean }>({});
+
+  // Same isNaN(d.getTime()) validity check as before, just evaluated on every
+  // keystroke via useMemo so the field can show a red border + inline message
+  // once touched, instead of only surfacing the problem on submit.
+  const dateError = useMemo(() => {
+    if (!weddingDate) return null;
+    const d = new Date(weddingDate);
+    return isNaN(d.getTime()) ? "Please enter a valid wedding date" : null;
+  }, [weddingDate]);
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
-    setError(null);
+    setTouched({ weddingDate: true });
     setSaved(false);
+
+    if (dateError) return;
 
     let parsedDate: string | undefined = undefined;
     if (weddingDate) {
-      const d = new Date(weddingDate);
-      if (isNaN(d.getTime())) {
-        setError("Please enter a valid wedding date");
-        return;
-      }
-      parsedDate = d.toISOString();
+      parsedDate = new Date(weddingDate).toISOString();
     }
 
     setSaving(true);
@@ -65,21 +75,24 @@ export function WeddingDetailsForm({ me }: { me: MeResponse }) {
       setSaved(true);
       router.refresh();
     } else {
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
     }
   }
 
   return (
-    <form onSubmit={handleSave}>
+    <form onSubmit={handleSave} noValidate>
       <div className="grid grid-cols-2 gap-4 max-[600px]:grid-cols-1">
         <label className="block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">Wedding date</span>
-          <input
+          <Input
             type="date"
             value={weddingDate}
             onChange={(e) => setWeddingDate(e.target.value)}
-            className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+            onBlur={() => setTouched((t) => ({ ...t, weddingDate: true }))}
+            invalid={touched.weddingDate && !!dateError}
+            className="px-3 py-2.5"
           />
+          {touched.weddingDate && <FieldError message={dateError} />}
         </label>
         <label className="block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">Partner&apos;s name</span>
@@ -102,7 +115,6 @@ export function WeddingDetailsForm({ me }: { me: MeResponse }) {
           />
         </label>
       </div>
-      {error && <p className="mt-2 text-[13px] text-red">{error}</p>}
       <button
         type="submit"
         disabled={saving}
@@ -116,21 +128,32 @@ export function WeddingDetailsForm({ me }: { me: MeResponse }) {
 
 export function AccountDetailsForm({ me }: { me: MeResponse }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [firstName, setFirstName] = useState(me.profile?.firstName ?? "");
   const [lastName, setLastName] = useState(me.profile?.lastName ?? "");
   const [phone, setPhone] = useState(me.phone ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<{ phone?: boolean }>({});
+
+  // Deliberately NOT the strict 10-digit-Indian-only optionalPhoneSchema used
+  // elsewhere: this field is optional and editable, and existing users may
+  // already have a non-Indian or differently-formatted number saved before
+  // that rule existed. Keeping the original lenient length check (rather than
+  // hard-rejecting anything that isn't a valid Indian mobile number) avoids
+  // blocking someone from saving the rest of their profile just because their
+  // pre-existing phone number doesn't fit the newer, stricter shape.
+  const phoneError = useMemo(() => {
+    const trimmed = phone.trim();
+    return trimmed && trimmed.length < 6 ? "Phone number must be at least 6 characters." : null;
+  }, [phone]);
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
+    setTouched({ phone: true });
+    if (phoneError) return;
+
     const trimmedPhone = phone.trim();
-    if (trimmedPhone && trimmedPhone.length < 6) {
-      setError("Phone number must be at least 6 characters.");
-      return;
-    }
-    setError(null);
     setSaving(true);
     setSaved(false);
     const result = await updateMyProfile({
@@ -143,13 +166,12 @@ export function AccountDetailsForm({ me }: { me: MeResponse }) {
       setSaved(true);
       router.refresh();
     } else {
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
     }
   }
 
   return (
-    <form onSubmit={handleSave}>
-      {error && <p className="mb-3 rounded-md bg-red-10 p-2.5 text-[13px] text-red-70">{error}</p>}
+    <form onSubmit={handleSave} noValidate>
       <label className="mb-3.5 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">First name</span>
         <input
@@ -170,15 +192,17 @@ export function AccountDetailsForm({ me }: { me: MeResponse }) {
       </label>
       <label className="mb-3.5 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">Phone</span>
-        <input
+        <Input
           type="tel"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          minLength={6}
+          onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
+          invalid={touched.phone && !!phoneError}
           maxLength={20}
           placeholder="+91 98765 43210"
-          className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+          className="px-3 py-2.5"
         />
+        {touched.phone && <FieldError message={phoneError} />}
       </label>
       <div className="mb-4">
         <span className="mb-1.5 block font-bold text-[13px]">Email</span>
@@ -230,13 +254,12 @@ function isEnabled(preferences: NotificationPreference[], eventType: Notificatio
 }
 
 export function NotificationPreferencesForm({ initialPreferences }: { initialPreferences: NotificationPreference[] }) {
+  const { showToast } = useToast();
   const [preferences, setPreferences] = useState(initialPreferences);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleToggle(checked: boolean) {
     setSaving(true);
-    setError(null);
     const result = await setNotificationPreference({ eventType: "LEAD_STATUS_UPDATED", channel: "EMAIL", isEnabled: checked });
     setSaving(false);
     if (result.success) {
@@ -246,13 +269,12 @@ export function NotificationPreferencesForm({ initialPreferences }: { initialPre
         return [...prev, result.data];
       });
     } else {
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
     }
   }
 
   return (
     <div>
-      {error && <p className="mb-2 rounded-md bg-red-10 p-2 text-xs text-red-70">{error}</p>}
       <div className="flex items-center justify-between py-3.5">
         <div>
           <div className="text-sm font-semibold">Email notifications</div>
@@ -272,9 +294,9 @@ export function NotificationPreferencesForm({ initialPreferences }: { initialPre
 
 export function AccountActions() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleLogout() {
     await logout();
@@ -284,7 +306,6 @@ export function AccountActions() {
 
   async function handleDeactivate() {
     setPending(true);
-    setError(null);
     const result = await deactivateAccount();
     if (result.success) {
       await logout();
@@ -292,24 +313,22 @@ export function AccountActions() {
       return;
     }
     setPending(false);
-    setError(formatApiError(result.error));
+    showToast(formatApiError(result.error), "error");
   }
 
   async function handleDelete() {
     setPending(true);
-    setError(null);
     const result = await deleteAccount();
     if (result.success) {
       router.push("/login");
       return;
     }
     setPending(false);
-    setError(formatApiError(result.error));
+    showToast(formatApiError(result.error), "error");
   }
 
   return (
     <div>
-      {error && <p className="mb-3 rounded-md bg-red-10 p-2.5 text-xs text-red-70">{error}</p>}
       <button
         type="button"
         onClick={handleLogout}

@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
 import { Button } from "@/components/ui/Button";
 import { GoogleSignInButton } from "@/components/shared/GoogleSignInButton";
+import { useToast } from "@/components/ui/Toast";
 import { login } from "@/lib/api/auth-client";
 import type { UserRole } from "@/lib/auth/types";
 import { formatApiError } from "@/lib/utils/error";
+import { identifierSchema, loginPasswordSchema, validateField } from "@/lib/validation/auth-schemas";
 
 const roleHomeRoute: Record<UserRole, string> = {
   END_USER: "/shortlist",
@@ -18,20 +21,26 @@ const roleHomeRoute: Record<UserRole, string> = {
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<{ identifier?: boolean; password?: boolean }>({});
   const [pending, setPending] = useState(false);
+
+  const identifierError = useMemo(() => validateField(identifierSchema, identifier), [identifier]);
+  const passwordError = useMemo(() => validateField(loginPasswordSchema, password), [password]);
+  const isFormValid = !identifierError && !passwordError;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setPending(true);
+    setTouched({ identifier: true, password: true });
+    if (!isFormValid) return;
 
+    setPending(true);
     const result = await login(identifier, password);
 
     if (!result.success) {
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       setPending(false);
       return;
     }
@@ -52,22 +61,18 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full">
-      {error && (
-        <div className="mb-4 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">
-          {error}
-        </div>
-      )}
-
+    <form onSubmit={handleSubmit} className="w-full" noValidate>
       <div className="mb-4.5">
         <Input
           type="text"
           placeholder="Email or phone"
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
-          required
+          onBlur={() => setTouched((t) => ({ ...t, identifier: true }))}
+          invalid={touched.identifier && !!identifierError}
           autoComplete="username"
         />
+        {touched.identifier && <FieldError message={identifierError} />}
       </div>
       <div className="mb-4">
         <Input
@@ -75,9 +80,11 @@ export function LoginForm() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          required
+          onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+          invalid={touched.password && !!passwordError}
           autoComplete="current-password"
         />
+        {touched.password && <FieldError message={passwordError} />}
       </div>
 
       <Button type="submit" variant="primary" block disabled={pending} className="mb-4">

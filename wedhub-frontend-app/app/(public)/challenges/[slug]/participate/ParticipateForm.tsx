@@ -1,11 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { uploadChallengeEntryPhoto } from "@/lib/media/upload";
 import { submitChallengeEntry } from "@/lib/api/challenges-client";
 import { trackEvent } from "@/lib/analytics/track";
 import { formatApiError } from "@/lib/utils/error";
+import { useToast } from "@/components/ui/Toast";
+import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
+import { optionalPhoneSchema, validateField } from "@/lib/validation/auth-schemas";
 import type { LocationSelf } from "@/lib/api/vendor-self.types";
 
 /**
@@ -26,6 +30,7 @@ export function ParticipateForm({
   cities: LocationSelf[];
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -41,8 +46,34 @@ export function ParticipateForm({
   const [contactPhone, setContactPhone] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [touched, setTouched] = useState<{
+    title?: boolean;
+    file?: boolean;
+    acceptedTerms?: boolean;
+    businessName?: boolean;
+    shortDescription?: boolean;
+    cityId?: boolean;
+    contactPhone?: boolean;
+  }>({});
+
+  const titleError = title.trim() ? null : "Please add a title for your entry";
+  const fileError = file ? null : "Please upload a photo of your work";
+  const acceptedTermsError = acceptedTerms ? null : "Please accept the challenge terms to continue";
+  const businessNameError = needsVendorBootstrap && !businessName.trim() ? "Please enter your artist/business name" : null;
+  const shortDescriptionError =
+    needsVendorBootstrap && !shortDescription.trim() ? "Please add a one-line description" : null;
+  const cityIdError = needsVendorBootstrap && !cityId ? "Please select your city" : null;
+  const contactPhoneError = useMemo(() => validateField(optionalPhoneSchema, contactPhone), [contactPhone]);
+
+  const isFormValid =
+    !titleError &&
+    !fileError &&
+    !acceptedTermsError &&
+    !businessNameError &&
+    !shortDescriptionError &&
+    !cityIdError &&
+    !contactPhoneError;
 
   if (submitted) {
     return (
@@ -55,21 +86,18 @@ export function ParticipateForm({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!file) {
-      setError("Please upload a photo of your work.");
-      return;
-    }
-    if (!acceptedTerms) {
-      setError("Please accept the challenge terms to continue.");
-      return;
-    }
-    if (needsVendorBootstrap && (!businessName || !shortDescription || !cityId)) {
-      setError("Please fill in your artist name, a short description, and your city.");
-      return;
-    }
+    setTouched({
+      title: true,
+      file: true,
+      acceptedTerms: true,
+      businessName: true,
+      shortDescription: true,
+      cityId: true,
+      contactPhone: true,
+    });
+    if (!isFormValid || !file) return;
 
     setSubmitting(true);
-    setError(null);
 
     try {
       const imageMediaId = await uploadChallengeEntryPhoto(file);
@@ -93,7 +121,7 @@ export function ParticipateForm({
       });
 
       if (!result.success) {
-        setError(formatApiError(result.error));
+        showToast(formatApiError(result.error), "error");
         return;
       }
 
@@ -101,53 +129,57 @@ export function ParticipateForm({
       setSubmitted(true);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not submit your entry. Please try again.");
+      showToast(err instanceof Error ? err.message : "Could not submit your entry. Please try again.", "error");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       {needsVendorBootstrap && (
         <fieldset className="space-y-4 rounded-xl border border-border p-4">
           <legend className="px-1 text-sm font-bold text-text-dark">About you</legend>
 
           <label className="block">
             <span className="mb-1 block text-xs font-bold text-text-grey">Your artist/business name</span>
-            <input
+            <Input
               type="text"
-              required
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+              onBlur={() => setTouched((t) => ({ ...t, businessName: true }))}
+              invalid={touched.businessName && !!businessNameError}
               placeholder="e.g. Priya Mehndi Art"
             />
+            {touched.businessName && <FieldError message={businessNameError} />}
           </label>
 
           <label className="block">
             <span className="mb-1 block text-xs font-bold text-text-grey">One line about your Mehndi work</span>
-            <input
+            <Input
               type="text"
-              required
               maxLength={200}
               value={shortDescription}
               onChange={(e) => setShortDescription(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+              onBlur={() => setTouched((t) => ({ ...t, shortDescription: true }))}
+              invalid={touched.shortDescription && !!shortDescriptionError}
               placeholder="e.g. Bridal mehndi specialist with 5+ years experience"
             />
+            {touched.shortDescription && <FieldError message={shortDescriptionError} />}
           </label>
 
           <label className="block">
             <span className="mb-1 block text-xs font-bold text-text-grey">Where are you based?</span>
             <select
-              required
               value={cityId}
               onChange={(e) => {
                 setCityId(e.target.value);
                 setCityName(e.target.selectedOptions[0]?.textContent ?? "");
               }}
-              className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+              onBlur={() => setTouched((t) => ({ ...t, cityId: true }))}
+              className={`w-full rounded-md border px-3 py-2.5 text-sm ${
+                touched.cityId && cityIdError ? "border-red focus:border-red" : "border-border focus:border-brand-primary"
+              }`}
             >
               <option value="">Select your city</option>
               {cities.map((city) => (
@@ -156,6 +188,7 @@ export function ParticipateForm({
                 </option>
               ))}
             </select>
+            {touched.cityId && <FieldError message={cityIdError} />}
           </label>
 
           <label className="block">
@@ -181,28 +214,31 @@ export function ParticipateForm({
 
           <label className="block">
             <span className="mb-1 block text-xs font-bold text-text-grey">WhatsApp number to contact you</span>
-            <input
+            <Input
               type="tel"
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
-              className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+              onBlur={() => setTouched((t) => ({ ...t, contactPhone: true }))}
+              invalid={touched.contactPhone && !!contactPhoneError}
               placeholder="e.g. 9999999999"
             />
+            {touched.contactPhone && <FieldError message={contactPhoneError} />}
           </label>
         </fieldset>
       )}
 
       <label className="block">
         <span className="mb-1 block text-xs font-bold text-text-grey">Challenge entry title</span>
-        <input
+        <Input
           type="text"
-          required
           maxLength={200}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+          onBlur={() => setTouched((t) => ({ ...t, title: true }))}
+          invalid={touched.title && !!titleError}
           placeholder="e.g. Bridal Bloom Design"
         />
+        {touched.title && <FieldError message={titleError} />}
       </label>
 
       <label className="block">
@@ -210,10 +246,15 @@ export function ParticipateForm({
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          required
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+          onChange={(e) => {
+            setFile(e.target.files?.[0] ?? null);
+            setTouched((t) => ({ ...t, file: true }));
+          }}
+          className={`w-full rounded-md border px-3 py-2.5 text-sm ${
+            touched.file && fileError ? "border-red focus:border-red" : "border-border focus:border-brand-primary"
+          }`}
         />
+        {touched.file && <FieldError message={fileError} />}
       </label>
 
       <label className="block">
@@ -240,17 +281,21 @@ export function ParticipateForm({
         </label>
       )}
 
-      <label className="flex items-start gap-2 text-xs text-text-grey">
-        <input
-          type="checkbox"
-          checked={acceptedTerms}
-          onChange={(e) => setAcceptedTerms(e.target.checked)}
-          className="mt-0.5"
-        />
-        I accept the challenge terms and conditions
-      </label>
-
-      {error && <p className="text-xs text-red-70">{error}</p>}
+      <div>
+        <label className="flex items-start gap-2 text-xs text-text-grey">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => {
+              setAcceptedTerms(e.target.checked);
+              setTouched((t) => ({ ...t, acceptedTerms: true }));
+            }}
+            className="mt-0.5"
+          />
+          I accept the challenge terms and conditions
+        </label>
+        {touched.acceptedTerms && <FieldError message={acceptedTermsError} />}
+      </div>
 
       <button
         type="submit"

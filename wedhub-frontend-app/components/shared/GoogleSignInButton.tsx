@@ -6,6 +6,7 @@ import Script from "next/script";
 import { loginWithGoogle } from "@/lib/api/auth-client";
 import type { AuthenticatedUser, UserRole } from "@/lib/auth/types";
 import { formatApiError } from "@/lib/utils/error";
+import { useToast } from "@/components/ui/Toast";
 
 /**
  * "Sign in with Google" via Google Identity Services (GIS) — renders
@@ -56,17 +57,16 @@ export function GoogleSignInButton({
   onSuccess: (user: AuthenticatedUser) => void;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const containerId = useId().replace(/:/g, "");
   const containerRef = useRef<HTMLDivElement>(null);
   const [scriptReady, setScriptReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
     if (!scriptReady || !GOOGLE_CLIENT_ID || !window.google || !containerRef.current) return;
 
     async function handleCredential(response: { credential: string }) {
-      setError(null);
       setPending(true);
       const result = await loginWithGoogle(response.credential, role);
       setPending(false);
@@ -76,7 +76,7 @@ export function GoogleSignInButton({
           router.push("/signup");
           return;
         }
-        setError(formatApiError(result.error));
+        showToast(formatApiError(result.error), "error");
         return;
       }
 
@@ -126,9 +126,6 @@ export function GoogleSignInButton({
   return (
     <div className="w-full">
       <Script src="https://accounts.google.com/gsi/client" onReady={() => setScriptReady(true)} />
-      {error && (
-        <div className="mb-3 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">{error}</div>
-      )}
       <div id={containerId} ref={containerRef} className="flex justify-center overflow-hidden" />
       {pending && <p className="mt-2 text-center text-[13px] text-text-grey">Signing in…</p>}
     </div>

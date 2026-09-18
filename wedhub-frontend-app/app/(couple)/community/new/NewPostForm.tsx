@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { createCommunityPost } from "@/lib/api/community-client";
 import { uploadCommunityPostPhoto } from "@/lib/media/upload";
 import { formatApiError } from "@/lib/utils/error";
+import { useToast } from "@/components/ui/Toast";
+import { FieldError } from "@/components/ui/FieldError";
 import type { CommunityTag } from "@/lib/api/community.types";
 import { CloseIcon } from "@/app/(public)/community/icons";
 
@@ -24,6 +26,7 @@ export function NewPostForm({
   openPhotoPicker?: boolean;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [postType, setPostType] = useState<"TEXT" | "POLL">(initialPostType);
@@ -33,7 +36,15 @@ export function NewPostForm({
   const [tagId, setTagId] = useState(initialTagId ?? "");
   const [photo, setPhoto] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "uploading" | "submitting" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [touched, setTouched] = useState<{ title?: boolean; body?: boolean; pollOptions?: boolean }>({});
+
+  const titleError = title.trim() ? null : postType === "POLL" ? "Please add a question" : "Please add a title";
+  const bodyError = postType === "TEXT" && !body.trim() ? "Please add a description" : null;
+  const trimmedPollOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+  const pollOptionsError =
+    postType === "POLL" && trimmedPollOptions.length < MIN_POLL_OPTIONS
+      ? `Please add at least ${MIN_POLL_OPTIONS} poll options`
+      : null;
 
   // Opens the file picker immediately when arriving via the feed's "Photo"
   // composer button (?mode=photo) — a one-time effect keyed by the prop
@@ -50,8 +61,7 @@ export function NewPostForm({
     event.target.value = "";
     if (!file) return;
     if (!ALLOWED_PHOTO_TYPES.has(file.type)) {
-      setErrorMessage("Only JPEG, PNG and WebP images are allowed.");
-      setStatus("error");
+      showToast("Only JPEG, PNG and WebP images are allowed.", "error");
       return;
     }
     setPhoto(file);
@@ -72,25 +82,8 @@ export function NewPostForm({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
-    if (!title.trim()) {
-      setErrorMessage("Please add a title");
-      setStatus("error");
-      return;
-    }
-
-    const trimmedOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
-    if (postType === "POLL" && trimmedOptions.length < MIN_POLL_OPTIONS) {
-      setErrorMessage(`Please add at least ${MIN_POLL_OPTIONS} poll options`);
-      setStatus("error");
-      return;
-    }
-    if (postType === "TEXT" && !body.trim()) {
-      setErrorMessage("Please add a description");
-      setStatus("error");
-      return;
-    }
-
-    setErrorMessage("");
+    setTouched({ title: true, body: true, pollOptions: true });
+    if (titleError || bodyError || pollOptionsError) return;
 
     let mediaId: string | undefined;
     if (photo) {
@@ -99,7 +92,7 @@ export function NewPostForm({
         mediaId = await uploadCommunityPostPhoto(photo);
       } catch (err) {
         setStatus("error");
-        setErrorMessage(err instanceof Error ? err.message : "Photo upload failed");
+        showToast(err instanceof Error ? err.message : "Photo upload failed", "error");
         return;
       }
     }
@@ -107,7 +100,14 @@ export function NewPostForm({
     setStatus("submitting");
     const result = await createCommunityPost(
       postType === "POLL"
-        ? { postType: "POLL", title: title.trim(), body: body.trim() || undefined, tagId: tagId || undefined, mediaId, options: trimmedOptions }
+        ? {
+            postType: "POLL",
+            title: title.trim(),
+            body: body.trim() || undefined,
+            tagId: tagId || undefined,
+            mediaId,
+            options: trimmedPollOptions,
+          }
         : { postType: "TEXT", title: title.trim(), body: body.trim(), tagId: tagId || undefined, mediaId },
     );
 
@@ -116,12 +116,12 @@ export function NewPostForm({
       router.refresh();
     } else {
       setStatus("error");
-      setErrorMessage(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
     }
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} noValidate>
       <div className="mb-4 flex gap-2">
         {(["TEXT", "POLL"] as const).map((type) => (
           <button
@@ -158,10 +158,14 @@ export function NewPostForm({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          onBlur={() => setTouched((t) => ({ ...t, title: true }))}
           maxLength={200}
           placeholder={postType === "POLL" ? "Ask couples a question…" : "What's on your mind?"}
-          className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+          className={`w-full rounded-md border px-3 py-2.5 text-sm ${
+            touched.title && titleError ? "border-red focus:border-red" : "border-border focus:border-brand-primary"
+          }`}
         />
+        {touched.title && <FieldError message={titleError} />}
       </label>
 
       {postType === "POLL" ? (
@@ -175,6 +179,7 @@ export function NewPostForm({
                 <input
                   value={option}
                   onChange={(e) => updatePollOption(index, e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, pollOptions: true }))}
                   maxLength={100}
                   placeholder={`Option ${index + 1}`}
                   className="w-full rounded-md border border-border px-3 py-2 text-sm"
@@ -197,6 +202,7 @@ export function NewPostForm({
               + Add option
             </button>
           )}
+          {touched.pollOptions && <FieldError message={pollOptionsError} />}
         </div>
       ) : null}
 
@@ -207,10 +213,14 @@ export function NewPostForm({
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          onBlur={() => setTouched((t) => ({ ...t, body: true }))}
           placeholder={postType === "POLL" ? "Any extra details…" : "Share the details — other couples are here to help"}
           maxLength={5000}
-          className="min-h-[100px] w-full rounded-md border border-border px-3 py-2.5 text-sm"
+          className={`min-h-[100px] w-full rounded-md border px-3 py-2.5 text-sm ${
+            touched.body && bodyError ? "border-red focus:border-red" : "border-border focus:border-brand-primary"
+          }`}
         />
+        {touched.body && <FieldError message={bodyError} />}
       </label>
 
       <div className="mb-1">
@@ -241,8 +251,6 @@ export function NewPostForm({
         )}
         <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={handlePhotoSelect} />
       </div>
-
-      {status === "error" && <p className="mt-3.5 text-[13px] text-red">{errorMessage}</p>}
 
       <button
         type="submit"

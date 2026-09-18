@@ -6,6 +6,7 @@ import { useState } from "react";
 import { setMyAttributes } from "@/lib/api/vendor-self-client";
 import type { CategorySelf, VendorSelf } from "@/lib/api/vendor-self.types";
 import { formatApiError } from "@/lib/utils/error";
+import { useToast } from "@/components/ui/Toast";
 import { AttributesSection, type AttributeValue, type AttributeValueMap } from "./AttributesSection";
 
 /**
@@ -26,6 +27,7 @@ import { AttributesSection, type AttributeValue, type AttributeValueMap } from "
  */
 export function ProfileEditor({ vendor, categories }: { vendor: VendorSelf; categories: CategorySelf[] }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const primaryCategoryEntry = vendor.categories.find((c) => c.isPrimary) ?? null;
   const selectedCategory = categories.find((c) => c.id === primaryCategoryEntry?.categoryId) ?? null;
 
@@ -42,7 +44,6 @@ export function ProfileEditor({ vendor, categories }: { vendor: VendorSelf; cate
   });
 
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [error, setError] = useState("");
 
   function isAttributeValueEmpty(value: AttributeValue | undefined): boolean {
     if (value === undefined) return true;
@@ -66,19 +67,18 @@ export function ProfileEditor({ vendor, categories }: { vendor: VendorSelf; cate
     );
     if (missingRequiredAttributes.length > 0) {
       setStatus("error");
-      setError(`Missing required field(s): ${missingRequiredAttributes.map((a) => a.label).join(", ")}`);
+      showToast(`Missing required field(s): ${missingRequiredAttributes.map((a) => a.label).join(", ")}`, "error");
       return;
     }
 
     setStatus("saving");
-    setError("");
 
     const result = await setMyAttributes({
       values: Object.entries(attributeValues).map(([attributeId, value]) => ({ attributeId, value })),
     });
     if (!result.success) {
       setStatus("error");
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
 
@@ -118,7 +118,6 @@ export function ProfileEditor({ vendor, categories }: { vendor: VendorSelf; cate
       </div>
 
       <div className="mt-5 rounded-xl border border-border bg-white p-5">
-        {status === "error" && <div className="mb-3.5 rounded-md bg-red-10 p-3.5 text-[13px] text-red-70">{error}</div>}
         <button
           type="button"
           onClick={handleSave}

@@ -6,6 +6,8 @@ import { createReview } from "@/lib/api/account-client";
 import { uploadReviewPhoto } from "@/lib/media/upload";
 import { runWithConcurrencyLimit } from "@/lib/utils/concurrency";
 import { formatApiError } from "@/lib/utils/error";
+import { useToast } from "@/components/ui/Toast";
+import { FieldError } from "@/components/ui/FieldError";
 
 const MAX_PHOTOS = 6;
 const MAX_CONCURRENT_UPLOADS = 3;
@@ -19,6 +21,7 @@ export function ReviewForm({
   vendorId: string;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [rating, setRating] = useState(0);
@@ -28,14 +31,15 @@ export function ReviewForm({
     Array<{ id: string; file: File; state: PhotoUploadState; mediaId?: string }>
   >([]);
   const [status, setStatus] = useState<"idle" | "uploading" | "submitting" | "success" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [ratingTouched, setRatingTouched] = useState(false);
+
+  const ratingError = rating === 0 ? "Please select a star rating" : null;
 
   function handlePhotoSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files ?? []);
     const invalid = selected.find((f) => !ALLOWED_PHOTO_TYPES.has(f.type));
     if (invalid) {
-      setErrorMessage("Only JPEG, PNG and WebP images are allowed.");
-      setStatus("error");
+      showToast("Only JPEG, PNG and WebP images are allowed.", "error");
       event.target.value = "";
       return;
     }
@@ -72,13 +76,9 @@ export function ReviewForm({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (rating === 0) {
-      setErrorMessage("Please select a star rating");
-      setStatus("error");
-      return;
-    }
+    setRatingTouched(true);
+    if (ratingError) return;
 
-    setErrorMessage("");
     setStatus("uploading");
 
     const alreadyDone = photos.filter((p) => p.state === "done" && p.mediaId);
@@ -101,8 +101,9 @@ export function ReviewForm({
     const failedCount = freshResults.filter((r) => r.failed).length;
     if (failedCount > 0) {
       setStatus("error");
-      setErrorMessage(
+      showToast(
         `${failedCount} of ${photos.length} photo${photos.length === 1 ? "" : "s"} failed to upload. Retry or remove ${failedCount === 1 ? "it" : "them"} below, or submit without ${failedCount === 1 ? "it" : "them"}.`,
+        "error",
       );
       return;
     }
@@ -126,19 +127,22 @@ export function ReviewForm({
       router.refresh();
     } else {
       setStatus("error");
-      setErrorMessage(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
     }
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} noValidate>
       <span className="mb-2 block text-[13px] font-bold">Overall rating</span>
-      <div className="mb-5 flex flex-row-reverse justify-end gap-2 text-[34px]">
+      <div className="mb-1 flex flex-row-reverse justify-end gap-2 text-[34px]">
         {[5, 4, 3, 2, 1].map((star) => (
           <button
             key={star}
             type="button"
-            onClick={() => setRating(star)}
+            onClick={() => {
+              setRating(star);
+              setRatingTouched(true);
+            }}
             onMouseEnter={() => setHoverRating(star)}
             onMouseLeave={() => setHoverRating(0)}
             aria-label={`${star} star${star === 1 ? "" : "s"}`}
@@ -149,6 +153,7 @@ export function ReviewForm({
           </button>
         ))}
       </div>
+      <div className="mb-4">{ratingTouched && <FieldError message={ratingError} />}</div>
 
       <label className="mb-4 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">Your review</span>
@@ -214,8 +219,6 @@ export function ReviewForm({
           onChange={handlePhotoSelect}
         />
       </div>
-
-      {status === "error" && <p className="mt-3.5 text-[13px] text-red">{errorMessage}</p>}
 
       <button
         type="submit"

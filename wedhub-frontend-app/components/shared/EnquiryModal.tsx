@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createSingleVendorEnquiry } from "@/lib/api/shortlists-client";
 import { trackEvent } from "@/lib/analytics/track";
 import { formatApiError } from "@/lib/utils/error";
+import { useToast } from "@/components/ui/Toast";
+import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
+import { emailSchema, optionalPhoneSchema, validateField } from "@/lib/validation/auth-schemas";
 import type { WeddingProfileWithDetails as ProfileSetupResponse } from "@/lib/api/profile-setup.types";
 
 interface MeResponse {
@@ -49,6 +53,7 @@ function EnquiryModalContent({
   vendorName: string;
   onClose: () => void;
 }) {
+  const { showToast } = useToast();
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -57,8 +62,12 @@ function EnquiryModalContent({
   const [guestCount, setGuestCount] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error" | "already-enquired">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
   const [existingConversationId, setExistingConversationId] = useState<string | null>(null);
+  const [touched, setTouched] = useState<{ contactName?: boolean; contactEmail?: boolean; contactPhone?: boolean }>({});
+
+  const nameError = contactName.trim().length === 0 ? "Please enter your name." : null;
+  const emailError = useMemo(() => validateField(emailSchema, contactEmail), [contactEmail]);
+  const phoneError = useMemo(() => validateField(optionalPhoneSchema, contactPhone), [contactPhone]);
 
   useEffect(() => {
     fetch("/api/users/me", { credentials: "include" })
@@ -121,21 +130,13 @@ function EnquiryModalContent({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    setTouched({ contactName: true, contactEmail: true, contactPhone: true });
     const trimmedName = contactName.trim();
-    if (!trimmedName) {
-      setStatus("error");
-      setErrorMessage("Please enter your name.");
-      return;
-    }
+    if (nameError || emailError || phoneError) return;
+
     const trimmedPhone = contactPhone.trim();
-    if (trimmedPhone && trimmedPhone.length < 6) {
-      setStatus("error");
-      setErrorMessage("Phone number must be at least 6 digits.");
-      return;
-    }
 
     setStatus("submitting");
-    setErrorMessage("");
 
     const result = await createSingleVendorEnquiry({
       vendorId,
@@ -156,8 +157,11 @@ function EnquiryModalContent({
       setExistingConversationId(result.error.details.conversationId);
       setStatus("already-enquired");
     } else {
+      // "error" status here just reverts the modal back to the form view
+      // (see the render below) — the actual message now goes to a toast
+      // instead of an inline banner.
       setStatus("error");
-      setErrorMessage(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
     }
   }
 
@@ -208,43 +212,49 @@ function EnquiryModalContent({
             </Link>
           </div>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <h2 className="mb-1.5 text-lg font-bold">Send an enquiry</h2>
             <p className="mb-5.5 text-[13px] text-text-grey">To {vendorName}.</p>
 
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-semibold">Your name</span>
-              <input
-                required
+              <Input
                 maxLength={200}
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
-                className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+                onBlur={() => setTouched((t) => ({ ...t, contactName: true }))}
+                invalid={touched.contactName && !!nameError}
+                className="px-3 py-2.5"
               />
+              {touched.contactName && <FieldError message={nameError} />}
             </label>
 
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-semibold">Your email</span>
-              <input
+              <Input
                 type="email"
-                required
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
-                className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+                onBlur={() => setTouched((t) => ({ ...t, contactEmail: true }))}
+                invalid={touched.contactEmail && !!emailError}
+                className="px-3 py-2.5"
               />
+              {touched.contactEmail && <FieldError message={emailError} />}
             </label>
 
             <label className="mb-3.5 block text-sm">
               <span className="mb-1.5 block font-semibold">Contact number</span>
-              <input
+              <Input
                 type="tel"
                 placeholder="+91 98765 43210"
-                minLength={6}
                 maxLength={20}
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
-                className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
+                onBlur={() => setTouched((t) => ({ ...t, contactPhone: true }))}
+                invalid={touched.contactPhone && !!phoneError}
+                className="px-3 py-2.5"
               />
+              {touched.contactPhone && <FieldError message={phoneError} />}
             </label>
 
             <label className="mb-3.5 block text-sm">
@@ -292,8 +302,6 @@ function EnquiryModalContent({
                 className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
               />
             </label>
-
-            {status === "error" && <p className="mb-3.5 text-[13px] text-red">{errorMessage}</p>}
 
             <button
               type="submit"

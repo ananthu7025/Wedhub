@@ -66,6 +66,9 @@ export const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 export const STATE_CODE_REGEX = /^[0-9]{2}$/;
 export const PINCODE_REGEX = /^[0-9]{6}$/;
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Standard Indian bank IFSC shape: 4-letter bank code + a fixed "0" (reserved
+// for future use by RBI) + 6 alphanumeric branch code characters.
+export const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
 /**
  * Validates Indian GSTIN. Returns error message if invalid, or null if valid/empty.
@@ -117,6 +120,21 @@ export function validateEmail(email?: string | null): string | null {
   const trimmed = email.trim();
   if (!EMAIL_REGEX.test(trimmed)) {
     return "Invalid email address format";
+  }
+  return null;
+}
+
+/**
+ * Validates Indian bank IFSC code. Returns error message if invalid, or null if valid/empty.
+ */
+export function validateIfsc(ifsc?: string | null): string | null {
+  if (!ifsc || !ifsc.trim()) return null;
+  const upper = ifsc.trim().toUpperCase();
+  if (upper.length !== 11) {
+    return "IFSC code must be exactly 11 characters (e.g. HDFC0001234)";
+  }
+  if (!IFSC_REGEX.test(upper)) {
+    return "Invalid IFSC format (e.g. 4 letters + 0 + 6 alphanumeric characters)";
   }
   return null;
 }

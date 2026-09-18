@@ -1,8 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
+import { useToast } from "@/components/ui/Toast";
 import type { PackageSelf } from "@/lib/api/vendor-self.types";
 import { LogoCoverPicker } from "../profile/LogoCoverPicker";
+
+function validateName(value: string): string | null {
+  if (!value.trim()) return "Package name is required";
+  if (value.trim().length > 200) return "Package name must be at most 200 characters";
+  return null;
+}
+
+function validatePrice(value: number | string): string | null {
+  if (value === "") return "Price is required";
+  const num = Number(value);
+  if (Number.isNaN(num) || num <= 0) return "Price must be a positive number";
+  return null;
+}
 
 export function PackageModal({
   initialPackage,
@@ -19,14 +35,19 @@ export function PackageModal({
     imageMediaId: string | null;
   }) => Promise<{ success: boolean; error?: string }>;
 }) {
+  const { showToast } = useToast();
   const [name, setName] = useState(initialPackage?.name ?? "");
   const [price, setPrice] = useState(initialPackage?.price ?? "");
   const [description, setDescription] = useState(initialPackage?.description ?? "");
   const [inclusions, setInclusions] = useState<string[]>(initialPackage?.inclusions ?? []);
   const [newInclusion, setNewInclusion] = useState("");
   const [imageMediaId, setImageMediaId] = useState<string | null>(initialPackage?.imageMediaId ?? null);
+  const [touched, setTouched] = useState<{ name?: boolean; price?: boolean }>({});
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+
+  const nameError = useMemo(() => validateName(name), [name]);
+  const priceError = useMemo(() => validatePrice(price), [price]);
+  const isFormValid = !nameError && !priceError;
 
   // Backend caps inclusions at max(50) items, max(200) chars each
   // (package.schema.ts) — enforced here, one item at a time, rather than
@@ -44,12 +65,10 @@ export function PackageModal({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!name.trim() || !price) {
-      setError("Package name and price are required");
-      return;
-    }
+    setTouched({ name: true, price: true });
+    if (!isFormValid) return;
+
     setSaving(true);
-    setError("");
     // Flush whatever's still sitting in the "add item" input — otherwise a
     // vendor who types an inclusion and clicks Save without pressing Enter
     // or "+ Add item" first silently loses it (docs/bugs.md item #15).
@@ -70,7 +89,7 @@ export function PackageModal({
       onClose();
     } else {
       setSaving(false);
-      setError(saveResult.error || "Could not save this package. Please try again.");
+      showToast(saveResult.error || "Could not save this package. Please try again.", "error");
     }
   }
 
@@ -83,18 +102,22 @@ export function PackageModal({
         <h2 className="mb-1.5 text-lg font-bold">{initialPackage ? "Edit package" : "Add package"}</h2>
         <p className="mb-5.5 text-[13px] text-text-grey">This package will be shown to couples on your public profile.</p>
 
-        <form onSubmit={handleSubmit}>
-          <label className="mb-3.5 block text-sm">
-            <span className="mb-1.5 block font-bold text-[13px]">Package name</span>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Signature"
-              maxLength={200}
-              required
-              className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
-            />
-          </label>
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="mb-3.5">
+            <label className="mb-1.5 block text-sm">
+              <span className="mb-1.5 block font-bold text-[13px]">Package name</span>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+                placeholder="e.g. Signature"
+                maxLength={200}
+                invalid={touched.name && !!nameError}
+                className="rounded-md px-3 py-2.5 text-sm"
+              />
+            </label>
+            {touched.name && <FieldError message={nameError} />}
+          </div>
 
           <div className="mb-3.5">
             <LogoCoverPicker
@@ -112,18 +135,22 @@ export function PackageModal({
             />
           </div>
 
-          <label className="mb-3.5 block text-sm">
-            <span className="mb-1.5 block font-bold text-[13px]">Price (₹)</span>
-            <input
-              type="number"
-              min="0"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="e.g. 75000"
-              required
-              className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
-            />
-          </label>
+          <div className="mb-3.5">
+            <label className="mb-1.5 block text-sm">
+              <span className="mb-1.5 block font-bold text-[13px]">Price (₹)</span>
+              <Input
+                type="number"
+                min="0"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, price: true }))}
+                placeholder="e.g. 75000"
+                invalid={touched.price && !!priceError}
+                className="rounded-md px-3 py-2.5 text-sm"
+              />
+            </label>
+            {touched.price && <FieldError message={priceError} />}
+          </div>
 
           <label className="mb-3.5 block text-sm">
             <span className="mb-1.5 block font-bold text-[13px]">Description</span>
@@ -177,8 +204,6 @@ export function PackageModal({
             </div>
             {inclusions.length >= 50 && <p className="mt-1.5 text-[11px] text-text-grey">Maximum of 50 inclusions.</p>}
           </div>
-
-          {error && <p className="mb-3.5 text-[13px] text-red">{error}</p>}
 
           <button
             type="submit"

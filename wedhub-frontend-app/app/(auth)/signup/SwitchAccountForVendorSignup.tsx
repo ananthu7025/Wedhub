@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/api/auth-client";
 import { formatApiError } from "@/lib/utils/error";
+import { useToast } from "@/components/ui/Toast";
 
 // Shown at /signup?type=vendor when the visitor is already signed in as an
 // END_USER (customer). A single account's `role` is a fixed enum on the
@@ -15,16 +16,15 @@ import { formatApiError } from "@/lib/utils/error";
 // with no explanation at all.
 export function SwitchAccountForVendorSignup({ homeHref }: { homeHref: string }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleLogoutAndContinue() {
     setPending(true);
-    setError(null);
     const result = await logout();
     if (!result.success) {
       setPending(false);
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
     // Full navigation (not router.push) so every server component re-reads
@@ -40,8 +40,6 @@ export function SwitchAccountForVendorSignup({ homeHref }: { homeHref: string })
         This browser is signed in to a customer account. Vendor accounts are separate, so registering as a vendor
         means logging out of this account first and signing up fresh.
       </p>
-
-      {error && <p className="mb-4 rounded-md bg-red-10 p-2.5 text-[13px] text-red-70">{error}</p>}
 
       <button
         type="button"

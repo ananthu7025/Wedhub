@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
+import { useToast } from "@/components/ui/Toast";
 import {
   createWeddingWebsite,
   createWeddingWebsiteEvent,
@@ -30,6 +33,22 @@ function normalizeUrl(raw: string): string | undefined {
   if (!trimmed) return undefined;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
+}
+
+// Plain-check validator for the optional Google Maps link: empty is fine
+// (field is optional), but anything entered must be a shape normalizeUrl()
+// can turn into a real http(s) URL — mirrors the backend's z.string().url()
+// constraint on googleMapsUrl (wedding-website.schema.ts) closely enough to
+// catch obvious typos before they round-trip to the server.
+function validateGoogleMapsUrl(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    new URL(normalizeUrl(trimmed)!);
+    return null;
+  } catch {
+    return "Enter a valid URL";
+  }
 }
 
 const TEMPLATE_BLURB: Record<WeddingWebsiteTemplate, string> = {
@@ -68,7 +87,6 @@ export function WeddingWebsiteWizard({
 }) {
   const [draft, setDraft] = useState<WeddingWebsiteDraft | null>(initialDraft);
   const [step, setStep] = useState<WizardStepName>(initialDraft ? stepForDraft(initialDraft) : "Template");
-  const [error, setError] = useState<string | null>(null);
 
   if (!draft) {
     return (
@@ -85,7 +103,6 @@ export function WeddingWebsiteWizard({
   return (
     <div>
       <WizardProgress current={step} />
-      {error && <div className="mb-4 rounded-md bg-red-10 p-3 text-[13px] font-semibold text-red-70">{error}</div>}
 
       {step === "Template" && (
         <TemplateStep
@@ -98,19 +115,11 @@ export function WeddingWebsiteWizard({
           existingDraftId={draft.id}
         />
       )}
-      {step === "Details" && (
-        <DetailsStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Events")} onError={setError} />
-      )}
-      {step === "Events" && <EventsStep draft={draft} onNext={() => setStep("Photos")} onError={setError} />}
-      {step === "Photos" && (
-        <PhotosStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Story")} onError={setError} />
-      )}
-      {step === "Story" && (
-        <StoryStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Preview")} onError={setError} />
-      )}
-      {step === "Preview" && (
-        <PreviewStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Payment")} onError={setError} />
-      )}
+      {step === "Details" && <DetailsStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Events")} />}
+      {step === "Events" && <EventsStep draft={draft} onNext={() => setStep("Photos")} />}
+      {step === "Photos" && <PhotosStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Story")} />}
+      {step === "Story" && <StoryStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Preview")} />}
+      {step === "Preview" && <PreviewStep draft={draft} onSaved={(d) => setDraft(d)} onNext={() => setStep("Payment")} />}
       {step === "Payment" && (
         <PaymentStep draft={draft} dashboardHref={dashboardHref} onPublished={(d) => setDraft(d)} />
       )}
@@ -132,15 +141,21 @@ function TemplateStep({
   existingDraftId?: string;
   onCreated: (draft: WeddingWebsiteDraft) => void;
 }) {
+  const { showToast } = useToast();
   const [template, setTemplate] = useState<WeddingWebsiteTemplate>(initialTemplate ?? templates[0]?.id ?? "ROYAL_WEDDING");
   const [brideName, setBrideName] = useState("");
   const [groomName, setGroomName] = useState("");
+  const [touched, setTouched] = useState<{ brideName?: boolean; groomName?: boolean }>({});
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  // Bride/groom names are only collected (and required) when first creating
+  // the draft — an existing draft already has both, so this step only lets
+  // the couple change the template and there's nothing here to validate.
+  const brideNameError = !existingDraftId && !brideName.trim() ? "Bride's name is required" : null;
+  const groomNameError = !existingDraftId && !groomName.trim() ? "Groom's name is required" : null;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setError(null);
 
     // Changing the template on an already-created draft never deletes
     // wedding information — it's just a PATCH to the same row.
@@ -149,32 +164,30 @@ function TemplateStep({
       const result = await updateWeddingWebsite(existingDraftId, { template });
       setPending(false);
       if (!result.success) {
-        setError(formatApiError(result.error));
+        showToast(formatApiError(result.error), "error");
         return;
       }
       onCreated(result.data);
       return;
     }
 
-    if (!brideName.trim() || !groomName.trim()) {
-      setError("Please enter both names to continue");
-      return;
-    }
+    setTouched({ brideName: true, groomName: true });
+    if (brideNameError || groomNameError) return;
+
     setPending(true);
     const result = await createWeddingWebsite({ template, brideName: brideName.trim(), groomName: groomName.trim() });
     setPending(false);
     if (!result.success) {
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
     onCreated(result.data);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-2xl">
+    <form onSubmit={handleSubmit} className="mx-auto max-w-2xl" noValidate>
       <h1 className="mb-1.5 text-xl font-bold">❤️ Create Your Wedding Website</h1>
       <p className="mb-6 text-[13px] text-text-grey">Choose a beautiful template to get started.</p>
-      {error && <div className="mb-4 rounded-md bg-red-10 p-3 text-[13px] font-semibold text-red-70">{error}</div>}
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {templates.map((option) => (
@@ -196,23 +209,27 @@ function TemplateStep({
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <span className="mb-1.5 block text-[13px] font-bold">Bride&apos;s name</span>
-            <input
+            <Input
               value={brideName}
               onChange={(e) => setBrideName(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, brideName: true }))}
+              invalid={touched.brideName && !!brideNameError}
               placeholder="e.g. Priya"
               maxLength={150}
-              className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
             />
+            {touched.brideName && <FieldError message={brideNameError} />}
           </div>
           <div>
             <span className="mb-1.5 block text-[13px] font-bold">Groom&apos;s name</span>
-            <input
+            <Input
               value={groomName}
               onChange={(e) => setGroomName(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, groomName: true }))}
+              invalid={touched.groomName && !!groomNameError}
               placeholder="e.g. Rahul"
               maxLength={150}
-              className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
             />
+            {touched.groomName && <FieldError message={groomNameError} />}
           </div>
         </div>
       )}
@@ -230,13 +247,12 @@ function DetailsStep({
   draft,
   onSaved,
   onNext,
-  onError,
 }: {
   draft: WeddingWebsiteDraft;
   onSaved: (d: WeddingWebsiteDraft) => void;
   onNext: () => void;
-  onError: (message: string | null) => void;
 }) {
+  const { showToast } = useToast();
   const [fields, setFields] = useState({
     weddingDate: draft.weddingDate?.slice(0, 10) ?? "",
     weddingTime: draft.weddingTime ?? "",
@@ -249,15 +265,24 @@ function DetailsStep({
     weddingHashtag: draft.weddingHashtag ?? "",
     contactInfo: draft.contactInfo ?? "",
   });
+  const [touched, setTouched] = useState<{ googleMapsUrl?: boolean }>({});
   const [pending, setPending] = useState(false);
 
   function set<K extends keyof typeof fields>(key: K, value: string) {
     setFields((prev) => ({ ...prev, [key]: value }));
   }
 
+  const googleMapsUrlError = useMemo(() => validateGoogleMapsUrl(fields.googleMapsUrl), [fields.googleMapsUrl]);
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    onError(null);
+    // Every other field on this step is genuinely optional/freeform
+    // server-side (see updateWeddingWebsiteSchema) — only the Google Maps
+    // link has a real format constraint, so it's the only one that can
+    // block advancing to the next step.
+    setTouched({ googleMapsUrl: true });
+    if (googleMapsUrlError) return;
+
     setPending(true);
     const result = await updateWeddingWebsite(draft.id, {
       weddingDate: fields.weddingDate ? new Date(fields.weddingDate).toISOString() : undefined,
@@ -273,7 +298,7 @@ function DetailsStep({
     });
     setPending(false);
     if (!result.success) {
-      onError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
     onSaved(result.data);
@@ -281,7 +306,7 @@ function DetailsStep({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-2xl">
+    <form onSubmit={handleSubmit} className="mx-auto max-w-2xl" noValidate>
       <h2 className="mb-5 text-lg font-bold">Wedding Details</h2>
       <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Wedding date">
@@ -301,7 +326,15 @@ function DetailsStep({
       </div>
       <div className="mb-4">
         <Field label="Google Maps link (optional)">
-          <input value={fields.googleMapsUrl} onChange={(e) => set("googleMapsUrl", e.target.value)} placeholder="https://maps.google.com/..." maxLength={1000} className="w-full rounded-md border border-border px-3 py-2.5 text-sm" />
+          <Input
+            value={fields.googleMapsUrl}
+            onChange={(e) => set("googleMapsUrl", e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, googleMapsUrl: true }))}
+            invalid={touched.googleMapsUrl && !!googleMapsUrlError}
+            placeholder="https://maps.google.com/..."
+            maxLength={1000}
+          />
+          {touched.googleMapsUrl && <FieldError message={googleMapsUrlError} />}
         </Field>
       </div>
       <div className="mb-4">
@@ -357,20 +390,22 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 // ---- Step 3: Events ----
 
-function EventsStep({ draft, onNext, onError }: { draft: WeddingWebsiteDraft; onNext: () => void; onError: (m: string | null) => void }) {
+function EventsStep({ draft, onNext }: { draft: WeddingWebsiteDraft; onNext: () => void }) {
+  const { showToast } = useToast();
   const [events, setEvents] = useState<WeddingWebsiteEvent[]>(draft.events);
   const [name, setName] = useState("");
   const [venue, setVenue] = useState("");
   const [description, setDescription] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
   const [adding, setAdding] = useState(false);
+
+  const nameError = name.trim() ? null : "Please name the event";
 
   async function handleAdd(event: React.FormEvent) {
     event.preventDefault();
-    if (!name.trim()) {
-      onError("Please name the event");
-      return;
-    }
-    onError(null);
+    setNameTouched(true);
+    if (nameError) return;
+
     setAdding(true);
     const result = await createWeddingWebsiteEvent(draft.id, {
       name: name.trim(),
@@ -379,13 +414,14 @@ function EventsStep({ draft, onNext, onError }: { draft: WeddingWebsiteDraft; on
     });
     setAdding(false);
     if (!result.success) {
-      onError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
     setEvents((prev) => [...prev, result.data]);
     setName("");
     setVenue("");
     setDescription("");
+    setNameTouched(false);
   }
 
   async function handleDelete(eventId: string) {
@@ -413,8 +449,19 @@ function EventsStep({ draft, onNext, onError }: { draft: WeddingWebsiteDraft; on
         {events.length === 0 && <p className="text-sm text-text-grey">No events added yet.</p>}
       </div>
 
-      <form onSubmit={handleAdd} className="mb-6 flex flex-col gap-2.5 rounded-md border border-dashed border-border p-4">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Event name (e.g. Mehendi)" maxLength={150} className="rounded-md border border-border px-3 py-2 text-sm" />
+      <form onSubmit={handleAdd} className="mb-6 flex flex-col gap-2.5 rounded-md border border-dashed border-border p-4" noValidate>
+        <div>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => setNameTouched(true)}
+            invalid={nameTouched && !!nameError}
+            placeholder="Event name (e.g. Mehendi)"
+            maxLength={150}
+            className="py-2"
+          />
+          {nameTouched && <FieldError message={nameError} />}
+        </div>
         <input value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="Venue (optional)" maxLength={200} className="rounded-md border border-border px-3 py-2 text-sm" />
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" rows={2} maxLength={1000} className="rounded-md border border-border px-3 py-2 text-sm" />
         <Button type="submit" variant="secondary" size="sm" disabled={adding}>
@@ -435,32 +482,29 @@ function PhotosStep({
   draft,
   onSaved,
   onNext,
-  onError,
 }: {
   draft: WeddingWebsiteDraft;
   onSaved: (d: WeddingWebsiteDraft) => void;
   onNext: () => void;
-  onError: (m: string | null) => void;
 }) {
+  const { showToast } = useToast();
   const [pending, setPending] = useState(false);
 
   async function handleCoverUploaded(media: { id: string }) {
-    onError(null);
     const result = await updateWeddingWebsite(draft.id, { coverMediaId: media.id });
     if (result.success) {
       onSaved(result.data);
     } else {
-      onError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
     }
   }
 
   async function handleCouplePhotoUploaded(media: { id: string }) {
-    onError(null);
     const result = await updateWeddingWebsite(draft.id, { couplePhotoMediaId: media.id });
     if (result.success) {
       onSaved(result.data);
     } else {
-      onError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
     }
   }
 
@@ -509,13 +553,12 @@ function StoryStep({
   draft,
   onSaved,
   onNext,
-  onError,
 }: {
   draft: WeddingWebsiteDraft;
   onSaved: (d: WeddingWebsiteDraft) => void;
   onNext: () => void;
-  onError: (message: string | null) => void;
 }) {
+  const { showToast } = useToast();
   const [fields, setFields] = useState({
     coupleStory: draft.coupleStory ?? "",
     brideDescription: draft.brideDescription ?? "",
@@ -528,9 +571,12 @@ function StoryStep({
     setFields((prev) => ({ ...prev, [key]: value }));
   }
 
+  // Every field here is genuinely freeform and optional server-side (see
+  // updateWeddingWebsiteSchema) — the only real constraint is the maxLength
+  // already enforced on each textarea below, so there's no format/required
+  // check to add.
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    onError(null);
     setPending(true);
     const result = await updateWeddingWebsite(draft.id, {
       coupleStory: fields.coupleStory || undefined,
@@ -540,7 +586,7 @@ function StoryStep({
     });
     setPending(false);
     if (!result.success) {
-      onError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
     onSaved(result.data);
@@ -548,7 +594,7 @@ function StoryStep({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-2xl">
+    <form onSubmit={handleSubmit} className="mx-auto max-w-2xl" noValidate>
       <h2 className="mb-1.5 text-lg font-bold">Your Story</h2>
       <p className="mb-5 text-[13px] text-text-grey">Keep it simple — a few lines is plenty.</p>
 
@@ -597,13 +643,12 @@ function PreviewStep({
   draft,
   onSaved,
   onNext,
-  onError,
 }: {
   draft: WeddingWebsiteDraft;
   onSaved: (d: WeddingWebsiteDraft) => void;
   onNext: () => void;
-  onError: (m: string | null) => void;
 }) {
+  const { showToast } = useToast();
   const [pending, setPending] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -611,12 +656,11 @@ function PreviewStep({
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
   async function handleGeneratePreview() {
-    onError(null);
     setPending(true);
     const result = await generateWeddingWebsitePreview(draft.id);
     setPending(false);
     if (!result.success) {
-      onError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
     setPreviewUrl(`${siteUrl}/preview/${result.data.previewToken}`);
@@ -667,18 +711,17 @@ function PaymentStep({
   dashboardHref: string;
   onPublished: (d: WeddingWebsiteDraft) => void;
 }) {
+  const { showToast } = useToast();
   const [order, setOrder] = useState<{ orderId: string; amount: number; currency: string } | null>(null);
   const [pending, setPending] = useState(false);
   const [polling, setPolling] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleCreateOrder() {
     setPending(true);
-    setError(null);
     const result = await createWeddingWebsitePublishOrder(draft.id);
     setPending(false);
     if (!result.success) {
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
     setOrder(result.data);
@@ -699,7 +742,7 @@ function PaymentStep({
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
     setPolling(false);
-    setError("Payment is still being confirmed — refresh this page in a moment.");
+    showToast("Payment is still being confirmed — refresh this page in a moment.", "info");
   }
 
   return (
@@ -708,7 +751,6 @@ function PaymentStep({
       <p className="mb-6 text-[13px] text-text-grey">
         A beautiful, shareable wedding website for just ₹49 — one-time payment, unlimited edits after.
       </p>
-      {error && <div className="mb-4 rounded-md bg-red-10 p-3 text-[13px] font-semibold text-red-70">{error}</div>}
 
       {polling ? (
         <p className="text-sm text-text-grey">Confirming your payment…</p>

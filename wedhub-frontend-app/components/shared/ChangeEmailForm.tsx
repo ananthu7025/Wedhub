@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { changeEmail } from "@/lib/api/auth-client";
 import { formatApiError } from "@/lib/utils/error";
+import { useToast } from "@/components/ui/Toast";
+import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
+import { emailSchema, validateField } from "@/lib/validation/auth-schemas";
 
 // Shared between (couple)/account and (vendor)/vendor/settings — both roles
 // need edit-email (item 9), and the flow is identical either way. Deliberately
@@ -11,21 +15,28 @@ import { formatApiError } from "@/lib/utils/error";
 // wedhub-backend's auth.service.ts::changeEmail — the account's real email
 // doesn't move until the link mailed to the new address is clicked).
 export function ChangeEmailForm() {
+  const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
+  const [touched, setTouched] = useState<{ newEmail?: boolean; currentPassword?: boolean }>({});
   const [saving, setSaving] = useState(false);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+
+  const emailError = useMemo(() => validateField(emailSchema, newEmail), [newEmail]);
+  const passwordError = currentPassword.trim().length === 0 ? "Current password is required" : null;
+  const isFormValid = !emailError && !passwordError;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setError(null);
+    setTouched({ newEmail: true, currentPassword: true });
+    if (!isFormValid) return;
+
     setSaving(true);
     const result = await changeEmail(newEmail.trim(), currentPassword);
     setSaving(false);
     if (!result.success) {
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
     setPendingMessage(
@@ -34,6 +45,7 @@ export function ChangeEmailForm() {
     setEditing(false);
     setNewEmail("");
     setCurrentPassword("");
+    setTouched({});
   }
 
   if (pendingMessage) {
@@ -53,27 +65,30 @@ export function ChangeEmailForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-md border border-border bg-surface-input p-3.5">
-      {error && <p className="mb-3 rounded-md bg-red-10 p-2 text-[13px] text-red-70">{error}</p>}
+    <form onSubmit={handleSubmit} className="rounded-md border border-border bg-surface-input p-3.5" noValidate>
       <label className="mb-3 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">New email</span>
-        <input
+        <Input
           type="email"
           value={newEmail}
           onChange={(e) => setNewEmail(e.target.value)}
-          required
-          className="w-full rounded-md border border-border bg-white px-3 py-2.5 text-sm"
+          onBlur={() => setTouched((t) => ({ ...t, newEmail: true }))}
+          invalid={touched.newEmail && !!emailError}
+          className="bg-white"
         />
+        {touched.newEmail && <FieldError message={emailError} />}
       </label>
       <label className="mb-3 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">Current password</span>
-        <input
+        <Input
           type="password"
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
-          required
-          className="w-full rounded-md border border-border bg-white px-3 py-2.5 text-sm"
+          onBlur={() => setTouched((t) => ({ ...t, currentPassword: true }))}
+          invalid={touched.currentPassword && !!passwordError}
+          className="bg-white"
         />
+        {touched.currentPassword && <FieldError message={passwordError} />}
       </label>
       <div className="flex gap-2">
         <button
@@ -87,7 +102,7 @@ export function ChangeEmailForm() {
           type="button"
           onClick={() => {
             setEditing(false);
-            setError(null);
+            setTouched({});
           }}
           className="flex-1 rounded-md border border-border bg-white py-2 text-[13px] font-bold"
         >

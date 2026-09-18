@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { register, login, resendVerificationEmail, refreshSession } from "@/lib/api/auth-client";
 import { updateMyProfile } from "@/lib/api/users-client";
 import { GoogleSignInButton } from "@/components/shared/GoogleSignInButton";
 import { formatApiError } from "@/lib/utils/error";
 import { trackEvent } from "@/lib/analytics/track";
+import { emailSchema, passwordSchema, validateField } from "@/lib/validation/auth-schemas";
 
 type AccountType = "END_USER" | "VENDOR";
 type Step = "credentials" | "verify" | "profile";
@@ -28,29 +31,36 @@ type Step = "credentials" | "verify" | "profile";
 // task) — so there is no reachable "done" step left in this component.
 export function SignupWizard({ accountType }: { accountType: AccountType }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [credentialsTouched, setCredentialsTouched] = useState<{ email?: boolean; password?: boolean }>({});
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  const emailError = useMemo(() => validateField(emailSchema, email), [email]);
+  const passwordError = useMemo(() => validateField(passwordSchema, password), [password]);
+  const isCredentialsValid = !emailError && !passwordError;
 
   async function handleCredentialsSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    setCredentialsTouched({ email: true, password: true });
+    if (!isCredentialsValid) return;
+
     setPending(true);
 
     const registerResult = await register(email, password, accountType);
     if (!registerResult.success) {
-      setError(formatApiError(registerResult.error));
+      showToast(formatApiError(registerResult.error), "error");
       setPending(false);
       return;
     }
 
     const loginResult = await login(email, password);
     if (!loginResult.success) {
-      setError("Account created — please log in.");
+      showToast("Account created — please log in.", "info");
       setPending(false);
       router.push("/login");
       return;
@@ -81,7 +91,6 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
   async function handleProfileSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
-    setError(null);
 
     if (firstName || lastName) {
       const result = await updateMyProfile({
@@ -89,7 +98,7 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
         lastName: lastName.trim() || undefined,
       });
       if (!result.success) {
-        setError(formatApiError(result.error));
+        showToast(formatApiError(result.error), "error");
         setPending(false);
         return;
       }
@@ -110,11 +119,6 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
             ? "Set up a free vendor account to start receiving enquiries."
             : "Discover and enquire with wedding vendors near you."}
         </p>
-        {error && (
-          <div className="mb-4 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">
-            {error}
-          </div>
-        )}
         <div className="mb-4.5">
           <span className="mb-2 block text-[13px] font-bold">Email</span>
           <Input
@@ -122,8 +126,10 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required
+            onBlur={() => setCredentialsTouched((t) => ({ ...t, email: true }))}
+            invalid={credentialsTouched.email && !!emailError}
           />
+          {credentialsTouched.email && <FieldError message={emailError} />}
         </div>
         <div className="mb-4.5">
           <span className="mb-2 block text-[13px] font-bold">Create password</span>
@@ -132,11 +138,16 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
             placeholder="Min. 8 characters"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            maxLength={128}
-            required
+            onBlur={() => setCredentialsTouched((t) => ({ ...t, password: true }))}
+            invalid={credentialsTouched.password && !!passwordError}
           />
-          <p className="mt-1.5 text-xs text-text-grey">Min. 8 characters.</p>
+          {credentialsTouched.password ? (
+            <FieldError message={passwordError} />
+          ) : (
+            <p className="mt-1.5 text-xs text-text-grey">
+              8+ characters, with uppercase, lowercase, a number, and a special character.
+            </p>
+          )}
         </div>
         <p className="mb-4.5 text-xs leading-relaxed text-text-grey">
           By continuing, you agree to itsmyKalyanam&apos;s Terms of Service and Privacy Policy.
@@ -195,11 +206,6 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
   if (step === "profile") {
     return (
       <form onSubmit={handleProfileSubmit} className="w-full max-w-md">
-        {error && (
-          <div className="mb-4 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">
-            {error}
-          </div>
-        )}
         <div className="mb-4.5">
           <span className="mb-2 block text-[13px] font-bold">First name</span>
           <Input
@@ -238,23 +244,20 @@ const RESEND_COOLDOWN_SECONDS = 30;
 // verify-email/pending/VerifyEmailPendingPanel.tsx's identical pattern,
 // which this mirrors for the case where the user never leaves this wizard).
 function VerifyEmailStep({ email, onVerified }: { email: string; onVerified: () => void }) {
+  const { showToast } = useToast();
   const [pending, setPending] = useState(false);
   const [checking, setChecking] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [sentMessage, setSentMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleResend() {
     setPending(true);
-    setError(null);
-    setSentMessage(null);
     const result = await resendVerificationEmail();
     setPending(false);
     if (!result.success) {
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
-    setSentMessage(`Verification email sent to ${email}.`);
+    showToast(`Verification email sent to ${email}.`, "success");
     setCooldown(RESEND_COOLDOWN_SECONDS);
     const interval = setInterval(() => {
       setCooldown((c) => {
@@ -269,11 +272,10 @@ function VerifyEmailStep({ email, onVerified }: { email: string; onVerified: () 
 
   async function handleCheckAgain() {
     setChecking(true);
-    setError(null);
     const result = await refreshSession();
     setChecking(false);
     if (!result.success) {
-      setError(formatApiError(result.error));
+      showToast(formatApiError(result.error), "error");
       return;
     }
     onVerified();
@@ -286,13 +288,6 @@ function VerifyEmailStep({ email, onVerified }: { email: string; onVerified: () 
         We&apos;ve sent a verification link to <span className="font-semibold text-text-dark">{email}</span>. Check
         your inbox and click the link to continue.
       </p>
-
-      {error && <div className="mb-4 rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">{error}</div>}
-      {sentMessage && (
-        <div className="mb-4 rounded-md bg-emerald-10 px-4 py-3 text-[13px] font-semibold text-emerald-70">
-          {sentMessage}
-        </div>
-      )}
 
       <Button type="button" variant="primary" block disabled={checking} onClick={handleCheckAgain}>
         {checking ? "Checking…" : "I've verified — continue"}

@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
+import { FieldError } from "@/components/ui/FieldError";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { WizardGuard } from "@/components/shared/WizardGuard";
 import { useWizardDraft } from "@/lib/hooks/useWizardDraft";
 import { createVendor } from "@/lib/api/vendor-onboarding-client";
@@ -46,11 +48,11 @@ const EMPTY_DRAFT: VendorOnboardingDraft = {
 // sequence, same three real endpoints the dashboard's profile editor uses.
 export function VendorOnboardingForm() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [step, setStep] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [cities, setCities] = useState<Location[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const { state, setState, saveDraft, clearDraft, markSubmitted } = useWizardDraft<VendorOnboardingDraft>(
@@ -110,11 +112,10 @@ export function VendorOnboardingForm() {
 
   async function handleSubmit() {
     if (!validateStep(0) || !validateStep(1) || !validateStep(2)) {
-      setSubmitError("Please fix the errors in earlier steps before submitting.");
+      showToast("Please fix the errors in earlier steps before submitting.", "error");
       return;
     }
     setSubmitting(true);
-    setSubmitError(null);
 
     const createResult = await createVendor(state.businessName.trim());
     if (!createResult.success) {
@@ -126,7 +127,7 @@ export function VendorOnboardingForm() {
         router.push("/vendor/dashboard");
         return;
       }
-      setSubmitError(formatApiError(createResult.error));
+      showToast(formatApiError(createResult.error), "error");
       return;
     }
 
@@ -139,14 +140,14 @@ export function VendorOnboardingForm() {
     });
     if (!profileResult.success) {
       setSubmitting(false);
-      setSubmitError(formatApiError(profileResult.error));
+      showToast(formatApiError(profileResult.error), "error");
       return;
     }
 
     const categoriesResult = await setMyCategories({ primaryCategoryId: state.categoryId, subcategoryIds: [] });
     setSubmitting(false);
     if (!categoriesResult.success) {
-      setSubmitError(formatApiError(categoriesResult.error));
+      showToast(formatApiError(categoriesResult.error), "error");
       return;
     }
 
@@ -187,8 +188,9 @@ export function VendorOnboardingForm() {
               onChange={(e) => updateField("businessName", e.target.value)}
               autoFocus
               disabled={submitting}
+              invalid={!!fieldErrors.businessName}
             />
-            {fieldErrors.businessName && <p className="mt-1.5 text-xs text-red-70">{fieldErrors.businessName}</p>}
+            <FieldError message={fieldErrors.businessName} />
             <p className="mt-1.5 text-xs text-text-grey">
               This is the name couples will see on your public storefront and portfolio. You can edit this anytime.
             </p>
@@ -205,7 +207,7 @@ export function VendorOnboardingForm() {
             <select
               value={state.categoryId}
               onChange={(e) => updateField("categoryId", e.target.value)}
-              className="w-full rounded-md border border-border px-4 py-3 text-sm"
+              className={`w-full rounded-md border px-4 py-3 text-sm ${fieldErrors.categoryId ? "border-red focus:border-red" : "border-border focus:border-brand-primary"}`}
             >
               <option value="">Select a category</option>
               {categories.map((category) => (
@@ -214,14 +216,14 @@ export function VendorOnboardingForm() {
                 </option>
               ))}
             </select>
-            {fieldErrors.categoryId && <p className="mt-1.5 text-xs text-red-70">{fieldErrors.categoryId}</p>}
+            <FieldError message={fieldErrors.categoryId} />
           </div>
           <div>
             <label className="mb-2 block text-xs font-bold tracking-wide uppercase text-text-grey">City *</label>
             <select
               value={state.cityId}
               onChange={(e) => updateField("cityId", e.target.value)}
-              className="w-full rounded-md border border-border px-4 py-3 text-sm"
+              className={`w-full rounded-md border px-4 py-3 text-sm ${fieldErrors.cityId ? "border-red focus:border-red" : "border-border focus:border-brand-primary"}`}
             >
               <option value="">Select your city</option>
               {cities.map((city) => (
@@ -230,7 +232,7 @@ export function VendorOnboardingForm() {
                 </option>
               ))}
             </select>
-            {fieldErrors.cityId && <p className="mt-1.5 text-xs text-red-70">{fieldErrors.cityId}</p>}
+            <FieldError message={fieldErrors.cityId} />
           </div>
         </div>
       )}
@@ -254,8 +256,14 @@ export function VendorOnboardingForm() {
               <label className="mb-2 block text-xs font-bold tracking-wide uppercase text-text-grey">
                 Price range max (₹, optional)
               </label>
-              <Input type="number" min="0" value={state.priceRangeMax} onChange={(e) => updateField("priceRangeMax", e.target.value)} />
-              {fieldErrors.priceRangeMax && <p className="mt-1.5 text-xs text-red-70">{fieldErrors.priceRangeMax}</p>}
+              <Input
+                type="number"
+                min="0"
+                value={state.priceRangeMax}
+                onChange={(e) => updateField("priceRangeMax", e.target.value)}
+                invalid={!!fieldErrors.priceRangeMax}
+              />
+              <FieldError message={fieldErrors.priceRangeMax} />
             </div>
           </div>
           <div>
@@ -301,9 +309,6 @@ export function VendorOnboardingForm() {
             <p>
               <span className="font-bold">Description:</span> {state.shortDescription}
             </p>
-          )}
-          {submitError && (
-            <div className="rounded-md bg-red-10 px-4 py-3 text-[13px] font-semibold text-red-70">{submitError}</div>
           )}
         </div>
       )}
