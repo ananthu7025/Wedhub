@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { VendorReview } from "@/lib/api/vendors.types";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { StarIcon, CheckIcon } from "./icons";
 
 interface VendorPortfolioReviewsProps {
@@ -108,16 +108,19 @@ export function VendorPortfolioReviews({
                       photo.thumbnailObjectKey ??
                       photo.optimizedObjectKey ??
                       photo.originalObjectKey;
+                    const photoUrl = getPublicMediaUrl(key);
                     return (
                       <div
                         key={photo.id}
                         className="relative h-18 w-18 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100"
                       >
                         <Image
-                          src={getPublicMediaUrl(key)}
+                          src={photoUrl}
                           alt="Review photo"
                           fill
+                          sizes="72px"
                           className="object-cover"
+                          unoptimized={isPreOptimizedMediaUrl(photoUrl)}
                         />
                       </div>
                     );

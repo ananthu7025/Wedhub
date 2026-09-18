@@ -773,14 +773,24 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
 // 21). imageUrl points at the bundled local design assets that ship with
 // wedhub-frontend-app/public/images/capsules/ — an admin can override any
 // of these via the category admin UI at any time.
+//
+// Image perf pass (2026-09-19): these were originally ~900KB-1.2MB JPEGs
+// rendered into a 165x245px carousel tile (CategoryCapsuleCarousel.tsx) —
+// re-exported as ~500px-wide WebP at quality 82 (same quality bar as the
+// R2 media pipeline's own variants), ~90% smaller with no visible quality
+// loss at this render size. The original .jpg files are intentionally kept
+// in wedhub-frontend-app/public/ (not deleted) since a production
+// Category row seeded before this change may still have the old .jpg URL
+// persisted — re-run `npm run db:seed` (or update these 7 rows via the
+// admin UI) to pick up the smaller .webp URLs on an already-seeded database.
 const HOMEPAGE_FEATURED_CATEGORIES: Array<{ name: string; imageUrl: string; startingPriceLabel: string; sortOrder: number }> = [
-  { name: "Photography & Videography", imageUrl: "/images/capsules/photo.jpg", startingPriceLabel: "₹ 50,000", sortOrder: 0 },
-  { name: "Venues", imageUrl: "/images/capsules/venue.jpg", startingPriceLabel: "₹ 1,50,000", sortOrder: 1 },
-  { name: "Makeup Artists", imageUrl: "/images/capsules/makeup.jpg", startingPriceLabel: "₹ 18,000", sortOrder: 2 },
-  { name: "Mehendi Artists", imageUrl: "/images/capsules/mehndi.jpg", startingPriceLabel: "₹ 8,000", sortOrder: 3 },
-  { name: "Decorators", imageUrl: "/images/capsules/decor.jpg", startingPriceLabel: "₹ 75,000", sortOrder: 4 },
-  { name: "Bridal Wear", imageUrl: "/images/capsules/wear.jpg", startingPriceLabel: "₹ 45,000", sortOrder: 5 },
-  { name: "Caterers", imageUrl: "/images/capsules/catering.jpg", startingPriceLabel: "₹ 800 / plate", sortOrder: 6 },
+  { name: "Photography & Videography", imageUrl: "/images/capsules/photo.webp", startingPriceLabel: "₹ 50,000", sortOrder: 0 },
+  { name: "Venues", imageUrl: "/images/capsules/venue.webp", startingPriceLabel: "₹ 1,50,000", sortOrder: 1 },
+  { name: "Makeup Artists", imageUrl: "/images/capsules/makeup.webp", startingPriceLabel: "₹ 18,000", sortOrder: 2 },
+  { name: "Mehendi Artists", imageUrl: "/images/capsules/mehndi.webp", startingPriceLabel: "₹ 8,000", sortOrder: 3 },
+  { name: "Decorators", imageUrl: "/images/capsules/decor.webp", startingPriceLabel: "₹ 75,000", sortOrder: 4 },
+  { name: "Bridal Wear", imageUrl: "/images/capsules/wear.webp", startingPriceLabel: "₹ 45,000", sortOrder: 5 },
+  { name: "Caterers", imageUrl: "/images/capsules/catering.webp", startingPriceLabel: "₹ 800 / plate", sortOrder: 6 },
 ];
 
 interface LocationSeed {

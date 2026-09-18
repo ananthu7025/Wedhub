@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 
 export interface DisplayRealWeddingStory {
   id: string;
@@ -14,7 +14,10 @@ export interface DisplayRealWeddingStory {
   vendorName: string;
   vendorSlug: string;
   coverImageUrl: string;
+  coverBlurDataUrl?: string | null;
   galleryPhotos?: string[];
+  /** Parallel array to galleryPhotos — same index, may be shorter/absent for the hardcoded sample fixture. */
+  galleryPhotoBlurs?: (string | null)[];
   photoCountLabel?: string;
 }
 
@@ -69,6 +72,10 @@ export function RealWeddingCollageCard({ story }: { story: DisplayRealWeddingSto
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  unoptimized={isPreOptimizedMediaUrl(story.coverImageUrl)}
+                  {...(story.coverBlurDataUrl
+                    ? { placeholder: "blur" as const, blurDataURL: story.coverBlurDataUrl }
+                    : {})}
                 />
               </div>
 
@@ -81,6 +88,10 @@ export function RealWeddingCollageCard({ story }: { story: DisplayRealWeddingSto
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     sizes="(max-width: 640px) 50vw, 20vw"
+                    unoptimized={isPreOptimizedMediaUrl(gallery[0])}
+                    {...(story.galleryPhotoBlurs?.[0]
+                      ? { placeholder: "blur" as const, blurDataURL: story.galleryPhotoBlurs[0] }
+                      : {})}
                   />
                 </div>
 
@@ -91,6 +102,10 @@ export function RealWeddingCollageCard({ story }: { story: DisplayRealWeddingSto
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     sizes="(max-width: 640px) 50vw, 20vw"
+                    unoptimized={isPreOptimizedMediaUrl(gallery[1])}
+                    {...(story.galleryPhotoBlurs?.[1]
+                      ? { placeholder: "blur" as const, blurDataURL: story.galleryPhotoBlurs[1] }
+                      : {})}
                   />
                   {/* Photo count overlay */}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px] transition-opacity group-hover:bg-black/60">
@@ -110,6 +125,10 @@ export function RealWeddingCollageCard({ story }: { story: DisplayRealWeddingSto
                 fill
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                unoptimized={isPreOptimizedMediaUrl(story.coverImageUrl)}
+                {...(story.coverBlurDataUrl
+                  ? { placeholder: "blur" as const, blurDataURL: story.coverBlurDataUrl }
+                  : {})}
               />
               <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent" />
               {story.photoCountLabel && (

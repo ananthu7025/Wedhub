@@ -32,7 +32,9 @@ export function ChallengeBannerCard({ challenge }: { challenge: Challenge }) {
   return (
     <div className="relative mb-6 overflow-hidden rounded-2xl border border-border bg-surface-input shadow-sm">
       <div className="relative h-40 w-full max-[600px]:h-32">
-        {challenge.bannerImage && <Image src={challenge.bannerImage} alt={challenge.title} fill className="object-cover" />}
+        {challenge.bannerImage && (
+          <Image src={challenge.bannerImage} alt={challenge.title} fill sizes="100vw" className="object-cover" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/20" />
         <div className="absolute inset-0 flex flex-col justify-center gap-2 p-6 text-white max-[600px]:p-4">
           <span className="w-fit rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide backdrop-blur">

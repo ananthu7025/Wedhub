@@ -14,6 +14,15 @@ export type ChallengeVoteScope = "PER_ENTRY" | "PER_CHALLENGE";
 export interface ChallengeMediaRef {
   id: string;
   optimizedObjectKey: string | null;
+  /**
+   * Present on ChallengeEntry.image (challenge.repository.ts's
+   * ENTRY_INCLUDE already selects it) but not on Challenge.winnerEntry.image
+   * (CHALLENGE_INCLUDE doesn't) — optional so both shapes satisfy this one
+   * type without a second interface. Grid/card contexts (entry cards,
+   * rankings list) should prefer it; the winner showcase falls back to
+   * optimized/original same as before.
+   */
+  thumbnailObjectKey?: string | null;
   originalObjectKey: string;
 }
 

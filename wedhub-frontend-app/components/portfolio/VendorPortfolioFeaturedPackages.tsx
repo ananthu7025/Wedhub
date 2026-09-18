@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { VendorPackage } from "@/lib/api/vendors.types";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { ArrowRightIcon } from "./icons";
 
 const FEATURED_COUNT = 2;
@@ -39,12 +39,20 @@ export function VendorPortfolioFeaturedPackages({ packages, onScrollToPackages }
         {featured.map((pkg) => {
           const imageKey =
             pkg.image?.thumbnailObjectKey ?? pkg.image?.optimizedObjectKey ?? pkg.image?.originalObjectKey ?? null;
+          const imageUrl = imageKey ? getPublicMediaUrl(imageKey) : null;
 
           return (
             <div key={pkg.id} className="flex items-center gap-3.5 py-4 first:pt-0 last:pb-0">
               <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-neutral-100">
-                {imageKey ? (
-                  <Image src={getPublicMediaUrl(imageKey)} alt={pkg.name} fill className="object-cover" />
+                {imageUrl ? (
+                  <Image
+                    src={imageUrl}
+                    alt={pkg.name}
+                    fill
+                    sizes="56px"
+                    className="object-cover"
+                    unoptimized={isPreOptimizedMediaUrl(imageUrl)}
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-neutral-400">
                     No photo

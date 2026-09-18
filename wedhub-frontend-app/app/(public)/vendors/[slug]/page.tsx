@@ -9,7 +9,7 @@ import { EnquiryCta } from "@/components/shared/EnquiryCta";
 import { JsonLd } from "@/components/shared/JsonLd";
 import { VendorContactLinks } from "@/components/shared/VendorContactLinks";
 import { getVendorAlbums, getVendorBySlug, getVendorReviews } from "@/lib/api/catalog";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { formatResponseTimeBucket } from "@/lib/utils/response-time";
 import { ApiRequestError } from "@/lib/api/types";
 import { Badge } from "@/components/ui/Badge";
@@ -160,7 +160,18 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
 
       <div className="relative h-80 bg-surface-input max-[900px]:h-52">
         {heroImageUrl && (
-          <Image src={heroImageUrl} alt={vendor.businessName} fill sizes="100vw" className="object-cover" priority />
+          <Image
+            src={heroImageUrl}
+            alt={vendor.businessName}
+            fill
+            sizes="100vw"
+            className="object-cover"
+            priority
+            unoptimized={isPreOptimizedMediaUrl(heroImageUrl)}
+            {...(coverMedia?.blurDataUrl ?? heroMedia?.blurDataUrl
+              ? { placeholder: "blur" as const, blurDataURL: coverMedia?.blurDataUrl ?? heroMedia?.blurDataUrl ?? undefined }
+              : {})}
+          />
         )}
       </div>
 
@@ -183,7 +194,15 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
         <div className="-mt-4 flex items-end gap-5 max-[900px]:flex-wrap">
           <div className="relative flex h-32 w-32 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-surface-input text-3xl font-bold text-text-grey shadow-[var(--shadow-card)]">
             {logoImageUrl ? (
-              <Image src={logoImageUrl} alt={vendor.businessName} fill sizes="128px" className="object-cover" />
+              <Image
+                src={logoImageUrl}
+                alt={vendor.businessName}
+                fill
+                sizes="128px"
+                className="object-cover"
+                unoptimized={isPreOptimizedMediaUrl(logoImageUrl)}
+                {...(logoMedia?.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoMedia.blurDataUrl } : {})}
+              />
             ) : (
               vendor.businessName.charAt(0)
             )}
@@ -244,14 +263,17 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                     .slice(0, 9)
                     .map((media) => {
                       const key = media.thumbnailObjectKey ?? media.optimizedObjectKey ?? media.originalObjectKey;
+                      const mediaUrl = getPublicMediaUrl(key);
                       return (
                         <div key={media.id} className="relative aspect-square overflow-hidden rounded-md bg-surface-input">
                           <Image
-                            src={getPublicMediaUrl(key)}
+                            src={mediaUrl}
                             alt={media.altText ?? vendor.businessName}
                             fill
                             sizes="(max-width: 900px) 50vw, 25vw"
                             className="object-cover"
+                            unoptimized={isPreOptimizedMediaUrl(mediaUrl)}
+                            {...(media.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: media.blurDataUrl } : {})}
                           />
                         </div>
                       );

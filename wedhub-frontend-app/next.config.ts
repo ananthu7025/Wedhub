@@ -110,6 +110,23 @@ const nextConfig: NextConfig = {
     // this marketplace serves). Listed first so it's preferred whenever the
     // requesting browser's Accept header supports it, falling back to WebP
     // otherwise (Next negotiates via content-negotiation automatically).
+    //
+    // Image perf pass (2026-09-19): re-evaluated whether AVIF's runtime
+    // encoding cost is worth paying, now that lib/media/url.ts's
+    // isPreOptimizedMediaUrl() routes every card/grid/gallery image whose
+    // src is already an R2 pipeline-generated "-thumbnail.webp"/
+    // "-medium.webp" variant (the large majority of this marketplace's
+    // image volume — vendor cards, search results, portfolios, galleries)
+    // through `unoptimized`, i.e. straight to Cloudflare/R2, never through
+    // this AVIF/WebP negotiation at all. What's left going through
+    // /_next/image is a much smaller, largely-static set (homepage/category
+    // hero images, Unsplash placeholders, admin-set cover URLs, and
+    // pre-pipeline originalObjectKey fallbacks) where AVIF's cold-encode
+    // cost (measured locally: ~900ms first request for a 384px resize vs
+    // ~24ms once Next's own minimumCacheTTL-backed cache is warm) is paid
+    // once per (url, width, quality) tuple, not per page view — kept AVIF
+    // enabled since it's no longer the bulk-traffic cost it would have
+    // been before the unoptimized policy existed.
     formats: ["image/avif", "image/webp"],
   },
   async headers() {

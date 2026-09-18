@@ -17,7 +17,7 @@ import {
   listGalleryCategories,
 } from "@/lib/api/catalog";
 import { getOptionalSession } from "@/lib/auth/dal";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import type { WeddingStory as RealWeddingStory } from "@/lib/api/vendors.types";
 
 const WEDDING_STORIES_SLOTS = 6;
@@ -270,6 +270,7 @@ export default async function HomePage() {
                       fill
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
                       sizes="96px"
+                      unoptimized={isPreOptimizedMediaUrl(item.imageUrl)}
                     />
                   )}
                 </div>
@@ -428,6 +429,7 @@ async function BlogSection() {
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  unoptimized={isPreOptimizedMediaUrl(blog.coverImageUrl)}
                 />
               )}
               <span className="absolute top-2.5 left-2.5 rounded-md bg-white/90 px-2.5 py-0.5 text-[10px] font-bold text-jet-black backdrop-blur-xs">
@@ -542,6 +544,7 @@ function WeddingStoryCard({ story, className }: { story: DisplayWeddingStory; cl
         fill
         className="object-cover transition-transform duration-500 group-hover:scale-110"
         sizes="(max-width: 768px) 100vw, 33vw"
+        unoptimized={isPreOptimizedMediaUrl(story.imageUrl)}
         {...(story.imageBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: story.imageBlurDataUrl } : {})}
       />
 

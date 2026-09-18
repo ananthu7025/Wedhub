@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { FeaturedCategory } from "@/lib/api/vendors.types";
 import { resolveCategorySeoSlug } from "@/lib/seo/category-slug-map";
+import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 
 /**
  * Wedding category carousel — real, admin-curated data from
@@ -95,6 +96,7 @@ export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCa
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-110"
                     sizes="(max-width: 640px) 145px, 165px"
+                    unoptimized={isPreOptimizedMediaUrl(category.imageUrl)}
                   />
                 )}
               </div>

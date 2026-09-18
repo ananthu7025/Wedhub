@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
+import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { trackEvent } from "@/lib/analytics/track";
 import { VendorHeartButton } from "./VendorHeartButton";
 
@@ -87,6 +88,7 @@ export function VendorCard({
             fill
             className="object-cover"
             sizes="(max-width: 900px) 50vw, 25vw"
+            unoptimized={isPreOptimizedMediaUrl(logoUrl)}
             {...(logoBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoBlurDataUrl } : {})}
           />
         ) : (

@@ -23,7 +23,8 @@
     "test:e2e": "vitest run tests/e2e",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "backfill:media-variants": "tsx --env-file=.env scripts/backfill-media-variants.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1124.0",

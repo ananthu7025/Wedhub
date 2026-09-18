@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { formatWhatsAppUrl, formatTelUrl } from "@/lib/utils/whatsapp";
 import { trackEvent } from "@/lib/analytics/track";
 
@@ -53,7 +54,14 @@ export function VendorPortfolioHeader({
         <div className="flex items-center gap-3.5 min-w-0">
           <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-gradient-to-br from-neutral-50 to-neutral-100 shadow-xs">
             {logoUrl ? (
-              <Image src={logoUrl} alt={businessName} fill className="object-cover" />
+              <Image
+                src={logoUrl}
+                alt={businessName}
+                fill
+                sizes="48px"
+                className="object-cover"
+                unoptimized={isPreOptimizedMediaUrl(logoUrl)}
+              />
             ) : (
               <span className="text-lg font-extrabold tracking-tight text-neutral-800">
                 {businessName.slice(0, 2).toUpperCase()}

@@ -1,77 +1,28 @@
 import { Worker, type Job } from "bullmq";
-import sharp from "sharp";
 import { createRedisConnection } from "../../config/redis";
 import { logger } from "../../config/logger";
 import { prisma } from "../../config/database";
-import { downloadObject, uploadObject } from "../../integrations/storage/r2.client";
 import { omitUndefined } from "../../common/utils/object.util";
+import { generateMediaVariants } from "./media-variant-generator";
 import type { MediaProcessingJobData } from "../queues/media-processing.queue";
-
-// "large" (1600px) was previously generated here too, but its key was never
-// persisted on Media/referenced anywhere — pure wasted R2 storage and
-// processing time. Removed; re-add alongside a real consumer (e.g. a
-// wedding-website gallery lightbox) if one gets built.
-const VARIANTS = [
-  { name: "medium", width: 800 },
-  { name: "thumbnail", width: 300 },
-] as const;
-
-function variantObjectKey(originalKey: string, variant: string): string {
-  const lastDot = originalKey.lastIndexOf(".");
-  const base = lastDot === -1 ? originalKey : originalKey.slice(0, lastDot);
-  return `${base}-${variant}.webp`;
-}
-
-// A tiny (16px-wide) heavily-compressed WebP, inlined as a data URL and
-// stored directly on the Media row — this is what next/image's
-// placeholder="blur" renders before the real optimized image arrives.
-// Deliberately not one of the R2-uploaded VARIANTS: it's small enough
-// (a few hundred bytes) to embed in the API response/DB row directly, so
-// the browser paints an image-accurate blur with zero extra network
-// request instead of a flat placeholder color.
-async function generateBlurDataUrl(original: Buffer): Promise<string> {
-  const blurBuffer = await sharp(original)
-    .resize({ width: 16, withoutEnlargement: true })
-    .webp({ quality: 20 })
-    .toBuffer();
-  return `data:image/webp;base64,${blurBuffer.toString("base64")}`;
-}
 
 async function processImage(mediaId: string): Promise<void> {
   const start = performance.now();
   const media = await prisma.media.findUniqueOrThrow({ where: { id: mediaId } });
 
-  const original = await downloadObject(media.originalObjectKey);
-  const metadata = await sharp(original).metadata();
+  const variants = await generateMediaVariants(media.originalObjectKey);
 
-  let optimizedKey: string | undefined;
-  let thumbnailKey: string | undefined;
-
-  for (const variant of VARIANTS) {
-    const objectKey = variantObjectKey(media.originalObjectKey, variant.name);
-    const resized = await sharp(original)
-      .resize({ width: variant.width, withoutEnlargement: true })
-      .webp({ quality: 82 })
-      .toBuffer();
-
-    await uploadObject(objectKey, resized, "image/webp");
-
-    if (variant.name === "medium") {
-      optimizedKey = objectKey;
-    }
-    if (variant.name === "thumbnail") {
-      thumbnailKey = objectKey;
-    }
-  }
-
-  const blurDataUrl = await generateBlurDataUrl(original);
-
+  // omitUndefined: Sharp's metadata.width/height can come back undefined
+  // for some inputs, and exactOptionalPropertyTypes rejects explicit
+  // `undefined` against Prisma's generated update-input types (they accept
+  // "field absent", not "field: undefined") — see object.util.ts's doc
+  // comment on why this is required, not just defensive.
   const fields = omitUndefined({
-    optimizedObjectKey: optimizedKey,
-    thumbnailObjectKey: thumbnailKey,
-    blurDataUrl,
-    width: metadata.width,
-    height: metadata.height,
+    optimizedObjectKey: variants.optimizedObjectKey,
+    thumbnailObjectKey: variants.thumbnailObjectKey,
+    blurDataUrl: variants.blurDataUrl,
+    width: variants.width,
+    height: variants.height,
   });
 
   await prisma.media.update({

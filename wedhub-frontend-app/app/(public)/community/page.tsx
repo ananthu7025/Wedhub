@@ -45,7 +45,7 @@ export default async function CommunityPage({ searchParams }: CommunityPageProps
           down to this page's more content-dense layout. */}
       <section className="relative overflow-hidden py-10 sm:py-14 text-white">
         <div className="absolute inset-0 z-0">
-          <Image src="/images/real-weddings-hero.jpg" alt="" fill priority className="object-cover object-center" />
+          <Image src="/images/real-weddings-hero.jpg" alt="" fill priority sizes="100vw" className="object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/75" />
         </div>
         <div className="relative z-10 mx-auto max-w-[1160px] px-6 text-center sm:px-10">

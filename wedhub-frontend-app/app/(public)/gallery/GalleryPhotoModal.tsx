@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 import type { GalleryDisplayItem } from "./GalleryPageView";
 
 /**
@@ -97,7 +98,14 @@ export function GalleryPhotoModal({
         className="relative max-h-[70vh] max-w-[90vw] aspect-[4/3] sm:aspect-[16/10] w-full"
         onClick={(e) => e.stopPropagation()}
       >
-        <Image src={activeItem.imageUrl} alt={activeItem.title} fill className="object-contain" sizes="100vw" />
+        <Image
+          src={activeItem.imageUrl}
+          alt={activeItem.title}
+          fill
+          className="object-contain"
+          sizes="100vw"
+          unoptimized={isPreOptimizedMediaUrl(activeItem.imageUrl)}
+        />
       </div>
 
       {/* Bottom Details + CTA */}

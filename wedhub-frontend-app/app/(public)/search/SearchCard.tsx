@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { VendorHeartButton } from "@/components/shared/VendorHeartButton";
+import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { trackEvent } from "@/lib/analytics/track";
 import { formatResponseTimeBucket } from "@/lib/utils/response-time";
 import type { VerificationLevel } from "@/lib/api/vendors.types";
@@ -108,6 +109,7 @@ export function SearchCard({
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width: 640px) 100vw, 320px"
+              unoptimized={isPreOptimizedMediaUrl(logoUrl)}
               {...(logoBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoBlurDataUrl } : {})}
             />
           ) : (
@@ -225,6 +227,7 @@ export function SearchCard({
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 900px) 50vw, 33vw"
+            unoptimized={isPreOptimizedMediaUrl(logoUrl)}
             {...(logoBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoBlurDataUrl } : {})}
           />
         ) : (

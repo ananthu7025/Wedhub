@@ -7,6 +7,7 @@ import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { PublicFooter } from "@/components/shared/PublicFooter";
 import { JsonLd } from "@/components/shared/JsonLd";
 import { getBlogPostBySlug } from "@/lib/api/catalog";
+import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { ApiRequestError } from "@/lib/api/types";
 import { blogPostingJsonLd, breadcrumbListJsonLd } from "@/lib/seo/json-ld";
 
@@ -101,7 +102,15 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
           {post.coverImageUrl && (
             <div className="relative mb-8 aspect-[16/9] overflow-hidden rounded-2xl bg-surface-input">
-              <Image src={post.coverImageUrl} alt={post.title} fill className="object-cover" sizes="(max-width: 900px) 100vw, 768px" priority />
+              <Image
+                src={post.coverImageUrl}
+                alt={post.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 900px) 100vw, 768px"
+                priority
+                unoptimized={isPreOptimizedMediaUrl(post.coverImageUrl)}
+              />
             </div>
           )}
 

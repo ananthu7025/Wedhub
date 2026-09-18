@@ -3,10 +3,20 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 
 export interface StoryDetailPhoto {
   id: string;
+  /**
+   * Masonry grid tile — thumbnail-first when a real generated thumbnail
+   * exists. Optional: the hardcoded SAMPLE_DETAILS fixture (page.tsx) only
+   * has one Unsplash URL per photo, so this falls back to `url` for those —
+   * real wedding-story data (page.tsx's fetched branch) always provides it.
+   */
+  thumbUrl?: string;
+  /** Lightbox-only — medium/optimized variant (or original), never the grid's 300px thumbnail upscaled full-screen. */
   url: string;
+  blurDataUrl?: string | null;
   caption?: string;
   aspectRatioClass?: string; // e.g. "aspect-[3/4]", "aspect-[4/3]", "aspect-[1/1]", "aspect-[2/3]"
   category?: string;
@@ -218,11 +228,13 @@ export function StoryDetailView({ story }: { story: StoryDetailData }) {
                 >
                   <div className={`relative w-full ${photo.aspectRatioClass ?? "aspect-[3/4]"} overflow-hidden bg-neutral-grey-20`}>
                     <Image
-                      src={photo.url}
+                      src={photo.thumbUrl ?? photo.url}
                       alt={photo.caption ?? `${story.coupleName} photo ${idx + 1}`}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                      unoptimized={isPreOptimizedMediaUrl(photo.thumbUrl ?? photo.url)}
+                      {...(photo.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: photo.blurDataUrl } : {})}
                     />
 
                     {/* Pinterest Hover Overlay */}
@@ -320,6 +332,7 @@ export function StoryDetailView({ story }: { story: StoryDetailData }) {
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                       sizes="(max-width: 640px) 100vw, 33vw"
+                      unoptimized={isPreOptimizedMediaUrl(rel.coverImageUrl)}
                     />
                   </div>
                   <div className="p-4">
@@ -424,6 +437,7 @@ export function StoryDetailView({ story }: { story: StoryDetailData }) {
               fill
               className="object-contain"
               sizes="100vw"
+              unoptimized={isPreOptimizedMediaUrl(activePhoto.url)}
             />
           </div>
 

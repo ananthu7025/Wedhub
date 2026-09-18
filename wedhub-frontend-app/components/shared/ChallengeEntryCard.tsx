@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { ChallengeVoteButton } from "./ChallengeVoteButton";
 import type { ChallengeEntry } from "@/lib/api/challenges.types";
 
@@ -26,13 +26,21 @@ export function ChallengeEntryCard({
   votingOpen: boolean;
   rank?: number;
 }) {
-  const imageKey = entry.image.optimizedObjectKey ?? entry.image.originalObjectKey;
+  const imageKey = entry.image.thumbnailObjectKey ?? entry.image.optimizedObjectKey ?? entry.image.originalObjectKey;
+  const imageUrl = getPublicMediaUrl(imageKey);
   const entryUrl = `/challenges/${challengeSlug}/entry/${entry.id}`;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-white shadow-[var(--shadow-card)]">
       <Link href={entryUrl} className="relative block aspect-[4/5] w-full bg-surface-input">
-        <Image src={getPublicMediaUrl(imageKey)} alt={entry.title} fill className="object-cover" />
+        <Image
+          src={imageUrl}
+          alt={entry.title}
+          fill
+          sizes="(max-width: 500px) 100vw, (max-width: 900px) 50vw, 33vw"
+          className="object-cover"
+          unoptimized={isPreOptimizedMediaUrl(imageUrl)}
+        />
         {rank !== undefined && rank <= 3 && (
           <span className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-bold shadow-md">
             {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"}

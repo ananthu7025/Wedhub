@@ -7,7 +7,7 @@ import { PublicFooter } from "@/components/shared/PublicFooter";
 import { JsonLd } from "@/components/shared/JsonLd";
 import { ChallengeVoteButton } from "@/components/shared/ChallengeVoteButton";
 import { getChallengeBySlug, getChallengeEntryById } from "@/lib/api/challenges";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { ApiRequestError } from "@/lib/api/types";
 import { getOptionalSession } from "@/lib/auth/dal";
 import { breadcrumbListJsonLd } from "@/lib/seo/json-ld";
@@ -92,7 +92,15 @@ export default async function ChallengeEntryPage({ params }: EntryPageProps) {
         </Link>
 
         <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-surface-input">
-          <Image src={imageUrl} alt={entry.title} fill className="object-cover" priority />
+          <Image
+            src={imageUrl}
+            alt={entry.title}
+            fill
+            sizes="(max-width: 600px) 100vw, 600px"
+            className="object-cover"
+            priority
+            unoptimized={isPreOptimizedMediaUrl(imageUrl)}
+          />
         </div>
 
         <div className="mt-4">

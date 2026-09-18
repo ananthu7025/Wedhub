@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { PublicFooter } from "@/components/shared/PublicFooter";
 import { listBlogPosts } from "@/lib/api/catalog";
+import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 
 const BLOG_DESCRIPTION =
   "Expert wedding planning tips, styling advice, vendor guides, and real inspiration to help you plan your perfect day.";
@@ -66,6 +67,7 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
                         fill
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        unoptimized={isPreOptimizedMediaUrl(post.coverImageUrl)}
                       />
                     )}
                     <span className="absolute top-2.5 left-2.5 rounded-md bg-white/90 px-2.5 py-0.5 text-[10px] font-bold text-jet-black backdrop-blur-xs">

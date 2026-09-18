@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import type { VendorAlbum, AlbumMedia } from "@/lib/api/vendors.types";
 import { CloseIcon, ChevronLeftIcon, ChevronRightIcon } from "./icons";
 
@@ -105,6 +105,7 @@ export function VendorPortfolioGallery({ albums, businessName }: VendorPortfolio
                 fill
                 sizes={isFeature ? "(max-width: 640px) 100vw, 50vw" : "(max-width: 640px) 50vw, 25vw"}
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
+                unoptimized={isPreOptimizedMediaUrl(url)}
                 {...(media.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: media.blurDataUrl } : {})}
               />
 

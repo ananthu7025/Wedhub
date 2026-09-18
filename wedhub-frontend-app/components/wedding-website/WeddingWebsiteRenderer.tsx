@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { WeddingWebsiteMedia, WeddingWebsitePublicView } from "@/lib/api/wedding-website.types";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { themeFor } from "./theme";
 import { RsvpForm } from "./RsvpForm";
 import { ShareButtons } from "./ShareButtons";
@@ -69,7 +69,15 @@ export function WeddingWebsiteRenderer({
       {/* Hero */}
       <section className="relative flex min-h-[70vh] items-end overflow-hidden">
         {heroKey ? (
-          <Image src={getPublicMediaUrl(heroKey)} alt={coupleNames} fill className="object-cover" priority sizes="100vw" />
+          <Image
+            src={getPublicMediaUrl(heroKey)}
+            alt={coupleNames}
+            fill
+            className="object-cover"
+            priority
+            sizes="100vw"
+            unoptimized={isPreOptimizedMediaUrl(getPublicMediaUrl(heroKey))}
+          />
         ) : (
           <div className={`absolute inset-0 ${theme.accentBgClass}`} />
         )}
@@ -125,7 +133,14 @@ export function WeddingWebsiteRenderer({
             <SectionHeading theme={theme}>Our Story</SectionHeading>
             {couplePhotoKey && (
               <div className="relative mx-auto mb-8 aspect-[4/5] w-full max-w-sm overflow-hidden rounded-lg">
-                <Image src={getPublicMediaUrl(couplePhotoKey)} alt={coupleNames} fill className="object-cover" sizes="384px" />
+                <Image
+                  src={getPublicMediaUrl(couplePhotoKey)}
+                  alt={coupleNames}
+                  fill
+                  className="object-cover"
+                  sizes="384px"
+                  unoptimized={isPreOptimizedMediaUrl(getPublicMediaUrl(couplePhotoKey))}
+                />
               </div>
             )}
             {website.coupleStory && <p className="mb-6 text-center leading-relaxed text-text-dark">{website.coupleStory}</p>}
@@ -196,7 +211,14 @@ export function WeddingWebsiteRenderer({
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {website.gallery.map((item) => (
                 <div key={item.id} className="relative aspect-square overflow-hidden rounded-md">
-                  <Image src={getPublicMediaUrl(gridThumbnailKeyFor(item))} alt={coupleNames} fill className="object-cover" sizes="(max-width: 640px) 50vw, 33vw" />
+                  <Image
+                    src={getPublicMediaUrl(gridThumbnailKeyFor(item))}
+                    alt={coupleNames}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 50vw, 33vw"
+                    unoptimized={isPreOptimizedMediaUrl(getPublicMediaUrl(gridThumbnailKeyFor(item)))}
+                  />
                 </div>
               ))}
             </div>

@@ -4,7 +4,7 @@ import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { FeaturedMediaItem, GalleryCategory } from "@/lib/api/vendors.types";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 
 // Backs the public homepage's "Gallery Inspiration" section — one tile per
 // active GalleryCategory, each linking to /gallery?category=<slug> (real
@@ -46,7 +46,9 @@ function buildCategoryTiles(categories: GalleryCategory[], items: FeaturedMediaI
     const imageUrl =
       category.coverImageUrl ??
       (coverItem
-        ? getPublicMediaUrl(coverItem.media.optimizedObjectKey ?? coverItem.media.originalObjectKey)
+        ? getPublicMediaUrl(
+            coverItem.media.thumbnailObjectKey ?? coverItem.media.optimizedObjectKey ?? coverItem.media.originalObjectKey,
+          )
         : (SAMPLE_COVER_IMAGES[category.name] ?? FALLBACK_COVER_IMAGE));
     const imageBlurDataUrl = category.coverImageUrl ? null : coverItem?.media.blurDataUrl;
     return { key: category.id, slug: category.slug, name: category.name, imageUrl, imageBlurDataUrl };
@@ -65,6 +67,7 @@ function CategoryTile({ tile }: { tile: DisplayCategoryTile }) {
         fill
         className="object-cover transition-transform duration-500 group-hover:scale-105"
         sizes="(max-width: 640px) 160px, 192px"
+        unoptimized={isPreOptimizedMediaUrl(tile.imageUrl)}
         {...(tile.imageBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: tile.imageBlurDataUrl } : {})}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity group-hover:opacity-95" />

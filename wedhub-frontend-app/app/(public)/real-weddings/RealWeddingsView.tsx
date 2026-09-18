@@ -110,9 +110,16 @@ export function RealWeddingsView({ initialData }: RealWeddingsViewProps) {
   const realDisplayStories: DisplayRealWeddingStory[] = useMemo(() => {
     return (initialData.stories ?? []).map((s) => {
       const coverKey = s.album.coverMedia?.optimizedObjectKey ?? s.album.coverMedia?.originalObjectKey;
-      const galleryKeys = (s.album.media ?? [])
-        .map((m) => m.optimizedObjectKey ?? m.originalObjectKey)
-        .filter(Boolean) as string[];
+      // Collage sub-thumbnails render at ~20vw (RealWeddingCollageCard's
+      // "gallery[0]"/"gallery[1]" tiles) — thumbnail-first, unlike the
+      // 16:10 cover photo which stays medium-sized for its larger tile.
+      const galleryThumbs = (s.album.media ?? [])
+        .slice(0, 2)
+        .map((m) => {
+          const key = m.thumbnailObjectKey ?? m.optimizedObjectKey ?? m.originalObjectKey;
+          return key ? { url: getPublicMediaUrl(key), blurDataUrl: m.blurDataUrl } : null;
+        })
+        .filter((x): x is { url: string; blurDataUrl: string | null | undefined } => x !== null);
 
       return {
         id: s.id,
@@ -123,7 +130,9 @@ export function RealWeddingsView({ initialData }: RealWeddingsViewProps) {
         vendorName: s.album.vendor.businessName,
         vendorSlug: s.album.vendor.slug,
         coverImageUrl: coverKey ? getPublicMediaUrl(coverKey) : "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800&q=80",
-        galleryPhotos: galleryKeys.slice(0, 2).map((k) => getPublicMediaUrl(k)),
+        coverBlurDataUrl: s.album.coverMedia?.blurDataUrl,
+        galleryPhotos: galleryThumbs.map((g) => g.url),
+        galleryPhotoBlurs: galleryThumbs.map((g) => g.blurDataUrl ?? null),
         photoCountLabel: s.album.media && s.album.media.length > 0 ? `+${s.album.media.length + 1} Photos` : undefined,
       };
     });
@@ -150,6 +159,7 @@ export function RealWeddingsView({ initialData }: RealWeddingsViewProps) {
             alt="Real Weddings Background"
             fill
             priority
+            sizes="100vw"
             className="object-cover object-center"
           />
           {/* Elegant Dark Vignette Overlay for Crisp Legibility */}

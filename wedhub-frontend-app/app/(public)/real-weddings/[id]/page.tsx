@@ -260,9 +260,11 @@ export default async function RealWeddingDetailPage({ params }: StoryPageProps) 
     const { data: real } = await getPublicWeddingStory(id);
 
     const coverKey = real.album.coverMedia?.optimizedObjectKey ?? real.album.coverMedia?.originalObjectKey;
+    const coverThumbKey = real.album.coverMedia?.thumbnailObjectKey ?? coverKey;
     const coverUrl = coverKey
       ? getPublicMediaUrl(coverKey)
       : "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=1200&q=80";
+    const coverThumbUrl = coverThumbKey ? getPublicMediaUrl(coverThumbKey) : coverUrl;
 
     const photos: StoryDetailPhoto[] = [];
 
@@ -270,6 +272,8 @@ export default async function RealWeddingDetailPage({ params }: StoryPageProps) 
     photos.push({
       id: "cover",
       url: coverUrl,
+      thumbUrl: coverThumbUrl,
+      blurDataUrl: real.album.coverMedia?.blurDataUrl,
       caption: `${real.coupleName} wedding celebration`,
       aspectRatioClass: "aspect-[16/10]",
       category: "Cover",
@@ -281,9 +285,12 @@ export default async function RealWeddingDetailPage({ params }: StoryPageProps) 
       if (key) {
         // Vary aspect ratios dynamically for Pinterest masonry
         const ratios = ["aspect-[3/4]", "aspect-[4/3]", "aspect-[2/3]", "aspect-[1/1]"];
+        const thumbKey = m.thumbnailObjectKey ?? key;
         photos.push({
           id: m.id,
           url: getPublicMediaUrl(key),
+          thumbUrl: getPublicMediaUrl(thumbKey),
+          blurDataUrl: m.blurDataUrl,
           caption: m.altText ?? `${real.coupleName} photo ${idx + 1}`,
           aspectRatioClass: ratios[idx % ratios.length],
           category: real.tag,

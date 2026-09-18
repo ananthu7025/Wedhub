@@ -5,7 +5,7 @@ import Image from "next/image";
 import type { VendorPackage } from "@/lib/api/vendors.types";
 import { formatWhatsAppUrl } from "@/lib/utils/whatsapp";
 import { trackEvent } from "@/lib/analytics/track";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { CheckIcon, SparkleIcon, WhatsAppIcon } from "./icons";
 
 interface VendorPortfolioPackagesProps {
@@ -93,6 +93,10 @@ export function VendorPortfolioPackages({
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover"
+                      unoptimized={isPreOptimizedMediaUrl(getPublicMediaUrl(imageKey))}
+                      {...(pkg.image?.blurDataUrl
+                        ? { placeholder: "blur" as const, blurDataURL: pkg.image.blurDataUrl }
+                        : {})}
                     />
                   </div>
                 )}

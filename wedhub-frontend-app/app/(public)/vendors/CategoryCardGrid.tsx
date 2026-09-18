@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Category } from "@/lib/api/vendors.types";
 import { resolveCategorySeoSlug } from "@/lib/seo/category-slug-map";
+import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 
 const PASTEL_PALETTE = [
   { bg: "bg-[#eef2ff]", border: "border-[#dce4ff]", text: "text-indigo-900" },
@@ -60,6 +61,7 @@ export function CategoryCardGrid({ categories }: { categories: Category[] }) {
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-110"
                   sizes="(max-width: 640px) 105px, 130px"
+                  unoptimized={isPreOptimizedMediaUrl(category.imageUrl)}
                 />
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center p-2 text-center text-gray-400">

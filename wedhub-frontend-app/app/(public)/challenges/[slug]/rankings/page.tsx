@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { PublicFooter } from "@/components/shared/PublicFooter";
 import { getChallengeBySlug, getChallengeRankings } from "@/lib/api/challenges";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { ApiRequestError } from "@/lib/api/types";
 import type { Challenge } from "@/lib/api/challenges.types";
 
@@ -73,7 +73,8 @@ export default async function ChallengeRankingsPage({ params, searchParams }: Ra
             {entries.map((entry, index) => {
               const rank = (page - 1) * PAGE_SIZE + index + 1;
               const isTop3 = rank <= 3;
-              const imageKey = entry.image.optimizedObjectKey ?? entry.image.originalObjectKey;
+              const imageKey = entry.image.thumbnailObjectKey ?? entry.image.optimizedObjectKey ?? entry.image.originalObjectKey;
+              const imageUrl = getPublicMediaUrl(imageKey);
               return (
                 <li
                   key={entry.id}
@@ -85,7 +86,14 @@ export default async function ChallengeRankingsPage({ params, searchParams }: Ra
                     {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
                   </span>
                   <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-input">
-                    <Image src={getPublicMediaUrl(imageKey)} alt={entry.title} fill className="object-cover" />
+                    <Image
+                      src={imageUrl}
+                      alt={entry.title}
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                      unoptimized={isPreOptimizedMediaUrl(imageUrl)}
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-text-dark">{entry.vendor.businessName}</p>

@@ -88,7 +88,9 @@ export default async function ChallengePage({ params }: ChallengePageProps) {
       <PublicTopbar />
 
       <div className="relative h-64 bg-surface-input max-[900px]:h-44">
-        {challenge.bannerImage && <Image src={challenge.bannerImage} alt={challenge.title} fill className="object-cover" priority />}
+        {challenge.bannerImage && (
+          <Image src={challenge.bannerImage} alt={challenge.title} fill sizes="100vw" className="object-cover" priority />
+        )}
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 px-4 text-center text-white">
           <span className="mb-2 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wide backdrop-blur">
             {STATUS_LABEL[challenge.status]}
@@ -148,7 +150,7 @@ export default async function ChallengePage({ params }: ChallengePageProps) {
               <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
                 {challenge.sponsorLogo && (
                   <div className="relative h-8 w-8 overflow-hidden rounded-full bg-white">
-                    <Image src={challenge.sponsorLogo} alt={challenge.sponsorName} fill className="object-contain" />
+                    <Image src={challenge.sponsorLogo} alt={challenge.sponsorName} fill sizes="32px" className="object-contain" />
                   </div>
                 )}
                 <p className="text-xs text-text-grey">

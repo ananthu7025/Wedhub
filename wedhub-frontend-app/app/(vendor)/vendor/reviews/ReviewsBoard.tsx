@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { respondToMyReview } from "@/lib/api/reviews-client";
 import type { VendorReview } from "@/lib/api/vendors.types";
 import { formatApiError } from "@/lib/utils/error";
@@ -174,9 +174,17 @@ export function ReviewsBoard({
                 <div className="mt-2.5 flex gap-2">
                   {review.photos.map((photo) => {
                     const key = photo.thumbnailObjectKey ?? photo.optimizedObjectKey ?? photo.originalObjectKey;
+                    const photoUrl = getPublicMediaUrl(key);
                     return (
                       <div key={photo.id} className="relative h-16 w-16 overflow-hidden rounded-md bg-surface-input">
-                        <Image src={getPublicMediaUrl(key)} alt="" fill className="object-cover" />
+                        <Image
+                          src={photoUrl}
+                          alt=""
+                          fill
+                          sizes="64px"
+                          className="object-cover"
+                          unoptimized={isPreOptimizedMediaUrl(photoUrl)}
+                        />
                       </div>
                     );
                   })}

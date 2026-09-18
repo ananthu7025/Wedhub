@@ -4,6 +4,7 @@ import { useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { VendorSearchResult } from "@/lib/api/vendors.types";
+import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 
 interface CuratedVendorShelfProps {
   title: string;
@@ -100,6 +101,7 @@ export function CuratedVendorShelf({
                       fill
                       className="object-cover transition-transform duration-500 hover:scale-105"
                       sizes="250px"
+                      unoptimized={isPreOptimizedMediaUrl(vendor.logoUrl)}
                       {...(vendor.logoBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: vendor.logoBlurDataUrl } : {})}
                     />
                   ) : (

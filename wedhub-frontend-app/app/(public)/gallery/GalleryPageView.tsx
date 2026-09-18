@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { FeaturedMediaItem, GalleryCategory } from "@/lib/api/vendors.types";
 import type { Challenge } from "@/lib/api/challenges.types";
 import { listFeaturedGalleryMediaClient } from "@/lib/api/catalog-client";
-import { getPublicMediaUrl } from "@/lib/media/url";
+import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { GalleryPhotoModal } from "./GalleryPhotoModal";
 import { ChallengeBannerCard } from "./ChallengeBannerCard";
 
@@ -18,7 +18,11 @@ export interface GalleryDisplayItem {
   key: string;
   category: string;
   title: string;
+  /** Masonry grid tile — thumbnail-first so the initial grid never pulls the medium/original variant for a few-hundred-px tile. */
+  thumbUrl: string;
+  /** Lightbox-only — medium/optimized variant (or original if that's genuinely all that exists), never the 300px thumbnail blown up full-screen. */
   imageUrl: string;
+  blurDataUrl: string | null;
   aspectRatioClass: string;
   vendor: { slug: string; businessName: string } | null;
 }
@@ -38,7 +42,11 @@ function toDisplayItems(items: FeaturedMediaItem[], startIndex: number): Gallery
     key: item.id,
     category: itemCategory(item),
     title: itemTitle(item),
+    thumbUrl: getPublicMediaUrl(
+      item.media.thumbnailObjectKey ?? item.media.optimizedObjectKey ?? item.media.originalObjectKey,
+    ),
     imageUrl: getPublicMediaUrl(item.media.optimizedObjectKey ?? item.media.originalObjectKey),
+    blurDataUrl: item.media.blurDataUrl,
     aspectRatioClass: ASPECT_RATIOS[(startIndex + i) % ASPECT_RATIOS.length] as string,
     vendor: item.media.vendor ? { slug: item.media.vendor.slug, businessName: item.media.vendor.businessName } : null,
   }));
@@ -164,11 +172,13 @@ export function GalleryPageView({
             >
               <div className={`relative w-full ${item.aspectRatioClass}`}>
                 <Image
-                  src={item.imageUrl}
+                  src={item.thumbUrl}
                   alt={item.title}
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                  unoptimized={isPreOptimizedMediaUrl(item.thumbUrl)}
+                  {...(item.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: item.blurDataUrl } : {})}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity group-hover:opacity-95" />
                 <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
