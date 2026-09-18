@@ -793,6 +793,225 @@ const HOMEPAGE_FEATURED_CATEGORIES: Array<{ name: string; imageUrl: string; star
   { name: "Caterers", imageUrl: "/images/capsules/catering.webp", startingPriceLabel: "₹ 800 / plate", sortOrder: 6 },
 ];
 
+// Homepage "Popular Searches" strip (PopularSearchCard model) — ships with
+// zero seeded rows by default (see this model's own schema comment); these
+// 4 give a fresh environment real homepage content instead of an empty
+// section immediately after seeding. searchQuery values are real category
+// names so they resolve through search.repository.ts's keyword ->
+// resolveKeywordCategoryIds() trigram match, i.e. clicking a card actually
+// returns filtered results, not an empty search page. locationBlurb/
+// priceLabel reflect this platform's actual Kerala-only scope (see
+// INDIA_STATES below — no other state is seeded), unlike the original
+// hardcoded homepage placeholder array this replaces (which named
+// Bengaluru/Delhi/Mumbai/Goa/Jaipur — none of them real for this
+// marketplace). Images reuse the same Unsplash-placeholder pattern already
+// used by GalleryInspiration.tsx's SAMPLE_COVER_IMAGES for
+// admin-uploadable content with no default asset yet.
+interface PopularSearchCardSeed {
+  title: string;
+  locationBlurb: string;
+  priceLabel: string;
+  imageUrl: string;
+  searchQuery: string;
+  sortOrder: number;
+}
+
+const POPULAR_SEARCH_CARDS: PopularSearchCardSeed[] = [
+  {
+    title: "Banquet Halls & Wedding Venues",
+    locationBlurb: "Kochi, Thiruvananthapuram, Kozhikode & more",
+    priceLabel: "₹ 800 per plate onwards",
+    imageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=500&q=80",
+    searchQuery: "Venues",
+    sortOrder: 0,
+  },
+  {
+    title: "Kerala Backwater Resorts for Destination Weddings",
+    locationBlurb: "Alleppey, Kumarakom & the Kerala backwaters",
+    priceLabel: "₹ 1,50,000 per day onwards",
+    imageUrl: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=500&q=80",
+    searchQuery: "Venues",
+    sortOrder: 1,
+  },
+  {
+    title: "Candid Wedding Photographers",
+    locationBlurb: "Top-rated photography & videography teams",
+    priceLabel: "₹ 50,000 onwards",
+    imageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=500&q=80",
+    searchQuery: "Photography & Videography",
+    sortOrder: 2,
+  },
+  {
+    title: "Bridal Makeup Artists",
+    locationBlurb: "HD & airbrush specialists across Kerala",
+    priceLabel: "₹ 18,000 onwards",
+    imageUrl: "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=500&q=80",
+    searchQuery: "Makeup Artists",
+    sortOrder: 3,
+  },
+];
+
+// /blog list + homepage "Latest from the Blog" (BlogPost model) — same
+// ships-empty-by-default situation as PopularSearchCard above. slug is
+// computed here with the same slugify() this file already uses elsewhere
+// (blog.service.ts does this at request time via generateUniqueSlug, but a
+// seed script writes directly through Prisma, bypassing that service
+// layer, so it has to be precomputed). publishedAt is set (not null) so
+// these are immediately live, matching isFeatured: true so they surface on
+// the homepage without needing a separate admin publish step after seeding.
+interface BlogPostSeed {
+  title: string;
+  category: string;
+  excerpt: string;
+  bodyMarkdown: string;
+  readTimeMinutes: number;
+  coverImageUrl: string;
+  sortOrder: number;
+}
+
+const BLOG_POSTS: BlogPostSeed[] = [
+  {
+    title: "The Ultimate Kerala Wedding Planning Checklist & Timeline",
+    category: "Wedding Planning",
+    excerpt:
+      "From booking your venue a year out to confirming the sadhya headcount the week before — a month-by-month checklist for planning a Kerala wedding without the last-minute scramble.",
+    bodyMarkdown: `# The Ultimate Kerala Wedding Planning Checklist & Timeline
+
+Planning a wedding in Kerala means juggling venue bookings, catering headcounts, and family traditions across several months. Here's a realistic month-by-month timeline to keep everything on track.
+
+## 12 Months Before
+
+- Set your budget and guest list
+- Shortlist and book your venue — banquet halls and backwater resorts get booked out fastest during the November–February wedding season
+- Book your photographer and videographer
+
+## 6-8 Months Before
+
+- Finalize your catering partner and sadhya menu
+- Book your mehendi and makeup artists
+- Start shortlisting outfits — Kanjeevaram and Kasavu sarees, sherwanis, and mundu sets often need custom tailoring lead time
+
+## 3 Months Before
+
+- Send invitations
+- Confirm decor and florist bookings
+- Finalize the day-of schedule with your event planner or coordinator
+
+## 1 Month Before
+
+- Confirm final guest count with your caterer
+- Do a final fitting for all outfits
+- Confirm transport and accommodation for out-of-town guests
+
+## Week Of
+
+- Reconfirm every vendor's arrival time
+- Delegate a point-of-contact for each vendor so you're not fielding calls on the day
+- Take a breath — the planning is done, now it's time to enjoy it
+
+Wherever you are in your planning journey, itsmyKalyanam's verified vendor directory can help you find and compare venues, photographers, caterers, and more, all in one place.`,
+    readTimeMinutes: 8,
+    coverImageUrl: "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=1200&q=80",
+    sortOrder: 0,
+  },
+  {
+    title: "Top Trending Bridal Looks for Kerala Weddings This Season",
+    category: "Bridal Fashion",
+    excerpt:
+      "From the timeless Kasavu saree to contemporary pastel lehengas — the bridal looks Kerala brides are choosing this wedding season, and how to pick what suits your ceremony.",
+    bodyMarkdown: `# Top Trending Bridal Looks for Kerala Weddings This Season
+
+Kerala weddings blend deep-rooted tradition with evolving bridal fashion. Here's what's trending this season across the state's most-loved wedding styles.
+
+## The Classic Kasavu Saree, Reimagined
+
+The off-white and gold Kasavu saree remains a staple for Kerala Hindu weddings, but this season brides are pairing it with statement temple jewellery and contemporary blouse cuts for a fresh silhouette.
+
+## Kanjeevaram Silks in Jewel Tones
+
+For the reception, many brides are moving beyond traditional red toward deep emerald, sapphire blue, and wine Kanjeevaram silks — still rich with zari work, but a distinct look from the ceremony saree.
+
+## Pastel Lehengas for Christian and Fusion Weddings
+
+Kerala's Christian weddings and fusion celebrations are seeing a rise in pastel and blush lehengas, often paired with lightweight dupattas suited to the coastal humidity.
+
+## Minimalist Gold Jewellery
+
+Layered necklaces are giving way to a single statement piece paired with simpler earrings — a shift toward comfort for long ceremony days.
+
+Browse verified bridal wear boutiques and makeup artists across Kerala on itsmyKalyanam to find the look that's right for your wedding.`,
+    readTimeMinutes: 5,
+    coverImageUrl: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=1200&q=80",
+    sortOrder: 1,
+  },
+  {
+    title: "10 Stunning Backwater Wedding Venues in Kerala",
+    category: "Venues",
+    excerpt:
+      "Houseboats, lakeside resorts, and heritage properties along Kerala's backwaters — venue ideas for couples dreaming of a destination wedding closer to home.",
+    bodyMarkdown: `# 10 Stunning Backwater Wedding Venues in Kerala
+
+Kerala's backwaters offer some of the most photogenic wedding backdrops in India — without the logistics of a true destination wedding abroad. Here's what to look for when shortlisting a backwater venue.
+
+## Alleppey: The Classic Choice
+
+Alleppey's canal-side resorts and houseboat operators are the most established backwater wedding option, with venues used to hosting large Kerala wedding parties.
+
+## Kumarakom: Quiet Luxury
+
+Kumarakom's lake-facing resorts lean upscale, ideal for couples wanting a smaller, more intimate guest list with premium accommodation on-site.
+
+## What to Ask Before Booking
+
+- Can the venue accommodate your full guest list for both the ceremony and the sadhya?
+- Is there covered space in case of monsoon-season rain?
+- Does the venue have empanelled caterers, or can you bring your own?
+- What's included in accommodation for out-of-town guests?
+
+## Book Early
+
+Backwater venues are booked heavily during the November–February peak season — start shortlisting at least 10-12 months ahead if you have your heart set on a specific property.
+
+Compare verified backwater and resort venues across Kerala on itsmyKalyanam, with real pricing and photos from past weddings.`,
+    readTimeMinutes: 6,
+    coverImageUrl: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=1200&q=80",
+    sortOrder: 2,
+  },
+  {
+    title: "Planning a Sadhya: A Guide to Traditional Kerala Wedding Catering",
+    category: "Food & Catering",
+    excerpt:
+      "What goes into a traditional Kerala wedding sadhya, how caterers price per plate, and the questions to ask before you finalize your wedding menu.",
+    bodyMarkdown: `# Planning a Sadhya: A Guide to Traditional Kerala Wedding Catering
+
+The sadhya — a traditional vegetarian feast served on a banana leaf — is central to most Kerala weddings. Here's what couples should know before booking a caterer.
+
+## What's In a Traditional Sadhya
+
+A full sadhya typically includes rice, sambar, rasam, avial, thoran, pachadi, pickles, papadam, and payasam for dessert, served in a specific order on a banana leaf. Most caterers offer this as a fixed package, with add-ons for non-vegetarian dishes served separately for weddings that include them.
+
+## How Pricing Works
+
+Caterers generally price per plate, with the rate depending on the number of dishes included, whether it's a full sadhya or a lighter menu, and guest count — larger weddings often get a better per-plate rate.
+
+## Questions to Ask Your Caterer
+
+- Is the quoted price per plate all-inclusive, or are certain dishes extra?
+- Can they accommodate a final headcount change close to the wedding date?
+- Do they provide serving staff, or is that a separate booking?
+- Can you request a tasting session before confirming?
+
+## Don't Forget the Reception Menu
+
+Many couples now pair a traditional sadhya at the main ceremony with a more contemporary buffet or live counters at the reception — worth budgeting for both if that's the plan.
+
+Find and compare verified caterers across Kerala, with real pricing per plate, on itsmyKalyanam.`,
+    readTimeMinutes: 6,
+    coverImageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&q=80",
+    sortOrder: 3,
+  },
+];
+
 interface LocationSeed {
   name: string;
   cities?: string[];
@@ -893,6 +1112,70 @@ export async function seedHomepageFeaturedCategories(): Promise<void> {
   }
 
   console.info(`Marked ${HOMEPAGE_FEATURED_CATEGORIES.length} categories as featured on homepage.`);
+}
+
+export async function seedPopularSearchCards(): Promise<void> {
+  // No unique column exists on this model besides id (see schema.prisma) —
+  // searchQuery isn't unique either (two cards legitimately share one, e.g.
+  // both backwater-resort cards above search "Venues"), so title is the
+  // only field that's actually distinct per row here and the natural
+  // idempotency key: re-running this script updates the same 4 rows
+  // in place instead of creating duplicates.
+  for (const card of POPULAR_SEARCH_CARDS) {
+    const existing = await prisma.popularSearchCard.findFirst({ where: { title: card.title } });
+    const data = {
+      locationBlurb: card.locationBlurb,
+      priceLabel: card.priceLabel,
+      imageUrl: card.imageUrl,
+      searchQuery: card.searchQuery,
+      isFeatured: true,
+      sortOrder: card.sortOrder,
+    };
+
+    if (existing) {
+      await prisma.popularSearchCard.update({ where: { id: existing.id }, data });
+    } else {
+      await prisma.popularSearchCard.create({ data: { title: card.title, ...data } });
+    }
+  }
+
+  console.info(`Seeded ${POPULAR_SEARCH_CARDS.length} popular search cards.`);
+}
+
+export async function seedBlogPosts(): Promise<void> {
+  for (const post of BLOG_POSTS) {
+    const slug = slugify(post.title);
+    await prisma.blogPost.upsert({
+      where: { slug },
+      update: {
+        title: post.title,
+        category: post.category,
+        coverImageUrl: post.coverImageUrl,
+        excerpt: post.excerpt,
+        bodyMarkdown: post.bodyMarkdown,
+        readTimeMinutes: post.readTimeMinutes,
+        isFeatured: true,
+        sortOrder: post.sortOrder,
+      },
+      create: {
+        title: post.title,
+        slug,
+        category: post.category,
+        coverImageUrl: post.coverImageUrl,
+        excerpt: post.excerpt,
+        bodyMarkdown: post.bodyMarkdown,
+        readTimeMinutes: post.readTimeMinutes,
+        // Set (not null) so these are immediately public — see this
+        // array's own comment on why, and BlogPost.publishedAt's schema
+        // comment on null-vs-set doubling as the draft/published flag.
+        publishedAt: new Date(),
+        isFeatured: true,
+        sortOrder: post.sortOrder,
+      },
+    });
+  }
+
+  console.info(`Seeded ${BLOG_POSTS.length} blog posts.`);
 }
 
 export async function seedLocations(): Promise<void> {
@@ -1103,6 +1386,8 @@ async function main(): Promise<void> {
   await seedHomepageFeaturedCategories();
   await seedLocations();
   await seedSubscriptionPlans();
+  await seedPopularSearchCards();
+  await seedBlogPosts();
 }
 
 // Only auto-run when executed directly (`npx tsx prisma/seed.ts` or `prisma
