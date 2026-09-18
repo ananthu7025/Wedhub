@@ -165,15 +165,14 @@ export default async function HomePage() {
     <div className="min-h-screen bg-surface-page">
       <PublicTopbar />
 
-      {/* Hero Section — strictly preserving user copy & search form, enhanced with Kerala wedding background */}
+      {/* Hero Section — strictly preserving user copy & search form, enhanced with generated wedding background */}
       <section className="relative m-6 overflow-hidden rounded-[24px] px-8 py-16 text-white shadow-xl max-[900px]:m-4 max-[900px]:px-6 max-[900px]:py-10">
-        {/* Traditional Kerala backwater wedding photography background
-            (2026-09-18 banner update) — this is the page's LCP element, so
-            it uses next/image with `priority` (skips lazy-loading + gets a
-            fetchpriority hint) instead of a plain CSS background-image,
-            which Next can't optimize, resize, or re-encode to AVIF/WebP.
-            Same visual result (object-cover, hover zoom) as the previous
-            background-image div. */}
+        {/* High resolution Indian wedding photography background — this is
+            the page's LCP element, so it uses next/image with `priority`
+            (skips lazy-loading + gets a fetchpriority hint) instead of a
+            plain CSS background-image, which Next can't optimize, resize,
+            or re-encode to AVIF/WebP. Same visual result (object-cover,
+            hover zoom) as the previous background-image div. */}
         <Image
           src="/images/hero-wedding-bg.jpg"
           alt=""
