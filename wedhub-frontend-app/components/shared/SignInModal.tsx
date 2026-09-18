@@ -102,7 +102,24 @@ export function SignInModal({
         <p className="mb-5 text-sm text-text-grey">Sign in to see contact details</p>
 
         <div className="mb-5">
-          <GoogleSignInButton onSuccess={handleSignedIn} />
+          {/*
+            role="END_USER": this modal only ever gates couple-facing
+            actions (revealing vendor contact details, sending an enquiry —
+            see VendorContactLinks.tsx/EnquiryCta.tsx, its only two callers),
+            never a vendor flow, so there's no ambiguity to ask the visitor
+            to resolve like /signup's account-type picker has.
+            GoogleSignInButton normally redirects a first-time Google
+            identity to /signup when `role` is omitted (the plain /login
+            page's behavior, which has no signup context) — inside this
+            popup that meant an unauthenticated visitor clicking "Continue
+            with Google" got yanked off the vendor page entirely, losing
+            their place and the whole point of an in-page modal. Passing a
+            role here makes a new Google identity register immediately
+            (auth.service.ts's loginWithGoogle -> createUserWithLinkedIdentity)
+            and continue the original reveal/enquiry action via onSuccess,
+            exactly like an existing user signing in would.
+          */}
+          <GoogleSignInButton role="END_USER" onSuccess={handleSignedIn} />
         </div>
 
         <div className="mb-5 flex items-center gap-3 text-[12px] text-text-grey">

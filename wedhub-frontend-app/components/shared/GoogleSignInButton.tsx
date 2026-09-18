@@ -18,9 +18,19 @@ import { useToast } from "@/components/ui/Toast";
  * `role` is which entry point rendered this button:
  *  - /signup passes "END_USER" or "VENDOR" (per its own ?type= context) —
  *    a brand-new Google identity there is registered with that role.
+ *  - SignInModal.tsx (the in-page "sign in to continue" popup) passes
+ *    "END_USER" too — it only ever gates couple-facing actions (reveal
+ *    vendor contact / send enquiry), so a brand-new Google identity there
+ *    registers immediately and the caller's onSuccess continues the
+ *    original action, same as an existing user signing in.
  *  - /login omits it entirely — that page has no signup-intent context, so
  *    a brand-new Google identity there is NOT registered; the backend
  *    returns NOT_FOUND and this component redirects to /signup instead.
+ *    Only /login should ever omit `role` — anywhere this button renders
+ *    inside a modal/popup rather than as a full page, omitting it means an
+ *    unauthenticated first-time visitor gets silently navigated away
+ *    mid-task instead of completing the action they opened the popup for
+ *    (see SignInModal.tsx's own comment on this exact bug).
  * A RETURNING user's Google identity always resolves to their real existing
  * role regardless of which of these rendered the button.
  *
