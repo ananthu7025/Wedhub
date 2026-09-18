@@ -366,7 +366,6 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
 
               <EnquiryCta
                 vendorId={vendor.id}
-                vendorSlug={vendor.slug}
                 vendorName={vendor.businessName}
                 isAuthenticated={session !== null}
               />

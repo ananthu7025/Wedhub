@@ -3,6 +3,19 @@
 import { useState } from "react";
 import { trackEvent } from "@/lib/analytics/track";
 import { revealVendorContactClient } from "@/lib/api/catalog-client";
+import { SignInModal } from "./SignInModal";
+
+// Custom padlock icon for "Reveal contact details" — matches the app's
+// inline-SVG icon convention (see VendorHeartButton.tsx) instead of the 🔒
+// system emoji, which renders inconsistently across platforms/fonts.
+function LockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4.5" y="11" width="15" height="10" rx="2" />
+      <path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
+    </svg>
+  );
+}
 
 /**
  * Clickable tel:/mailto:/website links for a vendor's contact block on
@@ -20,8 +33,12 @@ import { revealVendorContactClient } from "@/lib/api/catalog-client";
  * a logged-in session and logs contact_details_revealed server-side — a
  * stronger-intent signal the vendor sees distinctly on their Leads page
  * (see lead.repository.ts::listProfileViewers and LeadsBoard.tsx).
- * Unauthenticated visitors are sent to /login first, mirroring
- * EnquiryCta.tsx's exact same gate.
+ * Unauthenticated visitors get an in-page SignInModal instead of a redirect
+ * to /login, mirroring EnquiryCta.tsx's exact same gate — on successful
+ * sign-in the reveal call fires immediately (no second click needed) and
+ * router.refresh() (inside SignInModal) re-reads the server-rendered
+ * isAuthenticated flag so a future render of this component already knows
+ * the visitor is signed in.
  */
 export function VendorContactLinks({
   vendorId,
@@ -41,17 +58,44 @@ export function VendorContactLinks({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   if (!hasAnyContactInfo) return null;
 
+  async function reveal() {
+    setLoading(true);
+    setError(null);
+    const result = await revealVendorContactClient(vendorSlug);
+    setLoading(false);
+    if (!result.success) {
+      setError("Couldn't load contact details. Please try again.");
+      return;
+    }
+    trackEvent({ eventType: "contact_details_revealed", vendorId, metadata: { source: "profile_sidebar", businessName } });
+    setRevealed(result.data);
+  }
+
   if (!isAuthenticated) {
     return (
-      <a
-        href={`/login?next=/vendors/${vendorSlug}`}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-input px-4 py-2.5 text-[13px] font-semibold text-text-dark no-underline hover:bg-neutral-grey-20"
-      >
-        🔒 Reveal contact details
-      </a>
+      <>
+        <button
+          type="button"
+          onClick={() => setShowSignIn(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-input px-4 py-2.5 text-[13px] font-semibold text-text-dark hover:bg-neutral-grey-20"
+        >
+          <LockIcon /> Reveal contact details
+        </button>
+        {showSignIn && (
+          <SignInModal
+            vendorName={businessName}
+            onClose={() => setShowSignIn(false)}
+            onSuccess={() => {
+              setShowSignIn(false);
+              void reveal();
+            }}
+          />
+        )}
+      </>
     );
   }
 
@@ -61,21 +105,10 @@ export function VendorContactLinks({
         <button
           type="button"
           disabled={loading}
-          onClick={async () => {
-            setLoading(true);
-            setError(null);
-            const result = await revealVendorContactClient(vendorSlug);
-            setLoading(false);
-            if (!result.success) {
-              setError("Couldn't load contact details. Please try again.");
-              return;
-            }
-            trackEvent({ eventType: "contact_details_revealed", vendorId, metadata: { source: "profile_sidebar", businessName } });
-            setRevealed(result.data);
-          }}
+          onClick={reveal}
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-input px-4 py-2.5 text-[13px] font-semibold text-text-dark hover:bg-neutral-grey-20 disabled:opacity-60"
         >
-          🔒 {loading ? "Loading…" : "Reveal contact details"}
+          <LockIcon /> {loading ? "Loading…" : "Reveal contact details"}
         </button>
         {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
       </div>
