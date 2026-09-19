@@ -7,6 +7,7 @@ import { VendorAttributes } from "@/components/shared/VendorAttributes";
 import { VendorHeartButton } from "@/components/shared/VendorHeartButton";
 import { EnquiryCta } from "@/components/shared/EnquiryCta";
 import { JsonLd } from "@/components/shared/JsonLd";
+import { MessageVendorButton } from "@/components/shared/MessageVendorButton";
 import { VendorContactLinks } from "@/components/shared/VendorContactLinks";
 import { getVendorAlbums, getVendorBySlug, getVendorReviews } from "@/lib/api/catalog";
 import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
@@ -387,6 +388,12 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
               )}
 
               <EnquiryCta
+                vendorId={vendor.id}
+                vendorName={vendor.businessName}
+                isAuthenticated={session !== null}
+              />
+
+              <MessageVendorButton
                 vendorId={vendor.id}
                 vendorName={vendor.businessName}
                 isAuthenticated={session !== null}

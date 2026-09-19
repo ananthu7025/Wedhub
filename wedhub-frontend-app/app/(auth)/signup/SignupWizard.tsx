@@ -38,11 +38,18 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
   const [credentialsTouched, setCredentialsTouched] = useState<{ email?: boolean; password?: boolean }>({});
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [firstNameTouched, setFirstNameTouched] = useState(false);
   const [pending, setPending] = useState(false);
 
   const emailError = useMemo(() => validateField(emailSchema, email), [email]);
   const passwordError = useMemo(() => validateField(passwordSchema, password), [password]);
   const isCredentialsValid = !emailError && !passwordError;
+  // Item 7: firstName is the only genuinely required field on this step —
+  // lastName stays optional per the brief (only "the user's first name" is
+  // required). Without this, a user could click Continue with both blank
+  // and end up with firstName: null forever, with nothing ever prompting
+  // them to add it later.
+  const firstNameError = firstName.trim().length === 0 ? "First name is required" : null;
 
   async function handleCredentialsSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,18 +97,19 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
   // it (vs. leaving it as a some-day account-page task).
   async function handleProfileSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setFirstNameTouched(true);
+    if (firstNameError) return;
+
     setPending(true);
 
-    if (firstName || lastName) {
-      const result = await updateMyProfile({
-        firstName: firstName.trim() || undefined,
-        lastName: lastName.trim() || undefined,
-      });
-      if (!result.success) {
-        showToast(formatApiError(result.error), "error");
-        setPending(false);
-        return;
-      }
+    const result = await updateMyProfile({
+      firstName: firstName.trim(),
+      lastName: lastName.trim() || undefined,
+    });
+    if (!result.success) {
+      showToast(formatApiError(result.error), "error");
+      setPending(false);
+      return;
     }
 
     setPending(false);
@@ -211,12 +219,17 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
           <Input
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
+            onBlur={() => setFirstNameTouched(true)}
+            invalid={firstNameTouched && !!firstNameError}
             placeholder="e.g. Aditi"
             maxLength={100}
           />
+          {firstNameTouched && <FieldError message={firstNameError} />}
         </div>
         <div className="mb-4.5">
-          <span className="mb-2 block text-[13px] font-bold">Last name</span>
+          <span className="mb-2 block text-[13px] font-bold">
+            Last name <span className="font-normal text-text-grey">(optional)</span>
+          </span>
           <Input
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}

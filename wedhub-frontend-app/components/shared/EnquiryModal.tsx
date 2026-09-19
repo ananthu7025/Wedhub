@@ -63,11 +63,43 @@ function EnquiryModalContent({
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error" | "already-enquired">("idle");
   const [existingConversationId, setExistingConversationId] = useState<string | null>(null);
-  const [touched, setTouched] = useState<{ contactName?: boolean; contactEmail?: boolean; contactPhone?: boolean }>({});
+  const [touched, setTouched] = useState<{
+    contactName?: boolean;
+    contactEmail?: boolean;
+    contactPhone?: boolean;
+    weddingDate?: boolean;
+    budget?: boolean;
+    guestCount?: boolean;
+    message?: boolean;
+  }>({});
 
   const nameError = contactName.trim().length === 0 ? "Please enter your name." : null;
   const emailError = useMemo(() => validateField(emailSchema, contactEmail), [contactEmail]);
   const phoneError = useMemo(() => validateField(optionalPhoneSchema, contactPhone), [contactPhone]);
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  // Item 8: wedding date had no past-date restriction at all. Optional field
+  // (brief's required list is Name/Email/Wedding date/Message — this only
+  // rejects a date that WAS entered but is in the past; leaving it blank is
+  // still fine).
+  const weddingDateError =
+    weddingDate.length > 0 && weddingDate < todayStr ? "Wedding date can't be in the past." : null;
+  // Item 8: guest count/budget both allowed zero via the HTML min attribute
+  // alone, which doesn't actually block submission. Neither is in the
+  // brief's required-fields list, so blank stays valid — only an entered
+  // value must be >= 1 / a positive amount.
+  const guestCountError =
+    guestCount.trim().length > 0 && Number(guestCount) < 1 ? "Guest count must be at least 1 if provided." : null;
+  const budgetError =
+    budget.trim().length > 0 && Number(budget) <= 0 ? "Enter a valid positive budget amount." : null;
+  // Item 8: the brief's required-fields list has "Message or service
+  // requirement" as one combined item. This form collects no other
+  // service-requirement signal (no service/category picker, no
+  // requirements checklist) — wedding date/budget/guest count are separate
+  // named fields already listed on their own in the brief, not stand-ins
+  // for "service requirement." With no other signal in this form, message
+  // itself is the only field that can satisfy that requirement, so it
+  // becomes required instead of "(optional)".
+  const messageError = message.trim().length === 0 ? "Please tell the vendor what you need." : null;
 
   useEffect(() => {
     fetch("/api/users/me", { credentials: "include" })
@@ -130,9 +162,19 @@ function EnquiryModalContent({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setTouched({ contactName: true, contactEmail: true, contactPhone: true });
+    setTouched({
+      contactName: true,
+      contactEmail: true,
+      contactPhone: true,
+      weddingDate: true,
+      budget: true,
+      guestCount: true,
+      message: true,
+    });
     const trimmedName = contactName.trim();
-    if (nameError || emailError || phoneError) return;
+    if (nameError || emailError || phoneError || weddingDateError || guestCountError || budgetError || messageError) {
+      return;
+    }
 
     const trimmedPhone = contactPhone.trim();
 
@@ -146,7 +188,7 @@ function EnquiryModalContent({
       weddingDate: weddingDate || undefined,
       budget: budget ? Number(budget) : undefined,
       guestCount: guestCount ? Number(guestCount) : undefined,
-      message: message || undefined,
+      message: message.trim(),
     });
 
     if (result.success) {
@@ -196,6 +238,13 @@ function EnquiryModalContent({
             >
               Done
             </button>
+            <Link
+              href="/enquiries"
+              onClick={onClose}
+              className="mt-3 block text-center text-[13px] font-semibold text-brand-primary hover:underline"
+            >
+              View My Enquiries
+            </Link>
           </div>
         ) : status === "already-enquired" ? (
           <div className="py-6 text-center">
@@ -258,49 +307,62 @@ function EnquiryModalContent({
             </label>
 
             <label className="mb-3.5 block text-sm">
-              <span className="mb-1.5 block font-semibold">Wedding date</span>
+              <span className="mb-1.5 block font-semibold">
+                Wedding date <span className="font-normal text-text-grey">(optional)</span>
+              </span>
               <input
                 type="date"
+                min={todayStr}
                 value={weddingDate}
                 onChange={(e) => setWeddingDate(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, weddingDate: true }))}
                 className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
               />
+              {touched.weddingDate && <FieldError message={weddingDateError} />}
             </label>
 
             <label className="mb-3.5 block text-sm">
-              <span className="mb-1.5 block font-semibold">Estimated budget (₹)</span>
+              <span className="mb-1.5 block font-semibold">
+                Estimated budget (₹) <span className="font-normal text-text-grey">(optional)</span>
+              </span>
               <input
                 type="number"
-                min="0"
+                min="1"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, budget: true }))}
                 className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
               />
+              {touched.budget && <FieldError message={budgetError} />}
             </label>
 
             <label className="mb-3.5 block text-sm">
-              <span className="mb-1.5 block font-semibold">Guest count</span>
+              <span className="mb-1.5 block font-semibold">
+                Guest count <span className="font-normal text-text-grey">(optional)</span>
+              </span>
               <input
                 type="number"
-                min="0"
+                min="1"
                 value={guestCount}
                 onChange={(e) => setGuestCount(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, guestCount: true }))}
                 className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
               />
+              {touched.guestCount && <FieldError message={guestCountError} />}
             </label>
 
             <label className="mb-4.5 block text-sm">
-              <span className="mb-1.5 block font-semibold">
-                Message <span className="font-normal text-text-grey">(optional)</span>
-              </span>
+              <span className="mb-1.5 block font-semibold">Message</span>
               <textarea
                 rows={3}
                 placeholder="Tell them a bit about what you're looking for..."
                 maxLength={2000}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, message: true }))}
                 className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
               />
+              {touched.message && <FieldError message={messageError} />}
             </label>
 
             <button
@@ -311,7 +373,7 @@ function EnquiryModalContent({
               {status === "submitting" ? "Sending…" : "Submit Enquiry"}
             </button>
             <p className="mt-3 text-center text-[11px] text-text-grey">
-              Your contact info is only shared with this vendor.
+              Your name, email, phone, and message will be shared with {vendorName} so they can respond.
             </p>
           </form>
         )}

@@ -5,6 +5,7 @@ import { PublicFooter } from "@/components/shared/PublicFooter";
 import { getVendorBySlug } from "@/lib/api/catalog";
 import { ApiRequestError } from "@/lib/api/types";
 import { ReviewForm } from "./ReviewForm";
+import { VendorSearchPicker } from "./VendorSearchPicker";
 
 export const metadata: Metadata = {
   title: "Write a Review",
@@ -21,12 +22,19 @@ export default async function WriteReviewPage({ searchParams }: WriteReviewPageP
     return (
       <>
         <PublicTopbar activeHref="/enquiries" />
-        <div className="mx-auto max-w-[560px] px-6 py-14 text-center">
-          <h1 className="mb-2 text-xl font-bold">No vendor selected</h1>
-          <p className="mb-5 text-sm text-text-grey">Write a review from your enquiries list or a vendor&apos;s profile.</p>
-          <Link href="/enquiries" className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white no-underline">
-            Go to my enquiries
-          </Link>
+        <div className="mx-auto max-w-[560px] px-6 py-14">
+          <div className="text-center">
+            <h1 className="mb-2 text-xl font-bold">Who would you like to review?</h1>
+            <p className="mb-5 text-sm text-text-grey">
+              Search for a vendor below, or write a review from your enquiries list or a vendor&apos;s profile.
+            </p>
+          </div>
+          <VendorSearchPicker />
+          <div className="mt-6 text-center">
+            <Link href="/enquiries" className="text-[13px] font-semibold text-text-grey no-underline hover:underline">
+              Go to my enquiries
+            </Link>
+          </div>
         </div>
         <PublicFooter />
         <CoupleBottomNav activeHref="/enquiries" />

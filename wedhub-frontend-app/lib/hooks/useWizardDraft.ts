@@ -21,6 +21,12 @@ export function useWizardDraft<T>(storageKey: string, initialState: T) {
   // crash outright.
   const [state, setState] = useState<T>(initialState);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  // Item 6: distinct from draftLoaded, which becomes true after the
+  // mount-time localStorage read regardless of whether anything was
+  // actually there. This only flips true when a raw value genuinely
+  // existed in storage on mount, so callers can show a one-time "draft
+  // restored" toast without it firing for every fresh, empty wizard visit.
+  const [draftRestored, setDraftRestored] = useState(false);
 
   // Tracks whether the current state differs from what was last explicitly
   // saved (draft or submitted) — this, not "is state non-default", is what
@@ -37,6 +43,7 @@ export function useWizardDraft<T>(storageKey: string, initialState: T) {
         const merged = { ...initialState, ...(JSON.parse(raw) as Partial<T>) };
         setState(merged);
         lastSavedRef.current = JSON.stringify(merged);
+        setDraftRestored(true);
       }
     } catch {
       // See saveDraft's comment below — storage can be unavailable.
@@ -83,5 +90,5 @@ export function useWizardDraft<T>(storageKey: string, initialState: T) {
     setHasUnsavedChanges(false);
   }, [state]);
 
-  return { state, setState, hasUnsavedChanges, saveDraft, clearDraft, markSubmitted, draftLoaded };
+  return { state, setState, hasUnsavedChanges, saveDraft, clearDraft, markSubmitted, draftLoaded, draftRestored };
 }

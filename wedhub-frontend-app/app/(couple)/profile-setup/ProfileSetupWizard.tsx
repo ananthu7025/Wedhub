@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { WizardGuard } from "@/components/shared/WizardGuard";
+import { useToast } from "@/components/ui/Toast";
 import { useWizardDraft } from "@/lib/hooks/useWizardDraft";
 import { listCategoriesClient, listLocationsClient } from "@/lib/api/catalog-client";
 import { submitProfileSetup } from "@/lib/api/profile-setup-client";
@@ -30,6 +32,7 @@ function newEventDate(): ProfileSetupDraft["eventDates"][number] {
 
 export function ProfileSetupWizard() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [step, setStep] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [cities, setCities] = useState<Location[]>([]);
@@ -37,10 +40,29 @@ export function ProfileSetupWizard() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const { state, setState, saveDraft, clearDraft, markSubmitted } = useWizardDraft<ProfileSetupDraft>(
+  const { state, setState, saveDraft, clearDraft, markSubmitted, draftRestored } = useWizardDraft<ProfileSetupDraft>(
     DRAFT_STORAGE_KEY,
     EMPTY_PROFILE_SETUP_DRAFT,
   );
+
+  // Item 6: previously saveDraft() gave zero visible feedback — clicking it
+  // looked like nothing happened even though it silently wrote to
+  // localStorage. Reuses the app-wide toast system already used everywhere
+  // else for exactly this kind of success feedback.
+  function handleSaveDraft() {
+    saveDraft();
+    showToast("Draft saved — pick up where you left off anytime.", "success");
+  }
+
+  // Item 6: one-time "draft restored" notice — draftRestored (unlike
+  // draftLoaded) only fires when localStorage genuinely had a saved draft
+  // on mount, not for every fresh empty visit.
+  useEffect(() => {
+    if (draftRestored) {
+      showToast("Draft restored — pick up where you left off.", "info");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftRestored]);
 
   useEffect(() => {
     void listCategoriesClient().then((result) => {
@@ -225,14 +247,21 @@ export function ProfileSetupWizard() {
   return (
     <WizardGuard hasUnsavedChanges={hasUnsavedChanges} onSaveDraft={saveDraft}>
       <div className="mb-6">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold">Set up your wedding profile</h1>
-          <button type="button" onClick={saveDraft} className="text-[13px] font-bold text-brand-primary hover:underline">
-            Save as draft
-          </button>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={handleSaveDraft} className="text-[13px] font-bold text-brand-primary hover:underline">
+              Save as draft
+            </button>
+            <Link href="/shortlist" className="text-[13px] font-semibold text-text-grey hover:text-text-dark hover:underline">
+              Skip for now
+            </Link>
+          </div>
         </div>
         <p className="mb-4 text-[13px] text-text-grey">
-          Tell us about your wedding so we can match you with the right vendors.
+          Tell us about your wedding so we can match you with the right vendors. Fields marked{" "}
+          <span className="font-semibold">*</span> are required — everything else is optional and can be filled in
+          later.
         </p>
         <div className="flex gap-1.5">
           {STEPS.map((label, i) => (
@@ -278,7 +307,7 @@ export function ProfileSetupWizard() {
                       </select>
                     </label>
                     <label className="block text-sm">
-                      <span className="mb-1 block text-[12px] font-bold">Date</span>
+                      <span className="mb-1 block text-[12px] font-bold">Date *</span>
                       <Input type="date" min={TODAY} value={ed.date} onChange={(e) => updateEventDate(i, { date: e.target.value })} />
                       {fieldErrors[`eventDate.${i}.date`] && (
                         <p className="mt-1 text-[12px] text-red-70">{fieldErrors[`eventDate.${i}.date`]}</p>
@@ -286,7 +315,7 @@ export function ProfileSetupWizard() {
                     </label>
                     {ed.functionType === "OTHER" && (
                       <label className="col-span-2 block text-sm">
-                        <span className="mb-1 block text-[12px] font-bold">What is this function called?</span>
+                        <span className="mb-1 block text-[12px] font-bold">What is this function called? *</span>
                         <Input value={ed.otherLabel} onChange={(e) => updateEventDate(i, { otherLabel: e.target.value })} maxLength={100} />
                         {fieldErrors[`eventDate.${i}.otherLabel`] && (
                           <p className="mt-1 text-[12px] text-red-70">{fieldErrors[`eventDate.${i}.otherLabel`]}</p>
@@ -339,12 +368,16 @@ export function ProfileSetupWizard() {
               </p>
             </label>
             <label className="mb-4 block text-sm">
-              <span className="mb-1.5 block text-[13px] font-bold">Total expected guests</span>
+              <span className="mb-1.5 block text-[13px] font-bold">
+                Total expected guests <span className="font-normal text-text-grey">(optional)</span>
+              </span>
               <Input type="number" min="0" max="100000" value={state.guestCount} onChange={(e) => updateField("guestCount", e.target.value)} />
               {fieldErrors.guestCount && <p className="mt-1 text-[12px] text-red-70">{fieldErrors.guestCount}</p>}
             </label>
             <label className="mb-4 block text-sm">
-              <span className="mb-1.5 block text-[13px] font-bold">Phone number</span>
+              <span className="mb-1.5 block text-[13px] font-bold">
+                Phone number <span className="font-normal text-text-grey">(optional)</span>
+              </span>
               <Input
                 type="tel"
                 placeholder="+91 98765 43210"
@@ -409,11 +442,11 @@ export function ProfileSetupWizard() {
                     <p className="mb-2.5 text-[13px] font-bold">{category?.name ?? "Category"}</p>
                     <div className="grid grid-cols-2 gap-3 max-[400px]:grid-cols-1">
                       <label className="block text-sm">
-                        <span className="mb-1 block text-[12px] font-bold">Min budget (₹)</span>
+                        <span className="mb-1 block text-[12px] font-bold">Min budget (₹) (optional)</span>
                         <Input type="number" min="0" value={cp.budgetMin} onChange={(e) => updateCategoryBudget(cp.categoryId, { budgetMin: e.target.value })} />
                       </label>
                       <label className="block text-sm">
-                        <span className="mb-1 block text-[12px] font-bold">Max budget (₹)</span>
+                        <span className="mb-1 block text-[12px] font-bold">Max budget (₹) (optional)</span>
                         <Input type="number" min="0" value={cp.budgetMax} onChange={(e) => updateCategoryBudget(cp.categoryId, { budgetMax: e.target.value })} />
                       </label>
                     </div>
