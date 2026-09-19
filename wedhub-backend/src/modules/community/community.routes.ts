@@ -3,6 +3,7 @@ import { asyncHandler } from "../../common/utils/async-handler.util";
 import { validateBody, validateQuery } from "../../common/middleware/validate.middleware";
 import { authenticateMiddleware, optionalAuthenticateMiddleware } from "../../common/middleware/authenticate.middleware";
 import { authorize } from "../../common/middleware/authorize.middleware";
+import { requireVerifiedMiddleware } from "../../common/middleware/require-verified.middleware";
 import {
   communityCommentRateLimiter,
   communityPostRateLimiter,
@@ -52,11 +53,14 @@ communityRouter.get(
 // Couples-only writes — authorize(Role.END_USER) explicitly, not just
 // authenticateMiddleware (see community.schema/routes plan: Reviews' own
 // couple-write routes don't do this today, which is a gap this module must
-// not repeat).
+// not repeat). Posting is also gated on email verification — the sensitive
+// action explicitly called out for this module; voting/commenting/reporting
+// below are not.
 communityRouter.post(
   "/posts",
   authenticateMiddleware,
   authorize(Role.END_USER),
+  requireVerifiedMiddleware,
   communityPostRateLimiter,
   validateBody(createPostSchema),
   asyncHandler(communityController.createPost),

@@ -37,17 +37,30 @@ export async function notify(input: NotifyInput): Promise<void> {
       return;
     }
 
-    const content = renderNotification(input.eventType, input.data ?? {});
-
     await Promise.all(
       channels.map(async (channel) => {
+        // Rendered per-channel, not once and reused: VERIFICATION/
+        // PASSWORD_RESET/EMAIL_CHANGE_CONFIRMATION return a token-free body
+        // for anything other than EMAIL (see notification.templates.ts) —
+        // reusing one EMAIL-shaped render across every channel is exactly
+        // how a raw verification/reset token used to end up sitting in an
+        // IN_APP row, readable back via GET /notifications.
+        const content = renderNotification(input.eventType, input.data ?? {}, channel);
+        // Same reasoning applies to the persisted `data` JSON column: for a
+        // non-EMAIL channel, strip `token` so it never lands in the DB row
+        // either, even if a future template stops needing it in body text.
+        const persistedData =
+          channel !== "EMAIL" && input.data && "token" in input.data
+            ? Object.fromEntries(Object.entries(input.data).filter(([key]) => key !== "token"))
+            : input.data;
+
         const notification = await notificationRepository.createNotification({
           userId: input.userId,
           eventType: input.eventType,
           channel,
           title: content.title,
           body: content.body,
-          data: input.data as Prisma.InputJsonValue | undefined,
+          data: persistedData as Prisma.InputJsonValue | undefined,
           relatedEntityType: input.relatedEntityType,
           relatedEntityId: input.relatedEntityId,
         });

@@ -1,7 +1,63 @@
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { generateOpaqueToken } from "../../common/utils/token.util";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
+import { getPublicUrl } from "../../integrations/storage/r2.client";
 import * as shortlistRepository from "./shortlist.repository";
+
+// Same COALESCE(thumbnail, optimized, original) fallback search.repository.ts
+// uses for a card-sized image, and the same READY-only guard (a PROCESSING/
+// FAILED logo has no usable variant yet, so it must resolve to no photo, not
+// a broken/half-processed URL).
+function resolveLogoUrl(
+  logoMedia: { status: string; thumbnailObjectKey: string | null; optimizedObjectKey: string | null; originalObjectKey: string | null } | null,
+): string | null {
+  if (!logoMedia || logoMedia.status !== "READY") return null;
+  const objectKey = logoMedia.thumbnailObjectKey ?? logoMedia.optimizedObjectKey ?? logoMedia.originalObjectKey;
+  return objectKey ? getPublicUrl(objectKey) : null;
+}
+
+// GET /shortlists' actual public shape — the raw Prisma include result has
+// vendor.profile.logoMedia (an object key + status), never a real vendor
+// consumer should see; the frontend needs a resolved logoUrl/logoBlurDataUrl,
+// same fields VendorCard/SearchCard already read from search results.
+function toPublicShortlists<
+  T extends {
+    items: Array<{
+      vendor: {
+        profile: {
+          shortDescription: string | null;
+          startingPrice: unknown;
+          currency: string | null;
+          logoMedia: { status: string; thumbnailObjectKey: string | null; optimizedObjectKey: string | null; originalObjectKey: string | null; blurDataUrl: string | null } | null;
+        } | null;
+      };
+    }>;
+  },
+>(shortlists: T[]) {
+  return shortlists.map((shortlist) => ({
+    ...shortlist,
+    items: shortlist.items.map((item) => {
+      const profile = item.vendor.profile;
+      const logoMedia = profile?.logoMedia ?? null;
+      if (!profile) {
+        return { ...item, vendor: { ...item.vendor, profile: null } };
+      }
+      return {
+        ...item,
+        vendor: {
+          ...item.vendor,
+          profile: {
+            shortDescription: profile.shortDescription,
+            startingPrice: profile.startingPrice,
+            currency: profile.currency,
+            logoUrl: resolveLogoUrl(logoMedia),
+            logoBlurDataUrl: logoMedia?.status === "READY" ? logoMedia.blurDataUrl : null,
+          },
+        },
+      };
+    }),
+  }));
+}
 
 async function getOwnedShortlistOrThrow(userId: string, shortlistId: string) {
   const shortlist = await shortlistRepository.findShortlistById(shortlistId);
@@ -23,8 +79,9 @@ export async function getOrCreateDefaultShortlist(userId: string) {
   return shortlistRepository.createDefaultShortlist(userId);
 }
 
-export function listOwnShortlists(userId: string) {
-  return shortlistRepository.listUserShortlists(userId);
+export async function listOwnShortlists(userId: string) {
+  const shortlists = await shortlistRepository.listUserShortlists(userId);
+  return toPublicShortlists(shortlists);
 }
 
 export async function createShortlist(userId: string, name: string) {

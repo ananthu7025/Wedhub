@@ -2,6 +2,7 @@ import { Router } from "express";
 import { asyncHandler } from "../../common/utils/async-handler.util";
 import { validateBody, validateQuery } from "../../common/middleware/validate.middleware";
 import { authenticateMiddleware, optionalAuthenticateMiddleware } from "../../common/middleware/authenticate.middleware";
+import { requireVerifiedIfAuthenticatedMiddleware } from "../../common/middleware/require-verified.middleware";
 import { enquiryRateLimiter } from "../../common/middleware/rate-limit.middleware";
 import * as enquiryController from "./enquiry.controller";
 import { createMultiVendorEnquirySchema, createSingleVendorEnquirySchema, listMyEnquiriesQuerySchema } from "./enquiry.schema";
@@ -15,14 +16,20 @@ export const enquiryRouter = Router();
 enquiryRouter.use(optionalAuthenticateMiddleware);
 enquiryRouter.use(enquiryRateLimiter);
 
+// Sending an enquiry is the sensitive write this router exists for — gated
+// on email verification for whoever IS logged in, while staying anonymous-
+// friendly per the comment above (requireVerifiedIfAuthenticatedMiddleware
+// only blocks a logged-in-but-unverified req.user; it never demands login).
 enquiryRouter.post(
   "/single-vendor",
+  requireVerifiedIfAuthenticatedMiddleware,
   validateBody(createSingleVendorEnquirySchema),
   asyncHandler(enquiryController.createSingleVendorEnquiry),
 );
 
 enquiryRouter.post(
   "/multi-vendor",
+  requireVerifiedIfAuthenticatedMiddleware,
   validateBody(createMultiVendorEnquirySchema),
   asyncHandler(enquiryController.createMultiVendorEnquiry),
 );

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { trackEvent } from "@/lib/analytics/track";
 import { revealVendorContactClient } from "@/lib/api/catalog-client";
+import { formatApiError } from "@/lib/utils/error";
 import { SignInModal } from "./SignInModal";
 
 // Custom padlock icon for "Reveal contact details" — matches the app's
@@ -68,7 +69,11 @@ export function VendorContactLinks({
     const result = await revealVendorContactClient(vendorSlug);
     setLoading(false);
     if (!result.success) {
-      setError("Couldn't load contact details. Please try again.");
+      // Surface the backend's actual message (e.g. requireVerifiedMiddleware's
+      // "Please verify your email address before continuing") instead of a
+      // generic string that would hide a 403 EMAIL_NOT_VERIFIED behind the
+      // same text as a network blip.
+      setError(formatApiError(result.error));
       return;
     }
     trackEvent({ eventType: "contact_details_revealed", vendorId, metadata: { source: "profile_sidebar", businessName } });

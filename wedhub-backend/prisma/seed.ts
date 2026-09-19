@@ -106,6 +106,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
         "Photo Booth",
       ],
       helpText: "Core service capabilities",
+      isComparable: true,
     },
     {
       key: "photography_style_specialty",
@@ -114,6 +115,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Candid / Photojournalistic", "Fine Art", "Traditional / Classic", "Editorial / Fashion"],
       helpText: "Primary visual aesthetic",
+      isComparable: true,
     },
     {
       key: "standard_delivery_time_photos",
@@ -122,6 +124,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["2 Weeks", "4 Weeks", "6-8 Weeks"],
       helpText: "Expected timeline for edited photos",
+      isComparable: true,
     },
     {
       key: "standard_delivery_time_video",
@@ -153,6 +156,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["2-3 Crew", "4-6 Crew", "8+ Crew"],
       helpText: "Team size deployed for standard wedding",
+      isComparable: true,
     },
     {
       key: "album_specs",
@@ -167,6 +171,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Full-frame Dual Card Slot Cameras", "On-site Backup Data Management", "Spare Gear Available"],
       helpText: "Technical reliability indicators",
+      isComparable: true,
     },
   ],
   Venues: [
@@ -178,6 +183,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       options: ["Convention Centre", "Luxury Hotel / Resort", "Heritage Property", "Open Air Lawn / Beach", "Banquet Hall", "Auditorium"],
       helpText: "Physical style of venue",
       isFilterable: true,
+      isComparable: true,
     },
     { key: "floating_guest_capacity", label: "Floating Guest Capacity", dataType: "NUMBER", isRequired: true, helpText: "Maximum total guests venue can hold at once", isComparable: true },
     { key: "seating_guest_capacity", label: "Seating Guest Capacity", dataType: "NUMBER", isRequired: true, helpText: "Maximum seated dining / auditorium capacity", isComparable: true },
@@ -190,6 +196,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       options: ["Fully Air-Conditioned", "Non-AC", "Outdoor Semi-Covered"],
       helpText: "Cooling infrastructure",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "catering_policy",
@@ -199,6 +206,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       options: ["In-house Catering Only", "External Caterers Allowed", "Both"],
       helpText: "Food catering flexibility",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "alcohol_bar_policy",
@@ -239,6 +247,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       ],
       helpText: "Core makeup techniques offered",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "service_location_flexibility",
@@ -247,6 +256,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["At Venue / Client Home Only", "At Artist Studio Only", "Both (Studio & Venue Travel)"],
       helpText: "Where makeup happens",
+      isComparable: true,
     },
     { key: "brands_products_used", label: "Brands / Products Used", dataType: "TEXT", isRequired: true, helpText: "e.g., MAC, Huda Beauty, Bobbi Brown, NARS, Charlotte Tilbury, Estee Lauder — quality of makeup products used" },
     {
@@ -256,6 +266,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Paid Trial Available", "Free Trial on Booking", "No Trial Provided"],
       helpText: "Pre-wedding makeup preview policy",
+      isComparable: true,
     },
     {
       key: "hair_styling_draping_inclusions",
@@ -264,6 +275,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Hair Styling Included", "Saree / Dupatta Draping Included", "Jewellery Setting Included", "False Lashes Included"],
       helpText: "Package inclusive additions",
+      isComparable: true,
     },
     { key: "family_guest_makeup_capacity", label: "Family / Guest Makeup Capacity per Event", dataType: "TEXT", isRequired: true, helpText: "e.g., Up to 5 people (with assistants) — how many extra relatives can be styled" },
     { key: "travel_outstation_charges_policy", label: "Travel / Outstation Charges Policy", dataType: "TEXTAREA", isRequired: true, helpText: "Transport rules for artist team" },
@@ -283,6 +295,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       ],
       helpText: "Design styles mastered",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "henna_material_used",
@@ -291,9 +304,10 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["100% Organic / Chemical-free Homemade Cones", "Standard Commercial Cones"],
       helpText: "Safety of henna for skin",
+      isComparable: true,
     },
-    { key: "bridal_mehendi_package_pricing", label: "Bridal Mehendi Package Pricing (INR)", dataType: "NUMBER", isRequired: true, helpText: "Starting cost for bride's hands and feet" },
-    { key: "guest_family_mehendi_pricing", label: "Guest / Family Mehendi Pricing (per hand/person)", dataType: "NUMBER", isRequired: true, helpText: "Rate for wedding guests" },
+    { key: "bridal_mehendi_package_pricing", label: "Bridal Mehendi Package Pricing (INR)", dataType: "NUMBER", isRequired: true, helpText: "Starting cost for bride's hands and feet", isComparable: true },
+    { key: "guest_family_mehendi_pricing", label: "Guest / Family Mehendi Pricing (per hand/person)", dataType: "NUMBER", isRequired: true, helpText: "Rate for wedding guests", isComparable: true },
     { key: "speed_capacity_guests_per_hour", label: "Speed / Capacity (Guests per Hour)", dataType: "TEXT", isRequired: true, helpText: "e.g., 8-10 guests per artist per hour — efficiency metric for large functions" },
     { key: "minimum_order_value_outstation", label: "Minimum Order Value for Outstation / Home Visit", dataType: "NUMBER", helpText: "Threshold to travel to location" },
   ],
@@ -314,6 +328,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       ],
       helpText: "Decor elements provided",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "decoration_style",
@@ -328,6 +343,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
         "Rustic / Boho",
       ],
       helpText: "Design themes",
+      isComparable: true,
     },
     {
       key: "customization_availability",
@@ -344,9 +360,10 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["100% Real Flowers", "100% Artificial Silk Flowers", "Hybrid Mix"],
       helpText: "Floral material policy",
+      isComparable: true,
     },
     { key: "inhouse_lighting_sound_support", label: "In-house Lighting & Sound Support?", dataType: "BOOLEAN", isRequired: true, helpText: "Does decorator provide ambient/architectural lighting" },
-    { key: "minimum_event_budget_handled", label: "Minimum Event Budget Handled (INR)", dataType: "NUMBER", isRequired: true, helpText: "Floor budget decorator works with" },
+    { key: "minimum_event_budget_handled", label: "Minimum Event Budget Handled (INR)", dataType: "NUMBER", isRequired: true, helpText: "Floor budget decorator works with", isComparable: true },
   ],
   Caterers: [
     {
@@ -357,6 +374,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       options: ["Traditional Kerala Sadya (Banana Leaf)", "Live Food Counters", "Buffet Service", "Plated Fine Dining", "High Tea & Evening Snacks"],
       helpText: "Dining execution modes",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "cuisine_specialties",
@@ -372,6 +390,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       ],
       helpText: "Cuisine capabilities",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "dietary_options_offered",
@@ -381,6 +400,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       options: ["Pure Veg", "Non-Veg", "Jain Food", "Halal Certified", "Vegan Options"],
       helpText: "Dietary compliance",
       isFilterable: true,
+      isComparable: true,
     },
     { key: "guest_count_range_handled", label: "Minimum & Maximum Guest Count Handled", dataType: "NUMBER_RANGE", isRequired: true, helpText: "Operational scale (e.g., Min: 100 guests - Max: 5000 guests)" },
     { key: "per_plate_rate_veg_sadya", label: "Per Plate Rate - Pure Veg Sadya (INR)", dataType: "NUMBER", isRequired: true, helpText: "Cost range for traditional veg feast", isComparable: true },
@@ -410,6 +430,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       options: ["Bridal Kanchipuram Sarees", "Designer Lehengas", "Christian Wedding Gowns", "Engagement Gowns", "Anarkalis / Salwars", "Reception Sarees"],
       helpText: "Clothing items sold/rented",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "business_model",
@@ -419,6 +440,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       options: ["Custom Tailoring / Bespoke Design", "Ready-to-Wear Retail", "Rental Outfits"],
       helpText: "Purchase options",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "customization_lead_time",
@@ -456,6 +478,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       options: ["Sherwanis", "Tuxedos & Suits", "Indo-Western Fusion", "Designer Kurtas & Nehru Jackets", "Traditional Kasavu Mundu & Jubba Sets"],
       helpText: "Groom outfit options",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "service_type",
@@ -464,6 +487,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Bespoke Custom Tailoring", "Off-the-Shelf Retail", "Rental Options"],
       helpText: "Manufacturing/sales format",
+      isComparable: true,
     },
     {
       key: "accessories_available",
@@ -498,6 +522,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       ],
       helpText: "Type of materials/products",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "services_provided",
@@ -506,6 +531,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Custom Jewellery Design", "Ready Purchases", "Bridal Jewellery Rental", "Old Gold Exchange", "Gemstone Consultation"],
       helpText: "Business offerings",
+      isComparable: true,
     },
     {
       key: "certifications_purity",
@@ -515,6 +541,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       options: ["100% BIS Hallmarked Gold", "IGI / GIA Certified Diamonds", "Certified Precious Stones"],
       helpText: "Quality assurance standard",
       isFilterable: true,
+      isComparable: true,
     },
     { key: "rental_deposit_terms", label: "Rental Deposit & Terms", dataType: "TEXTAREA", helpText: "Rules for rented jewellery" },
     {
@@ -524,6 +551,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["3 Weeks", "4-6 Weeks"],
       helpText: "Time needed to manufacture custom gold/diamond pieces",
+      isComparable: true,
     },
   ],
   "Cakes & Desserts": [
@@ -535,6 +563,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       options: ["Multi-Tier Wedding Cakes", "Customized Theme Cakes", "Cupcake Towers", "Dessert Tables & Grazing Platter", "Custom Favors / Cake Boxes"],
       helpText: "Baked items list",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "flavors_dietary_customizations",
@@ -549,6 +578,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       ],
       helpText: "Dietary flexibility",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "cake_tasting_session",
@@ -574,7 +604,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       options: ["Min 7 Days", "Min 15 Days", "Min 1 Month"],
       helpText: "Advance notice for bespoke cakes",
     },
-    { key: "price_per_kg_tier_starting_rate", label: "Price per KG / Tier Starting Rate (INR)", dataType: "TEXT", isRequired: true, helpText: "e.g., ₹1,200 per kg / ₹5,000 starting tier cake — costing base" },
+    { key: "price_per_kg_tier_starting_rate", label: "Price per KG / Tier Starting Rate (INR)", dataType: "TEXT", isRequired: true, helpText: "e.g., ₹1,200 per kg / ₹5,000 starting tier cake — costing base", isComparable: true },
   ],
   "Artists & DJs": [
     {
@@ -592,6 +622,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       ],
       helpText: "Entertainment type",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "music_genres_specialization",
@@ -600,6 +631,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Bollywood", "EDM / Commercial", "Malayalam / Regional Hits", "Tamil / Telugu Hits", "Retro / Classic", "Hip Hop", "Fusion"],
       helpText: "Musical repertoire",
+      isComparable: true,
     },
     {
       key: "sound_lighting_equipment_included",
@@ -608,6 +640,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Includes Sound Console & DJ Gear", "Includes Full Sound + Stage Lights", "Performance Only (Venue must provide equipment)"],
       helpText: "Technical setup responsibilities",
+      isComparable: true,
     },
     {
       key: "performance_duration_per_event",
@@ -616,6 +649,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["2 Hours", "4 Hours", "Full Event (Up to 6 Hours)"],
       helpText: "Standard performance hours",
+      isComparable: true,
     },
     {
       key: "language_fluency_emcees",
@@ -640,6 +674,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       ],
       helpText: "Bar services provided",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "liquor_license_support",
@@ -656,6 +691,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Fresh Mixers & Syrups", "Premium Ice & Garnishes", "Glassware & Barware", "Custom Printed Menu Cards"],
       helpText: "What caterer supplies besides alcohol",
+      isComparable: true,
     },
     {
       key: "alcohol_supply_policy",
@@ -664,6 +700,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Client Supplies Alcohol (Service Only)", "Full Package (Alcohol + Mixers where permitted)"],
       helpText: "Who buys the liquor",
+      isComparable: true,
     },
     { key: "bartenders_per_100_guests", label: "Number of Bartenders per 100 Guests", dataType: "NUMBER", isRequired: true, helpText: "Ratio of bartenders to guests" },
   ],
@@ -682,6 +719,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       ],
       helpText: "Types of vehicles",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "rental_package_duration",
@@ -690,6 +728,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["4 Hours", "8 Hours", "80 KM", "Full Day (24 Hours)"],
       helpText: "Billing structure",
+      isComparable: true,
     },
     {
       key: "inclusions_with_vehicle",
@@ -698,6 +737,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Uniformed Chauffeur", "Fuel Charges Included", "Basic Ribbon/Flower Decoration", "Toll & State Permits Included"],
       helpText: "What's in the hire charge",
+      isComparable: true,
     },
     { key: "backup_vehicle_assurance", label: "Backup Vehicle Assurance", dataType: "BOOLEAN", isRequired: true, helpText: "Emergency vehicle replacement in case of breakdown" },
     {
@@ -723,6 +763,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       ],
       helpText: "Depth of involvement",
       isFilterable: true,
+      isComparable: true,
     },
     {
       key: "services_covered_in_planning",
@@ -738,6 +779,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
         "Stage Management & Itinerary Execution",
       ],
       helpText: "Specific planning duties",
+      isComparable: true,
     },
     {
       key: "fee_model_billing_structure",
@@ -746,6 +788,7 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
       isRequired: true,
       options: ["Fixed Flat Fee", "Percentage of Total Wedding Budget (e.g., 10%)", "Hybrid"],
       helpText: "How planner charges client",
+      isComparable: true,
     },
     {
       key: "experience_destination_weddings",

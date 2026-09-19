@@ -27,10 +27,14 @@ vendorRouter.get("/:slug", optionalAuthenticateMiddleware, asyncHandler(vendorCo
 
 // Requires a logged-in couple — contact details are only ever revealed to
 // an identified viewer, never anonymously (see revealVendorContact's doc
-// comment).
+// comment). Also gated on email verification: revealing a vendor's real
+// phone/email/website is a sensitive action, not a read, so an unverified
+// account shouldn't be able to do it (same requireVerifiedMiddleware used
+// below for vendor self-service creation).
 vendorRouter.post(
   "/:slug/reveal-contact",
   authenticateMiddleware,
+  requireVerifiedMiddleware,
   asyncHandler(vendorController.revealVendorContact),
 );
 

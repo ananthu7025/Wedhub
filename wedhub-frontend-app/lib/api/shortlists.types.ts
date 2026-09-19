@@ -20,6 +20,13 @@ export interface ShortlistVendorSummary {
     shortDescription: string | null;
     startingPrice: string | null;
     currency: string | null;
+    // Resolved server-side by shortlist.service.ts's toPublicShortlists —
+    // GET /shortlists previously selected no media at all, so every
+    // shortlist card showed "No photo yet" regardless of whether the
+    // vendor actually had a processed logo (shown correctly everywhere
+    // else — search cards, the vendor's own profile page).
+    logoUrl: string | null;
+    logoBlurDataUrl: string | null;
   } | null;
 }
 

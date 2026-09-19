@@ -31,6 +31,7 @@ interface SearchResultsViewProps {
 export function SearchResultsView({
   vendors,
   total,
+  categories,
   cities,
   selectedCategory,
   selectedCity,
@@ -164,26 +165,12 @@ export function SearchResultsView({
 
       {/* Vendors List / Grid */}
       {vendors.length === 0 ? (
-        <div className="my-12 flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-xs">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#fff1f2] text-[#e00b41]">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="7" />
-              <path d="M21 21l-4.3-4.3" />
-            </svg>
-          </div>
-          <h2 className="mb-1.5 text-lg font-bold text-gray-900">No vendors found</h2>
-          <p className="max-w-md text-xs sm:text-sm text-gray-500 mb-6">
-            We couldn&apos;t find any vendors matching your exact criteria. Try broadening your budget, selecting another city, or exploring all categories.
-          </p>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/vendors"
-              className="rounded-full bg-[#e00b41] px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#c2185b] transition-colors"
-            >
-              Browse All Categories
-            </Link>
-          </div>
-        </div>
+        <NoResultsEmptyState
+          keyword={keyword}
+          categories={categories}
+          cities={cities}
+          hasActiveFilters={Boolean(keyword || selectedCategory || selectedCity || priceMin !== undefined || priceMax !== undefined || verified)}
+        />
       ) : viewMode === "list" ? (
         <div className="flex flex-col gap-5">
           {vendors.map((vendor) => (
@@ -256,6 +243,97 @@ export function SearchResultsView({
               Next →
             </Link>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// A dead-end "no results" state loses a visitor who might just have typed
+// a slightly-off term or a city with no vendors YET — this gives them
+// somewhere to go next instead of a wall. Picks up to 6 categories and 6
+// cities to show as quick links (every category/city this page already
+// fetched, not a separate request) rather than hardcoding a "popular"
+// subset that could drift from what's actually in the catalog.
+function NoResultsEmptyState({
+  keyword,
+  categories,
+  cities,
+  hasActiveFilters,
+}: {
+  keyword?: string;
+  categories: Category[];
+  cities: Location[];
+  hasActiveFilters: boolean;
+}) {
+  const suggestedCategories = categories.slice(0, 6);
+  const suggestedCities = cities.slice(0, 6);
+
+  return (
+    <div className="my-12 flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-xs">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#fff1f2] text-[#e00b41]">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M21 21l-4.3-4.3" />
+        </svg>
+      </div>
+      <h2 className="mb-1.5 text-lg font-bold text-gray-900">
+        {keyword ? <>No vendors found for &ldquo;{keyword}&rdquo;</> : "No vendors found"}
+      </h2>
+      <p className="max-w-md text-xs sm:text-sm text-gray-500 mb-6">
+        {keyword
+          ? "Try another spelling, a shorter search term, or use the suggestions below."
+          : "Try broadening your budget, selecting another city, or exploring all categories."}
+      </p>
+
+      <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+        <Link
+          href="/vendors"
+          className="rounded-full bg-[#e00b41] px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#c2185b] transition-colors"
+        >
+          Browse all vendors
+        </Link>
+        {hasActiveFilters && (
+          <Link
+            href="/search"
+            className="rounded-full border border-gray-300 bg-white px-5 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Clear filters
+          </Link>
+        )}
+      </div>
+
+      {suggestedCategories.length > 0 && (
+        <div className="mb-6 w-full max-w-2xl">
+          <p className="mb-2.5 text-[11px] font-bold uppercase tracking-wide text-gray-400">Popular categories</p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {suggestedCategories.map((category) => (
+              <Link
+                key={category.id}
+                href={`/search?categoryId=${category.id}`}
+                className="rounded-full border border-gray-200 bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:border-[#e00b41] hover:text-[#e00b41] transition-colors"
+              >
+                {category.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {suggestedCities.length > 0 && (
+        <div className="w-full max-w-2xl">
+          <p className="mb-2.5 text-[11px] font-bold uppercase tracking-wide text-gray-400">Nearby districts</p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {suggestedCities.map((city) => (
+              <Link
+                key={city.id}
+                href={`/search?cityId=${city.id}`}
+                className="rounded-full border border-gray-200 bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-700 hover:border-[#e00b41] hover:text-[#e00b41] transition-colors"
+              >
+                {city.name}
+              </Link>
+            ))}
+          </div>
         </div>
       )}
     </div>

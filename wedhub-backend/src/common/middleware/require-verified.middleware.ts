@@ -24,3 +24,26 @@ export function requireVerifiedMiddleware(req: Request, _res: Response, next: Ne
 
   next();
 }
+
+// Same email-verified gate, but for routes mounted behind
+// optionalAuthenticateMiddleware instead of authenticateMiddleware (e.g.
+// enquiry.routes.ts, which product.md's "Get Quote" flow requires to keep
+// working for anonymous visitors). Anonymous requests (no req.user at all)
+// are waved through unchanged — there is no verification state to gate for
+// a visitor who was never asked to log in — while a request that DID attach
+// a user (a logged-in, unverified account) is blocked exactly like
+// requireVerifiedMiddleware above. This only widens who is EXEMPT from the
+// check; a logged-in unverified user is never treated as anonymous.
+export function requireVerifiedIfAuthenticatedMiddleware(req: Request, _res: Response, next: NextFunction): void {
+  if (!req.user) {
+    next();
+    return;
+  }
+
+  if (!req.user.emailVerified) {
+    next(new EmailNotVerifiedError());
+    return;
+  }
+
+  next();
+}

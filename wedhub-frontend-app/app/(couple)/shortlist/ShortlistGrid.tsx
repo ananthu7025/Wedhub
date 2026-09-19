@@ -89,7 +89,8 @@ export function ShortlistGrid({ items }: { items: ShortlistItem[] }) {
               vendorId={item.vendorId}
               slug={item.vendor.slug}
               businessName={item.vendor.businessName}
-              logoUrl={null}
+              logoUrl={item.vendor.profile?.logoUrl ?? null}
+              logoBlurDataUrl={item.vendor.profile?.logoBlurDataUrl ?? null}
               shortDescription={item.vendor.profile?.shortDescription ?? null}
               startingPrice={item.vendor.profile?.startingPrice ?? null}
               currency={item.vendor.profile?.currency ?? null}

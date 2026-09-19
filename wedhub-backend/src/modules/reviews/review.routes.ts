@@ -3,6 +3,7 @@ import { asyncHandler } from "../../common/utils/async-handler.util";
 import { validateBody, validateQuery } from "../../common/middleware/validate.middleware";
 import { authenticateMiddleware } from "../../common/middleware/authenticate.middleware";
 import { authorize } from "../../common/middleware/authorize.middleware";
+import { requireVerifiedMiddleware } from "../../common/middleware/require-verified.middleware";
 import { reviewRateLimiter } from "../../common/middleware/rate-limit.middleware";
 import { Role } from "../../common/enums/roles.enum";
 import * as reviewController from "./review.controller";
@@ -18,9 +19,15 @@ import {
 
 export const reviewRouter = Router();
 
+// Writing a review is the sensitive action called out for this module —
+// gated on email verification like vendor.routes.ts's other self-service
+// writes. Responding to/reporting a review below stay unverified-accessible
+// (vendor responding to feedback, or reporting abuse, aren't the write this
+// gate targets).
 reviewRouter.post(
   "/",
   authenticateMiddleware,
+  requireVerifiedMiddleware,
   reviewRateLimiter,
   validateBody(createReviewSchema),
   asyncHandler(reviewController.createReview),

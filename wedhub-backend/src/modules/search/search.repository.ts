@@ -25,8 +25,38 @@ const CITY_KEYWORD_ALIASES: Record<string, string> = {
   tvm: "thiruvananthapuram",
   cochin: "ernakulam",
   kochi: "ernakulam",
+  alleppey: "alappuzha",
   calicut: "kozhikode",
   trichur: "thrissur",
+};
+
+// Explicit category synonyms, keyed by the REAL Category.slug (stable
+// across reseeds, unlike an id) — checked BEFORE any trigram/similarity
+// matching against the category's literal name. This is the fix for cases
+// like "bridal makeup kochi" (previously: "bridal makeup" isn't
+// trigram-close to "Makeup Artists" as a literal string, so it fell through
+// to free-text matching, which then matched a BRIDAL WEAR vendor whose
+// description happened to contain the word "bridal" — exactly the wrong
+// vendor for a makeup search) and "MUA"/"hall"/"auditorium"/"henna", none
+// of which are trigram-similar to their real category name at all.
+// Each entry is checked against the SINGULARIZED phrase (see singularize()
+// below), so "photographer"/"photographers", "caterer"/"caterers" etc. all
+// resolve identically without listing every plural form here.
+const CATEGORY_SYNONYMS: Record<string, string[]> = {
+  "photography-videography": ["photographer", "photography", "wedding photography", "videographer", "videography", "photo", "cinematography"],
+  "makeup-artists": ["makeup", "makeup artist", "bridal makeup", "mua", "beautician", "hair and makeup"],
+  venues: ["venue", "hall", "auditorium", "resort", "banquet hall", "wedding hall", "marriage hall", "convention center", "function hall"],
+  caterers: ["catering", "caterer", "wedding food", "food service", "sadya"],
+  "mehendi-artists": ["mehndi", "mehendi", "henna", "mehndi artist", "henna artist"],
+  decorators: ["decorator", "decoration", "wedding decor", "decor", "mandap decoration", "stage decoration"],
+  "bridal-wear": ["bridal wear", "bridal outfit", "wedding saree", "lehenga", "wedding gown", "bride outfit"],
+  "groom-wear": ["groom wear", "groom outfit", "sherwani", "groom suit"],
+  jewellery: ["jewelry", "jewellery", "bridal jewellery", "ornaments", "gold jewellery"],
+  "artists-djs": ["dj", "band", "live band", "wedding dj", "music", "orchestra", "emcee", "anchor"],
+  "cocktail-bar-services": ["bartender", "bar service", "cocktail", "mocktail", "mixologist"],
+  "cakes-desserts": ["cake", "wedding cake", "dessert", "baker", "bakery"],
+  "event-planners": ["event planner", "wedding planner", "event management", "wedding organiser", "wedding organizer", "planner"],
+  "wedding-cars-luxury-rentals": ["wedding car", "luxury car", "car rental", "vintage car", "bridal car"],
 };
 
 // Words too short/common on their own to safely trigram-match a category or
@@ -34,35 +64,164 @@ const CITY_KEYWORD_ALIASES: Record<string, string> = {
 // some short name) — excluded from ever being tried as a standalone token.
 const STOPWORDS = new Set(["a", "an", "the", "and", "in", "at", "for", "near", "me", "of"]);
 
+// Minimal English singularization — enough for this domain's vocabulary
+// ("photographers" -> "photographer", "caterers" -> "caterer", "venues" ->
+// "venue"), not a general-purpose stemmer. Applied to every candidate
+// phrase before synonym lookup so CATEGORY_SYNONYMS only needs to list each
+// term once instead of every singular/plural pair.
+function singularize(word: string): string {
+  if (word.endsWith("ies") && word.length > 4) return word.slice(0, -3) + "y"; // "hobbies" -> "hobby" (unused here but a normal English rule)
+  if (word.endsWith("sses")) return word.slice(0, -2); // "dresses" -> "dress"
+  if (word.endsWith("s") && !word.endsWith("ss") && word.length > 3) return word.slice(0, -1);
+  return word;
+}
+
+function normalizePhrase(phrase: string): string {
+  return phrase
+    .toLowerCase()
+    .split(/\s+/)
+    .map(singularize)
+    .join(" ");
+}
+
 interface KeywordParse {
-  /** Best-matching category id(s) for the phrase this resolved from, or []. Multiple ids only when the phrase is genuinely ambiguous between categories (e.g. "wedding"). */
-  categoryIds: string[];
+  /** Best-matching category id, or undefined. Unlike the old implementation, this is now a SINGLE id whenever a category term was confidently recognized (synonym hit, or a high-confidence name/slug match) — see resolveCategoryRun's confident flag. */
+  categoryId: string | undefined;
+  /** True when categoryId came from an explicit synonym hit or a near-exact name match, meaning the caller should treat it as a HARD filter rather than a ranking nudge — this is the core fix for "bridal makeup kochi" returning a bridal-wear vendor: a confidently-recognized category term must never be overridden by a free-text/description match on an unrelated vendor. */
+  categoryConfident: boolean;
   /** Best-matching city id, or undefined. A single city — unlike category, a query naming two cities has no sensible "match either" semantics for a hard filter. */
   cityId: string | undefined;
   /** Whatever words weren't consumed by the category/city match above, rejoined — still passed through as free text against business name/description/tags, same as the whole original keyword used to be. */
   remainingText: string | undefined;
 }
 
+interface CategoryLookup {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+async function resolveCategoryRun(
+  phrase: string,
+  categories: CategoryLookup[],
+): Promise<{ id: string; confident: boolean } | undefined> {
+  const normalized = normalizePhrase(phrase);
+
+  // 1. Exact synonym hit — the strongest, most confident signal. Checked
+  // against every category's synonym list, singularized on both sides so
+  // "photographers" matches the "photographer" dictionary entry.
+  for (const category of categories) {
+    const synonyms = CATEGORY_SYNONYMS[category.slug] ?? [];
+    if (synonyms.some((syn) => normalizePhrase(syn) === normalized)) {
+      return { id: category.id, confident: true };
+    }
+  }
+
+  // 2. Near-exact match against the category's real name/slug (e.g. typing
+  // "venues" or "venue" directly, or a close typo of the literal name) —
+  // still confident enough to be a hard filter. Postgres trigram similarity
+  // of 1.0 on the whole normalized string, or a very close (>=0.6) match,
+  // both count as "the user clearly named this category."
+  const nameRows = await prisma.$queryRaw<{ id: string; sim: number }[]>(Prisma.sql`
+    SELECT id, similarity(name, ${normalized}) AS sim FROM categories
+    WHERE is_active = true AND (name % ${normalized} OR slug % ${normalized} OR name ILIKE '%' || ${normalized} || '%')
+    ORDER BY sim DESC
+    LIMIT 1
+  `);
+  if (nameRows.length > 0) {
+    const row = nameRows[0]!;
+    return { id: row.id, confident: row.sim >= 0.6 };
+  }
+
+  // 3. Loose synonym similarity — a typo of a synonym ("photograhper" ->
+  // "photographer") caught by trigram similarity against the synonym list
+  // itself rather than the category's real name, which a synonym is often
+  // nowhere close to (e.g. "mua" vs. "Makeup Artists" has ~0 similarity as
+  // literal strings). Still confident (it named a real synonym, just
+  // misspelled) — this is what keeps typo tolerance working for synonyms,
+  // not just for real category names. One batched query via unnest (not a
+  // per-synonym round trip) over every (categoryId, normalizedSynonym) pair
+  // across every category — cheap: the whole dictionary is well under 100
+  // rows, computed once per parseKeyword() call, not per category.
+  const synonymCategoryIds: string[] = [];
+  const synonymTexts: string[] = [];
+  for (const category of categories) {
+    for (const syn of CATEGORY_SYNONYMS[category.slug] ?? []) {
+      synonymCategoryIds.push(category.id);
+      synonymTexts.push(normalizePhrase(syn));
+    }
+  }
+  if (synonymCategoryIds.length > 0) {
+    const bestRows = await prisma.$queryRaw<{ id: string; sim: number }[]>(Prisma.sql`
+      SELECT category_id AS id, similarity(synonym, ${normalized}) AS sim FROM (
+        SELECT unnest(${synonymCategoryIds}::uuid[]) AS category_id, unnest(${synonymTexts}::text[]) AS synonym
+      ) pairs
+      ORDER BY sim DESC
+      LIMIT 1
+    `);
+    const best = bestRows[0];
+    if (best && best.sim >= 0.4) {
+      return { id: best.id, confident: true };
+    }
+  }
+
+  return undefined;
+}
+
+async function resolveCityRun(phrase: string): Promise<string | undefined> {
+  const normalized = phrase.toLowerCase();
+
+  // Fuzzy-matched against the alias KEYS too (not just an exact dictionary
+  // lookup) — a typo of a colloquial name ("kochhi") is common enough to
+  // handle the same way a typo of the real district name already is.
+  // similarity('kochhi','kochi') = 0.625, well past the 0.3 pg_trgm default
+  // threshold the % operator itself uses. Uses Postgres's own similarity()
+  // (not a reimplementation of trigram matching in JS) via unnest over the
+  // small, fixed alias map — cheap, no index needed.
+  const aliasKeys = Object.keys(CITY_KEYWORD_ALIASES);
+  const aliasTargets = Object.values(CITY_KEYWORD_ALIASES);
+  const aliasRows =
+    aliasKeys.length > 0
+      ? await prisma.$queryRaw<{ target: string }[]>(Prisma.sql`
+          SELECT target FROM (
+            SELECT unnest(${aliasTargets}::text[]) AS target, unnest(${aliasKeys}::text[]) AS alias
+          ) aliases
+          WHERE alias = ${normalized} OR similarity(alias, ${normalized}) >= 0.3
+          ORDER BY (alias = ${normalized}) DESC, similarity(alias, ${normalized}) DESC
+          LIMIT 1
+        `)
+      : [];
+  const aliasTarget = aliasRows[0]?.target;
+
+  const cityRows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT id FROM locations
+    WHERE type = 'CITY' AND is_active = true
+      AND (
+        name % ${normalized} OR slug % ${normalized} OR name ILIKE '%' || ${normalized} || '%'
+        ${aliasTarget ? Prisma.sql`OR slug = ${aliasTarget}` : Prisma.empty}
+      )
+    ORDER BY similarity(name, ${normalized}) DESC
+    LIMIT 1
+  `);
+  return cityRows[0]?.id;
+}
+
 // Splits a keyword like "kochi photographers" into an independently-resolved
 // city ("kochi" -> Ernakulam) and category ("photographers" -> Photography &
 // Videography) instead of trigram-matching the ENTIRE two-word string as one
-// unit against each table (which is what this used to do, and why it never
-// matched anything — "kochi photographers" isn't trigram-close to either
-// "Ernakulam" or "Photography & Videography" on its own).
+// unit against each table. Also resolves category synonyms ("bridal
+// makeup" -> Makeup Artists, "mua" -> Makeup Artists, "hall" -> Venues)
+// that have no trigram similarity to the category's literal name at all.
 //
 // Approach: try every contiguous run of words (longest first, so a two-word
-// category/city name is preferred over a one-word fragment of it matching
-// something else), resolve each run against both tables, and greedily keep
-// the first city match and first category match found — REMOVING those
-// words from further consideration so the same word can't double-count
-// (e.g. "kochi" won't then also get tried as a leftover free-text word).
-// This mirrors how a typeahead-driven search bar (type a location, get
-// city-scoped results; type a service term, get category-scoped ones) reads
-// a mixed free-text query without the user ever picking from two separate
-// dropdowns.
+// category/city name/synonym is preferred over a one-word fragment of it
+// matching something else), resolve each run against both tables, and
+// greedily keep the first city match and first category match found —
+// REMOVING those words from further consideration so the same word can't
+// double-count.
 async function parseKeyword(keyword: string | undefined): Promise<KeywordParse> {
   if (!keyword?.trim()) {
-    return { categoryIds: [], cityId: undefined, remainingText: undefined };
+    return { categoryId: undefined, categoryConfident: false, cityId: undefined, remainingText: undefined };
   }
 
   const words = keyword
@@ -70,8 +229,13 @@ async function parseKeyword(keyword: string | undefined): Promise<KeywordParse> 
     .split(/\s+/)
     .filter((w) => w.length > 0);
   if (words.length === 0) {
-    return { categoryIds: [], cityId: undefined, remainingText: undefined };
+    return { categoryId: undefined, categoryConfident: false, cityId: undefined, remainingText: undefined };
   }
+
+  const categories = await prisma.category.findMany({
+    where: { isActive: true },
+    select: { id: true, slug: true, name: true },
+  });
 
   // All contiguous runs (start, end exclusive), longest first, so e.g.
   // "wedding photographers" is tried as a whole phrase before "wedding" and
@@ -88,66 +252,31 @@ async function parseKeyword(keyword: string | undefined): Promise<KeywordParse> 
   const consumed = new Array<boolean>(words.length).fill(false);
   let cityId: string | undefined;
   let cityRun: { start: number; end: number } | undefined;
-  let categoryIds: string[] = [];
+  let categoryId: string | undefined;
+  let categoryConfident = false;
   let categoryRun: { start: number; end: number } | undefined;
 
   for (const run of runs) {
     if (run.start < consumed.length && consumed.slice(run.start, run.end).some(Boolean)) continue;
 
     if (!cityId) {
-      // Fuzzy-matched against the alias KEYS too (not just an exact
-      // dictionary lookup) — a typo of a colloquial name ("kochhi") is
-      // common enough to handle the same way a typo of the real district
-      // name already is. similarity('kochhi','kochi') = 0.625, well past
-      // the 0.3 pg_trgm default threshold the % operator itself uses.
-      // Uses Postgres's own similarity() (not a reimplementation of
-      // trigram matching in JS) via unnest over the small, fixed alias
-      // map — cheap, no index needed, same reasoning as the category/city
-      // table scans above.
-      const aliasKeys = Object.keys(CITY_KEYWORD_ALIASES);
-      const aliasTargets = Object.values(CITY_KEYWORD_ALIASES);
-      const aliasRows =
-        aliasKeys.length > 0
-          ? await prisma.$queryRaw<{ target: string }[]>(Prisma.sql`
-              SELECT target FROM (
-                SELECT unnest(${aliasTargets}::text[]) AS target, unnest(${aliasKeys}::text[]) AS alias
-              ) aliases
-              WHERE alias = ${run.phrase.toLowerCase()} OR similarity(alias, ${run.phrase.toLowerCase()}) >= 0.3
-              ORDER BY (alias = ${run.phrase.toLowerCase()}) DESC, similarity(alias, ${run.phrase.toLowerCase()}) DESC
-              LIMIT 1
-            `)
-          : [];
-      const aliasTarget = aliasRows[0]?.target;
-
-      const cityRows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-        SELECT id FROM locations
-        WHERE type = 'CITY' AND is_active = true
-          AND (
-            name % ${run.phrase} OR slug % ${run.phrase} OR name ILIKE '%' || ${run.phrase} || '%'
-            ${aliasTarget ? Prisma.sql`OR slug = ${aliasTarget}` : Prisma.empty}
-          )
-        ORDER BY similarity(name, ${run.phrase}) DESC
-        LIMIT 1
-      `);
-      if (cityRows.length > 0) {
-        cityId = cityRows[0]!.id;
+      const resolved = await resolveCityRun(run.phrase);
+      if (resolved) {
+        cityId = resolved;
         cityRun = { start: run.start, end: run.end };
       }
     }
 
-    if (categoryIds.length === 0) {
-      const categoryRows = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
-        SELECT id FROM categories
-        WHERE is_active = true
-          AND (name % ${run.phrase} OR slug % ${run.phrase} OR name ILIKE '%' || ${run.phrase} || '%')
-      `);
-      if (categoryRows.length > 0) {
-        categoryIds = categoryRows.map((row) => row.id);
+    if (!categoryId) {
+      const resolved = await resolveCategoryRun(run.phrase, categories);
+      if (resolved) {
+        categoryId = resolved.id;
+        categoryConfident = resolved.confident;
         categoryRun = { start: run.start, end: run.end };
       }
     }
 
-    if (cityId && categoryIds.length > 0) break;
+    if (cityId && categoryId) break;
   }
 
   if (cityRun) {
@@ -160,7 +289,7 @@ async function parseKeyword(keyword: string | undefined): Promise<KeywordParse> 
   const remainingWords = words.filter((_, i) => !consumed[i]);
   const remainingText = remainingWords.length > 0 ? remainingWords.join(" ") : undefined;
 
-  return { categoryIds, cityId, remainingText };
+  return { categoryId, categoryConfident, cityId, remainingText };
 }
 
 // Raw SQL is required here (not Prisma's query builder) for two things
@@ -176,16 +305,25 @@ function buildWhere(filters: VendorSearchFilters, parsed: KeywordParse, resolved
     conditions.push(
       Prisma.sql`EXISTS (SELECT 1 FROM vendor_categories vc WHERE vc.vendor_id = v.id AND vc.category_id = ${filters.categoryId}::uuid)`,
     );
+  } else if (parsed.categoryId && parsed.categoryConfident) {
+    // THE core fix: a confidently-recognized category term (synonym hit or
+    // a near-exact name match — see resolveCategoryRun) is now a HARD
+    // filter, exactly like an explicit ?categoryId=... param. Previously
+    // this was only ever an OR-branch alongside free-text matching, which
+    // is exactly how "bridal makeup kochi" could return a BRIDAL WEAR
+    // vendor: "bridal makeup" found no category, fell back to matching the
+    // words "bridal"/"makeup" against description text, and a bridal-wear
+    // vendor's description containing "bridal" was enough to qualify. A
+    // vendor whose CATEGORY doesn't match a confidently-named category must
+    // never appear just because its bio text happens to share a word.
+    conditions.push(
+      Prisma.sql`EXISTS (SELECT 1 FROM vendor_categories vc WHERE vc.vendor_id = v.id AND vc.category_id = ${parsed.categoryId}::uuid)`,
+    );
   }
 
   // A city named INSIDE the keyword (e.g. "kochi photographers" -> Ernakulam)
-  // is a hard filter, same as the structured cityId query param — this is
-  // the actual fix: previously a city name embedded in a longer keyword was
-  // only ever a ranking nudge (or, before that, not resolved at all because
-  // the whole multi-word string was trigram-matched as one unit against the
-  // city table and never matched anything), so "kochi photographers" could
-  // return photographers from anywhere in Kerala. An explicit ?cityId=...
-  // query param always wins if both are somehow present.
+  // is a hard filter, same as the structured cityId query param. An explicit
+  // ?cityId=... query param always wins if both are somehow present.
   if (resolvedCityId) {
     conditions.push(Prisma.sql`v.city_id = ${resolvedCityId}::uuid`);
   }
@@ -216,15 +354,15 @@ function buildWhere(filters: VendorSearchFilters, parsed: KeywordParse, resolved
   }
 
   // Free text only covers whatever WASN'T already consumed as a city/
-  // category phrase above (parsed.remainingText) — e.g. for "kochi
-  // photographers" this is undefined (both words were consumed), so no
-  // free-text condition runs at all; the resolvedCityId hard filter above
-  // plus the categoryMatch OR-branch below already narrow correctly. For
-  // "kochi wedding decor specialists" ("wedding decor" -> Decorators,
-  // "kochi" -> Ernakulam), remainingText would be "specialists", which
-  // still gets a chance to match business name/bio/tags.
+  // category phrase above (parsed.remainingText). When a category was
+  // recognized but NOT confidently (a loose/ambiguous match), it still
+  // contributes as an OR-branch here rather than a hard filter above — that
+  // keeps the old, more permissive behavior for genuinely ambiguous terms
+  // (e.g. "wedding" alone, which isn't a category synonym for anything
+  // specific) while the confident case above is now a real filter.
   const freeText = parsed.remainingText;
-  if (freeText || parsed.categoryIds.length > 0) {
+  const looseCategoryId = !parsed.categoryConfident ? parsed.categoryId : undefined;
+  if (freeText || looseCategoryId) {
     conditions.push(
       Prisma.sql`(
         ${
@@ -238,10 +376,10 @@ function buildWhere(filters: VendorSearchFilters, parsed: KeywordParse, resolved
             : Prisma.sql`false`
         }
         ${
-          parsed.categoryIds.length > 0
+          looseCategoryId
             ? Prisma.sql`OR EXISTS (
                 SELECT 1 FROM vendor_categories vc
-                WHERE vc.vendor_id = v.id AND vc.category_id = ANY(${parsed.categoryIds}::uuid[])
+                WHERE vc.vendor_id = v.id AND vc.category_id = ${looseCategoryId}::uuid
               )`
             : Prisma.empty
         }
@@ -284,7 +422,14 @@ function buildWhere(filters: VendorSearchFilters, parsed: KeywordParse, resolved
   return Prisma.join(conditions, " AND ");
 }
 
-function similarityExpr(keyword: string | undefined): Prisma.Sql {
+// Weighted relevance: an exact category match is worth more than any
+// description/tag keyword similarity — this is the SQL-level expression of
+// "do not allow general description matches to outrank correct category
+// matches." categoryMatch/cityMatch below are already booleans computed
+// per-row; this folds them into a single sortable score alongside the
+// existing free-text similarity, weighted so category correctness always
+// dominates over a merely-similar bio.
+function relevanceExpr(keyword: string | undefined): Prisma.Sql {
   if (!keyword) {
     return Prisma.sql`0`;
   }
@@ -297,16 +442,17 @@ function similarityExpr(keyword: string | undefined): Prisma.Sql {
 
 // References the outer query's own output-column aliases (the "ranked"
 // subquery), not the inner v/vp table aliases — ORDER BY runs after the
-// subquery's column list is already projected.
+// subquery's column list is already projected. "relevance"/"recommended"
+// now sort by categoryMatch FIRST (a vendor that genuinely belongs to a
+// confidently-named category always outranks one that merely has similar
+// bio text), then cityMatch, then the free-text similarity score as a
+// tie-breaker among vendors already in the right category/city.
 const SORT_CLAUSES: Record<string, Prisma.Sql> = {
   price_low: Prisma.sql`"startingPrice" ASC NULLS LAST, "profileCompleteness" DESC`,
   price_high: Prisma.sql`"startingPrice" DESC NULLS LAST, "profileCompleteness" DESC`,
   newest: Prisma.sql`"createdAt" DESC`,
-  // "relevance" and "recommended" both order by similarity/completeness in
-  // SQL for stable pagination; vendor-ranking.service.ts re-scores this same
-  // page in-application for "recommended" without re-querying.
-  relevance: Prisma.sql`similarity DESC, "profileCompleteness" DESC`,
-  recommended: Prisma.sql`similarity DESC, "profileCompleteness" DESC`,
+  relevance: Prisma.sql`"categoryMatch" DESC, "cityMatch" DESC, similarity DESC, "profileCompleteness" DESC`,
+  recommended: Prisma.sql`"categoryMatch" DESC, "cityMatch" DESC, similarity DESC, "profileCompleteness" DESC`,
   // Item 4 — vendors with no responded leads yet (NULL) sort last, same
   // NULLS LAST convention as price_low/price_high above.
   fastest_reply: Prisma.sql`"avgResponseTimeMs" ASC NULLS LAST, "profileCompleteness" DESC`,
@@ -323,25 +469,13 @@ export async function searchVendors(
   // incidentally typing a different place name into the same search box.
   const resolvedCityId = filters.cityId ?? parsed.cityId;
   const where = buildWhere(filters, parsed, resolvedCityId);
-  // Ranking still scores against the FULL original keyword (not just
-  // remainingText) — even when every word got consumed as a city/category
-  // phrase (so there's no free-text WHERE condition left to run), a
-  // photographer named "Kochi Photo Studio" should still rank above one
-  // named "Alappuzha Photo Studio" for a "kochi photographers" search, and
-  // similarity() against the whole phrase is a harmless ranking signal even
-  // when it's not precise enough to be a WHERE-clause filter on its own.
-  const similarity = similarityExpr(filters.keyword);
-  // A structured categoryId filter already restricts every row to that
-  // category, so it's a blanket match; a keyword-resolved category isn't a
-  // hard filter (vendors can still qualify via text/tag match instead), so
-  // it needs a real per-row check for ranking to reward the vendors that
-  // actually belong to the implied category.
+  const similarity = relevanceExpr(filters.keyword);
   const categoryMatch = filters.categoryId
     ? Prisma.sql`true`
-    : parsed.categoryIds.length > 0
+    : parsed.categoryId
       ? Prisma.sql`EXISTS (
           SELECT 1 FROM vendor_categories vc
-          WHERE vc.vendor_id = v.id AND vc.category_id = ANY(${parsed.categoryIds}::uuid[])
+          WHERE vc.vendor_id = v.id AND vc.category_id = ${parsed.categoryId}::uuid
         )`
       : Prisma.sql`false`;
   const cityMatch = resolvedCityId ? Prisma.sql`v.city_id = ${resolvedCityId}::uuid` : Prisma.sql`false`;

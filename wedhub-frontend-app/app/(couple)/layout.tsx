@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/dal";
+import { VerifyEmailBanner } from "./VerifyEmailBanner";
 
 /**
  * Every (couple) route requires an authenticated END_USER — proxy.ts does the
@@ -16,6 +17,11 @@ export const metadata: Metadata = {
 };
 
 export default async function CoupleLayout({ children }: { children: React.ReactNode }) {
-  await requireRole("END_USER");
-  return <>{children}</>;
+  const session = await requireRole("END_USER");
+  return (
+    <>
+      {!session.emailVerified && <VerifyEmailBanner />}
+      {children}
+    </>
+  );
 }

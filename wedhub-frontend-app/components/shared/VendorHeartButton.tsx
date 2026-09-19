@@ -11,6 +11,18 @@ import { addFavorite, removeFavorite } from "@/lib/api/shortlists-client";
  * Not idempotent server-side (409 on duplicate add), so we track "favorited"
  * state client-side from whatever the caller knows (initialFavorited) and
  * only flip it after a successful response.
+ *
+ * router.refresh() after a successful toggle is what keeps /shortlist (a
+ * Server Component that fetches the couple's shortlist fresh on every
+ * render — app/(couple)/shortlist/page.tsx's listMyShortlists()) from
+ * showing stale data: without it, saving a second vendor from a card
+ * elsewhere on the site (search results, a vendor profile) only updated
+ * THIS button's own local state, never told Next to treat any
+ * already-rendered/cached route as stale, so navigating to /shortlist
+ * right after could still serve what was last rendered before the save —
+ * fixed by a hard reload only. refresh() re-runs every Server Component on
+ * the current route tree AND invalidates the client Router Cache entry the
+ * next navigation to /shortlist would otherwise reuse.
  */
 export function VendorHeartButton({
   vendorId,
@@ -50,6 +62,7 @@ export function VendorHeartButton({
         setFavorited(!next);
       } else {
         onToggle?.(next);
+        router.refresh();
       }
     } catch {
       setFavorited(!next);

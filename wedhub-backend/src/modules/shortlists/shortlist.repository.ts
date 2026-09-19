@@ -10,7 +10,22 @@ const SHORTLIST_WITH_ITEMS_INCLUDE = {
           slug: true,
           status: true,
           verificationLevel: true,
-          profile: { select: { shortDescription: true, startingPrice: true, currency: true } },
+          profile: {
+            select: {
+              shortDescription: true,
+              startingPrice: true,
+              currency: true,
+              // Same logo resolution as search.repository.ts's searchVendors
+              // (thumbnail -> optimized -> original fallback, READY only) —
+              // GET /shortlists previously selected no media at all, so
+              // every shortlist card fell back to "No photo yet" even for
+              // vendors with a real, already-processed logo shown correctly
+              // everywhere else (search cards, the vendor's own profile).
+              logoMedia: {
+                select: { thumbnailObjectKey: true, optimizedObjectKey: true, originalObjectKey: true, blurDataUrl: true, status: true },
+              },
+            },
+          },
         },
       },
     },

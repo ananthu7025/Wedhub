@@ -1,4 +1,4 @@
-import type { NotificationEventType } from "@prisma/client";
+import type { NotificationChannel, NotificationEventType } from "@prisma/client";
 import { env } from "../../config/env";
 
 export interface NotificationContent {
@@ -14,7 +14,20 @@ export interface NotificationContent {
 // wouldn't already catch via a missing/undefined value showing up blank.
 export type TemplateData = Record<string, string | number | undefined>;
 
-const TEMPLATES: Record<NotificationEventType, (data: TemplateData) => NotificationContent> = {
+// Almost every event renders identically regardless of delivery channel, so
+// a template is just `(data) => content`. VERIFICATION/PASSWORD_RESET/
+// EMAIL_CHANGE_CONFIRMATION are the only exceptions: their EMAIL content
+// necessarily embeds a raw, single-use auth token in the link (required for
+// the email to be useful), but that same token must never sit in the
+// Notification DB row an IN_APP channel persists (GET /notifications would
+// return it verbatim to the token's owner — the actual vulnerability this
+// fixes). For those three, the template function branches on the second
+// `channel` argument to return a generic, token-free body for anything
+// other than EMAIL. Every other template just ignores that argument, so
+// this is additive, not a rewrite of the rendering system.
+type Template = (data: TemplateData, channel: NotificationChannel) => NotificationContent;
+
+const TEMPLATES: Record<NotificationEventType, Template> = {
   // REGISTRATION is declared (schema-complete) for a possible future
   // standalone "welcome" touch — the actual signup email is VERIFICATION
   // below, which carries both the welcome message and the one actionable
@@ -24,14 +37,30 @@ const TEMPLATES: Record<NotificationEventType, (data: TemplateData) => Notificat
     title: "Welcome to itsmyKalyanam",
     body: "Your account has been created.",
   }),
-  VERIFICATION: (data) => ({
-    title: "Welcome to itsmyKalyanam — verify your email",
-    body: `Your account has been created. Confirm your email address to activate it: ${env.FRONTEND_URL}/verify-email?token=${data.token ?? ""}`,
-  }),
-  PASSWORD_RESET: (data) => ({
-    title: "Reset your password",
-    body: `We received a request to reset your password. Use this link to choose a new one: ${env.FRONTEND_URL}/reset-password?token=${data.token ?? ""}. If you didn't request this, you can ignore this email.`,
-  }),
+  VERIFICATION: (data, channel) => {
+    if (channel !== "EMAIL") {
+      return {
+        title: "Verify your email",
+        body: "Verify your email to unlock all account features.",
+      };
+    }
+    return {
+      title: "Welcome to itsmyKalyanam — verify your email",
+      body: `Your account has been created. Confirm your email address to activate it: ${env.FRONTEND_URL}/verify-email?token=${data.token ?? ""}`,
+    };
+  },
+  PASSWORD_RESET: (data, channel) => {
+    if (channel !== "EMAIL") {
+      return {
+        title: "Password reset requested",
+        body: "A password reset was requested for your account. Check your email for the reset link. If this wasn't you, secure your account.",
+      };
+    }
+    return {
+      title: "Reset your password",
+      body: `We received a request to reset your password. Use this link to choose a new one: ${env.FRONTEND_URL}/reset-password?token=${data.token ?? ""}. If you didn't request this, you can ignore this email.`,
+    };
+  },
   VENDOR_APPROVED: (data) => ({
     title: "Your vendor profile is approved",
     body: `${data.businessName ?? "Your business"} is now live on itsmyKalyanam and visible to couples searching your category and city.`,
@@ -100,14 +129,26 @@ const TEMPLATES: Record<NotificationEventType, (data: TemplateData) => Notificat
     title: "Your account was linked to Google sign-in",
     body: "Someone just signed in to your itsmyKalyanam account using Google for the first time. If this was you, no action is needed. If it wasn't, reset your password immediately.",
   }),
-  EMAIL_CHANGE_CONFIRMATION: (data) => ({
-    title: "Confirm your new email address",
-    body: `Confirm this email address to finish changing your itsmyKalyanam account email: ${env.FRONTEND_URL}/confirm-email-change?token=${data.token ?? ""}. Your current email stays active until you confirm. If you didn't request this, you can ignore this email.`,
-  }),
+  EMAIL_CHANGE_CONFIRMATION: (data, channel) => {
+    if (channel !== "EMAIL") {
+      return {
+        title: "Confirm your new email address",
+        body: "Confirm your new email address to finish changing your account email. Check your email for the confirmation link.",
+      };
+    }
+    return {
+      title: "Confirm your new email address",
+      body: `Confirm this email address to finish changing your itsmyKalyanam account email: ${env.FRONTEND_URL}/confirm-email-change?token=${data.token ?? ""}. Your current email stays active until you confirm. If you didn't request this, you can ignore this email.`,
+    };
+  },
 };
 
-export function renderNotification(eventType: NotificationEventType, data: TemplateData): NotificationContent {
-  return TEMPLATES[eventType](data);
+export function renderNotification(
+  eventType: NotificationEventType,
+  data: TemplateData,
+  channel: NotificationChannel,
+): NotificationContent {
+  return TEMPLATES[eventType](data, channel);
 }
 
 export function renderEmailHtml(content: NotificationContent): string {
