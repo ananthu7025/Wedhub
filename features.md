@@ -1,7 +1,7 @@
 | Priority  | Feature to add                 | Why it matters                                                                          |
 | --------- | ------------------------------ | --------------------------------------------------------------------------------------- |
 | 🔥 **P0** | **Lead CRM Pipeline**          | Manage `New → Contacted → Quote Sent → Follow-up → Booked → Completed/Lost`             |
-| 🔥 **P0** | **Quotation Builder**          | Create professional branded quotations from existing packages and send via WhatsApp/PDF |
+| 🔥 **P0** | **Quotation Builder**          | ✅ **Done** — Create professional branded quotations from existing packages and send via WhatsApp/PDF |
 | 🔥 **P0** | **Booking Calendar**           | Vendors mark available/booked dates and manage upcoming weddings                        |
 | 🔥 **P0** | **Booking Management**         | Couple + event + package + venue + date + amount + payment status in one place          |
 | 🔥 **P0** | **WhatsApp Business Workflow** | One-click quote, follow-up, payment reminder, booking confirmation and review request   |
@@ -13,4 +13,3 @@
 | **P2**    | Team/staff accounts            | Useful for larger photography, catering and decoration companies                        |
 | **P2**    | Expense tracking               | Revenue vs expenses and basic profitability                                             |
 | **P2**    | AI Assistant                   | Generate replies, quotes, descriptions, captions and follow-ups                       s  |
-sssss
