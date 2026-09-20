@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type {
@@ -29,7 +29,15 @@ export function InvoicesBoard({
   const router = useRouter();
 
   const [invoices, setInvoices] = useState<VendorInvoice[]>(initialInvoices);
-  const [metrics] = useState<InvoiceSummaryMetrics | null>(initialMetrics);
+  const [metrics, setMetrics] = useState<InvoiceSummaryMetrics | null>(initialMetrics);
+
+  useEffect(() => {
+    setInvoices(initialInvoices);
+  }, [initialInvoices]);
+
+  useEffect(() => {
+    setMetrics(initialMetrics);
+  }, [initialMetrics]);
 
   const [activeTab, setActiveTab] = useState<"ALL" | VendorInvoiceStatus | "OVERDUE">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -347,21 +355,30 @@ export function InvoicesBoard({
             </svg>
           </div>
           <h3 className="mt-4 text-base font-bold text-text-dark">
-            {searchQuery ? "No matching invoices found" : "No invoices created yet"}
+            {searchQuery
+              ? "No matching invoices found"
+              : activeTab !== "ALL"
+              ? `No ${activeTab.toLowerCase()} invoices found`
+              : "No invoices created yet"}
           </h3>
           <p className="mt-1 max-w-sm text-xs text-text-grey">
             {searchQuery
               ? "Try clearing your search query or switching tabs."
+              : activeTab !== "ALL"
+              ? `You do not have any ${activeTab.toLowerCase()} invoices at the moment.`
               : "Create your first statutory GST invoice for wedding clients with automatic tax breakdowns and instant printable receipts."}
           </p>
           <div className="mt-6 flex gap-3">
-            {searchQuery ? (
+            {searchQuery || activeTab !== "ALL" ? (
               <button
                 type="button"
-                onClick={() => setSearchQuery("")}
+                onClick={() => {
+                  setSearchQuery("");
+                  setActiveTab("ALL");
+                }}
                 className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-semibold text-text-dark hover:bg-gray-50"
               >
-                Clear Search
+                View All Invoices
               </button>
             ) : (
               <Link

@@ -89,8 +89,8 @@ export function findInvoiceById(vendorId: string, invoiceId: string) {
 }
 
 export async function findInvoices(vendorId: string, filters: ListInvoicesFilters) {
-  const page = filters.page ?? 1;
-  const limit = filters.limit ?? 20;
+  const page = Math.max(1, Number(filters.page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(filters.limit) || 20));
   const skip = (page - 1) * limit;
 
   const where: Prisma.VendorInvoiceWhereInput = {

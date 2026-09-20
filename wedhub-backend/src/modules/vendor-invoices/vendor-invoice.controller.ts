@@ -44,7 +44,7 @@ export async function updateBillingProfile(req: Request, res: Response): Promise
 export async function listInvoices(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
   const vendor = await getOwnedVendorOrThrow(userId);
-  const query = req.query as unknown as ListInvoicesFilters;
+  const query = (req.validatedQuery ?? req.query) as unknown as ListInvoicesFilters;
   const result = await invoiceService.listInvoices(vendor.id, query);
   res.json(
     successResponse(result.items, {

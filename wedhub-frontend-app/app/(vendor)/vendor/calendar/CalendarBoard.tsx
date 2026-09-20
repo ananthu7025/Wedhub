@@ -320,22 +320,6 @@ export function CalendarBoard({
               </svg>
               Block Dates
             </button>
-
-            {/* Primary Add Wedding */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedDateForNew(undefined);
-                setEditingBooking(null);
-                setBookingModalOpen(true);
-              }}
-              className="rounded-lg bg-brand-primary px-4 py-2 text-xs font-bold text-white hover:bg-brand-primary-hover transition shadow-xs flex items-center gap-1.5"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              Add Wedding
-            </button>
           </div>
         </div>
 
