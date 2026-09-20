@@ -62,12 +62,12 @@ const isDev = process.env.NODE_ENV !== "production";
 const cspDirectives = [
   "default-src 'self'",
   isDev
-    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://accounts.google.com/gsi/client https://www.googletagmanager.com"
-    : "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://accounts.google.com/gsi/client https://www.googletagmanager.com",
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://accounts.google.com/gsi/client https://www.googletagmanager.com https://static.cloudflareinsights.com"
+    : "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://accounts.google.com/gsi/client https://www.googletagmanager.com https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
   "img-src 'self' blob: data: https://images.unsplash.com https://image.itsmykalyanam.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://www.googletagmanager.com",
+  "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://lumberjack.razorpay.com https://accounts.google.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://www.googletagmanager.com https://cloudflareinsights.com https://static.cloudflareinsights.com",
   "frame-src https://checkout.razorpay.com https://api.razorpay.com https://accounts.google.com",
   "object-src 'none'",
   "base-uri 'self'",
