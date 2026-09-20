@@ -73,6 +73,7 @@ model User {
   communityComments        CommunityComment[]       @relation("CommunityCommentAuthor")
   communityPostReports     CommunityPostReport[]
   communityPollVotes       CommunityPollVote[]
+  bookingsAsCouple         VendorBooking[]          @relation("BookingsAsCouple")
 
   @@index([role])
   @@index([status])
@@ -558,6 +559,9 @@ model Vendor {
   conversations           Conversation[]
   weddingStorySubmissions WeddingStory[]          @relation("WeddingStorySubmitter")
   storyCollaborations     WeddingStoryVendor[]
+  bookings                VendorBooking[]
+  blackoutDates           VendorBlackoutDate[]
+  calendarSetting         VendorCalendarSetting?
 
   @@index([status])
   @@index([cityId])
@@ -1469,6 +1473,7 @@ model Lead {
   vendorInvoices       VendorInvoice[]
   studioClientsSourced StudioClient[]
   conversations        Conversation[]
+  bookings             VendorBooking[]
 
   @@index([vendorId, status])
   @@index([vendorId, createdAt])
@@ -2389,6 +2394,7 @@ model VendorInvoice {
   payments   VendorInvoicePayment[]
   activities VendorInvoiceActivity[]
   storeOrder VendorStoreOrder?
+  bookings   VendorBooking[]
 
   @@unique([vendorId, invoiceNumber])
   @@index([vendorId, status])
@@ -3093,4 +3099,91 @@ model CommunityPostReport {
 
   @@unique([postId, reporterId])
   @@map("community_post_reports")
+}
+
+// ---------------------------------------------------------------------------
+// Vendor Booking Calendar & Availability Engine (P0)
+// ---------------------------------------------------------------------------
+
+enum VendorBookingStatus {
+  CONFIRMED
+  TENTATIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum VendorBookingShift {
+  FULL_DAY
+  MORNING
+  EVENING
+}
+
+model VendorBooking {
+  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId     String              @map("vendor_id") @db.Uuid
+  leadId       String?             @map("lead_id") @db.Uuid
+  invoiceId    String?             @map("invoice_id") @db.Uuid
+  coupleUserId String?             @map("couple_user_id") @db.Uuid
+
+  title        String
+  clientName   String              @map("client_name")
+  clientPhone  String?             @map("client_phone")
+  clientEmail  String?             @map("client_email")
+  eventType    String              @default("Wedding") @map("event_type")
+
+  startDate    DateTime            @map("start_date") @db.Date
+  endDate      DateTime            @map("end_date") @db.Date
+  shift        VendorBookingShift  @default(FULL_DAY)
+  startTime    String?             @map("start_time")
+  endTime      String?             @map("end_time")
+
+  venueName    String?             @map("venue_name")
+  venueCity    String?             @map("venue_city")
+  packageTitle String?             @map("package_title")
+  totalAmount  Decimal?            @map("total_amount") @db.Decimal(12, 2)
+  advancePaid  Decimal?            @map("advance_paid") @db.Decimal(12, 2)
+  status       VendorBookingStatus @default(CONFIRMED)
+  notes        String?             @db.Text
+
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  vendor       Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  lead         Lead?               @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  invoice      VendorInvoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  coupleUser   User?               @relation("BookingsAsCouple", fields: [coupleUserId], references: [id], onDelete: SetNull)
+
+  @@index([vendorId, startDate])
+  @@index([vendorId, status])
+  @@index([leadId])
+  @@map("vendor_bookings")
+}
+
+model VendorBlackoutDate {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId  String   @map("vendor_id") @db.Uuid
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId, startDate])
+  @@map("vendor_blackout_dates")
+}
+
+model VendorCalendarSetting {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId              String   @unique @map("vendor_id") @db.Uuid
+  maxBookingsPerDay     Int      @default(1) @map("max_bookings_per_day")
+  publicCalendarEnabled Boolean  @default(true) @map("public_calendar_enabled")
+  icalToken             String   @default(dbgenerated("gen_random_uuid()")) @unique @map("ical_token")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  vendor                Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_calendar_settings")
 }

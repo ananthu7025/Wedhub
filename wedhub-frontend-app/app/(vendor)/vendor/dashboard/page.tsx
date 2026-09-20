@@ -8,9 +8,11 @@ import { listMyLeads } from "@/lib/api/leads";
 import { getVendorReviews } from "@/lib/api/catalog";
 import { getActiveChallenge } from "@/lib/api/challenges";
 import { COMPLETENESS_CHECKS } from "@/lib/api/vendor-self.types";
+import { getMyUpcomingWeddings } from "@/lib/api/vendor-calendar";
 import { DashboardSparkline } from "./DashboardSparkline";
 import { DashboardInteractiveSections } from "./DashboardInteractiveSections";
 import { ChallengeEntryWidget } from "./ChallengeEntryWidget";
+import { UpcomingWeddingsWidget } from "./UpcomingWeddingsWidget";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -77,7 +79,7 @@ export default async function VendorDashboardPage() {
   const vendor = await requireVendorOwnership();
   const primaryCategoryId = vendor.categories.find((c) => c.isPrimary)?.categoryId;
 
-  const [analytics, me, leadsResponse, notificationsResponse, reviewsResponse, activeChallenge] = await Promise.all([
+  const [analytics, me, leadsResponse, notificationsResponse, reviewsResponse, activeChallenge, upcomingWeddings] = await Promise.all([
     getMyAnalytics()
       .then((r) => r.data)
       .catch(() => null),
@@ -96,6 +98,9 @@ export default async function VendorDashboardPage() {
           .then((r) => r.data)
           .catch(() => null)
       : Promise.resolve(null),
+    getMyUpcomingWeddings(5)
+      .then((r) => r.data)
+      .catch(() => []),
   ]);
 
   const emailUnverified = !me.emailVerifiedAt;
@@ -318,6 +323,9 @@ export default async function VendorDashboardPage() {
             </Link>
           </div>
         )}
+
+        {/* Upcoming Weddings & Calendar Commitments Widget */}
+        <UpcomingWeddingsWidget weddings={upcomingWeddings} />
 
         {/* Main 2-Column Split: Leads Table & Manage Prospects on Left, Activity on Right */}
         <DashboardInteractiveSections

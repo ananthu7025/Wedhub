@@ -37,6 +37,7 @@ import { weddingWebsiteAdminRouter, weddingWebsiteRouter } from "../modules/wedd
 import { weddingWebsiteMediaRouter } from "../modules/wedding-website-media";
 import { analyticsRouter } from "../modules/analytics";
 import { vendorInvoiceRouter } from "../modules/vendor-invoices";
+import { vendorCalendarRouter } from "../modules/vendor-calendar";
 import { vendorStoreRouter, publicStoreRouter } from "../modules/vendor-store/vendor-store.routes";
 import { adminStorePaymentsRouter } from "../modules/admin-store-payments";
 import {
@@ -103,6 +104,7 @@ apiV1Router.use("/admin/wedding-websites", weddingWebsiteAdminRouter);
 apiV1Router.use("/wedding-website-media", weddingWebsiteMediaRouter);
 apiV1Router.use("/analytics", analyticsRouter);
 apiV1Router.use("/vendor-invoices", vendorInvoiceRouter);
+apiV1Router.use("/vendor-calendar", vendorCalendarRouter);
 apiV1Router.use("/vendor-store", vendorStoreRouter);
 apiV1Router.use("/stores", publicStoreRouter);
 apiV1Router.use("/admin/store-payments", adminStorePaymentsRouter);
