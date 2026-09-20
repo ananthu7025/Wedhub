@@ -19,13 +19,51 @@ async function call<T>(
   method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
   body?: unknown,
 ): Promise<ApiResponse<T>> {
-  const response = await fetch(`/api${path}`, {
-    method,
-    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    credentials: "include",
-  });
-  return (await response.json()) as ApiResponse<T>;
+  try {
+    const response = await fetch(`/api${path}`, {
+      method,
+      headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      credentials: "include",
+    });
+
+    const text = await response.text();
+    let parsed: unknown;
+    try {
+      parsed = text ? JSON.parse(text) : null;
+    } catch {
+      return {
+        success: false,
+        error: {
+          code: "SERVER_ERROR",
+          message: `Server returned an unexpected response (Status ${response.status})`,
+        },
+      };
+    }
+
+    if (!response.ok) {
+      if (parsed && typeof parsed === "object" && "error" in parsed) {
+        return parsed as ApiResponse<T>;
+      }
+      return {
+        success: false,
+        error: {
+          code: "HTTP_ERROR",
+          message: `Request failed with status ${response.status}`,
+        },
+      };
+    }
+
+    return parsed as ApiResponse<T>;
+  } catch (err) {
+    return {
+      success: false,
+      error: {
+        code: "NETWORK_ERROR",
+        message: err instanceof Error ? err.message : "Network connection error",
+      },
+    };
+  }
 }
 
 export function fetchMyCalendarMonth(year: number, month: number) {
