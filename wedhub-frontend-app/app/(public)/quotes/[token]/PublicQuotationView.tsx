@@ -44,7 +44,7 @@ export function PublicQuotationView({ quotation: initialQuotation }: PublicQuota
 
   const logoUrl = quotation.vendorLogoKey
     ? getPublicMediaUrl(quotation.vendorLogoKey)
-    : quotation.vendor.profile?.logoMedia?.thumbnailObjectKey
+    : quotation.vendor?.profile?.logoMedia?.thumbnailObjectKey
       ? getPublicMediaUrl(quotation.vendor.profile.logoMedia.thumbnailObjectKey)
       : null;
 
@@ -110,12 +110,14 @@ export function PublicQuotationView({ quotation: initialQuotation }: PublicQuota
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Link
-              href={`/vendors/${quotation.vendor.slug}`}
-              className="rounded-xl border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition"
-            >
-              View Portfolio
-            </Link>
+            {quotation.vendor?.slug && (
+              <Link
+                href={`/vendors/${quotation.vendor.slug}`}
+                className="rounded-xl border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition"
+              >
+                View Portfolio
+              </Link>
+            )}
 
             <Link
               href={`/quotes/${quotation.viewToken}/print`}

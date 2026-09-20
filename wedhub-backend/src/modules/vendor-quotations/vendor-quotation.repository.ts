@@ -3,8 +3,8 @@ import { prisma } from "../../config/database";
 import type { ListQuotationsFilters, QuotationSummaryMetrics } from "./vendor-quotation.types";
 
 export async function findQuotations(vendorId: string, filters: ListQuotationsFilters) {
-  const page = filters.page || 1;
-  const limit = filters.limit || 20;
+  const page = Math.max(1, Number(filters.page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(filters.limit) || 20));
   const skip = (page - 1) * limit;
 
   const where: Prisma.VendorQuotationWhereInput = {
@@ -66,6 +66,19 @@ export async function findQuotations(vendorId: string, filters: ListQuotationsFi
   };
 }
 
+const quotationVendorSelect = {
+  id: true,
+  businessName: true,
+  slug: true,
+  profile: {
+    select: {
+      logoMedia: true,
+      coverMedia: true,
+      website: true,
+    },
+  },
+};
+
 export async function findQuotationById(vendorId: string, id: string) {
   return prisma.vendorQuotation.findFirst({
     where: { id, vendorId },
@@ -77,6 +90,9 @@ export async function findQuotationById(vendorId: string, id: string) {
         include: {
           enquiry: true,
         },
+      },
+      vendor: {
+        select: quotationVendorSelect,
       },
     },
   });
@@ -90,18 +106,7 @@ export async function findQuotationByToken(viewToken: string) {
         orderBy: { itemOrder: "asc" },
       },
       vendor: {
-        select: {
-          id: true,
-          businessName: true,
-          slug: true,
-          profile: {
-            select: {
-              logoMedia: true,
-              coverMedia: true,
-              website: true,
-            },
-          },
-        },
+        select: quotationVendorSelect,
       },
     },
   });
@@ -182,6 +187,9 @@ export async function createQuotation(data: {
         orderBy: { itemOrder: "asc" },
       },
       lead: true,
+      vendor: {
+        select: quotationVendorSelect,
+      },
     },
   });
 }
@@ -223,6 +231,9 @@ export async function updateQuotation(
           orderBy: { itemOrder: "asc" },
         },
         lead: true,
+        vendor: {
+          select: quotationVendorSelect,
+        },
       },
     });
   });

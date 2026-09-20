@@ -99,7 +99,7 @@ export interface VendorQuotation {
 }
 
 export interface PublicQuotation extends VendorQuotation {
-  vendor: {
+  vendor?: {
     id: string;
     businessName: string;
     slug: string;
@@ -116,7 +116,7 @@ export interface PublicQuotation extends VendorQuotation {
       } | null;
       website?: string | null;
     } | null;
-  };
+  } | null;
 }
 
 export interface CreateVendorQuotationBody {

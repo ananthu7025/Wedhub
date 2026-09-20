@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { VendorShell } from "@/components/shared/VendorShell";
 import { requireVendorOwnership } from "@/lib/auth/require-vendor";
 import { getLeadPrefill, getMyBillingProfile } from "@/lib/api/vendor-invoices";
+import { getMyQuotation } from "@/lib/api/vendor-quotations";
 import type { LeadPrefillData, VendorBillingProfile } from "@/lib/api/vendor-invoices.types";
-import { InvoiceEditor } from "../InvoiceEditor";
+import { InvoiceEditor, type QuotePrefillData } from "../InvoiceEditor";
 
 export const metadata: Metadata = {
   title: "Create GST Invoice | WedHub Vendor",
@@ -11,12 +12,12 @@ export const metadata: Metadata = {
 };
 
 interface NewInvoicePageProps {
-  searchParams: Promise<{ leadId?: string }>;
+  searchParams: Promise<{ leadId?: string; quoteId?: string }>;
 }
 
 export default async function NewVendorInvoicePage({ searchParams }: NewInvoicePageProps) {
   const vendor = await requireVendorOwnership();
-  const { leadId } = await searchParams;
+  const { leadId, quoteId } = await searchParams;
 
   let billingProfile: VendorBillingProfile;
   try {
@@ -60,11 +61,45 @@ export default async function NewVendorInvoicePage({ searchParams }: NewInvoiceP
     }
   }
 
+  let quotePrefill: QuotePrefillData | null = null;
+  if (quoteId) {
+    try {
+      const quoteRes = await getMyQuotation(quoteId);
+      if (quoteRes?.data) {
+        const q = quoteRes.data;
+        quotePrefill = {
+          quotationId: q.id,
+          quotationNumber: q.quotationNumber,
+          clientName: q.clientName,
+          clientPhone: q.clientPhone,
+          clientEmail: q.clientEmail,
+          clientAddress: q.clientAddress,
+          items: q.items.map((it) => ({
+            description:
+              it.name +
+              (it.inclusions && it.inclusions.length > 0
+                ? ` (${it.inclusions.join(", ")})`
+                : ""),
+            sacCode: "998311",
+            quantity: Number(it.quantity) || 1,
+            unit: it.unit || "Package",
+            unitPrice: Number(it.unitPrice) || 0,
+            discount: Number(it.discount) || 0,
+            gstRate: Number(q.taxRate) || 0,
+          })),
+        };
+      }
+    } catch (err) {
+      console.error("Failed to load quotation for invoice prefill:", err);
+    }
+  }
+
   return (
-    <VendorShell activeHref="/vendor/invoices" vendorName={vendor.businessName}>
+    <VendorShell activeHref="/vendor/finances" vendorName={vendor.businessName}>
       <InvoiceEditor
         billingProfile={billingProfile}
         leadPrefill={leadPrefill}
+        quotePrefill={quotePrefill}
       />
     </VendorShell>
   );

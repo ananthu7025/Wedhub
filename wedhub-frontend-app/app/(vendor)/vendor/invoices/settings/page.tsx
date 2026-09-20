@@ -46,7 +46,7 @@ export default async function VendorBillingSettingsPage() {
   }
 
   return (
-    <VendorShell activeHref="/vendor/invoices" vendorName={vendor.businessName}>
+    <VendorShell activeHref="/vendor/finances" vendorName={vendor.businessName}>
       <BillingSettingsForm
         initialProfile={profile}
         vendorBusinessName={vendor.businessName}

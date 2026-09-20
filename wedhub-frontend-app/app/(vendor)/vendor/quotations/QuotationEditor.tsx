@@ -293,6 +293,7 @@ export function QuotationEditor({
             const { url } = formatQuotationWhatsAppMessage(res.data);
             if (url) window.open(url, "_blank");
           }
+          router.refresh();
           router.push(`/vendor/quotations/${res.data.id}`);
         } else {
           setError(formatApiError(res.error));
@@ -305,6 +306,7 @@ export function QuotationEditor({
             const { url } = formatQuotationWhatsAppMessage(res.data);
             if (url) window.open(url, "_blank");
           }
+          router.refresh();
           router.push(`/vendor/quotations/${res.data.id}`);
         } else {
           setError(formatApiError(res.error));
@@ -322,8 +324,8 @@ export function QuotationEditor({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 pb-4">
         <div>
           <div className="flex items-center gap-2 text-xs text-neutral-500">
-            <Link href="/vendor/quotations" className="hover:text-neutral-900">
-              Quotations
+            <Link href="/vendor/finances?tab=quotes" className="hover:text-neutral-900">
+              Quotes & Invoices
             </Link>
             <span>/</span>
             <span className="font-semibold text-neutral-800">
@@ -337,7 +339,7 @@ export function QuotationEditor({
 
         <div className="flex items-center gap-2.5">
           <Link
-            href="/vendor/quotations"
+            href="/vendor/finances?tab=quotes"
             className="rounded-xl border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"
           >
             Cancel

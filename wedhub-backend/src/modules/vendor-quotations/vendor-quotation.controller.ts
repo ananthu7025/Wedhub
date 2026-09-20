@@ -27,7 +27,7 @@ function getParam(req: Request, name: string): string {
 export async function listQuotations(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
   const vendor = await getOwnedVendorOrThrow(userId);
-  const query = req.query as unknown as ListQuotationsFilters;
+  const query = (req.validatedQuery ?? req.query) as unknown as ListQuotationsFilters;
   const result = await quotationService.listQuotations(vendor.id, query);
   res.json(
     successResponse(result.items, {

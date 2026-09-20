@@ -21,7 +21,7 @@ export default async function VendorInvoiceDetailPage({ params }: InvoiceDetailP
   try {
     const invoiceRes = await getMyInvoice(id);
     return (
-      <VendorShell activeHref="/vendor/invoices" vendorName={vendor.businessName}>
+      <VendorShell activeHref="/vendor/finances" vendorName={vendor.businessName}>
         <InvoiceDetailView initialInvoice={invoiceRes.data} />
       </VendorShell>
     );

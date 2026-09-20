@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
@@ -21,6 +21,7 @@ import { formatApiError } from "@/lib/utils/error";
 interface QuotationsBoardProps {
   initialQuotations: VendorQuotation[];
   metrics: QuotationSummaryMetrics;
+  hideHeader?: boolean;
 }
 
 function statusBadgeVariant(status: VendorQuotationStatus): "blue" | "amber" | "green" | "grey" | "crimson" | "red" {
@@ -38,9 +39,13 @@ function statusBadgeVariant(status: VendorQuotationStatus): "blue" | "amber" | "
   }
 }
 
-export function QuotationsBoard({ initialQuotations, metrics }: QuotationsBoardProps) {
+export function QuotationsBoard({ initialQuotations, metrics, hideHeader = false }: QuotationsBoardProps) {
   const router = useRouter();
   const [quotations, setQuotations] = useState<VendorQuotation[]>(initialQuotations);
+
+  useEffect(() => {
+    setQuotations(initialQuotations);
+  }, [initialQuotations]);
   const [filterStatus, setFilterStatus] = useState<VendorQuotationStatus | "ALL">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeWhatsAppModalQuote, setActiveWhatsAppModalQuote] = useState<VendorQuotation | null>(null);
@@ -142,25 +147,27 @@ export function QuotationsBoard({ initialQuotations, metrics }: QuotationsBoardP
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Quotations</h1>
-          <p className="text-sm text-neutral-500">
-            Create professional branded proposals from packages and send directly via WhatsApp or PDF.
-          </p>
+      {!hideHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900">Quotations</h1>
+            <p className="text-sm text-neutral-500">
+              Create professional branded proposals from packages and send directly via WhatsApp or PDF.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/vendor/quotations/new"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover active:scale-[0.98]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Create Quotation
+            </Link>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/vendor/quotations/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover active:scale-[0.98]"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            Create Quotation
-          </Link>
-        </div>
-      </div>
+      )}
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
@@ -169,33 +176,35 @@ export function QuotationsBoard({ initialQuotations, metrics }: QuotationsBoardP
       )}
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4 lg:grid-cols-5">
-        <div className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-xs">
-          <span className="text-xs font-medium text-neutral-500">Quoted Value</span>
-          <p className="mt-1 text-xl font-extrabold text-neutral-900">{formatINR(metrics.totalQuotedValue)}</p>
-          <span className="text-[11px] text-neutral-400">{metrics.totalCount} total quotes</span>
+      {!hideHeader && (
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4 lg:grid-cols-5">
+          <div className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-xs">
+            <span className="text-xs font-medium text-neutral-500">Quoted Value</span>
+            <p className="mt-1 text-xl font-extrabold text-neutral-900">{formatINR(metrics.totalQuotedValue)}</p>
+            <span className="text-[11px] text-neutral-400">{metrics.totalCount} total quotes</span>
+          </div>
+          <div className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-xs">
+            <span className="text-xs font-medium text-neutral-500">Accepted Value</span>
+            <p className="mt-1 text-xl font-extrabold text-emerald-600">{formatINR(metrics.totalAcceptedValue)}</p>
+            <span className="text-[11px] text-emerald-600 font-medium">{metrics.acceptedCount} accepted</span>
+          </div>
+          <div className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-xs">
+            <span className="text-xs font-medium text-neutral-500">Sent / Pending</span>
+            <p className="mt-1 text-xl font-extrabold text-blue-600">{metrics.sentCount}</p>
+            <span className="text-[11px] text-neutral-400">awaiting response</span>
+          </div>
+          <div className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-xs">
+            <span className="text-xs font-medium text-neutral-500">Conversion Rate</span>
+            <p className="mt-1 text-xl font-extrabold text-brand-primary">{metrics.conversionRate}%</p>
+            <span className="text-[11px] text-neutral-400">proposals closed</span>
+          </div>
+          <div className="hidden lg:block rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-xs">
+            <span className="text-xs font-medium text-neutral-500">Drafts</span>
+            <p className="mt-1 text-xl font-extrabold text-neutral-700">{metrics.draftCount}</p>
+            <span className="text-[11px] text-neutral-400">ready to send</span>
+          </div>
         </div>
-        <div className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-xs">
-          <span className="text-xs font-medium text-neutral-500">Accepted Value</span>
-          <p className="mt-1 text-xl font-extrabold text-emerald-600">{formatINR(metrics.totalAcceptedValue)}</p>
-          <span className="text-[11px] text-emerald-600 font-medium">{metrics.acceptedCount} accepted</span>
-        </div>
-        <div className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-xs">
-          <span className="text-xs font-medium text-neutral-500">Sent / Pending</span>
-          <p className="mt-1 text-xl font-extrabold text-blue-600">{metrics.sentCount}</p>
-          <span className="text-[11px] text-neutral-400">awaiting response</span>
-        </div>
-        <div className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-xs">
-          <span className="text-xs font-medium text-neutral-500">Conversion Rate</span>
-          <p className="mt-1 text-xl font-extrabold text-brand-primary">{metrics.conversionRate}%</p>
-          <span className="text-[11px] text-neutral-400">proposals closed</span>
-        </div>
-        <div className="hidden lg:block rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-xs">
-          <span className="text-xs font-medium text-neutral-500">Drafts</span>
-          <p className="mt-1 text-xl font-extrabold text-neutral-700">{metrics.draftCount}</p>
-          <span className="text-[11px] text-neutral-400">ready to send</span>
-        </div>
-      </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

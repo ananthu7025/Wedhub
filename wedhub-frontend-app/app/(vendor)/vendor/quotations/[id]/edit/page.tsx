@@ -31,7 +31,7 @@ export default async function EditQuotationPage({ params }: EditQuotationPagePro
   }
 
   return (
-    <VendorShell activeHref="/vendor/quotations" vendorName={vendor.businessName}>
+    <VendorShell activeHref="/vendor/finances" vendorName={vendor.businessName}>
       <QuotationEditor
         initialQuotation={quotation}
         availablePackages={vendor.packages}

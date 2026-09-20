@@ -29,7 +29,7 @@ export default async function NewQuotationPage({ searchParams }: NewQuotationPag
   }
 
   return (
-    <VendorShell activeHref="/vendor/quotations" vendorName={vendor.businessName}>
+    <VendorShell activeHref="/vendor/finances" vendorName={vendor.businessName}>
       <QuotationEditor
         availablePackages={vendor.packages}
         leadPrefill={leadPrefill}

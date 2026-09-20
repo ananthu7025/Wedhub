@@ -40,7 +40,7 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
   }
 
   return (
-    <VendorShell activeHref="/vendor/quotations" vendorName={vendor.businessName}>
+    <VendorShell activeHref="/vendor/finances" vendorName={vendor.businessName}>
       <QuotationDetailView quotation={quotation} />
     </VendorShell>
   );

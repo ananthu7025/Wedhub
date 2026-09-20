@@ -18,11 +18,13 @@ import { formatApiError } from "@/lib/utils/error";
 interface InvoicesBoardProps {
   initialInvoices: VendorInvoice[];
   initialMetrics: InvoiceSummaryMetrics | null;
+  hideHeader?: boolean;
 }
 
 export function InvoicesBoard({
   initialInvoices,
   initialMetrics,
+  hideHeader = false,
 }: InvoicesBoardProps) {
   const router = useRouter();
 
@@ -136,37 +138,39 @@ export function InvoicesBoard({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text-dark">
-            Invoices & Billing
-          </h1>
-          <p className="mt-1 text-sm text-text-grey">
-            Generate statutory Indian GST invoices, collect payments, and track receivables.
-          </p>
+      {!hideHeader && (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-text-dark">
+              Invoices & Billing
+            </h1>
+            <p className="mt-1 text-sm text-text-grey">
+              Generate statutory Indian GST invoices, collect payments, and track receivables.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/vendor/invoices/settings"
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-text-dark shadow-sm transition hover:bg-gray-50"
+            >
+              <svg className="h-4 w-4 text-text-grey" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Billing Settings
+            </Link>
+            <Link
+              href="/vendor/invoices/new"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary/90"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create Invoice
+            </Link>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/vendor/invoices/settings"
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-text-dark shadow-sm transition hover:bg-gray-50"
-          >
-            <svg className="h-4 w-4 text-text-grey" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Billing Settings
-          </Link>
-          <Link
-            href="/vendor/invoices/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary/90"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Create Invoice
-          </Link>
-        </div>
-      </div>
+      )}
 
       {/* Alerts */}
       {feedback && (
@@ -189,87 +193,89 @@ export function InvoicesBoard({
       )}
 
       {/* KPI Cards Strip */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {/* Total Invoiced */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
-              Total Invoiced
-            </span>
-            <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 shrink-0">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </span>
+      {!hideHeader && (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {/* Total Invoiced */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
+                Total Invoiced
+              </span>
+              <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 shrink-0">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </span>
+            </div>
+            <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-text-dark truncate">
+              {formatINR(metrics?.totalInvoiced ?? 0)}
+            </div>
+            <div className="mt-1 text-[11px] sm:text-xs text-text-grey truncate">
+              {metrics?.counts.all ?? 0} total invoices
+            </div>
           </div>
-          <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-text-dark truncate">
-            {formatINR(metrics?.totalInvoiced ?? 0)}
-          </div>
-          <div className="mt-1 text-[11px] sm:text-xs text-text-grey truncate">
-            {metrics?.counts.all ?? 0} total invoices
-          </div>
-        </div>
 
-        {/* Received */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
-              Collected
-            </span>
-            <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </span>
+          {/* Received */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
+                Collected
+              </span>
+              <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </span>
+            </div>
+            <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-emerald-600 truncate">
+              {formatINR(metrics?.totalReceived ?? 0)}
+            </div>
+            <div className="mt-1 text-[11px] sm:text-xs text-text-grey truncate">
+              {metrics?.counts.paid ?? 0} fully settled
+            </div>
           </div>
-          <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-emerald-600 truncate">
-            {formatINR(metrics?.totalReceived ?? 0)}
-          </div>
-          <div className="mt-1 text-[11px] sm:text-xs text-text-grey truncate">
-            {metrics?.counts.paid ?? 0} fully settled
-          </div>
-        </div>
 
-        {/* Outstanding */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
-              Outstanding
-            </span>
-            <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 shrink-0">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </span>
+          {/* Outstanding */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
+                Outstanding
+              </span>
+              <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 shrink-0">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </span>
+            </div>
+            <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-amber-600 truncate">
+              {formatINR(metrics?.outstandingBalance ?? 0)}
+            </div>
+            <div className="mt-1 text-[11px] sm:text-xs text-text-grey truncate">
+              Pending collection
+            </div>
           </div>
-          <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-amber-600 truncate">
-            {formatINR(metrics?.outstandingBalance ?? 0)}
-          </div>
-          <div className="mt-1 text-[11px] sm:text-xs text-text-grey truncate">
-            Pending collection
-          </div>
-        </div>
 
-        {/* Overdue */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
-              Overdue
-            </span>
-            <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 shrink-0">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </span>
-          </div>
-          <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-rose-600 truncate">
-            {formatINR(metrics?.overdueAmount ?? 0)}
-          </div>
-          <div className="mt-1 text-[11px] sm:text-xs text-rose-500 font-medium truncate">
-            Past payment due
+          {/* Overdue */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-text-grey truncate">
+                Overdue
+              </span>
+              <span className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 shrink-0">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </span>
+            </div>
+            <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold text-rose-600 truncate">
+              {formatINR(metrics?.overdueAmount ?? 0)}
+            </div>
+            <div className="mt-1 text-[11px] sm:text-xs text-rose-500 font-medium truncate">
+              Past payment due
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col gap-3.5 rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">

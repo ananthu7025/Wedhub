@@ -65,7 +65,7 @@ export default async function EditVendorInvoicePage({ params }: EditInvoicePageP
   }
 
   return (
-    <VendorShell activeHref="/vendor/invoices" vendorName={vendor.businessName}>
+    <VendorShell activeHref="/vendor/finances" vendorName={vendor.businessName}>
       <InvoiceEditor
         billingProfile={billingProfile}
         initialInvoice={invoice}

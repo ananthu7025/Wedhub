@@ -22,10 +22,29 @@ import {
   validateGstin,
 } from "@/lib/utils/gst";
 
+export interface QuotePrefillData {
+  quotationId: string;
+  quotationNumber: string;
+  clientName: string;
+  clientPhone?: string | null;
+  clientEmail?: string | null;
+  clientAddress?: string | null;
+  items: Array<{
+    description: string;
+    sacCode: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    discount: number;
+    gstRate: number;
+  }>;
+}
+
 interface InvoiceEditorProps {
   billingProfile: VendorBillingProfile;
   initialInvoice?: VendorInvoice | null;
   leadPrefill?: LeadPrefillData | null;
+  quotePrefill?: QuotePrefillData | null;
 }
 
 interface EditorLineItem {
@@ -44,6 +63,7 @@ export function InvoiceEditor({
   billingProfile,
   initialInvoice,
   leadPrefill,
+  quotePrefill,
 }: InvoiceEditorProps) {
   const router = useRouter();
   const isEditing = !!initialInvoice;
@@ -63,16 +83,16 @@ export function InvoiceEditor({
 
   // Client Details
   const [clientName, setClientName] = useState(
-    initialInvoice?.clientName ?? leadPrefill?.clientName ?? ""
+    initialInvoice?.clientName ?? quotePrefill?.clientName ?? leadPrefill?.clientName ?? ""
   );
   const [clientPhone, setClientPhone] = useState(
-    initialInvoice?.clientPhone ?? leadPrefill?.clientPhone ?? ""
+    initialInvoice?.clientPhone ?? quotePrefill?.clientPhone ?? leadPrefill?.clientPhone ?? ""
   );
   const [clientEmail, setClientEmail] = useState(
-    initialInvoice?.clientEmail ?? leadPrefill?.clientEmail ?? ""
+    initialInvoice?.clientEmail ?? quotePrefill?.clientEmail ?? leadPrefill?.clientEmail ?? ""
   );
   const [clientAddress, setClientAddress] = useState(
-    initialInvoice?.clientAddress ?? ""
+    initialInvoice?.clientAddress ?? quotePrefill?.clientAddress ?? ""
   );
   const [clientCity, setClientCity] = useState(
     initialInvoice?.clientCity ?? ""
@@ -104,6 +124,17 @@ export function InvoiceEditor({
           sacCode: it.sacCode ?? "",
           quantity: it.quantity,
           unit: it.unit || "unit",
+          unitPrice: it.unitPrice,
+          discount: it.discount,
+          gstRate: it.gstRate,
+        }))
+      : quotePrefill?.items && quotePrefill.items.length > 0
+      ? quotePrefill.items.map((it, idx) => ({
+          key: `quote-item-${idx}-${Date.now()}`,
+          description: it.description,
+          sacCode: it.sacCode || "998311",
+          quantity: it.quantity,
+          unit: it.unit || "Package",
           unitPrice: it.unitPrice,
           discount: it.discount,
           gstRate: it.gstRate,
@@ -437,10 +468,10 @@ export function InvoiceEditor({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Link
-            href="/vendor/invoices"
+            href="/vendor/finances?tab=invoices"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-grey hover:text-brand-primary"
           >
-            ← Back to Invoices
+            ← Back to Quotes & Invoices
           </Link>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-text-dark">
             {isEditing ? `Edit Draft #${initialInvoice.invoiceNumber}` : "New GST Invoice"}
@@ -450,6 +481,14 @@ export function InvoiceEditor({
               ? "Make changes to your draft invoice before issuing to the client."
               : "Create a compliant tax invoice with automatic CGST, SGST, or IGST calculations."}
           </p>
+          {quotePrefill && (
+            <div className="mt-2.5 inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/90 px-3 py-1.5 text-xs font-medium text-blue-900">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white">✓</span>
+              <span>
+                Pre-filled from <strong>Quotation #{quotePrefill.quotationNumber}</strong>. Review items and issue invoice.
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
