@@ -59,12 +59,12 @@ export function GoogleCalendarSyncModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg bg-surface-white rounded-2xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto" onClick={onClose}>
+      <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-border my-8" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-subtle">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+        <div className="flex items-center justify-between border-b border-border pb-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary-soft text-brand-primary font-bold">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                 <line x1="16" y1="2" x2="16" y2="6" />
@@ -73,33 +73,33 @@ export function GoogleCalendarSyncModal({
               </svg>
             </div>
             <div>
-              <h3 className="text-base font-bold text-text-dark">Sync with Google Calendar</h3>
-              <p className="text-xs text-text-muted">Live subscription feed for your phone and desktop</p>
+              <h2 className="text-lg font-bold text-text-dark">Sync with Google Calendar</h2>
+              <p className="text-xs text-text-grey mt-0.5">Live subscription feed for your phone and desktop</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-text-muted hover:text-text-dark hover:bg-surface-elevated rounded-lg transition"
+            className="rounded-lg p-1.5 text-text-grey hover:bg-surface-input hover:text-text-dark transition"
             aria-label="Close modal"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5">
+        <div className="space-y-5">
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
+            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-800 font-medium">
               {error}
             </div>
           )}
 
           {/* Feed URL Box */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-text-dark">
+            <label className="block text-xs font-semibold text-text-grey">
               Your Private Calendar Feed URL (iCal)
             </label>
             <div className="flex items-center gap-2">
@@ -107,21 +107,23 @@ export function GoogleCalendarSyncModal({
                 type="text"
                 readOnly
                 value={feedUrl}
-                className="flex-1 px-3.5 py-2 text-xs font-mono bg-surface-subtle border border-border rounded-xl text-text-muted select-all focus:outline-none"
+                placeholder="https://..."
+                className="flex-1 px-3.5 py-2 text-xs font-mono bg-surface-input border border-border rounded-lg text-text-dark select-all focus:outline-none"
               />
               <button
                 type="button"
                 onClick={handleCopy}
-                className={`px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 shrink-0 ${
+                disabled={!feedUrl}
+                className={`px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-1.5 shrink-0 disabled:opacity-50 ${
                   copied
                     ? "bg-emerald-600 text-white"
-                    : "bg-primary-600 text-white hover:bg-primary-700"
+                    : "bg-brand-primary text-white hover:bg-brand-primary-hover"
                 }`}
               >
                 {copied ? "✓ Copied" : "Copy Link"}
               </button>
             </div>
-            <p className="text-[11px] text-text-muted">
+            <p className="text-[11px] text-text-grey">
               Keep this URL private. Anyone with this link can view your scheduled wedding dates.
             </p>
           </div>
@@ -129,10 +131,10 @@ export function GoogleCalendarSyncModal({
           {/* Quick Subscribe Button */}
           <div>
             <a
-              href={webcalUrl}
+              href={webcalUrl || "#"}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-xl text-xs font-semibold transition"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-brand-primary-soft/50 hover:bg-brand-primary-soft text-brand-primary border border-brand-primary/20 rounded-lg text-xs font-bold transition"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
@@ -144,18 +146,18 @@ export function GoogleCalendarSyncModal({
           </div>
 
           {/* How to setup in Google Calendar */}
-          <div className="p-4 rounded-2xl bg-surface-subtle border border-border space-y-2">
+          <div className="p-4 rounded-xl bg-surface-input border border-border space-y-2">
             <h4 className="text-xs font-bold text-text-dark uppercase tracking-wider">
               How to add to Google Calendar
             </h4>
-            <ol className="text-xs text-text-muted space-y-1.5 list-decimal pl-4">
+            <ol className="text-xs text-text-grey space-y-1.5 list-decimal pl-4">
               <li>
                 Open{" "}
                 <a
                   href="https://calendar.google.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-600 underline font-medium"
+                  className="text-brand-primary font-bold hover:underline"
                 >
                   Google Calendar
                 </a>{" "}
@@ -169,25 +171,25 @@ export function GoogleCalendarSyncModal({
               </li>
               <li>Paste the URL copied above and click <strong>Add calendar</strong>.</li>
             </ol>
-            <p className="text-[11px] text-text-muted mt-2 pt-2 border-t border-border">
+            <p className="text-[11px] text-text-grey mt-2 pt-2 border-t border-border">
               WedHub bookings will automatically update inside Google Calendar as they are booked or rescheduled!
             </p>
           </div>
 
           {/* Security reset */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center justify-between pt-3 border-t border-border">
             <button
               type="button"
               disabled={regenerating}
               onClick={handleRegenerate}
-              className="text-xs text-text-muted hover:text-rose-600 font-medium transition disabled:opacity-50"
+              className="text-xs text-red-600 hover:underline font-semibold transition disabled:opacity-50"
             >
               {regenerating ? "Resetting..." : "Reset Private Link (Revoke old link)"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-text-dark hover:bg-surface-elevated rounded-xl transition"
+              className="rounded-lg border border-border px-4 py-2 text-xs font-bold text-text-dark hover:bg-surface-input transition"
             >
               Done
             </button>

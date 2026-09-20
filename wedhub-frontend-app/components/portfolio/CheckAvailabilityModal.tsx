@@ -93,12 +93,12 @@ export function CheckAvailabilityModal({
   const selectedDayInfo = selectedDate && availability?.days ? availability.days[selectedDate] : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-surface-white rounded-3xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto" onClick={onClose}>
+      <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-border my-8" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-subtle">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-primary-50 text-primary-600 rounded-xl">
+        <div className="flex items-center justify-between border-b border-border pb-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary-soft text-brand-primary font-bold">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                 <line x1="16" y1="2" x2="16" y2="6" />
@@ -107,18 +107,18 @@ export function CheckAvailabilityModal({
               </svg>
             </div>
             <div>
-              <h3 className="text-base font-bold text-text-dark">Check Date Availability</h3>
-              <p className="text-xs text-text-muted">{vendorName}</p>
+              <h2 className="text-lg font-bold text-text-dark">Check Date Availability</h2>
+              <p className="text-xs text-text-grey mt-0.5">{vendorName}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-text-muted hover:text-text-dark hover:bg-surface-elevated rounded-xl transition"
+            className="rounded-lg p-1.5 text-text-grey hover:bg-surface-input hover:text-text-dark transition"
             aria-label="Close modal"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
@@ -126,21 +126,21 @@ export function CheckAvailabilityModal({
         {/* Auth Check State */}
         {checkingAuth ? (
           <div className="p-12 text-center space-y-3">
-            <div className="w-8 h-8 border-3 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs text-text-muted font-medium">Checking session...</p>
+            <div className="w-8 h-8 border-3 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-xs text-text-grey font-medium">Checking session...</p>
           </div>
         ) : !isLoggedIn ? (
           /* Authentication Gate */
-          <div className="p-8 text-center space-y-4">
-            <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto border border-amber-200/80">
+          <div className="p-6 text-center space-y-4">
+            <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto border border-amber-200">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0110 0v4" />
               </svg>
             </div>
             <div>
-              <h4 className="text-lg font-bold text-text-dark">Sign in to View Availability</h4>
-              <p className="text-xs text-text-muted max-w-sm mx-auto mt-1.5 leading-relaxed">
+              <h3 className="text-lg font-bold text-text-dark">Sign in to View Availability</h3>
+              <p className="text-xs text-text-grey max-w-sm mx-auto mt-1.5 leading-relaxed">
                 Real-time booking calendars are exclusive to registered couples on WedHub. Please sign in or create a free account to check whether {vendorName} is available for your wedding.
               </p>
             </div>
@@ -149,13 +149,13 @@ export function CheckAvailabilityModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold text-text-muted hover:text-text-dark transition"
+                className="w-full sm:w-auto rounded-lg border border-border px-5 py-2.5 text-xs font-bold text-text-dark hover:bg-surface-input transition"
               >
                 Cancel
               </button>
               <Link
                 href={`/login?returnUrl=/portfolio/${vendorSlug}`}
-                className="w-full sm:w-auto px-6 py-2.5 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-xl shadow-sm transition"
+                className="w-full sm:w-auto rounded-lg bg-brand-primary px-6 py-2.5 text-xs font-bold text-white hover:bg-brand-primary-hover shadow-sm transition"
               >
                 Sign In to View Calendar →
               </Link>
@@ -163,14 +163,14 @@ export function CheckAvailabilityModal({
           </div>
         ) : (
           /* Logged-in Availability Calendar */
-          <div className="p-6 space-y-5">
+          <div className="space-y-5">
             {/* Month Header Navigation */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 bg-surface-subtle p-1 rounded-xl border border-border">
+              <div className="flex items-center gap-1.5 bg-surface-input p-1 rounded-xl border border-border">
                 <button
                   type="button"
                   onClick={() => changeMonth(-1)}
-                  className="p-1.5 hover:bg-surface-white rounded-lg text-text-dark transition"
+                  className="p-1.5 hover:bg-white rounded-lg text-text-dark transition"
                   aria-label="Previous month"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -183,7 +183,7 @@ export function CheckAvailabilityModal({
                 <button
                   type="button"
                   onClick={() => changeMonth(1)}
-                  className="p-1.5 hover:bg-surface-white rounded-lg text-text-dark transition"
+                  className="p-1.5 hover:bg-white rounded-lg text-text-dark transition"
                   aria-label="Next month"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -193,7 +193,7 @@ export function CheckAvailabilityModal({
               </div>
 
               {/* Legend */}
-              <div className="flex items-center gap-3 text-[11px] text-text-muted font-medium">
+              <div className="flex items-center gap-3 text-[11px] text-text-grey font-medium">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Available
                 </span>
@@ -210,7 +210,7 @@ export function CheckAvailabilityModal({
                   <div
                     key={w}
                     className={`text-center text-[11px] font-bold py-1 ${
-                      idx === 0 || idx === 6 ? "text-primary-600" : "text-text-muted"
+                      idx === 0 || idx === 6 ? "text-brand-primary" : "text-text-grey"
                     }`}
                   >
                     {w}
@@ -221,7 +221,7 @@ export function CheckAvailabilityModal({
               <div className="grid grid-cols-7 gap-1">
                 {/* Empty leading cells */}
                 {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-                  <div key={`empty-${i}`} className="h-10 rounded-lg bg-slate-50/40" />
+                  <div key={`empty-${i}`} className="h-10 rounded-lg bg-surface-input/50" />
                 ))}
 
                 {/* Day cells */}
@@ -234,7 +234,6 @@ export function CheckAvailabilityModal({
 
                   const isBooked = dayData?.status === "BOOKED";
                   const isBlocked = dayData?.status === "BLOCKED";
-                  const isAvailable = !isPast && !isBooked && !isBlocked;
 
                   return (
                     <button
@@ -244,14 +243,14 @@ export function CheckAvailabilityModal({
                       onClick={() => setSelectedDate(dateStr)}
                       className={`h-11 rounded-xl text-xs font-semibold flex flex-col items-center justify-center relative transition border ${
                         isSelected
-                          ? "bg-primary-600 text-white border-primary-600 shadow-sm"
+                          ? "bg-brand-primary text-white border-brand-primary shadow-sm"
                           : isPast
-                          ? "bg-slate-50 text-slate-300 border-transparent cursor-not-allowed"
+                          ? "bg-gray-100 text-gray-400 border-transparent cursor-not-allowed"
                           : isBooked
                           ? "bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100"
                           : isBlocked
-                          ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                          : "bg-surface-white text-text-dark border-border hover:border-emerald-300 hover:bg-emerald-50/50"
+                          ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                          : "bg-white text-text-dark border-border hover:border-emerald-400 hover:bg-emerald-50/50"
                       }`}
                     >
                       <span>{dayNum}</span>
@@ -263,7 +262,7 @@ export function CheckAvailabilityModal({
                               : isBooked
                               ? "bg-rose-500"
                               : isBlocked
-                              ? "bg-slate-400"
+                              ? "bg-gray-400"
                               : "bg-emerald-500"
                           }`}
                         />
@@ -277,11 +276,11 @@ export function CheckAvailabilityModal({
             {/* Selected Date Feedback Strip */}
             {selectedDate ? (
               <div
-                className={`p-3.5 rounded-2xl border text-xs flex items-center justify-between gap-3 ${
+                className={`p-3.5 rounded-xl border text-xs flex items-center justify-between gap-3 ${
                   selectedDayInfo?.status === "BOOKED"
                     ? "bg-rose-50 border-rose-200 text-rose-800"
                     : selectedDayInfo?.status === "BLOCKED"
-                    ? "bg-slate-100 border-slate-200 text-slate-700"
+                    ? "bg-gray-100 border-gray-200 text-gray-700"
                     : "bg-emerald-50 border-emerald-200 text-emerald-800"
                 }`}
               >
@@ -309,13 +308,13 @@ export function CheckAvailabilityModal({
                     onProceedToEnquire(selectedDate);
                     onClose();
                   }}
-                  className="px-4 py-2 text-xs font-bold rounded-xl text-white bg-text-dark hover:bg-neutral-800 shrink-0 transition"
+                  className="px-4 py-2 text-xs font-bold rounded-lg text-white bg-brand-primary hover:bg-brand-primary-hover shrink-0 transition"
                 >
                   Enquire for Date →
                 </button>
               </div>
             ) : (
-              <p className="text-center text-xs text-text-muted">
+              <p className="text-center text-xs text-text-grey">
                 Tap on any date above to check availability for your wedding day
               </p>
             )}

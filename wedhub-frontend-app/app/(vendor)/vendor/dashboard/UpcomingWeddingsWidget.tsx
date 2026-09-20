@@ -9,10 +9,10 @@ export function UpcomingWeddingsWidget({ weddings }: UpcomingWeddingsWidgetProps
   const activeWeddings = weddings.filter((w) => w.daysUntil >= 0);
 
   return (
-    <div className="rounded-2xl border border-border bg-surface-white p-5 shadow-xs">
+    <div className="rounded-2xl border border-border bg-white p-5 shadow-xs">
       <div className="flex items-center justify-between pb-3 border-b border-border">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+          <div className="p-2 bg-brand-primary-soft text-brand-primary rounded-xl font-bold">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
               <line x1="16" y1="2" x2="16" y2="6" />
@@ -22,13 +22,13 @@ export function UpcomingWeddingsWidget({ weddings }: UpcomingWeddingsWidgetProps
           </div>
           <div>
             <h3 className="text-sm font-bold text-text-dark">Upcoming Weddings & Events</h3>
-            <p className="text-xs text-text-muted">Your scheduled wedding commitments</p>
+            <p className="text-xs text-text-grey mt-0.5">Your scheduled wedding commitments</p>
           </div>
         </div>
 
         <Link
           href="/vendor/calendar"
-          className="text-xs font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1"
+          className="text-xs font-bold text-brand-primary hover:text-brand-primary-hover flex items-center gap-1"
         >
           View Calendar →
         </Link>
@@ -36,11 +36,11 @@ export function UpcomingWeddingsWidget({ weddings }: UpcomingWeddingsWidgetProps
 
       <div className="mt-3.5 space-y-2.5">
         {activeWeddings.length === 0 ? (
-          <div className="py-6 text-center text-text-muted">
+          <div className="py-6 text-center text-text-grey">
             <p className="text-xs font-medium">No upcoming weddings scheduled yet</p>
             <Link
               href="/vendor/calendar"
-              className="inline-block mt-2 text-xs font-semibold text-primary-600 hover:underline"
+              className="inline-block mt-2 text-xs font-bold text-brand-primary hover:underline"
             >
               + Mark your dates on Booking Calendar
             </Link>
@@ -49,11 +49,11 @@ export function UpcomingWeddingsWidget({ weddings }: UpcomingWeddingsWidgetProps
           activeWeddings.slice(0, 3).map((w) => (
             <div
               key={w.id}
-              className="flex items-center justify-between p-3 rounded-xl bg-surface-subtle border border-border/80 hover:bg-surface-elevated transition"
+              className="flex items-center justify-between p-3 rounded-xl bg-surface-input border border-border hover:border-text-grey/30 transition"
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-surface-white rounded-lg text-center min-w-[50px] border border-border shadow-xs">
-                  <span className="block text-[10px] uppercase font-bold text-text-muted">
+                <div className="p-2 bg-white rounded-lg text-center min-w-[50px] border border-border shadow-xs">
+                  <span className="block text-[10px] uppercase font-bold text-text-grey">
                     {new Date(w.startDate + "T00:00:00Z").toLocaleString("en-IN", { month: "short" })}
                   </span>
                   <span className="block text-base font-extrabold text-text-dark leading-none">
@@ -64,11 +64,11 @@ export function UpcomingWeddingsWidget({ weddings }: UpcomingWeddingsWidgetProps
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-bold text-text-dark">{w.title}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-indigo-100 text-indigo-800">
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-brand-primary-soft text-brand-primary">
                       {w.eventType}
                     </span>
                   </div>
-                  <p className="text-[11px] text-text-muted mt-0.5">
+                  <p className="text-[11px] text-text-grey mt-0.5">
                     {w.daysUntil === 0
                       ? "Today!"
                       : w.daysUntil === 1
@@ -95,7 +95,7 @@ export function UpcomingWeddingsWidget({ weddings }: UpcomingWeddingsWidgetProps
                 )}
                 <Link
                   href="/vendor/calendar"
-                  className="px-2.5 py-1 text-xs font-medium text-text-dark hover:bg-surface-white border border-border rounded-lg transition"
+                  className="px-2.5 py-1 text-xs font-bold text-text-dark hover:bg-white border border-border rounded-lg transition"
                 >
                   Details
                 </Link>

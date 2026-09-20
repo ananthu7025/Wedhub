@@ -104,28 +104,28 @@ export function BookingDetailDrawer({
   const statusStyle = statusColors[booking.status] || statusColors.CONFIRMED;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-lg bg-surface-white h-full shadow-2xl flex flex-col border-l border-border animate-in slide-in-from-right duration-200">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-in fade-in duration-150" onClick={onClose}>
+      <div className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col border-l border-border animate-in slide-in-from-right duration-200" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-subtle">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white">
           <div className="flex items-center gap-2">
             <span
-              className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+              className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
             >
               {booking.status}
             </span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-surface-elevated text-text-muted">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-surface-input text-text-grey">
               {booking.eventType}
             </span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-text-muted hover:text-text-dark hover:bg-surface-elevated rounded-lg transition"
+            className="rounded-lg p-1.5 text-text-grey hover:bg-surface-input hover:text-text-dark transition"
             aria-label="Close drawer"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
@@ -133,7 +133,7 @@ export function BookingDetailDrawer({
         {/* Content */}
         <div className="flex-1 p-6 space-y-6 overflow-y-auto">
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
+            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-800 font-medium">
               {error}
             </div>
           )}
@@ -141,12 +141,12 @@ export function BookingDetailDrawer({
           {/* Title & Client */}
           <div>
             <h2 className="text-xl font-bold text-text-dark">{booking.title}</h2>
-            <p className="text-sm font-medium text-text-muted mt-0.5">Couple: {booking.clientName}</p>
+            <p className="text-sm font-medium text-text-grey mt-0.5">Couple: {booking.clientName}</p>
           </div>
 
           {/* Date & Time Badge */}
-          <div className="p-4 rounded-2xl bg-surface-subtle border border-border flex items-start gap-3">
-            <div className="p-2.5 bg-primary-50 text-primary-600 rounded-xl">
+          <div className="p-4 rounded-xl bg-surface-input border border-border flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary-soft text-brand-primary font-bold shrink-0">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                 <line x1="16" y1="2" x2="16" y2="6" />
@@ -175,8 +175,8 @@ export function BookingDetailDrawer({
                   </>
                 )}
               </p>
-              <p className="text-xs text-text-muted mt-0.5">
-                Shift: <span className="font-medium text-text-dark">{booking.shift.replace("_", " ")}</span>
+              <p className="text-xs text-text-grey mt-0.5">
+                Shift: <span className="font-bold text-text-dark">{booking.shift.replace("_", " ")}</span>
                 {booking.startTime && ` • ${booking.startTime}${booking.endTime ? ` - ${booking.endTime}` : ""}`}
               </p>
             </div>
@@ -184,9 +184,9 @@ export function BookingDetailDrawer({
 
           {/* Venue & Location */}
           <div className="space-y-2">
-            <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Venue Location</h4>
-            <div className="p-3.5 rounded-xl border border-border bg-surface-white flex items-center gap-3">
-              <div className="p-2 bg-slate-100 text-slate-600 rounded-lg">
+            <h4 className="text-xs font-bold text-text-dark uppercase tracking-wider">Venue Location</h4>
+            <div className="p-3.5 rounded-xl border border-border bg-white flex items-center gap-3">
+              <div className="p-2 bg-surface-input text-text-grey rounded-lg">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
                   <circle cx="12" cy="10" r="3" />
@@ -194,14 +194,14 @@ export function BookingDetailDrawer({
               </div>
               <div>
                 <p className="text-sm font-semibold text-text-dark">{booking.venueName || "Venue not specified"}</p>
-                {booking.venueCity && <p className="text-xs text-text-muted">{booking.venueCity}</p>}
+                {booking.venueCity && <p className="text-xs text-text-grey">{booking.venueCity}</p>}
               </div>
             </div>
           </div>
 
           {/* Quick Actions (WhatsApp & Google Calendar) */}
           <div className="space-y-2">
-            <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Quick Actions</h4>
+            <h4 className="text-xs font-bold text-text-dark uppercase tracking-wider">Quick Actions</h4>
             <div className="grid grid-cols-2 gap-3">
               {whatsappUrl ? (
                 <a
@@ -219,7 +219,7 @@ export function BookingDetailDrawer({
                 <button
                   type="button"
                   disabled
-                  className="flex items-center justify-center gap-2 p-3 bg-surface-subtle text-text-muted border border-border rounded-xl text-xs font-medium cursor-not-allowed opacity-60"
+                  className="flex items-center justify-center gap-2 p-3 bg-surface-input text-text-grey border border-border rounded-xl text-xs font-medium cursor-not-allowed opacity-60"
                 >
                   No Phone Number
                 </button>
@@ -244,15 +244,15 @@ export function BookingDetailDrawer({
 
           {/* Financials Breakdown */}
           <div className="space-y-2">
-            <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Payment Summary</h4>
-            <div className="p-4 rounded-2xl bg-surface-subtle border border-border space-y-2.5">
-              <div className="flex justify-between text-xs text-text-muted">
+            <h4 className="text-xs font-bold text-text-dark uppercase tracking-wider">Payment Summary</h4>
+            <div className="p-4 rounded-xl bg-surface-input border border-border space-y-2.5">
+              <div className="flex justify-between text-xs text-text-grey">
                 <span>Total Amount</span>
                 <span className="font-semibold text-text-dark font-mono">
                   {booking.totalAmount ? `₹${Number(booking.totalAmount).toLocaleString("en-IN")}` : "—"}
                 </span>
               </div>
-              <div className="flex justify-between text-xs text-text-muted">
+              <div className="flex justify-between text-xs text-text-grey">
                 <span>Advance Paid</span>
                 <span className="font-semibold text-emerald-600 font-mono">
                   {booking.advancePaid ? `₹${Number(booking.advancePaid).toLocaleString("en-IN")}` : "₹0"}
@@ -260,7 +260,7 @@ export function BookingDetailDrawer({
               </div>
               <div className="pt-2 border-t border-border flex justify-between text-xs">
                 <span className="font-semibold text-text-dark">Balance Remaining</span>
-                <span className="font-bold text-amber-700 font-mono">
+                <span className="font-bold text-amber-800 font-mono">
                   {booking.balanceDue ? `₹${Number(booking.balanceDue).toLocaleString("en-IN")}` : "—"}
                 </span>
               </div>
@@ -270,22 +270,22 @@ export function BookingDetailDrawer({
           {/* Notes */}
           {booking.notes && (
             <div className="space-y-2">
-              <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Notes & Checklist</h4>
-              <div className="p-3.5 rounded-xl border border-border bg-surface-white text-xs text-text-dark whitespace-pre-wrap">
+              <h4 className="text-xs font-bold text-text-dark uppercase tracking-wider">Notes & Checklist</h4>
+              <div className="p-3.5 rounded-xl border border-border bg-white text-xs text-text-dark whitespace-pre-wrap">
                 {booking.notes}
               </div>
             </div>
           )}
 
           {/* Quick Status Changers */}
-          <div className="space-y-2 pt-2 border-t border-border">
-            <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider">Update Status</h4>
+          <div className="space-y-2 pt-3 border-t border-border">
+            <h4 className="text-xs font-bold text-text-dark uppercase tracking-wider">Update Status</h4>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={busy || booking.status === "CONFIRMED"}
                 onClick={() => handleStatusChange("CONFIRMED")}
-                className="text-xs px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium disabled:opacity-50"
+                className="text-xs px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold disabled:opacity-50"
               >
                 Mark Confirmed
               </button>
@@ -293,7 +293,7 @@ export function BookingDetailDrawer({
                 type="button"
                 disabled={busy || booking.status === "COMPLETED"}
                 onClick={() => handleStatusChange("COMPLETED")}
-                className="text-xs px-3 py-1.5 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium disabled:opacity-50"
+                className="text-xs px-3 py-1.5 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold disabled:opacity-50"
               >
                 Mark Completed
               </button>
@@ -301,7 +301,7 @@ export function BookingDetailDrawer({
                 type="button"
                 disabled={busy || booking.status === "CANCELLED"}
                 onClick={() => handleStatusChange("CANCELLED")}
-                className="text-xs px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 font-medium disabled:opacity-50"
+                className="text-xs px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold disabled:opacity-50"
               >
                 Cancel Booking
               </button>
@@ -310,12 +310,12 @@ export function BookingDetailDrawer({
         </div>
 
         {/* Footer actions */}
-        <div className="p-4 border-t border-border bg-surface-subtle flex items-center justify-between">
+        <div className="p-4 border-t border-border bg-surface-input flex items-center justify-between">
           <button
             type="button"
             disabled={busy}
             onClick={handleDelete}
-            className="px-3 py-2 text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition"
+            className="px-3 py-2 text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
           >
             Delete Booking
           </button>
@@ -323,7 +323,7 @@ export function BookingDetailDrawer({
             <button
               type="button"
               onClick={() => onEdit(booking)}
-              className="px-4 py-2 text-xs font-semibold text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 rounded-xl transition"
+              className="rounded-lg bg-brand-primary px-5 py-2 text-xs font-bold text-white hover:bg-brand-primary-hover transition"
             >
               Edit Details
             </button>

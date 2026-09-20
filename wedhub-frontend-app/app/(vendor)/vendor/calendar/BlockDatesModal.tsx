@@ -66,40 +66,40 @@ export function BlockDatesModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-md bg-surface-white rounded-2xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto" onClick={onClose}>
+      <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-border my-8" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-subtle">
+        <div className="flex items-center justify-between border-b border-border pb-4 mb-5">
           <div>
-            <h3 className="text-base font-bold text-text-dark">Block Dates / Mark Unavailable</h3>
-            <p className="text-xs text-text-muted mt-0.5">
+            <h2 className="text-lg font-bold text-text-dark">Block Dates / Mark Unavailable</h2>
+            <p className="text-xs text-text-grey mt-0.5">
               Mark personal leave, holidays, or offline commitments
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-text-muted hover:text-text-dark hover:bg-surface-elevated rounded-lg transition"
+            className="rounded-lg p-1.5 text-text-grey hover:bg-surface-input hover:text-text-dark transition"
             aria-label="Close modal"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
+            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-800 font-medium">
               {error}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-text-dark mb-1">
-                From Date <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-text-grey mb-1">
+                From Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -109,12 +109,12 @@ export function BlockDatesModal({
                   setStartDate(e.target.value);
                   if (e.target.value > endDate) setEndDate(e.target.value);
                 }}
-                className="w-full px-3 py-2 text-sm bg-surface-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-text-dark"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-dark bg-white focus:border-brand-primary focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-text-dark mb-1">
-                To Date <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold text-text-grey mb-1">
+                To Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -122,19 +122,19 @@ export function BlockDatesModal({
                 min={startDate}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-surface-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-text-dark"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm text-text-dark bg-white focus:border-brand-primary focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-text-dark mb-1.5">Reason / Note</label>
+            <label className="block text-xs font-semibold text-text-grey mb-1">Reason / Note</label>
             <input
               type="text"
               placeholder="e.g., Vacation, Family Event, Maintenance..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-surface-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-text-dark"
+              className="w-full rounded-lg border border-border px-3.5 py-2 text-sm text-text-dark bg-white focus:border-brand-primary focus:outline-none"
             />
             {/* Quick reason chips */}
             <div className="flex flex-wrap gap-1.5 mt-2">
@@ -143,10 +143,10 @@ export function BlockDatesModal({
                   key={r}
                   type="button"
                   onClick={() => setReason(r)}
-                  className={`text-[11px] px-2.5 py-1 rounded-lg border transition ${
+                  className={`text-xs px-2.5 py-1 rounded-lg border transition ${
                     reason === r
-                      ? "bg-primary-50 text-primary-700 border-primary-300 font-medium"
-                      : "bg-surface-subtle text-text-muted border-border hover:bg-surface-elevated"
+                      ? "bg-brand-primary-soft text-brand-primary border-brand-primary font-bold"
+                      : "bg-surface-input text-text-dark border-border hover:bg-gray-200"
                   }`}
                 >
                   {r}
@@ -155,22 +155,22 @@ export function BlockDatesModal({
             </div>
           </div>
 
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600">
+          <div className="rounded-xl border border-blue-100 bg-blue-50/80 p-3.5 text-xs text-blue-900 leading-relaxed">
             Blocked dates prevent double-booking and appear as unavailable on couple date checks.
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border mt-5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-text-muted hover:text-text-dark hover:bg-surface-elevated rounded-xl transition"
+              className="rounded-lg border border-border px-4 py-2 text-xs font-bold text-text-dark hover:bg-surface-input transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition shadow-sm disabled:opacity-50 flex items-center gap-2"
+              className="rounded-lg bg-brand-primary px-5 py-2 text-xs font-bold text-white hover:bg-brand-primary-hover transition disabled:opacity-60 flex items-center gap-2"
             >
               {saving && (
                 <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -164,10 +164,10 @@ export function CalendarBoard({
             </div>
           </div>
         ) : (
-          <div className="lg:col-span-2 p-5 rounded-2xl bg-surface-white border border-border shadow-xs flex items-center justify-between">
+          <div className="lg:col-span-2 p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
             <div>
               <h3 className="text-base font-bold text-text-dark">Ready for Upcoming Weddings</h3>
-              <p className="text-xs text-text-muted mt-0.5">
+              <p className="text-xs text-text-grey mt-0.5">
                 Mark confirmed wedding bookings to keep track of schedules and advance balances
               </p>
             </div>
@@ -178,7 +178,7 @@ export function CalendarBoard({
                 setEditingBooking(null);
                 setBookingModalOpen(true);
               }}
-              className="px-4 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition"
+              className="rounded-lg bg-brand-primary px-4 py-2 text-xs font-bold text-white hover:bg-brand-primary-hover transition"
             >
               + Add Wedding
             </button>
@@ -186,30 +186,30 @@ export function CalendarBoard({
         )}
 
         {/* Monthly Metrics Summary Card */}
-        <div className="p-5 rounded-2xl bg-surface-white border border-border shadow-xs flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+            <span className="text-xs font-bold text-text-grey uppercase tracking-wider">
               {monthName} Overview
             </span>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-surface-subtle text-text-muted">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-surface-input text-text-grey">
               Cap: {settings?.maxBookingsPerDay || 1}/day
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 mt-3 pt-2 border-t border-border">
             <div>
-              <p className="text-xs text-text-muted">Booked</p>
+              <p className="text-xs text-text-grey">Booked</p>
               <p className="text-xl font-bold text-text-dark mt-0.5">
                 {calendar.summary.totalBookingsThisMonth}
               </p>
             </div>
             <div>
-              <p className="text-xs text-text-muted">Confirmed</p>
+              <p className="text-xs text-text-grey">Confirmed</p>
               <p className="text-xl font-bold text-emerald-600 mt-0.5">
                 {calendar.summary.confirmedCount}
               </p>
             </div>
             <div>
-              <p className="text-xs text-text-muted">Blocked</p>
+              <p className="text-xs text-text-grey">Blocked</p>
               <p className="text-xl font-bold text-rose-600 mt-0.5">
                 {calendar.summary.blockedDaysCount}
               </p>
@@ -219,16 +219,16 @@ export function CalendarBoard({
       </div>
 
       {/* Main Calendar Card & Toolbar */}
-      <div className="bg-surface-white border border-border rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-border rounded-2xl shadow-xs overflow-hidden">
         {/* Toolbar */}
         <div className="p-4 sm:p-5 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Month Navigator */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center bg-surface-subtle border border-border rounded-xl p-1">
+            <div className="flex items-center bg-surface-input border border-border rounded-xl p-1">
               <button
                 type="button"
                 onClick={() => changeMonth(-1)}
-                className="p-1.5 hover:bg-surface-white rounded-lg text-text-dark transition"
+                className="p-1.5 hover:bg-white rounded-lg text-text-dark transition"
                 title="Previous month"
                 aria-label="Previous month"
               >
@@ -242,7 +242,7 @@ export function CalendarBoard({
               <button
                 type="button"
                 onClick={() => changeMonth(1)}
-                className="p-1.5 hover:bg-surface-white rounded-lg text-text-dark transition"
+                className="p-1.5 hover:bg-white rounded-lg text-text-dark transition"
                 title="Next month"
                 aria-label="Next month"
               >
@@ -255,27 +255,27 @@ export function CalendarBoard({
             <button
               type="button"
               onClick={jumpToToday}
-              className="px-3 py-1.5 text-xs font-semibold bg-surface-subtle hover:bg-surface-elevated text-text-dark border border-border rounded-xl transition"
+              className="px-3 py-1.5 text-xs font-bold bg-surface-input hover:bg-gray-200 text-text-dark border border-border rounded-lg transition"
             >
               Today
             </button>
 
             {loadingMonth && (
-              <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
             )}
           </div>
 
           {/* View Toggles & Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
             {/* View Switcher */}
-            <div className="flex items-center bg-surface-subtle p-1 rounded-xl border border-border">
+            <div className="flex items-center bg-surface-input p-1 rounded-xl border border-border">
               <button
                 type="button"
                 onClick={() => setViewMode("MONTH")}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
                   viewMode === "MONTH"
-                    ? "bg-surface-white text-text-dark shadow-xs"
-                    : "text-text-muted hover:text-text-dark"
+                    ? "bg-white text-text-dark shadow-xs"
+                    : "text-text-grey hover:text-text-dark"
                 }`}
               >
                 Month Grid
@@ -283,10 +283,10 @@ export function CalendarBoard({
               <button
                 type="button"
                 onClick={() => setViewMode("AGENDA")}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
                   viewMode === "AGENDA"
-                    ? "bg-surface-white text-text-dark shadow-xs"
-                    : "text-text-muted hover:text-text-dark"
+                    ? "bg-white text-text-dark shadow-xs"
+                    : "text-text-grey hover:text-text-dark"
                 }`}
               >
                 Upcoming Agenda ({upcoming.length})
@@ -297,7 +297,7 @@ export function CalendarBoard({
             <button
               type="button"
               onClick={() => setSyncModalOpen(true)}
-              className="px-3 py-2 text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl transition flex items-center gap-1.5"
+              className="px-3 py-2 text-xs font-bold bg-brand-primary-soft/50 hover:bg-brand-primary-soft text-brand-primary border border-brand-primary/20 rounded-lg transition flex items-center gap-1.5"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -312,7 +312,7 @@ export function CalendarBoard({
             <button
               type="button"
               onClick={() => setBlockModalOpen(true)}
-              className="px-3 py-2 text-xs font-semibold bg-surface-subtle hover:bg-surface-elevated text-text-dark border border-border rounded-xl transition flex items-center gap-1.5"
+              className="px-3 py-2 text-xs font-bold bg-surface-input hover:bg-gray-200 text-text-dark border border-border rounded-lg transition flex items-center gap-1.5"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
@@ -329,7 +329,7 @@ export function CalendarBoard({
                 setEditingBooking(null);
                 setBookingModalOpen(true);
               }}
-              className="px-4 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition shadow-xs flex items-center gap-1.5"
+              className="rounded-lg bg-brand-primary px-4 py-2 text-xs font-bold text-white hover:bg-brand-primary-hover transition shadow-xs flex items-center gap-1.5"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M12 5v14M5 12h14" />
@@ -340,18 +340,18 @@ export function CalendarBoard({
         </div>
 
         {/* Status Filters Bar */}
-        <div className="px-5 py-2.5 bg-surface-subtle border-b border-border flex items-center justify-between text-xs">
+        <div className="px-5 py-2.5 bg-surface-input border-b border-border flex items-center justify-between text-xs">
           <div className="flex items-center gap-2 overflow-x-auto">
-            <span className="text-text-muted font-medium mr-1">Filter:</span>
+            <span className="text-text-grey font-semibold mr-1">Filter:</span>
             {(["ALL", "CONFIRMED", "TENTATIVE", "BLOCKED"] as const).map((filter) => (
               <button
                 key={filter}
                 type="button"
                 onClick={() => setStatusFilter(filter)}
-                className={`px-2.5 py-1 rounded-lg font-medium transition ${
+                className={`px-2.5 py-1 rounded-lg font-bold transition ${
                   statusFilter === filter
                     ? "bg-text-dark text-white"
-                    : "bg-surface-white text-text-muted border border-border hover:bg-surface-elevated"
+                    : "bg-white text-text-grey border border-border hover:bg-gray-100"
                 }`}
               >
                 {filter === "ALL" ? "All Dates" : filter}
@@ -359,7 +359,7 @@ export function CalendarBoard({
             ))}
           </div>
 
-          <div className="hidden sm:flex items-center gap-4 text-[11px] text-text-muted">
+          <div className="hidden sm:flex items-center gap-4 text-[11px] text-text-grey">
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block" /> Confirmed Wedding
             </span>
@@ -429,12 +429,12 @@ export function CalendarBoard({
                     }}
                     className={`group relative min-h-[95px] sm:min-h-[120px] p-2 rounded-xl border transition flex flex-col justify-between ${
                       isToday
-                        ? "border-primary-500 ring-2 ring-primary-500/20 bg-primary-50/10"
+                        ? "border-brand-primary ring-2 ring-brand-primary/20 bg-brand-primary-soft/15"
                         : isBlocked
                         ? "border-rose-200 bg-rose-50/40"
                         : hasBookings
                         ? "border-indigo-200 bg-indigo-50/20"
-                        : "border-border bg-surface-white hover:border-primary-300 hover:bg-surface-subtle cursor-pointer"
+                        : "border-border bg-white hover:border-brand-primary hover:bg-surface-input cursor-pointer"
                     }`}
                   >
                     {/* Top Date Header */}
@@ -442,7 +442,7 @@ export function CalendarBoard({
                       <span
                         className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
                           isToday
-                            ? "bg-primary-600 text-white shadow-xs"
+                            ? "bg-brand-primary text-white shadow-xs"
                             : isBlocked
                             ? "text-rose-700 font-semibold"
                             : hasBookings
@@ -463,7 +463,7 @@ export function CalendarBoard({
                             setEditingBooking(null);
                             setBookingModalOpen(true);
                           }}
-                          className="opacity-0 group-hover:opacity-100 p-1 rounded-md bg-surface-white border border-border text-text-muted hover:text-primary-600 shadow-xs transition"
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded-md bg-white border border-border text-text-grey hover:text-brand-primary shadow-xs transition"
                           title="Add wedding on this date"
                         >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -598,16 +598,16 @@ export function CalendarBoard({
                         updatedAt: "",
                       });
                     }}
-                    className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-subtle px-3 rounded-xl transition cursor-pointer"
+                    className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-surface-input px-3 rounded-xl transition cursor-pointer"
                   >
                     <div className="flex items-start gap-3.5">
-                      <div className="p-3 bg-primary-50 text-primary-600 rounded-xl font-mono text-center min-w-[65px] shrink-0 border border-primary-100">
-                        <span className="block text-xs uppercase text-primary-700 font-bold">
+                      <div className="p-3 bg-brand-primary-soft/50 text-brand-primary rounded-xl font-mono text-center min-w-[65px] shrink-0 border border-brand-primary/20">
+                        <span className="block text-xs uppercase text-brand-primary font-bold">
                           {new Date(item.startDate + "T00:00:00Z").toLocaleString("en-IN", {
                             month: "short",
                           })}
                         </span>
-                        <span className="block text-xl font-extrabold text-primary-900 leading-none mt-0.5">
+                        <span className="block text-xl font-extrabold text-text-dark leading-none mt-0.5">
                           {new Date(item.startDate + "T00:00:00Z").getUTCDate()}
                         </span>
                       </div>
@@ -625,10 +625,10 @@ export function CalendarBoard({
                           >
                             {item.status}
                           </span>
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-surface-elevated text-text-muted">
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-surface-input text-text-grey">
                             {item.eventType}
                           </span>
-                          <span className="text-xs text-text-muted">
+                          <span className="text-xs text-text-grey">
                             {item.daysUntil === 0
                               ? "• Today!"
                               : item.daysUntil > 0
@@ -638,7 +638,7 @@ export function CalendarBoard({
                         </div>
 
                         <h4 className="text-base font-bold text-text-dark">{item.title}</h4>
-                        <p className="text-xs text-text-muted">
+                        <p className="text-xs text-text-grey">
                           Couple: <span className="font-semibold text-text-dark">{item.clientName}</span>
                           {item.venueName && ` • 📍 ${item.venueName}`}
                           {item.venueCity && `, ${item.venueCity}`}
@@ -649,7 +649,7 @@ export function CalendarBoard({
                     <div className="flex items-center gap-3 shrink-0">
                       {item.totalAmount && (
                         <div className="text-right hidden sm:block">
-                          <p className="text-xs text-text-muted">Total</p>
+                          <p className="text-xs text-text-grey">Total</p>
                           <p className="text-sm font-bold text-text-dark font-mono">
                             ₹{item.totalAmount.toLocaleString("en-IN")}
                           </p>
