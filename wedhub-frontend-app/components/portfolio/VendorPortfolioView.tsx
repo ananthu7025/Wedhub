@@ -8,6 +8,7 @@ import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { formatTelUrl } from "@/lib/utils/whatsapp";
 import { trackEvent } from "@/lib/analytics/track";
 import { VendorPortfolioGallery } from "./VendorPortfolioGallery";
+import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
 import { VendorPortfolioPackages } from "./VendorPortfolioPackages";
 import { VendorPortfolioFeaturedPackages } from "./VendorPortfolioFeaturedPackages";
 import { VendorPortfolioAbout } from "./VendorPortfolioAbout";
@@ -37,6 +38,13 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
   const [enquiryModalOpen, setEnquiryModalOpen] = useState(false);
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>("portfolio");
+  // Pagination state for the portfolio grid below — VendorPortfolioGallery
+  // shows 7 photos per page (see its own PAGE_SIZE), so the header's
+  // prev/next controls need the same page-count math to know when to
+  // disable themselves. Kept in sync manually rather than exposed by the
+  // gallery component itself, since it has no other state to report back.
+  const [portfolioPage, setPortfolioPage] = useState(0);
+  const portfolioPageCount = Math.max(1, Math.ceil(albums.flatMap((a) => a.media).length / 7));
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const profile = vendor.profile;
@@ -343,15 +351,37 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
           ref={(el) => { sectionRefs.current.portfolio = el; }}
           className="scroll-mt-36 pt-10"
         >
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-neutral-900">Work &amp; Moments</h2>
               <p className="text-xs text-neutral-500">
                 A glimpse of {businessName}&apos;s recent work and wedding moments
               </p>
             </div>
+            {portfolioPageCount > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPortfolioPage((p) => Math.max(0, p - 1))}
+                  disabled={portfolioPage === 0}
+                  aria-label="Previous photos"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-500 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPortfolioPage((p) => Math.min(portfolioPageCount - 1, p + 1))}
+                  disabled={portfolioPage >= portfolioPageCount - 1}
+                  aria-label="Next photos"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRightIcon className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
-          <VendorPortfolioGallery albums={albums} businessName={businessName} />
+          <VendorPortfolioGallery albums={albums} businessName={businessName} page={portfolioPage} onPageChange={setPortfolioPage} />
         </section>
 
         {/* About + Featured Packages preview, two-column like the reference — packages surfaced

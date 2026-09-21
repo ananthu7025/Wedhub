@@ -11,6 +11,8 @@ import { MessageVendorButton } from "@/components/shared/MessageVendorButton";
 import { VendorContactLinks } from "@/components/shared/VendorContactLinks";
 import { VendorPortfolioTabs } from "@/components/portfolio/VendorPortfolioTabs";
 import { VendorRatingDistribution } from "@/components/portfolio/VendorRatingDistribution";
+import { MapPinIcon } from "@/components/portfolio/icons";
+import { pickPortfolioQuote } from "@/lib/utils/portfolio-quotes";
 import { CuratedVendorShelf } from "../CuratedVendorShelf";
 import { getVendorAlbums, getVendorBySlug, getVendorReviews, searchVendors } from "@/lib/api/catalog";
 import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
@@ -154,7 +156,11 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
     .filter((name) => name !== vendor.city?.name);
 
   const galleryMedia = albums.flatMap((a) => a.media);
-  const hasAbout = Boolean(vendor.profile?.description) || vendor.attributeValues.length > 0;
+  const hasAbout =
+    Boolean(vendor.profile?.description) ||
+    Boolean(vendor.profile?.address) ||
+    Boolean(vendor.profile?.shortDescription) ||
+    vendor.attributeValues.length > 0;
   const hasPackages = vendor.packages.some((pkg) => pkg.isActive);
   const hasReviews = reviews.length > 0;
   // The fetched review page equals the vendor's real total only when the
@@ -211,13 +217,18 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
             ))}
           </nav>
 
-          {/* Two-column hero: gallery preview on the left, identity +
-              contact card on the right — sticky on desktop so the
-              enquiry/contact actions stay reachable while scrolling. */}
+          {/* Two-column hero: full-bleed cover photo (name/location/tagline
+              overlaid directly on it, matching the reference design) on the
+              left, contact card on the right — sticky on desktop so the
+              enquiry/contact actions stay reachable while scrolling. When
+              there's no cover/portfolio photo at all, falls back to the
+              plain text header this page used before the redesign, since
+              overlaying white text on a solid surface-input box would be
+              illegible. */}
           <div className="grid grid-cols-[1fr_360px] gap-6 max-[900px]:grid-cols-1">
-            <div>
-              {heroImageUrl && (
-                <div className="relative aspect-16/9 w-full overflow-hidden rounded-xl bg-surface-input sm:aspect-21/9">
+            <div className="relative aspect-16/9 w-full overflow-hidden rounded-xl bg-surface-input sm:aspect-21/9">
+              {heroImageUrl ? (
+                <>
                   <Image
                     src={heroImageUrl}
                     alt={vendor.businessName}
@@ -230,48 +241,76 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                       ? { placeholder: "blur" as const, blurDataURL: coverMedia?.blurDataUrl ?? heroMedia?.blurDataUrl ?? undefined }
                       : {})}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-transparent" />
+
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-7">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <h1 className="text-2xl font-bold text-white drop-shadow-sm sm:text-[32px]">{vendor.businessName}</h1>
+                        {verificationLabel && <Badge variant="green">{verificationLabel}</Badge>}
+                      </div>
+                      {vendor.city && (
+                        <p className="mt-1.5 flex items-center gap-1.5 text-sm text-white/90">
+                          <MapPinIcon className="h-4 w-4 flex-shrink-0" />
+                          {vendor.city.name}
+                          {extraServiceAreaCities.length > 0 && ` +${extraServiceAreaCities.length} more city`}
+                        </p>
+                      )}
+                      {vendor.profile?.shortDescription && (
+                        <>
+                          <div className="mt-2.5 h-px w-10 bg-white/50" />
+                          <p className="mt-2 text-sm font-medium text-white/95">{vendor.profile.shortDescription}</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <VendorHeartButton
+                    vendorId={vendor.id}
+                    isAuthenticated={session !== null}
+                    initialFavorited={isFavorited}
+                    className="absolute bottom-5 right-5 h-11 w-11 border-none bg-white shadow-md sm:bottom-7 sm:right-7"
+                  />
+                </>
+              ) : (
+                <div className="flex h-full w-full items-center gap-4 p-6">
+                  {logoImageUrl && (
+                    <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-2 border-white shadow-[var(--shadow-card)]">
+                      <Image
+                        src={logoImageUrl}
+                        alt={vendor.businessName}
+                        fill
+                        sizes="64px"
+                        className="object-cover"
+                        unoptimized={isPreOptimizedMediaUrl(logoImageUrl)}
+                        {...(logoMedia?.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoMedia.blurDataUrl } : {})}
+                      />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <h1 className="text-2xl font-bold">{vendor.businessName}</h1>
+                      {verificationLabel && <Badge variant="green">{verificationLabel}</Badge>}
+                    </div>
+                    {vendor.city && (
+                      <p className="mt-1 flex items-center gap-1.5 text-sm text-text-grey">
+                        <MapPinIcon className="h-4 w-4 flex-shrink-0" />
+                        {vendor.city.name}
+                        {extraServiceAreaCities.length > 0 && ` +${extraServiceAreaCities.length} more city`}
+                      </p>
+                    )}
+                    {vendor.profile?.shortDescription && (
+                      <p className="mt-1.5 text-sm font-medium text-text-dark">{vendor.profile.shortDescription}</p>
+                    )}
+                  </div>
+                  <VendorHeartButton
+                    vendorId={vendor.id}
+                    isAuthenticated={session !== null}
+                    initialFavorited={isFavorited}
+                    className="static h-10 w-10 flex-shrink-0 border border-border bg-white shadow-none"
+                  />
                 </div>
               )}
-
-              <div className="mt-4 flex items-start gap-4">
-                {logoImageUrl && (
-                  <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-2 border-white shadow-[var(--shadow-card)]">
-                    <Image
-                      src={logoImageUrl}
-                      alt={vendor.businessName}
-                      fill
-                      sizes="64px"
-                      className="object-cover"
-                      unoptimized={isPreOptimizedMediaUrl(logoImageUrl)}
-                      {...(logoMedia?.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoMedia.blurDataUrl } : {})}
-                    />
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <h1 className="text-2xl font-bold">{vendor.businessName}</h1>
-                    {verificationLabel && <Badge variant="green">{verificationLabel}</Badge>}
-                  </div>
-                  <p className="mt-1 text-sm text-text-grey">
-                    {hasRating && (
-                      <>
-                        <span className="font-bold text-text-dark">★ {Number(vendor.averageRating).toFixed(1)}</span>{" "}
-                        ({vendor.reviewCount} review{vendor.reviewCount === 1 ? "" : "s"}){" · "}
-                      </>
-                    )}
-                    {vendor.city && vendor.city.name}
-                    {extraServiceAreaCities.length > 0 && ` +${extraServiceAreaCities.length} more city`}
-                  </p>
-                  {vendor.profile?.address && <p className="mt-0.5 text-xs text-text-grey">{vendor.profile.address}</p>}
-                  {responseTimeLabel && <p className="mt-1.5 text-xs font-medium text-emerald-700">{responseTimeLabel}</p>}
-                </div>
-                <VendorHeartButton
-                  vendorId={vendor.id}
-                  isAuthenticated={session !== null}
-                  initialFavorited={isFavorited}
-                  className="static h-10 w-10 flex-shrink-0 border border-border bg-white shadow-none"
-                />
-              </div>
             </div>
 
             <aside>
@@ -306,6 +345,10 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                 >
                   Add to compare
                 </Link>
+
+                {responseTimeLabel && (
+                  <p className="mt-3 text-center text-xs font-medium text-emerald-700">{responseTimeLabel}</p>
+                )}
               </div>
             </aside>
           </div>
@@ -313,8 +356,11 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
           {/* Portfolio */}
           {galleryMedia.length > 0 && (
             <section className="mt-10">
-              <h2 className="mb-4 text-lg font-bold">Portfolio</h2>
-              <VendorPortfolioTabs albums={albums} businessName={vendor.businessName} />
+              <VendorPortfolioTabs
+                albums={albums}
+                businessName={vendor.businessName}
+                quoteTile={{ label: pickPortfolioQuote(vendor.id, primaryCategory?.name) }}
+              />
             </section>
           )}
 
@@ -324,16 +370,25 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                 <section className="mb-10">
                   <h2 className="mb-4 text-lg font-bold">
                     About {vendor.businessName}
-                    {vendor.city ? ` - ${primaryCategory?.name ?? ""}, ${vendor.city.name}` : ""}
+                    {vendor.city ? ` – ${primaryCategory?.name ?? ""}, ${vendor.city.name}` : ""}
                   </h2>
-                  {vendor.profile?.description && (
-                    <p className="whitespace-pre-line text-sm leading-relaxed text-text-body">{vendor.profile.description}</p>
-                  )}
-                  {vendor.attributeValues.length > 0 && (
-                    <div className="mt-5">
-                      <VendorAttributes attributeValues={vendor.attributeValues} />
-                    </div>
-                  )}
+                  <div className="rounded-xl bg-crimson-10/40 p-6">
+                    {vendor.profile?.description && (
+                      <p className="mb-5 whitespace-pre-line text-sm leading-relaxed text-text-body">{vendor.profile.description}</p>
+                    )}
+                    {vendor.profile?.address && (
+                      <p className="mb-5 flex items-start gap-2 text-sm text-text-body">
+                        <MapPinIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-crimson-70" />
+                        {vendor.profile.address}
+                      </p>
+                    )}
+                    <VendorAttributes
+                      attributeValues={vendor.attributeValues}
+                      leadingRow={
+                        vendor.profile?.shortDescription ? { label: "Tagline", value: vendor.profile.shortDescription } : undefined
+                      }
+                    />
+                  </div>
                 </section>
               )}
 
