@@ -203,7 +203,7 @@ export async function approveVendor(vendorId: string, adminId: string) {
     adminId,
     toStatus: "APPROVED",
     reason: undefined,
-    allowedFromStatuses: ["PENDING_APPROVAL"],
+    allowedFromStatuses: ["PENDING_APPROVAL", "DRAFT"],
     auditAction: "ADMIN_APPROVED_VENDOR",
     extraData: { approvedAt: new Date(), rejectionReason: null },
   });

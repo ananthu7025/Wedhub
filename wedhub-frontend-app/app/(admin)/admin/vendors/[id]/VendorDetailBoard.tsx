@@ -323,15 +323,15 @@ export function VendorDetailBoard({
             </button>
           </div>
 
-          {(vendor.status === "PENDING_APPROVAL" || vendor.status === "APPROVED" || vendor.status === "SUSPENDED") && (
+          {(vendor.status === "PENDING_APPROVAL" || vendor.status === "DRAFT" || vendor.status === "APPROVED" || vendor.status === "SUSPENDED") && (
             <div className="rounded-xl border border-border bg-white p-6">
               <h3 className="mb-4 text-base font-bold">
-                {vendor.status === "PENDING_APPROVAL" ? "Approve or reject" : vendor.status === "APPROVED" ? "Suspend" : "Restore"}
+                {vendor.status === "PENDING_APPROVAL" || vendor.status === "DRAFT" ? "Approve or reject" : vendor.status === "APPROVED" ? "Suspend" : "Restore"}
               </h3>
               {vendor.status !== "SUSPENDED" && (
                 <label className="mb-3 block">
                   <span className="mb-1.5 block text-xs font-semibold text-text-grey">
-                    Reason {vendor.status === "PENDING_APPROVAL" ? "(required to reject)" : "(required to suspend)"}
+                    Reason {vendor.status === "PENDING_APPROVAL" || vendor.status === "DRAFT" ? "(required to reject)" : "(required to suspend)"}
                   </span>
                   <textarea
                     value={reason}
@@ -343,7 +343,7 @@ export function VendorDetailBoard({
                 </label>
               )}
               <div className="flex flex-wrap gap-2">
-                {vendor.status === "PENDING_APPROVAL" && (
+                {(vendor.status === "PENDING_APPROVAL" || vendor.status === "DRAFT") && (
                   <>
                     <button
                       onClick={handleApprove}

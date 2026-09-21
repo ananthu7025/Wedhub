@@ -31,9 +31,14 @@ const CHECKS: WeightedCheck[] = [
   },
   { label: "At least one package", weight: 5, isMet: (v) => v.packages.length > 0 },
   {
-    label: "A contact method",
-    weight: 10,
-    isMet: (v) => !!(v.profile?.phone || v.profile?.email || v.profile?.website),
+    label: "Contact email",
+    weight: 5,
+    isMet: (v) => !!v.profile?.email,
+  },
+  {
+    label: "Phone number",
+    weight: 5,
+    isMet: (v) => !!v.profile?.phone,
   },
   {
     label: "Category attribute values",
@@ -47,7 +52,8 @@ export const REQUIRED_FOR_SUBMISSION_LABELS = [
   "Full description",
   "Primary category",
   "Primary city",
-  "A contact method",
+  "Contact email",
+  "Phone number",
 ];
 
 export function calculateCompleteness(vendor: VendorWithRelations): CompletenessResult {

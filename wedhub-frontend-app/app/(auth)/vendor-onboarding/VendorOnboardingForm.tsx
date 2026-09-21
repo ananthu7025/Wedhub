@@ -19,6 +19,7 @@ const STEPS = ["Business name", "Category & city", "Pricing & description", "Rev
 
 interface VendorOnboardingDraft {
   businessName: string;
+  phone: string;
   categoryId: string;
   cityId: string;
   startingPrice: string;
@@ -29,6 +30,7 @@ interface VendorOnboardingDraft {
 
 const EMPTY_DRAFT: VendorOnboardingDraft = {
   businessName: "",
+  phone: "",
   categoryId: "",
   cityId: "",
   startingPrice: "",
@@ -80,6 +82,11 @@ export function VendorOnboardingForm() {
 
     if (currentStep === 0) {
       if (!state.businessName.trim()) errors.businessName = "Please enter your business or brand name.";
+      if (!state.phone.trim()) {
+        errors.phone = "Please enter your contact phone number.";
+      } else if (!/^[0-9+ -]{10,15}$/.test(state.phone.trim())) {
+        errors.phone = "Please enter a valid phone number (at least 10 digits).";
+      }
     }
 
     if (currentStep === 1) {
@@ -132,6 +139,7 @@ export function VendorOnboardingForm() {
     }
 
     const profileResult = await upsertMyProfile({
+      phone: state.phone.trim() || undefined,
       shortDescription: state.shortDescription || undefined,
       cityId: state.cityId || undefined,
       startingPrice: state.startingPrice ? Number(state.startingPrice) : undefined,
@@ -193,6 +201,25 @@ export function VendorOnboardingForm() {
             <FieldError message={fieldErrors.businessName} />
             <p className="mt-1.5 text-xs text-text-grey">
               This is the name couples will see on your public storefront and portfolio. You can edit this anytime.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="phone" className="mb-2 block text-xs font-bold tracking-wide uppercase text-text-grey">
+              Contact Phone Number *
+            </label>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="e.g. +91 9876543210"
+              value={state.phone}
+              onChange={(e) => updateField("phone", e.target.value)}
+              disabled={submitting}
+              invalid={!!fieldErrors.phone}
+            />
+            <FieldError message={fieldErrors.phone} />
+            <p className="mt-1.5 text-xs text-text-grey">
+              Couples and clients will contact you directly on this number. Your account email is already linked automatically.
             </p>
           </div>
         </div>
@@ -286,6 +313,9 @@ export function VendorOnboardingForm() {
         <div className="space-y-3 text-sm">
           <p>
             <span className="font-bold">Business name:</span> {state.businessName}
+          </p>
+          <p>
+            <span className="font-bold">Phone number:</span> {state.phone}
           </p>
           <p>
             <span className="font-bold">Category:</span>{" "}

@@ -664,12 +664,16 @@ function ContactSocialSection({ vendor }: { vendor: VendorSelf }) {
           />
           {touched.website && <FieldError message={websiteError} />}
         </label>
-        <div className="mb-3.5 grid grid-cols-2 gap-3">
+        <div className="mb-3.5 grid grid-cols-2 gap-3 max-[600px]:grid-cols-1">
           <label className="block text-sm">
-            <span className="mb-1.5 block font-bold text-[13px]">Phone</span>
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="font-bold text-[13px]">Contact Phone *</span>
+              <span className="text-[11px] font-semibold text-brand-primary">Required</span>
+            </div>
             <Input
               type="tel"
               maxLength={20}
+              placeholder="+91 9876543210"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
@@ -679,7 +683,10 @@ function ContactSocialSection({ vendor }: { vendor: VendorSelf }) {
             {touched.phone && <FieldError message={phoneError} />}
           </label>
           <label className="block text-sm">
-            <span className="mb-1.5 block font-bold text-[13px]">Email</span>
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="font-bold text-[13px]">Contact Email</span>
+              <span className="text-[11px] text-text-grey">From account</span>
+            </div>
             <Input
               type="email"
               value={email}

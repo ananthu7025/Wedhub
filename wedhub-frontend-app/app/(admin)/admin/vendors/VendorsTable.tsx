@@ -228,7 +228,7 @@ export function VendorsTable({
                       >
                         View
                       </Link>
-                      {vendor.status === "PENDING_APPROVAL" && (
+                      {(vendor.status === "PENDING_APPROVAL" || vendor.status === "DRAFT") && (
                         <button
                           onClick={() => handleApprove(vendor.id)}
                           className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-text-dark hover:bg-surface-input"

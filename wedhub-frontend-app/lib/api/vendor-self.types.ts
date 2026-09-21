@@ -409,6 +409,7 @@ export const COMPLETENESS_CHECKS: Array<{ label: string; weight: number; require
   { label: "At least one service area", weight: 5, requiredForSubmission: false },
   { label: "Pricing information", weight: 10, requiredForSubmission: false },
   { label: "At least one package", weight: 5, requiredForSubmission: false },
-  { label: "A contact method", weight: 10, requiredForSubmission: true },
+  { label: "Contact email", weight: 5, requiredForSubmission: true },
+  { label: "Phone number", weight: 5, requiredForSubmission: true },
   { label: "Category attribute values", weight: 5, requiredForSubmission: false },
 ];

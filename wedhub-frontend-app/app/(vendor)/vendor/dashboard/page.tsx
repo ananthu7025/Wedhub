@@ -66,8 +66,10 @@ function isChecklistItemMet(label: string, vendor: Awaited<ReturnType<typeof req
       return vendor.profile?.startingPrice != null || vendor.profile?.customQuoteAvailable === true;
     case "At least one package":
       return vendor.packages.length > 0;
-    case "A contact method":
-      return !!(vendor.profile?.phone || vendor.profile?.email || vendor.profile?.website);
+    case "Contact email":
+      return !!vendor.profile?.email;
+    case "Phone number":
+      return !!vendor.profile?.phone;
     case "Category attribute values":
       return vendor.attributeValues.length > 0;
     default:

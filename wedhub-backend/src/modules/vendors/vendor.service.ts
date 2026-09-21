@@ -30,6 +30,11 @@ export async function createVendorForOwner(ownerUserId: string, input: CreateVen
     throw new ConflictError("You already have a vendor profile");
   }
 
+  const ownerUser = await prisma.user.findUnique({
+    where: { id: ownerUserId },
+    select: { email: true, phone: true },
+  });
+
   const slug = await generateUniqueSlug(slugify(input.businessName), async (candidate) =>
     Boolean(await vendorRepository.findVendorBySlugAnyCase(candidate)),
   );
@@ -40,6 +45,12 @@ export async function createVendorForOwner(ownerUserId: string, input: CreateVen
     ownerUserId,
   });
 
+  // Automatically seed initial VendorProfile with owner's registration/login email
+  await vendorRepository.upsertVendorProfile(vendor.id, {
+    email: ownerUser?.email ?? null,
+    phone: ownerUser?.phone ?? null,
+  });
+
   await vendorRepository.recordStatusChange({
     vendorId: vendor.id,
     fromStatus: null,
@@ -47,6 +58,8 @@ export async function createVendorForOwner(ownerUserId: string, input: CreateVen
     reason: undefined,
     changedByUserId: ownerUserId,
   });
+
+  await recalculateCompleteness(vendor.id);
 
   return vendor;
 }
@@ -79,8 +92,25 @@ export async function upsertProfile(vendorId: string, input: UpsertVendorProfile
     assertOwnReadyMediaOrNull(vendorId, coverMediaId),
   ]);
 
+  // If email was not explicitly provided in input, and profile doesn't have an email yet,
+  // default to owner's login email
+  let resolvedEmail = profileFields.email;
+  if (resolvedEmail === undefined) {
+    const existing = await vendorRepository.findVendorById(vendorId);
+    if (!existing?.profile?.email && existing?.ownerUserId) {
+      const owner = await prisma.user.findUnique({
+        where: { id: existing.ownerUserId },
+        select: { email: true },
+      });
+      if (owner?.email) {
+        resolvedEmail = owner.email;
+      }
+    }
+  }
+
   const results = await vendorRepository.upsertProfileTx(vendorId, cityId, {
     ...profileFields,
+    ...(resolvedEmail !== undefined ? { email: resolvedEmail } : {}),
     logoMediaId,
     coverMediaId,
   });
