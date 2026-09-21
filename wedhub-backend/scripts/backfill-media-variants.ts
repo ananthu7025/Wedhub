@@ -96,9 +96,39 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item
 }
 
 async function backfillOne(
-  media: { id: string; originalObjectKey: string; optimizedObjectKey: string | null; thumbnailObjectKey: string | null; blurDataUrl: string | null },
+  media: {
+    id: string;
+    originalObjectKey: string;
+    optimizedObjectKey: string | null;
+    thumbnailObjectKey: string | null;
+    blurDataUrl: string | null;
+    mediaType: string;
+    status: string;
+  },
   options: CliOptions,
 ): Promise<BackfillResult> {
+  // VIDEO rows must never reach generateMediaVariants() — it's Sharp-based
+  // (image-only) and throws on a video file. Before the mediaType branch
+  // was added to media-processing.processor.ts, every uploaded video threw
+  // there too and got permanently stuck at status "FAILED" — this backfill
+  // script's original OR-null-column query would happily pick those rows
+  // back up (a FAILED video has every variant column null) and immediately
+  // fail them again on the exact same Sharp call. The fix here mirrors the
+  // worker's own fix: a video just needs its status flipped to READY, no
+  // resize pipeline applies to it at all (see media-processing.processor.ts's
+  // comment on this for the full reasoning).
+  if (media.mediaType === "VIDEO") {
+    if (media.status === "READY") {
+      return { mediaId: media.id, outcome: "skipped-already-complete" };
+    }
+    if (!options.apply) {
+      return { mediaId: media.id, outcome: "would-update" };
+    }
+    await prisma.media.update({ where: { id: media.id }, data: { status: "READY" } });
+    logger.info({ mediaId: media.id }, "Backfill: video media marked READY (no resize pipeline)");
+    return { mediaId: media.id, outcome: "updated" };
+  }
+
   const needsVariants = options.force || !media.optimizedObjectKey || !media.thumbnailObjectKey || !media.blurDataUrl;
   if (!needsVariants) {
     return { mediaId: media.id, outcome: "skipped-already-complete" };
@@ -167,7 +197,15 @@ async function main(): Promise<void> {
 
   const candidates = await prisma.media.findMany({
     where,
-    select: { id: true, originalObjectKey: true, optimizedObjectKey: true, thumbnailObjectKey: true, blurDataUrl: true },
+    select: {
+      id: true,
+      originalObjectKey: true,
+      optimizedObjectKey: true,
+      thumbnailObjectKey: true,
+      blurDataUrl: true,
+      mediaType: true,
+      status: true,
+    },
     orderBy: { createdAt: "asc" },
     ...(options.limit ? { take: options.limit } : {}),
   });

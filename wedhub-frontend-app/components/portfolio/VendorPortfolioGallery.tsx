@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import type { VendorAlbum, AlbumMedia } from "@/lib/api/vendors.types";
-import { CloseIcon, ChevronLeftIcon, ChevronRightIcon } from "./icons";
+import { CloseIcon, ChevronLeftIcon, ChevronRightIcon, PlayIcon } from "./icons";
 
 interface VendorPortfolioGalleryProps {
   albums: VendorAlbum[];
@@ -81,10 +81,15 @@ export function VendorPortfolioGallery({ albums, businessName }: VendorPortfolio
       {/* Asymmetric grid — first tile spans two rows on larger screens, mirroring the reference layout */}
       <div className="grid grid-cols-2 sm:grid-cols-4 grid-flow-dense gap-3 sm:gap-4">
         {visibleMedia.map((media, index) => {
-          const key =
-            media.thumbnailObjectKey ??
-            media.optimizedObjectKey ??
-            media.originalObjectKey;
+          const isVideo = media.mediaType === "VIDEO";
+          // A VIDEO row is never processed through the image resize
+          // pipeline (see media-processing.processor.ts) — it has no
+          // thumbnailObjectKey/optimizedObjectKey/blurDataUrl to fall back
+          // through, only its original upload, which isn't a valid
+          // next/image source at all. The grid tile for a video shows a
+          // plain dark tile with a play icon instead of attempting to
+          // decode the video file as an image.
+          const key = media.thumbnailObjectKey ?? media.optimizedObjectKey ?? media.originalObjectKey;
           const url = getPublicMediaUrl(key);
           const isFeature = index === 0;
           const isLastVisible = hasOverflow && index === visibleMedia.length - 1;
@@ -99,15 +104,23 @@ export function VendorPortfolioGallery({ albums, businessName }: VendorPortfolio
                   : "aspect-square"
               }`}
             >
-              <Image
-                src={url}
-                alt={media.altText ?? `${businessName} portfolio`}
-                fill
-                sizes={isFeature ? "(max-width: 640px) 100vw, 50vw" : "(max-width: 640px) 50vw, 25vw"}
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                unoptimized={isPreOptimizedMediaUrl(url)}
-                {...(media.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: media.blurDataUrl } : {})}
-              />
+              {isVideo ? (
+                <div className="flex h-full w-full items-center justify-center bg-neutral-800">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-neutral-900 shadow-md transition-transform group-hover:scale-110">
+                    <PlayIcon className="ml-0.5 h-5 w-5" />
+                  </span>
+                </div>
+              ) : (
+                <Image
+                  src={url}
+                  alt={media.altText ?? `${businessName} portfolio`}
+                  fill
+                  sizes={isFeature ? "(max-width: 640px) 100vw, 50vw" : "(max-width: 640px) 50vw, 25vw"}
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  unoptimized={isPreOptimizedMediaUrl(url)}
+                  {...(media.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: media.blurDataUrl } : {})}
+                />
+              )}
 
               {isLastVisible ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-black/60 text-white">
@@ -172,19 +185,33 @@ export function VendorPortfolioGallery({ albums, businessName }: VendorPortfolio
             </button>
           )}
 
-          {/* Large image */}
+          {/* Large image / video */}
           <div
             className="relative max-h-[85vh] max-w-[90vw] overflow-hidden rounded-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getPublicMediaUrl(
-                activeMedia.optimizedObjectKey ?? activeMedia.originalObjectKey
-              )}
-              alt={activeMedia.altText ?? businessName}
-              className="max-h-[85vh] max-w-[90vw] object-contain"
-            />
+            {activeMedia.mediaType === "VIDEO" ? (
+              // No optimizedObjectKey exists for video (never processed —
+              // see the grid tile's comment above) — originalObjectKey is
+              // the only playable source. autoPlay is intentionally
+              // omitted: a visitor opening the lightbox to browse a photo
+              // grid shouldn't have unrequested video/audio start playing;
+              // controls lets them start it themselves.
+              <video
+                key={activeMedia.id}
+                src={getPublicMediaUrl(activeMedia.originalObjectKey)}
+                controls
+                playsInline
+                className="max-h-[85vh] max-w-[90vw]"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={getPublicMediaUrl(activeMedia.optimizedObjectKey ?? activeMedia.originalObjectKey)}
+                alt={activeMedia.altText ?? businessName}
+                className="max-h-[85vh] max-w-[90vw] object-contain"
+              />
+            )}
             {activeMedia.altText && (
               <p className="mt-2 text-center text-xs text-white/80">
                 {activeMedia.altText}

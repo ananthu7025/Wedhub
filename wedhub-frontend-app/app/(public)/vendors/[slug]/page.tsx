@@ -9,7 +9,10 @@ import { EnquiryCta } from "@/components/shared/EnquiryCta";
 import { JsonLd } from "@/components/shared/JsonLd";
 import { MessageVendorButton } from "@/components/shared/MessageVendorButton";
 import { VendorContactLinks } from "@/components/shared/VendorContactLinks";
-import { getVendorAlbums, getVendorBySlug, getVendorReviews } from "@/lib/api/catalog";
+import { VendorPortfolioTabs } from "@/components/portfolio/VendorPortfolioTabs";
+import { VendorRatingDistribution } from "@/components/portfolio/VendorRatingDistribution";
+import { CuratedVendorShelf } from "../CuratedVendorShelf";
+import { getVendorAlbums, getVendorBySlug, getVendorReviews, searchVendors } from "@/lib/api/catalog";
 import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { formatResponseTimeBucket } from "@/lib/utils/response-time";
 import { ApiRequestError } from "@/lib/api/types";
@@ -87,12 +90,23 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
   const { slug } = await params;
   const vendor = await loadVendor(slug);
 
-  const [{ data: albums }, reviewsResult, session] = await Promise.all([
+  const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? vendor.categories[0]?.category;
+
+  const [{ data: albums }, reviewsResult, session, similarResult] = await Promise.all([
     getVendorAlbums(slug),
-    getVendorReviews(vendor.id, 1, 10).catch(() => ({ data: [], meta: undefined })),
+    // limit=50: high enough that the fetched page equals the vendor's real
+    // total for the overwhelming majority of vendors on this marketplace
+    // today (rating distribution below only renders when it genuinely
+    // does — see VendorRatingDistribution's own doc comment for why a
+    // partial sample is never shown as if it were complete).
+    getVendorReviews(vendor.id, 1, 50).catch(() => ({ data: [], meta: undefined })),
     getOptionalSession(),
+    primaryCategory
+      ? searchVendors({ categoryId: primaryCategory.id, limit: 12 }).catch(() => ({ data: [], meta: undefined }))
+      : Promise.resolve({ data: [], meta: undefined }),
   ]);
   const reviews = reviewsResult.data;
+  const similarVendors = similarResult.data.filter((v) => v.id !== vendor.id).slice(0, 10);
 
   // Seeds the heart button with real shortlist membership instead of always
   // starting "unfavorited" (which made un-hearting an already-shortlisted
@@ -108,7 +122,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
   // public album photo if no cover image is set; logo falls back to the
   // first-letter badge.
   const coverMedia = vendor.profile?.coverMedia;
-  const heroMedia = albums[0]?.media[0];
+  const heroMedia = albums[0]?.media.find((m) => m.mediaType === "IMAGE");
   const heroImageKey =
     coverMedia?.optimizedObjectKey ??
     coverMedia?.originalObjectKey ??
@@ -117,15 +131,31 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
   const heroImageUrl = heroImageKey ? getPublicMediaUrl(heroImageKey) : null;
 
   const logoMedia = vendor.profile?.logoMedia;
-  // Rendered into a 128px badge (see the h-32 w-32 box below) — the
-  // 300px thumbnail variant is already more than enough resolution, no
-  // need to request the 800px "medium" variant for this.
+  // Rendered into a compact circular badge — the 300px thumbnail variant is
+  // already more than enough resolution, no need to request the 800px
+  // "medium" variant for this.
   const logoImageKey = logoMedia?.thumbnailObjectKey ?? logoMedia?.optimizedObjectKey ?? logoMedia?.originalObjectKey;
   const logoImageUrl = logoImageKey ? getPublicMediaUrl(logoImageKey) : null;
 
   const verificationLabel = VERIFICATION_LABEL[vendor.verificationLevel];
-  const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? vendor.categories[0]?.category;
   const responseTimeLabel = formatResponseTimeBucket(vendor.avgResponseTimeMs);
+  const hasRating = Number(vendor.averageRating) > 0;
+
+  // Real, additional service-area cities beyond the vendor's home city — a
+  // genuine "+N more city" line only when there's real data behind it, not
+  // a decorative count.
+  const extraServiceAreaCities = vendor.serviceAreas
+    .map((sa) => sa.location.name)
+    .filter((name) => name !== vendor.city?.name);
+
+  const galleryMedia = albums.flatMap((a) => a.media);
+  const hasAbout = Boolean(vendor.profile?.description) || vendor.attributeValues.length > 0;
+  const hasPackages = vendor.packages.some((pkg) => pkg.isActive);
+  const hasReviews = reviews.length > 0;
+  // The fetched review page equals the vendor's real total only when the
+  // count matches — see VendorRatingDistribution's own comment on why a
+  // partial sample must never be shown as if it were a complete breakdown.
+  const reviewsAreComplete = reviews.length === vendor.reviewCount;
 
   const breadcrumbItems = [
     { name: "Home", path: "/" },
@@ -159,257 +189,262 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
       />
       <PublicTopbar />
 
-      <div className="relative h-80 bg-surface-input max-[900px]:h-52">
-        {heroImageUrl && (
-          <Image
-            src={heroImageUrl}
-            alt={vendor.businessName}
-            fill
-            sizes="100vw"
-            className="object-cover"
-            priority
-            unoptimized={isPreOptimizedMediaUrl(heroImageUrl)}
-            {...(coverMedia?.blurDataUrl ?? heroMedia?.blurDataUrl
-              ? { placeholder: "blur" as const, blurDataURL: coverMedia?.blurDataUrl ?? heroMedia?.blurDataUrl ?? undefined }
-              : {})}
-          />
-        )}
-      </div>
-
-      <div className="mx-auto max-w-[1200px] px-10 max-[900px]:px-4">
-        <nav className="mb-4 pt-5 text-xs text-text-grey" aria-label="Breadcrumb">
-          {breadcrumbItems.map((item, index) => (
-            <span key={item.path}>
-              {index > 0 && " / "}
-              {index === breadcrumbItems.length - 1 ? (
-                <span aria-current="page">{item.name}</span>
-              ) : (
-                <Link href={item.path} className="no-underline hover:underline">
-                  {item.name}
-                </Link>
-              )}
-            </span>
-          ))}
-        </nav>
-
-        <div className="-mt-4 flex items-end gap-5 max-[900px]:flex-wrap">
-          <div className="relative flex h-32 w-32 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-surface-input text-3xl font-bold text-text-grey shadow-[var(--shadow-card)]">
-            {logoImageUrl ? (
-              <Image
-                src={logoImageUrl}
-                alt={vendor.businessName}
-                fill
-                sizes="128px"
-                className="object-cover"
-                unoptimized={isPreOptimizedMediaUrl(logoImageUrl)}
-                {...(logoMedia?.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoMedia.blurDataUrl } : {})}
-              />
-            ) : (
-              vendor.businessName.charAt(0)
-            )}
-          </div>
-          <div className="flex-1 pb-2">
-            <div className="mb-1 inline-flex flex-wrap items-center gap-2.5 bg-white">
-              <h1 className="text-[26px] font-bold">{vendor.businessName}</h1>
-              {verificationLabel && <Badge variant="green">{verificationLabel}</Badge>}
-            </div>
-            <p className="text-[13px] text-text-grey">
-              {Number(vendor.averageRating) > 0 && <>★ {Number(vendor.averageRating).toFixed(1)} ({vendor.reviewCount} reviews) · </>}
-              {primaryCategory?.name}
-              {vendor.city && <> · {vendor.city.name}</>}
-              {vendor.profile?.yearsExperience !== null && vendor.profile?.yearsExperience !== undefined && (
-                <> · {vendor.profile.yearsExperience} yrs experience</>
-              )}
-            </p>
-            {responseTimeLabel && <p className="mt-1 text-[12px] font-medium text-emerald-700">{responseTimeLabel}</p>}
-          </div>
-          <div className="flex items-center gap-2.5 pb-2">
-            <VendorHeartButton
-              vendorId={vendor.id}
-              isAuthenticated={session !== null}
-              initialFavorited={isFavorited}
-              className="static h-10 w-10 border border-border bg-white shadow-none"
-            />
-            <Link
-              href={`/shortlist?compareVendorId=${vendor.id}`}
-              className="rounded-md border border-border bg-white px-4 py-2.5 text-sm font-bold text-text-dark no-underline hover:bg-surface-input"
-            >
-              Add to compare
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-8 grid grid-cols-[1fr_340px] gap-7 max-[900px]:grid-cols-1">
-          <main className="max-[900px]:order-2">
-            {(vendor.profile?.description || vendor.attributeValues.length > 0) && (
-              <section className="mb-9">
-                <h2 className="mb-4 text-lg font-bold">About</h2>
-                {vendor.profile?.description && (
-                  <p className="text-sm leading-relaxed text-text-body">{vendor.profile.description}</p>
+      <div className="bg-surface-page">
+        <div className="mx-auto max-w-[1200px] px-4 py-4 sm:px-6">
+          <nav className="mb-4 text-xs text-text-grey" aria-label="Breadcrumb">
+            {breadcrumbItems.map((item, index) => (
+              <span key={item.path}>
+                {index > 0 && " / "}
+                {index === breadcrumbItems.length - 1 ? (
+                  <span aria-current="page">{item.name}</span>
+                ) : (
+                  <Link href={item.path} className="no-underline hover:underline">
+                    {item.name}
+                  </Link>
                 )}
-                {vendor.attributeValues.length > 0 && (
-                  <div className="mt-5">
-                    <VendorAttributes attributeValues={vendor.attributeValues} />
+              </span>
+            ))}
+          </nav>
+
+          {/* Two-column hero: gallery preview on the left, identity +
+              contact card on the right — sticky on desktop so the
+              enquiry/contact actions stay reachable while scrolling. */}
+          <div className="grid grid-cols-[1fr_360px] gap-6 max-[900px]:grid-cols-1">
+            <div>
+              {heroImageUrl && (
+                <div className="relative aspect-16/9 w-full overflow-hidden rounded-xl bg-surface-input sm:aspect-21/9">
+                  <Image
+                    src={heroImageUrl}
+                    alt={vendor.businessName}
+                    fill
+                    sizes="(max-width: 900px) 100vw, 800px"
+                    className="object-cover"
+                    priority
+                    unoptimized={isPreOptimizedMediaUrl(heroImageUrl)}
+                    {...(coverMedia?.blurDataUrl ?? heroMedia?.blurDataUrl
+                      ? { placeholder: "blur" as const, blurDataURL: coverMedia?.blurDataUrl ?? heroMedia?.blurDataUrl ?? undefined }
+                      : {})}
+                  />
+                </div>
+              )}
+
+              <div className="mt-4 flex items-start gap-4">
+                {logoImageUrl && (
+                  <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-2 border-white shadow-[var(--shadow-card)]">
+                    <Image
+                      src={logoImageUrl}
+                      alt={vendor.businessName}
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                      unoptimized={isPreOptimizedMediaUrl(logoImageUrl)}
+                      {...(logoMedia?.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoMedia.blurDataUrl } : {})}
+                    />
                   </div>
                 )}
-              </section>
-            )}
-
-            <section className="mb-9">
-              <h2 className="mb-4 text-lg font-bold">Portfolio</h2>
-              {albums.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2.5 max-[900px]:grid-cols-2">
-                  {albums
-                    .flatMap((album) => album.media)
-                    .slice(0, 9)
-                    .map((media) => {
-                      const key = media.thumbnailObjectKey ?? media.optimizedObjectKey ?? media.originalObjectKey;
-                      const mediaUrl = getPublicMediaUrl(key);
-                      return (
-                        <div key={media.id} className="relative aspect-square overflow-hidden rounded-md bg-surface-input">
-                          <Image
-                            src={mediaUrl}
-                            alt={media.altText ?? vendor.businessName}
-                            fill
-                            sizes="(max-width: 900px) 50vw, 25vw"
-                            className="object-cover"
-                            unoptimized={isPreOptimizedMediaUrl(mediaUrl)}
-                            {...(media.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: media.blurDataUrl } : {})}
-                          />
-                        </div>
-                      );
-                    })}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h1 className="text-2xl font-bold">{vendor.businessName}</h1>
+                    {verificationLabel && <Badge variant="green">{verificationLabel}</Badge>}
+                  </div>
+                  <p className="mt-1 text-sm text-text-grey">
+                    {hasRating && (
+                      <>
+                        <span className="font-bold text-text-dark">★ {Number(vendor.averageRating).toFixed(1)}</span>{" "}
+                        ({vendor.reviewCount} review{vendor.reviewCount === 1 ? "" : "s"}){" · "}
+                      </>
+                    )}
+                    {vendor.city && vendor.city.name}
+                    {extraServiceAreaCities.length > 0 && ` +${extraServiceAreaCities.length} more city`}
+                  </p>
+                  {vendor.profile?.address && <p className="mt-0.5 text-xs text-text-grey">{vendor.profile.address}</p>}
+                  {responseTimeLabel && <p className="mt-1.5 text-xs font-medium text-emerald-700">{responseTimeLabel}</p>}
                 </div>
-              ) : (
-                <p className="text-sm text-text-grey">Portfolio photos are being prepared. Check back soon.</p>
-              )}
-            </section>
+                <VendorHeartButton
+                  vendorId={vendor.id}
+                  isAuthenticated={session !== null}
+                  initialFavorited={isFavorited}
+                  className="static h-10 w-10 flex-shrink-0 border border-border bg-white shadow-none"
+                />
+              </div>
+            </div>
 
-            <section className="mb-9">
-              <h2 className="mb-4 text-lg font-bold">Packages &amp; Pricing</h2>
-              {vendor.packages.length > 0 ? (
-                <>
+            <aside>
+              <div className="sticky top-[90px] rounded-xl border border-border bg-white p-5 shadow-[var(--shadow-card)]">
+                {vendor.profile?.startingPrice && (
+                  <div className="mb-4 border-b border-border pb-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-text-grey">Starting Price</p>
+                    <p className="text-xl font-bold">
+                      {vendor.profile.currency === "INR" ? "₹" : vendor.profile.currency}
+                      {Number(vendor.profile.startingPrice).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                )}
+
+                <EnquiryCta vendorId={vendor.id} vendorName={vendor.businessName} isAuthenticated={session !== null} />
+
+                <MessageVendorButton vendorId={vendor.id} vendorName={vendor.businessName} isAuthenticated={session !== null} />
+
+                <div className="mt-4 border-t border-border pt-4">
+                  <VendorContactLinks
+                    vendorId={vendor.id}
+                    vendorSlug={vendor.slug}
+                    businessName={vendor.businessName}
+                    isAuthenticated={session !== null}
+                    hasAnyContactInfo={Boolean(vendor.profile?.hasContactInfo)}
+                  />
+                </div>
+
+                <Link
+                  href={`/shortlist?compareVendorId=${vendor.id}`}
+                  className="mt-3 block w-full rounded-md border border-border bg-white py-2.5 text-center text-xs font-bold text-text-dark no-underline hover:bg-surface-input"
+                >
+                  Add to compare
+                </Link>
+              </div>
+            </aside>
+          </div>
+
+          {/* Portfolio */}
+          {galleryMedia.length > 0 && (
+            <section className="mt-10">
+              <h2 className="mb-4 text-lg font-bold">Portfolio</h2>
+              <VendorPortfolioTabs albums={albums} businessName={vendor.businessName} />
+            </section>
+          )}
+
+          <div className="mt-10 grid grid-cols-[1fr_360px] gap-10 max-[900px]:grid-cols-1">
+            <main className="min-w-0">
+              {hasAbout && (
+                <section className="mb-10">
+                  <h2 className="mb-4 text-lg font-bold">
+                    About {vendor.businessName}
+                    {vendor.city ? ` - ${primaryCategory?.name ?? ""}, ${vendor.city.name}` : ""}
+                  </h2>
+                  {vendor.profile?.description && (
+                    <p className="whitespace-pre-line text-sm leading-relaxed text-text-body">{vendor.profile.description}</p>
+                  )}
+                  {vendor.attributeValues.length > 0 && (
+                    <div className="mt-5">
+                      <VendorAttributes attributeValues={vendor.attributeValues} />
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {hasPackages && (
+                <section className="mb-10">
+                  <h2 className="mb-4 text-lg font-bold">Packages &amp; Pricing</h2>
                   {vendor.packages
                     .filter((pkg) => pkg.isActive)
                     .map((pkg) => {
-                      const imageKey =
-                        pkg.image?.thumbnailObjectKey ?? pkg.image?.optimizedObjectKey ?? pkg.image?.originalObjectKey;
+                      const imageKey = pkg.image?.thumbnailObjectKey ?? pkg.image?.optimizedObjectKey ?? pkg.image?.originalObjectKey;
                       return (
-                      <div key={pkg.id} className="mb-3.5 flex gap-4 rounded-xl border border-border p-5">
-                        {imageKey && (
-                          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-surface-input">
-                            <Image src={getPublicMediaUrl(imageKey)} alt={pkg.name} fill sizes="64px" className="object-cover" />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-2 flex items-baseline justify-between">
-                            <span className="text-[15px] font-bold">{pkg.name}</span>
-                            <span className="text-base font-bold text-brand-primary">
-                              {pkg.currency === "INR" ? "₹" : pkg.currency} {Number(pkg.price).toLocaleString("en-IN")}
-                            </span>
-                          </div>
-                          {pkg.description && <p className="mb-2 text-[13px] text-text-grey">{pkg.description}</p>}
-                          {pkg.inclusions.length > 0 && (
-                            <ul className="mt-2.5 list-disc pl-4.5 text-[13px] leading-loose text-text-body">
-                              {pkg.inclusions.map((item) => (
-                                <li key={item}>{item}</li>
-                              ))}
-                            </ul>
+                        <div key={pkg.id} className="mb-3.5 flex gap-4 rounded-xl border border-border p-5">
+                          {imageKey && (
+                            <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-surface-input">
+                              <Image src={getPublicMediaUrl(imageKey)} alt={pkg.name} fill sizes="64px" className="object-cover" />
+                            </div>
                           )}
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-2 flex items-baseline justify-between gap-2">
+                              <span className="text-[15px] font-bold">{pkg.name}</span>
+                              <span className="whitespace-nowrap text-base font-bold text-brand-primary">
+                                {pkg.currency === "INR" ? "₹" : pkg.currency} {Number(pkg.price).toLocaleString("en-IN")}
+                              </span>
+                            </div>
+                            {pkg.description && <p className="mb-2 text-[13px] text-text-grey">{pkg.description}</p>}
+                            {pkg.inclusions.length > 0 && (
+                              <ul className="mt-2.5 list-disc pl-4.5 text-[13px] leading-loose text-text-body">
+                                {pkg.inclusions.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
                         </div>
-                      </div>
                       );
                     })}
                   {vendor.profile?.customQuoteAvailable && (
                     <p className="text-[13px] text-text-grey">Custom quotations available on request.</p>
                   )}
-                </>
-              ) : (
-                <p className="text-sm text-text-grey">No packages listed yet. Contact the vendor for pricing.</p>
-              )}
-            </section>
-
-            <section>
-              <h2 className="mb-4 text-lg font-bold">Reviews</h2>
-              {Number(vendor.averageRating) > 0 && (
-                <div className="mb-6 flex items-center gap-5">
-                  <div className="text-[44px] font-bold">{Number(vendor.averageRating).toFixed(1)}</div>
-                  <div className="text-sm text-text-grey">{vendor.reviewCount} review{vendor.reviewCount === 1 ? "" : "s"}</div>
-                </div>
+                </section>
               )}
 
-              {reviews.length === 0 ? (
-                <p className="text-sm text-text-grey">No reviews yet.</p>
-              ) : (
-                reviews.map((review) => (
-                  <div key={review.id} className="border-b border-neutral-grey-20 py-4.5 last:border-b-0">
-                    <div className="mb-1 text-[#f0a202]">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</div>
-                    {review.title && <div className="mb-1 text-sm font-bold">{review.title}</div>}
-                    {review.content && <p className="mb-2 text-[13px] leading-relaxed">{review.content}</p>}
-                    {review.verifiedInteraction && <Badge variant="green">✓ Verified booking</Badge>}
-                    {review.photos.length > 0 && (
-                      <div className="mt-2.5 flex gap-2">
-                        {review.photos.map((photo) => {
-                          const key = photo.thumbnailObjectKey ?? photo.optimizedObjectKey ?? photo.originalObjectKey;
-                          return (
-                            <div key={photo.id} className="relative h-16 w-16 overflow-hidden rounded-md bg-surface-input">
-                              <Image
-                                src={getPublicMediaUrl(key)}
-                                alt={`Review photo for ${vendor.businessName}`}
-                                fill
-                                sizes="64px"
-                                className="object-cover"
-                              />
-                            </div>
-                          );
-                        })}
+              {hasReviews && (
+                <section>
+                  <h2 className="mb-4 text-lg font-bold">
+                    Reviews for {vendor.businessName} ({vendor.reviewCount})
+                  </h2>
+
+                  <div className="mb-6 grid grid-cols-[auto_1fr] gap-8 rounded-xl border border-border p-5 max-[600px]:grid-cols-1">
+                    <div className="text-center">
+                      <div className="text-[44px] font-bold leading-none">{Number(vendor.averageRating).toFixed(1)}</div>
+                      <div className="mt-1 text-xs text-text-grey">
+                        {vendor.reviewCount} review{vendor.reviewCount === 1 ? "" : "s"}
                       </div>
-                    )}
-                    {review.vendorResponse && (
-                      <div className="mt-2.5 rounded-md bg-surface-input p-3.5 text-[13px]">
-                        <strong className="mb-1 block text-xs">Response from {vendor.businessName}</strong>
-                        {review.vendorResponse}
+                    </div>
+                    {reviewsAreComplete && (
+                      <div className="flex flex-col justify-center">
+                        <VendorRatingDistribution reviews={reviews} />
                       </div>
                     )}
                   </div>
-                ))
+
+                  {reviews.map((review) => (
+                    <div key={review.id} className="border-b border-neutral-grey-20 py-4.5 last:border-b-0">
+                      <div className="mb-1 text-[#f0a202]">
+                        {"★".repeat(review.rating)}
+                        {"☆".repeat(5 - review.rating)}
+                      </div>
+                      {review.title && <div className="mb-1 text-sm font-bold">{review.title}</div>}
+                      {review.content && <p className="mb-2 text-[13px] leading-relaxed">{review.content}</p>}
+                      {review.verifiedInteraction && <Badge variant="green">✓ Verified booking</Badge>}
+                      {review.photos.length > 0 && (
+                        <div className="mt-2.5 flex gap-2">
+                          {review.photos.map((photo) => {
+                            const key = photo.thumbnailObjectKey ?? photo.optimizedObjectKey ?? photo.originalObjectKey;
+                            return (
+                              <div key={photo.id} className="relative h-16 w-16 overflow-hidden rounded-md bg-surface-input">
+                                <Image
+                                  src={getPublicMediaUrl(key)}
+                                  alt={`Review photo for ${vendor.businessName}`}
+                                  fill
+                                  sizes="64px"
+                                  className="object-cover"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {review.vendorResponse && (
+                        <div className="mt-2.5 rounded-md bg-surface-input p-3.5 text-[13px]">
+                          <strong className="mb-1 block text-xs">Response from {vendor.businessName}</strong>
+                          {review.vendorResponse}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </section>
               )}
-            </section>
-          </main>
+            </main>
 
-          <aside className="max-[900px]:order-1">
-            <div className="sticky top-[90px] max-[900px]:static rounded-xl border border-border bg-white p-6 shadow-[var(--shadow-card)]">
-              {vendor.profile?.startingPrice && (
-                <p className="mb-1 text-xl font-bold">
-                  {vendor.profile.currency === "INR" ? "₹" : vendor.profile.currency}
-                  {Number(vendor.profile.startingPrice).toLocaleString("en-IN")}{" "}
-                  <span className="text-xs font-medium text-text-grey">starting price</span>
-                </p>
-              )}
+            {/* Right rail intentionally left as spacing on desktop — the
+                sticky contact card above already occupies this column; this
+                grid keeps the main content width consistent with the hero
+                above it without a second sticky element competing for
+                attention. */}
+            <div aria-hidden className="max-[900px]:hidden" />
+          </div>
 
-              <EnquiryCta
-                vendorId={vendor.id}
-                vendorName={vendor.businessName}
-                isAuthenticated={session !== null}
-              />
-
-              <MessageVendorButton
-                vendorId={vendor.id}
-                vendorName={vendor.businessName}
-                isAuthenticated={session !== null}
-              />
-
-              <div className="mt-5 border-t border-border pt-4">
-                <VendorContactLinks
-                  vendorId={vendor.id}
-                  vendorSlug={vendor.slug}
-                  businessName={vendor.businessName}
-                  isAuthenticated={session !== null}
-                  hasAnyContactInfo={Boolean(vendor.profile?.hasContactInfo)}
-                />
-              </div>
-            </div>
-          </aside>
+          {similarVendors.length > 0 && primaryCategory && (
+            <CuratedVendorShelf
+              title={`Browse Similar ${primaryCategory.name}`}
+              categoryId={primaryCategory.id}
+              vendors={similarVendors}
+            />
+          )}
         </div>
       </div>
       <div className="h-16" />
