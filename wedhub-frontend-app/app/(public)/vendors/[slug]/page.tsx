@@ -122,7 +122,12 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
   // public album photo if no cover image is set; logo falls back to the
   // first-letter badge.
   const coverMedia = vendor.profile?.coverMedia;
-  const heroMedia = albums[0]?.media.find((m) => m.mediaType === "IMAGE");
+  // "IMAGE" is not a real MediaType value (see AlbumMedia's own type
+  // comment in vendors.types.ts) — a photo in an album is "PORTFOLIO".
+  // Excluding "VIDEO" rather than positively matching "PORTFOLIO" also
+  // means this correctly keeps working if a third non-video media type
+  // ever appears in an album's media list.
+  const heroMedia = albums[0]?.media.find((m) => m.mediaType !== "VIDEO");
   const heroImageKey =
     coverMedia?.optimizedObjectKey ??
     coverMedia?.originalObjectKey ??
