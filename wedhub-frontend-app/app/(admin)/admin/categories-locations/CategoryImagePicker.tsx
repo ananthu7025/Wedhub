@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { confirmAdminImageUpload, createAdminImageUploadRequest } from "@/lib/api/admin-client";
 import { compressImageIfPossible } from "@/lib/media/compress-image";
 import { UPLOAD_CACHE_CONTROL } from "@/lib/media/upload";
@@ -22,14 +22,20 @@ const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export function CategoryImagePicker({
   currentImageUrl,
   onUploaded,
+  onRemoved,
 }: {
   currentImageUrl: string | null;
   onUploaded: (url: string) => void;
+  onRemoved?: () => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setPreviewUrl(currentImageUrl);
+  }, [currentImageUrl]);
 
   async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0];
@@ -104,8 +110,21 @@ export function CategoryImagePicker({
           disabled={uploading}
           className="rounded-md border border-border bg-white px-3 py-1.5 text-xs font-bold hover:bg-surface-input disabled:opacity-60"
         >
-          {uploading ? "Uploading…" : currentImageUrl ? "Change image" : "Upload image"}
+          {uploading ? "Uploading…" : currentImageUrl || previewUrl ? "Change image" : "Upload image"}
         </button>
+        {(previewUrl || currentImageUrl) && onRemoved && (
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => {
+              setPreviewUrl(null);
+              onRemoved();
+            }}
+            className="rounded-md border border-red-20 bg-red-10 px-3 py-1.5 text-xs font-bold text-red-70 hover:bg-red-20 disabled:opacity-60"
+          >
+            Remove image
+          </button>
+        )}
       </div>
       {error && <p className="mt-1.5 text-xs text-red">{error}</p>}
       <input ref={fileInputRef} type="file" accept={ACCEPTED_MIME_TYPES.join(",")} hidden onChange={handleFileSelect} />

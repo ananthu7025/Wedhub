@@ -34,6 +34,8 @@ export const CATEGORY_SEO_SLUGS: Record<string, string> = {
   "cocktail-bar-services": "wedding-bar-services",
   "wedding-cars-luxury-rentals": "wedding-car-rentals",
   "event-planners": "wedding-planners",
+  "content-creators": "wedding-content-creators",
+  "content-creator": "wedding-content-creators",
 };
 
 /** Real Category.slug -> marketing SEO slug, e.g. "photography-videography" -> "wedding-photographers". */

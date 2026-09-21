@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { createAdminCategory, updateAdminCategory } from "@/lib/api/admin-client";
 import type { Category, Location } from "@/lib/api/vendors.types";
@@ -99,16 +99,31 @@ export function CatalogBoard({
     setSelectedId(result.data.id);
   }
 
-  async function handleSaveBasicInfo(category: Category, name: string, description: string) {
+  async function handleSaveBasicInfo(category: Category, name: string, description: string, imageUrl?: string | null) {
     setPendingId(category.id);
     setError(null);
-    const result = await updateAdminCategory(category.id, { name: name.trim(), description: description.trim() });
+    const result = await updateAdminCategory(category.id, {
+      name: name.trim(),
+      description: description.trim(),
+      ...(imageUrl !== undefined ? { imageUrl } : {}),
+    });
     setPendingId(null);
     if (!result.success) {
       setError(formatApiError(result.error));
       return;
     }
-    setCategories((prev) => prev.map((c) => (c.id === category.id ? { ...c, name: result.data.name, description: result.data.description } : c)));
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id === category.id
+          ? {
+              ...c,
+              name: result.data.name,
+              description: result.data.description,
+              imageUrl: result.data.imageUrl !== undefined ? result.data.imageUrl : c.imageUrl,
+            }
+          : c,
+      ),
+    );
   }
 
   async function handleToggleCategory(category: Category) {
@@ -369,10 +384,11 @@ export function CatalogBoard({
             <div className={selected ? "" : "hidden lg:block"}>
               {selected ? (
                 <CategoryDetailPanel
+                  key={selected.id}
                   category={selected}
                   pending={pendingId === selected.id}
                   onBack={() => setSelectedId(null)}
-                  onSaveBasicInfo={(name, description) => handleSaveBasicInfo(selected, name, description)}
+                  onSaveBasicInfo={(name, description, imageUrl) => handleSaveBasicInfo(selected, name, description, imageUrl)}
                   onToggle={() => handleToggleCategory(selected)}
                   onToggleFeatured={() => handleToggleFeatured(selected)}
                   onToggleStore={() => handleToggleStore(selected)}
@@ -431,7 +447,7 @@ function CategoryDetailPanel({
   category: Category;
   pending: boolean;
   onBack: () => void;
-  onSaveBasicInfo: (name: string, description: string) => void;
+  onSaveBasicInfo: (name: string, description: string, imageUrl?: string | null) => void;
   onToggle: () => void;
   onToggleFeatured: () => void;
   onToggleStore: () => void;
@@ -443,6 +459,13 @@ function CategoryDetailPanel({
   const [description, setDescription] = useState(category.description ?? "");
   const [imageUrlDraft, setImageUrlDraft] = useState<string | null>(category.imageUrl);
   const [priceDraft, setPriceDraft] = useState(category.startingPriceLabel ?? "");
+
+  useEffect(() => {
+    setName(category.name);
+    setDescription(category.description ?? "");
+    setImageUrlDraft(category.imageUrl);
+    setPriceDraft(category.startingPriceLabel ?? "");
+  }, [category.id, category.name, category.description, category.imageUrl, category.startingPriceLabel]);
 
   const TABS: Array<{ id: DetailTab; label: string }> = [
     { id: "overview", label: "Overview" },
@@ -456,7 +479,7 @@ function CategoryDetailPanel({
       <div className="rounded-xl border border-border bg-white">
         <div
           className="flex h-32 items-end rounded-t-xl bg-surface-input bg-cover bg-center sm:h-40"
-          style={category.imageUrl ? { backgroundImage: `url(${category.imageUrl})` } : undefined}
+          style={(imageUrlDraft ?? category.imageUrl) ? { backgroundImage: `url(${imageUrlDraft ?? category.imageUrl})` } : undefined}
         >
           <div className="flex w-full items-center justify-between gap-3 p-4">
             <button
@@ -535,14 +558,25 @@ function CategoryDetailPanel({
               </label>
               <label className="block text-sm">
                 <span className="mb-1 block text-xs font-semibold text-text-grey">Category image (optional)</span>
-                <CategoryImagePicker currentImageUrl={category.imageUrl} onUploaded={(url) => setImageUrlDraft(url)} />
+                <CategoryImagePicker
+                  currentImageUrl={imageUrlDraft ?? category.imageUrl}
+                  onUploaded={(url) => {
+                    setImageUrlDraft(url);
+                    // Persist immediately so the image is saved to the database without needing a second click
+                    onSaveBasicInfo(name, description, url);
+                  }}
+                  onRemoved={() => {
+                    setImageUrlDraft(null);
+                    onSaveBasicInfo(name, description, null);
+                  }}
+                />
               </label>
             </div>
             <div className="mt-4 flex items-center gap-3">
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => onSaveBasicInfo(name, description)}
+                onClick={() => onSaveBasicInfo(name, description, imageUrlDraft)}
                 className="rounded-md bg-brand-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
               >
                 {pending ? "Saving…" : "Save changes"}
