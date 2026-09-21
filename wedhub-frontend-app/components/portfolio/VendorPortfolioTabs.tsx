@@ -6,11 +6,20 @@ import { VendorPortfolioGallery } from "./VendorPortfolioGallery";
 
 /**
  * Photos/Videos split above the portfolio grid — real data-backed (every
- * AlbumMedia row already carries mediaType: "IMAGE" | "VIDEO", set at
- * upload time), not a cosmetic tab bar over one undifferentiated grid.
+ * AlbumMedia row's mediaType is "PORTFOLIO" (a photo) or "VIDEO", the only
+ * two values album.repository.ts's queries ever return into an album's
+ * media list), not a cosmetic tab bar over one undifferentiated grid.
  * Reuses VendorPortfolioGallery as-is for the actual grid+lightbox instead
  * of duplicating that logic — this component only filters albums down to
  * the active media type before handing them off.
+ *
+ * Correctness note: a previous version of this file (and of AlbumMedia's
+ * own type declaration) filtered on `mediaType === "IMAGE"` — a value that
+ * doesn't exist anywhere in the real MediaType enum, so every photo was
+ * silently filtered out and the portfolio section rendered as if the
+ * vendor had never uploaded anything. Fixed by checking for "VIDEO" and
+ * treating everything else (i.e. "PORTFOLIO") as a photo, rather than
+ * positively matching a literal that was never real.
  *
  * The Videos tab is only rendered when at least one VIDEO item actually
  * exists — most vendors on this marketplace only ever upload photos, and a
@@ -22,16 +31,20 @@ export function VendorPortfolioTabs({ albums, businessName }: { albums: VendorAl
   const [tab, setTab] = useState<"photos" | "videos">("photos");
 
   const filteredAlbums = useMemo(() => {
-    const wantType = tab === "videos" ? "VIDEO" : "IMAGE";
     return albums
-      .map((album) => ({ ...album, media: album.media.filter((m) => m.mediaType === wantType) }))
+      .map((album) => ({
+        ...album,
+        media: album.media.filter((m) => (tab === "videos" ? m.mediaType === "VIDEO" : m.mediaType !== "VIDEO")),
+      }))
       .filter((album) => album.media.length > 0);
   }, [albums, tab]);
 
   if (!hasVideos) {
     // Only one real tab worth of content — skip the tab bar entirely rather
-    // than showing a single-option toggle that does nothing.
-    return <VendorPortfolioGallery albums={albums.map((a) => ({ ...a, media: a.media.filter((m) => m.mediaType === "IMAGE") }))} businessName={businessName} />;
+    // than showing a single-option toggle that does nothing. No filtering
+    // needed here: hasVideos is already false, so every album's media is
+    // already photos-only.
+    return <VendorPortfolioGallery albums={albums} businessName={businessName} />;
   }
 
   return (

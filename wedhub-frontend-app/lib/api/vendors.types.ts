@@ -215,7 +215,15 @@ export interface VendorDetail {
 export interface AlbumMedia {
   id: string;
   albumId: string | null;
-  mediaType: "IMAGE" | "VIDEO";
+  // Media.mediaType is the platform-wide content-purpose enum (LOGO, COVER,
+  // PORTFOLIO, VIDEO, REVIEW_PHOTO, ...), not a file-format flag — a
+  // previous version of this type incorrectly declared "IMAGE" as a
+  // possible value, which doesn't exist anywhere in the real enum and
+  // silently broke every media.mediaType === "IMAGE" check written against
+  // it (see album.repository.ts's listPublicVendorPortfolioMedia, whose own
+  // query confirms only "PORTFOLIO" | "VIDEO" are ever returned into an
+  // album's media list — a photo is "PORTFOLIO", never "IMAGE").
+  mediaType: "PORTFOLIO" | "VIDEO";
   originalObjectKey: string;
   optimizedObjectKey: string | null;
   thumbnailObjectKey: string | null;
