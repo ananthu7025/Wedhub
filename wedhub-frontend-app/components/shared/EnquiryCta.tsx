@@ -4,6 +4,17 @@ import { useState } from "react";
 import { EnquiryModal } from "./EnquiryModal";
 import { SignInModal } from "./SignInModal";
 
+// Matches VendorContactLinks.tsx's inline-SVG-per-file icon convention for
+// this directory.
+function SendIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22 2 11 13" />
+      <path d="M22 2 15 22l-4-9-9-4 20-7z" />
+    </svg>
+  );
+}
+
 /**
  * Client wrapper so the (Server Component) vendor profile page can render an
  * interactive "Send Enquiry" button without itself becoming a Client
@@ -32,9 +43,9 @@ export function EnquiryCta({
         <button
           type="button"
           onClick={() => setShowSignIn(true)}
-          className="mt-3 block w-full rounded-md bg-brand-primary py-3 text-center text-sm font-bold text-white shadow-[0_4px_12px_rgba(224,11,65,0.18)] hover:bg-brand-primary-hover"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-brand-primary py-3 text-center text-sm font-bold text-white shadow-[0_4px_12px_rgba(224,11,65,0.18)] hover:bg-brand-primary-hover"
         >
-          Send Enquiry
+          <SendIcon /> Send Enquiry
         </button>
         {showSignIn && (
           <SignInModal
@@ -56,9 +67,9 @@ export function EnquiryCta({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-3 block w-full rounded-md bg-brand-primary py-3 text-center text-sm font-bold text-white shadow-[0_4px_12px_rgba(224,11,65,0.18)] hover:bg-brand-primary-hover"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-brand-primary py-3 text-center text-sm font-bold text-white shadow-[0_4px_12px_rgba(224,11,65,0.18)] hover:bg-brand-primary-hover"
       >
-        Send Enquiry
+        <SendIcon /> Send Enquiry
       </button>
       <EnquiryModal vendorId={vendorId} vendorName={vendorName} open={open} onClose={() => setOpen(false)} />
     </>

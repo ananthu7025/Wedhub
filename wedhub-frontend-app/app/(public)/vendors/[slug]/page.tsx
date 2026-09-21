@@ -248,6 +248,12 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                       <div className="flex flex-wrap items-center gap-2.5">
                         <h1 className="text-2xl font-bold text-white drop-shadow-sm sm:text-[32px]">{vendor.businessName}</h1>
                         {verificationLabel && <Badge variant="green">{verificationLabel}</Badge>}
+                        {hasRating && (
+                          <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-xs">
+                            ★ {Number(vendor.averageRating).toFixed(1)}
+                            <span className="font-medium text-white/80">({vendor.reviewCount})</span>
+                          </span>
+                        )}
                       </div>
                       {vendor.city && (
                         <p className="mt-1.5 flex items-center gap-1.5 text-sm text-white/90">
@@ -291,6 +297,12 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                     <div className="flex flex-wrap items-center gap-2.5">
                       <h1 className="text-2xl font-bold">{vendor.businessName}</h1>
                       {verificationLabel && <Badge variant="green">{verificationLabel}</Badge>}
+                      {hasRating && (
+                        <span className="flex items-center gap-1 text-xs font-bold text-text-dark">
+                          ★ {Number(vendor.averageRating).toFixed(1)}
+                          <span className="font-medium text-text-grey">({vendor.reviewCount})</span>
+                        </span>
+                      )}
                     </div>
                     {vendor.city && (
                       <p className="mt-1 flex items-center gap-1.5 text-sm text-text-grey">
@@ -341,8 +353,12 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
 
                 <Link
                   href={`/shortlist?compareVendorId=${vendor.id}`}
-                  className="mt-3 block w-full rounded-md border border-border bg-white py-2.5 text-center text-xs font-bold text-text-dark no-underline hover:bg-surface-input"
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-white py-2.5 text-center text-xs font-bold text-text-dark no-underline hover:bg-surface-input"
                 >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="7" height="18" rx="1.5" />
+                    <rect x="14" y="3" width="7" height="18" rx="1.5" />
+                  </svg>
                   Add to compare
                 </Link>
 
