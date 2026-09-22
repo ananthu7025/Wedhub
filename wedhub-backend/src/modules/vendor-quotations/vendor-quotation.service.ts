@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/database";
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { omitUndefined } from "../../common/utils/object.util";
+import { assertVendorFeatureAccess } from "../entitlements/entitlement.service";
 import { formatIndianCurrencyWords } from "../vendor-invoices/vendor-invoice.service";
 import * as quotationRepository from "./vendor-quotation.repository";
 import type {
@@ -131,6 +132,7 @@ export async function getLeadPrefill(vendorId: string, leadId: string): Promise<
 }
 
 export async function createQuotation(vendorId: string, input: CreateVendorQuotationInput) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Quotes & Invoices");
   const vendor = await prisma.vendor.findUnique({
     where: { id: vendorId },
     include: {
@@ -238,6 +240,7 @@ export async function createQuotation(vendorId: string, input: CreateVendorQuota
 }
 
 export async function updateQuotation(vendorId: string, id: string, input: UpdateVendorQuotationInput) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Quotes & Invoices");
   const existing = await quotationRepository.findQuotationById(vendorId, id);
   if (!existing) {
     throw new NotFoundError("Quotation not found");
@@ -332,6 +335,7 @@ export async function deleteQuotation(vendorId: string, id: string) {
 }
 
 export async function markAsSent(vendorId: string, id: string, sentVia: string) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Quotes & Invoices");
   const existing = await quotationRepository.findQuotationById(vendorId, id);
   if (!existing) {
     throw new NotFoundError("Quotation not found");
@@ -345,6 +349,7 @@ export async function markAsSent(vendorId: string, id: string, sentVia: string) 
 }
 
 export async function duplicateQuotation(vendorId: string, id: string) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Quotes & Invoices");
   const source = await quotationRepository.findQuotationById(vendorId, id);
   if (!source) {
     throw new NotFoundError("Source quotation not found");
@@ -468,6 +473,7 @@ export async function publicDeclineQuotation(viewToken: string, reason?: string)
 }
 
 export async function convertToInvoice(vendorId: string, id: string) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Quotes & Invoices");
   const quote = await quotationRepository.findQuotationById(vendorId, id);
   if (!quote) {
     throw new NotFoundError("Quotation not found");
@@ -497,6 +503,7 @@ export async function convertToInvoice(vendorId: string, id: string) {
 }
 
 export async function convertToBooking(vendorId: string, id: string) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Quotes & Invoices");
   const quote = await quotationRepository.findQuotationById(vendorId, id);
   if (!quote) {
     throw new NotFoundError("Quotation not found");

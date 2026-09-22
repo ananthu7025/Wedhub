@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { VendorShell } from "@/components/shared/VendorShell";
+import { UpgradePrompt } from "@/components/shared/UpgradePrompt";
 import { requireVendorOwnership } from "@/lib/auth/require-vendor";
 import { getMyEffectivePlan } from "@/lib/api/vendor-self";
 import { listMyQuotations, getMyQuotationMetrics } from "@/lib/api/vendor-quotations";
@@ -28,6 +29,22 @@ export default async function FinancesPage({ searchParams }: FinancesPageProps) 
   const invoicingAccess = await getMyEffectivePlan()
     .then((r) => r.data.features.invoicing_access)
     .catch(() => false);
+
+  // Whole-page gate — confirmed 2026-09-22 that Quotations became a
+  // Premium-only feature too (previously only Invoicing was gated inside
+  // this page while Quotations stayed free). The nav item itself is hidden
+  // for a Free vendor (VendorShell.tsx); this covers direct URL access.
+  if (!invoicingAccess) {
+    return (
+      <UpgradePrompt
+        feature="Quotes & Invoices"
+        description="Create branded proposals, collect client acceptances, issue GST invoices, and track payments — all in one place."
+        activeHref="/vendor/finances"
+        vendorName={vendor.businessName}
+        vendorSlug={vendor.slug}
+      />
+    );
+  }
 
   let quotations: VendorQuotation[] = [];
   let quotationMetrics: QuotationSummaryMetrics = {
@@ -82,7 +99,6 @@ export default async function FinancesPage({ searchParams }: FinancesPageProps) 
           initialInvoices={invoices}
           invoiceMetrics={invoiceMetrics}
           initialTab={initialTab}
-          invoicingAccess={invoicingAccess}
         />
       </Suspense>
     </VendorShell>

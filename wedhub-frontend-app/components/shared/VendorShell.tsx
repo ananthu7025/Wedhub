@@ -42,9 +42,10 @@ const navLinks = [
   {
     href: "/vendor/store",
     label: "Store",
-    // Only shown when hasStoreEligibleCategory is true — see VendorShell's
-    // filter below. Kept in this array (not removed) so the filter is a
-    // single, obvious line rather than a second, easy-to-forget list.
+    // Only shown when hasStoreEligibleCategory AND store_access (plan-gated,
+    // see VendorShell's filter below) are both true. Kept in this array
+    // (not removed) so the filter is a single, obvious line rather than a
+    // second, easy-to-forget list.
     icon: (
       <>
         <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
@@ -68,6 +69,11 @@ const navLinks = [
   {
     href: "/vendor/finances",
     label: "Quotes & Invoices",
+    // Plan-gated (invoicing_access) — see VendorShell's filter below.
+    // Confirmed 2026-09-22: both Quotations and Invoicing are Premium-only,
+    // so unlike Leads/Analytics (which keep a free baseline), this whole
+    // nav item is hidden for a plan without invoicing_access, same
+    // treatment as Store.
     icon: (
       <>
         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -158,7 +164,21 @@ export async function VendorShell({
   const hasStoreEligibleCategory = Boolean(
     vendorResult?.data.categories.some((vc) => vc.category.hasStoreEnabled),
   );
-  const visibleNavLinks = navLinks.filter((link) => link.href !== "/vendor/store" || hasStoreEligibleCategory);
+  // Store and Quotes & Invoices are hidden entirely for a plan without their
+  // feature, rather than shown-and-gated-on-click — there is nothing usable
+  // behind either on a plan that lacks the feature (confirmed 2026-09-22
+  // with the user, revised same day to also cover Quotations — previously
+  // Quotations stayed free while only Invoicing was gated inside the page;
+  // now both are invoicing_access-gated and the whole nav item is hidden,
+  // same treatment as Store). Leads/Analytics keep a free baseline and stay
+  // visible with only their Premium-specific parts gated inline.
+  const hasStoreAccess = Boolean(planResult?.data.features.store_access);
+  const hasInvoicingAccess = Boolean(planResult?.data.features.invoicing_access);
+  const visibleNavLinks = navLinks.filter((link) => {
+    if (link.href === "/vendor/store") return hasStoreEligibleCategory && hasStoreAccess;
+    if (link.href === "/vendor/finances") return hasInvoicingAccess;
+    return true;
+  });
 
   return (
     <div className="flex h-screen w-full max-w-full overflow-x-hidden">
@@ -282,6 +302,8 @@ export async function VendorShell({
         unreadCount={unreadCount}
         unreadMessageCount={unreadMessageCount}
         hasStoreEligibleCategory={hasStoreEligibleCategory}
+        hasStoreAccess={hasStoreAccess}
+        hasInvoicingAccess={hasInvoicingAccess}
       />
     </div>
   );

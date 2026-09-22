@@ -14,16 +14,18 @@ interface FinancesHubProps {
   initialInvoices: VendorInvoice[];
   invoiceMetrics: InvoiceSummaryMetrics | null;
   initialTab?: "quotes" | "invoices";
-  invoicingAccess: boolean;
 }
 
+// invoicingAccess is no longer checked here — page.tsx now gates the whole
+// page before this component ever renders (confirmed 2026-09-22: both
+// Quotations and Invoicing are invoicing_access-gated together), so a Free
+// vendor never reaches this component at all.
 export function FinancesHub({
   initialQuotations,
   quotationMetrics,
   initialInvoices,
   invoiceMetrics,
   initialTab = "quotes",
-  invoicingAccess,
 }: FinancesHubProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -225,36 +227,12 @@ export function FinancesHub({
           metrics={quotationMetrics}
           hideHeader={true}
         />
-      ) : invoicingAccess ? (
+      ) : (
         <InvoicesBoard
           initialInvoices={initialInvoices}
           initialMetrics={invoiceMetrics}
           hideHeader={true}
         />
-      ) : (
-        // Backend still enforces this via assertVendorFeatureAccess on every
-        // create/update/issue/record-payment call — this is the "explain
-        // before they invest effort" layer, not the real gate. Existing
-        // invoices remain readable elsewhere (view/cancel is never gated),
-        // this only blocks creating new ones from this tab.
-        <div className="flex flex-col items-center justify-center rounded-xl border border-neutral-200 bg-white px-6 py-14 text-center">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary-soft text-brand-primary">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="11" width="18" height="10" rx="2" />
-              <path d="M7 11V7a5 5 0 0110 0v4" />
-            </svg>
-          </div>
-          <h3 className="mb-2 text-base font-bold text-neutral-900">Invoicing is a plan upgrade away</h3>
-          <p className="mb-5 max-w-md text-sm text-neutral-500">
-            Issue GST invoices, track payments, and manage your billing profile with a plan that includes Invoicing & Billing.
-          </p>
-          <Link
-            href="/vendor/subscription"
-            className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
-          >
-            View plans
-          </Link>
-        </div>
       )}
     </div>
   );

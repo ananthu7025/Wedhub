@@ -11,6 +11,13 @@ interface VendorMobileNavProps {
   unreadCount?: number;
   unreadMessageCount?: number;
   hasStoreEligibleCategory?: boolean;
+  // Plan-gated (store_access), separate from category eligibility above —
+  // both must be true for Store to appear anywhere in this nav. See
+  // VendorShell.tsx's identical gate on the desktop sidebar.
+  hasStoreAccess?: boolean;
+  // Plan-gated (invoicing_access) — gates the whole "Quotes & Invoices" nav
+  // item (both Quotations and Invoicing), same as VendorShell.tsx.
+  hasInvoicingAccess?: boolean;
 }
 
 const PRIMARY_BOTTOM_TABS = [
@@ -205,20 +212,33 @@ export function VendorMobileNav({
   unreadCount = 0,
   unreadMessageCount = 0,
   hasStoreEligibleCategory = false,
+  hasStoreAccess = false,
+  hasInvoicingAccess = false,
 }: VendorMobileNavProps) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Mirrors VendorShell's desktop nav filter — same "Store" link, same
-  // hasStoreEligibleCategory gate, just applied to this drawer's separate
-  // SECONDARY_SECTIONS copy of the link.
+  const canShowStore = hasStoreEligibleCategory && hasStoreAccess;
+
+  // Mirrors VendorShell's desktop nav filter — same Store/Finances links,
+  // same gates, just applied to this drawer's separate SECONDARY_SECTIONS
+  // copies of the links.
   const visibleSections = SECONDARY_SECTIONS.map((section) => ({
     ...section,
-    links: section.links.filter((link) => link.href !== "/vendor/store" || hasStoreEligibleCategory),
+    links: section.links.filter((link) => {
+      if (link.href === "/vendor/store") return canShowStore;
+      if (link.href === "/vendor/finances") return hasInvoicingAccess;
+      return true;
+    }),
   }));
 
-  // Check if current route is one of the 4 primary tabs
-  const isPrimaryTab = PRIMARY_BOTTOM_TABS.some((tab) => pathname === tab.href || pathname.startsWith(tab.href + "/"));
+  // The bottom tab bar's own separate copy of the Store link (previously
+  // unfiltered entirely — a pre-existing gap fixed alongside this plan gate,
+  // since it's the same nav item this pass is already touching).
+  const visiblePrimaryTabs = PRIMARY_BOTTOM_TABS.filter((tab) => tab.href !== "/vendor/store" || canShowStore);
+
+  // Check if current route is one of the primary tabs
+  const isPrimaryTab = visiblePrimaryTabs.some((tab) => pathname === tab.href || pathname.startsWith(tab.href + "/"));
   // "More" button is highlighted if on any secondary vendor page and not a primary tab
   const isMoreActive = !isPrimaryTab && pathname.startsWith("/vendor");
 
@@ -258,7 +278,7 @@ export function VendorMobileNav({
         className="fixed inset-x-0 bottom-0 z-40 block border-t border-border bg-white/95 backdrop-blur-md shadow-[0_-4px_24px_rgba(0,0,0,0.06)] lg:hidden pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1"
       >
         <div className="grid grid-cols-5 items-center justify-around px-1">
-          {PRIMARY_BOTTOM_TABS.map((tab) => {
+          {visiblePrimaryTabs.map((tab) => {
             const isActive = pathname === tab.href || pathname.startsWith(tab.href + "/");
 
             return (

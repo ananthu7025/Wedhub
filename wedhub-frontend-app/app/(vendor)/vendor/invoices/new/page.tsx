@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { VendorShell } from "@/components/shared/VendorShell";
+import { UpgradePrompt } from "@/components/shared/UpgradePrompt";
 import { requireVendorOwnership } from "@/lib/auth/require-vendor";
+import { getMyEffectivePlan } from "@/lib/api/vendor-self";
 import { getLeadPrefill, getMyBillingProfile } from "@/lib/api/vendor-invoices";
 import { getMyQuotation } from "@/lib/api/vendor-quotations";
 import type { LeadPrefillData, VendorBillingProfile } from "@/lib/api/vendor-invoices.types";
@@ -18,6 +20,25 @@ interface NewInvoicePageProps {
 export default async function NewVendorInvoicePage({ searchParams }: NewInvoicePageProps) {
   const vendor = await requireVendorOwnership();
   const { leadId, quoteId } = await searchParams;
+
+  // Direct-URL gate — the /vendor/finances nav item is hidden for a Free
+  // vendor, but this route is independently reachable by URL. The backend
+  // already 403s createInvoice/getLeadPrefill regardless; this avoids a
+  // wasted form-fill before discovering that.
+  const invoicingAccess = await getMyEffectivePlan()
+    .then((r) => r.data.features.invoicing_access)
+    .catch(() => false);
+  if (!invoicingAccess) {
+    return (
+      <UpgradePrompt
+        feature="Invoicing"
+        description="Issue GST invoices, track payments, and manage your billing profile with a plan that includes Invoicing & Billing."
+        activeHref="/vendor/finances"
+        vendorName={vendor.businessName}
+        vendorSlug={vendor.slug}
+      />
+    );
+  }
 
   let billingProfile: VendorBillingProfile;
   try {
