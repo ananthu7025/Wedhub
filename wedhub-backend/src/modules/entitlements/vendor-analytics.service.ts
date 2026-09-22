@@ -30,10 +30,14 @@ function daysAgo(days: number): Date {
 // windowDays — GET /leads/analytics itself is untouched and keeps returning
 // its own all-time numbers for its existing caller (the standalone
 // /vendor/analytics dashboard page), since nothing about that contract
-// needed to change to satisfy this task. All 7 core metrics are returned to
-// every tier per product.md's plain listing (not tier-gated) — only the
-// daily breakdown chart stays advanced-only, matching the existing
-// profileViewsByDay precedent.
+// needed to change to satisfy this task.
+//
+// conversionRate is gated behind analytics_level (2026-09-22 fix — see
+// PLAN-2026-09-22-premium-feature-buildout.md §5) same as the sibling
+// GET /leads/analytics endpoint. Every other of the 7 core metrics stays
+// ungated per product.md's plain listing — only conversionRate (a
+// Premium-plan feature promise) and the daily breakdown chart are
+// advanced-only.
 export async function getVendorAnalytics(vendorId: string) {
   const level = await entitlementService.canVendorAccess(vendorId, "analytics_level");
   const windowDays = level === "advanced" ? ADVANCED_WINDOW_DAYS : BASIC_WINDOW_DAYS;
@@ -71,7 +75,7 @@ export async function getVendorAnalytics(vendorId: string) {
     reviews,
     responseRate: leadAnalytics.responseRate,
     averageResponseTimeMs: leadAnalytics.averageResponseTimeMs,
-    conversionRate: leadAnalytics.conversionRate,
+    conversionRate: level === "advanced" ? leadAnalytics.conversionRate : null,
     qualifiedLeads: leadAnalytics.qualifiedLeads,
     wonLeads: leadAnalytics.wonLeads,
     lostLeads: leadAnalytics.lostLeads,

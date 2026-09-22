@@ -298,9 +298,15 @@ export default async function VendorDashboardPage() {
             </div>
 
             <div className="mt-3 flex items-end justify-between gap-2">
-              <span className="text-3xl font-extrabold tracking-tight text-red-70">
-                {analytics ? formatPercent(analytics.conversionRate) : "0%"}
-              </span>
+              {analytics?.conversionRate === null || analytics?.conversionRate === undefined ? (
+                <a href="/vendor/subscription" className="text-xs font-semibold text-brand-primary">
+                  Upgrade to unlock
+                </a>
+              ) : (
+                <span className="text-3xl font-extrabold tracking-tight text-red-70">
+                  {formatPercent(analytics.conversionRate)}
+                </span>
+              )}
               <DashboardSparkline color="coral" />
             </div>
           </div>

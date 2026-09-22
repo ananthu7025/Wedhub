@@ -390,7 +390,10 @@ export interface VendorAnalytics {
   reviews: number;
   responseRate: number;
   averageResponseTimeMs: number | null;
-  conversionRate: number;
+  // Null for a basic-analytics-tier vendor — gated behind analytics_level
+  // (fixed 2026-09-22, this field previously leaked to every tier
+  // regardless of level; see PLAN-2026-09-22-premium-feature-buildout.md §5).
+  conversionRate: number | null;
   qualifiedLeads: number;
   wonLeads: number;
   lostLeads: number;
