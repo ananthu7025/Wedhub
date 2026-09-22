@@ -366,7 +366,11 @@ export async function logoutAllDevices(userId: string): Promise<void> {
   await authRepository.revokeAllRefreshTokensForUser(userId);
 }
 
-export async function verifyEmail(presentedToken: string): Promise<void> {
+// Returns the now-verified account's email so the frontend can pre-fill it
+// on /login for the common case where verifying happens in a browser/tab
+// with no active session (e.g. checking email on a different device than
+// signup) — see VerifyEmailStatus.tsx's own comment on that flow.
+export async function verifyEmail(presentedToken: string): Promise<{ email: string }> {
   const tokenHash = hashToken(presentedToken);
   const existing = await authRepository.findEmailVerificationTokenByHash(tokenHash);
 
@@ -375,7 +379,8 @@ export async function verifyEmail(presentedToken: string): Promise<void> {
   }
 
   await authRepository.markEmailVerificationTokenUsed(existing.id);
-  await authRepository.markEmailVerified(existing.userId);
+  const user = await authRepository.markEmailVerified(existing.userId);
+  return { email: user.email };
 }
 
 export async function forgotPassword(email: string): Promise<void> {

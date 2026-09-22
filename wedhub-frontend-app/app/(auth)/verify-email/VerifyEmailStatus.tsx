@@ -7,7 +7,7 @@ import type { ApiResponse } from "@/lib/api/types";
 import { formatApiError } from "@/lib/utils/error";
 import { refreshSession } from "@/lib/api/auth-client";
 
-type Status = "verifying" | "success" | "redirecting" | "no-session" | "error";
+type Status = "verifying" | "redirecting" | "error";
 
 // Auto-verifies on mount (no manual "I'm verified" click needed) and, when
 // this browser tab already holds the session that owns the link (the common
@@ -18,8 +18,11 @@ type Status = "verifying" | "success" | "redirecting" | "no-session" | "error";
 // — verifying via this link doesn't retroactively rewrite an already-issued
 // token, only refreshSession() (which re-reads emailVerifiedAt from the DB)
 // does. If there's no session in this tab at all — link opened in a fresh
-// tab/email client, the other common case — refreshSession() fails and we
-// fall back to a plain "verified, please log in" screen instead of erroring.
+// tab/email client/different device than signup, confirmed (2026-09-22) to
+// be the MORE common case in practice, not the exception — refreshSession()
+// fails and this redirects to /login with the now-verified email pre-filled
+// and a "verified, log in to continue" banner instead of a passive "you can
+// log in now" dead end a user could easily miss or assume already worked.
 export function VerifyEmailStatus({ token }: { token: string }) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>("verifying");
@@ -34,7 +37,7 @@ export function VerifyEmailStatus({ token }: { token: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),
       });
-      const json = (await response.json()) as ApiResponse<{ verified: true }>;
+      const json = (await response.json()) as ApiResponse<{ verified: true; email: string }>;
       if (cancelled) return;
 
       if (!json.success) {
@@ -46,12 +49,15 @@ export function VerifyEmailStatus({ token }: { token: string }) {
       const refreshResult = await refreshSession();
       if (cancelled) return;
 
+      setStatus("redirecting");
       if (!refreshResult.success) {
-        setStatus("no-session");
+        // No session in this browser/tab — the account is genuinely
+        // verified (the POST above already succeeded), there's just nothing
+        // here to refresh into a dashboard redirect.
+        router.push(`/login?verifiedEmail=${encodeURIComponent(json.data.email)}`);
         return;
       }
 
-      setStatus("redirecting");
       // /verify-email/pending re-checks the (now-fresh) session server-side
       // and redirects onward to the right role's dashboard — see that page's
       // own redirect(roleHomeRoute[...]) once session.emailVerified is true.
@@ -68,25 +74,8 @@ export function VerifyEmailStatus({ token }: { token: string }) {
   if (status === "verifying" || status === "redirecting") {
     return (
       <p className="text-center text-sm text-text-grey">
-        {status === "verifying" ? "Verifying your email…" : "Verified — taking you to your dashboard…"}
+        {status === "verifying" ? "Verifying your email…" : "Verified — continuing…"}
       </p>
-    );
-  }
-
-  if (status === "success" || status === "no-session") {
-    return (
-      <div className="text-center">
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-10 text-emerald-70">
-          ✓
-        </div>
-        <p className="mb-6 text-sm text-text-grey">Your email is verified. You can log in now.</p>
-        <Link
-          href="/login"
-          className="inline-block rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white no-underline"
-        >
-          Go to login
-        </Link>
-      </div>
     );
   }
 

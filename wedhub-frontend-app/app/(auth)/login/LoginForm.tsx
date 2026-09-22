@@ -23,7 +23,16 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
-  const [identifier, setIdentifier] = useState("");
+  // Pre-fills the identifier when arriving here right after verifying an
+  // email in a browser/tab with no active session (VerifyEmailStatus.tsx's
+  // "no-session" fallback) — one less thing to type, and the banner below
+  // makes it unmistakable that logging in is the actual next step, not a
+  // dead end. Read once as the initial state rather than synced via effect:
+  // the query param is only ever meaningful on first render (a subsequent
+  // change to it, e.g. from browser back/forward, shouldn't clobber
+  // whatever the user has since typed).
+  const justVerifiedEmail = searchParams.get("verifiedEmail");
+  const [identifier, setIdentifier] = useState(justVerifiedEmail ?? "");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [touched, setTouched] = useState<{ identifier?: boolean; password?: boolean }>({});
@@ -64,6 +73,12 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full" noValidate>
+      {justVerifiedEmail && (
+        <div className="mb-4.5 flex items-start gap-2 rounded-md bg-emerald-10 p-3 text-[13px] text-emerald-70">
+          <span className="mt-0.5">✓</span>
+          <span>Email verified — log in to continue.</span>
+        </div>
+      )}
       <div className="mb-4.5">
         <Input
           type="text"

@@ -91,8 +91,8 @@ export async function logoutAll(req: Request, res: Response): Promise<void> {
 
 export async function verifyEmail(req: Request, res: Response): Promise<void> {
   const body = req.body as VerifyEmailBody;
-  await authService.verifyEmail(body.token);
-  res.json(successResponse({ verified: true }));
+  const { email } = await authService.verifyEmail(body.token);
+  res.json(successResponse({ verified: true, email }));
 }
 
 export async function forgotPassword(req: Request, res: Response): Promise<void> {

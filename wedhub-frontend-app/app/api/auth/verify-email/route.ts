@@ -7,6 +7,6 @@ export async function POST(request: Request) {
     method: "POST",
     body: JSON.stringify(body),
   });
-  const json = await parseBackendJson<{ verified: true }>(backendResponse);
+  const json = await parseBackendJson<{ verified: true; email: string }>(backendResponse);
   return NextResponse.json(json, { status: backendResponse.status });
 }
