@@ -51,6 +51,15 @@ echo "--- Deploying Production Database Migrations & Building Backend ---"
 cd /opt/wedhub/wedhub-backend
 npm ci
 npx prisma migrate deploy
+# Safe to run on every deploy — prisma/seed.ts's master-data functions
+# (subscription plans, categories, etc.) are upsert/create-only against
+# fields an admin can edit through the UI, never overwriting an existing
+# row's admin-configured values (only filling in rows that don't exist yet,
+# e.g. a brand-new plan/category added to seed.ts's source list). Confirmed
+# for subscription plans specifically 2026-09-22 after this exact gap caused
+# both wedhub_prod and wedhub_test to serve stale plan `features` JSON post
+# code-deploy until seeded manually.
+npm run db:seed
 npm run build
 
 echo "--- Building Production Frontend ---"
@@ -73,6 +82,7 @@ if [ -d "/opt/wedhub-test" ]; then
   cd /opt/wedhub-test/wedhub-backend
   npm ci
   npx prisma migrate deploy
+  npm run db:seed
   npm run build
 
   echo "--- Building Test Frontend ---"

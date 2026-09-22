@@ -1409,6 +1409,11 @@ interface PlanSeed {
   features: Record<string, unknown>;
 }
 
+// 2-plan Free/Premium structure (confirmed 2026-09-22 — Pro and both YEARLY
+// variants were deliberately removed from test and production; this source
+// list is create-only per seedSubscriptionPlans below, so leaving the old
+// pro/pro-yearly/premium-yearly entries here would silently recreate them on
+// any environment where they'd been deleted, on the next deploy/seed run).
 const SUBSCRIPTION_PLANS: PlanSeed[] = [
   {
     slug: "free",
@@ -1427,61 +1432,13 @@ const SUBSCRIPTION_PLANS: PlanSeed[] = [
     },
   },
   {
-    slug: "pro",
-    billingInterval: "MONTHLY",
-    name: "Pro",
-    price: 5999,
-    trialDays: 14,
-    isDefault: false,
-    sortOrder: 2,
-    limits: { portfolio_limit: 100, video_limit: 10 },
-    features: {
-      analytics_level: true,
-      featured_eligibility: false,
-      store_access: true,
-      invoicing_access: true,
-    },
-  },
-  {
-    slug: "pro-yearly",
-    billingInterval: "YEARLY",
-    name: "Pro (Yearly)",
-    price: 59990,
-    trialDays: 14,
-    isDefault: false,
-    sortOrder: 3,
-    limits: { portfolio_limit: 100, video_limit: 10 },
-    features: {
-      analytics_level: true,
-      featured_eligibility: false,
-      store_access: true,
-      invoicing_access: true,
-    },
-  },
-  {
     slug: "premium",
     billingInterval: "MONTHLY",
     name: "Premium",
     price: 12999,
     trialDays: 14,
     isDefault: false,
-    sortOrder: 4,
-    limits: { portfolio_limit: 500, video_limit: 50 },
-    features: {
-      analytics_level: true,
-      featured_eligibility: true,
-      store_access: true,
-      invoicing_access: true,
-    },
-  },
-  {
-    slug: "premium-yearly",
-    billingInterval: "YEARLY",
-    name: "Premium (Yearly)",
-    price: 129990,
-    trialDays: 14,
-    isDefault: false,
-    sortOrder: 5,
+    sortOrder: 2,
     limits: { portfolio_limit: 500, video_limit: 50 },
     features: {
       analytics_level: true,
@@ -1492,19 +1449,22 @@ const SUBSCRIPTION_PLANS: PlanSeed[] = [
   },
 ];
 
+// CREATE-ONLY, never UPDATE an existing plan. Plans are admin-owned data
+// post-launch (PLAN-2026-09-22-dynamic-plans-and-feature-registry.md) — an
+// admin editing price/limits/features/name through PlanFormModal must never
+// have that edit silently reverted by the next deploy's seed run. This
+// function only fills in a plan that doesn't exist yet (a fresh database, or
+// a plan slug an admin genuinely never created) — it never touches a plan
+// that's already there, no matter how its fields differ from SUBSCRIPTION_PLANS
+// below. This is what makes it safe to run on every deploy (see deploy.sh).
 async function seedSubscriptionPlans(): Promise<void> {
+  const existingSlugs = new Set((await prisma.subscriptionPlan.findMany({ select: { slug: true } })).map((p) => p.slug));
+  let createdCount = 0;
+
   for (const plan of SUBSCRIPTION_PLANS) {
-    await prisma.subscriptionPlan.upsert({
-      where: { slug: plan.slug },
-      update: {
-        name: plan.name,
-        price: plan.price,
-        trialDays: plan.trialDays,
-        sortOrder: plan.sortOrder,
-        limits: plan.limits,
-        features: plan.features,
-      },
-      create: {
+    if (existingSlugs.has(plan.slug)) continue;
+    await prisma.subscriptionPlan.create({
+      data: {
         slug: plan.slug,
         billingInterval: plan.billingInterval,
         name: plan.name,
@@ -1517,12 +1477,13 @@ async function seedSubscriptionPlans(): Promise<void> {
         features: plan.features,
       },
     });
+    createdCount += 1;
   }
 
-  // isDefault is intentionally excluded from the `update` branch above (an
-  // admin may have deliberately moved the default to a different plan since
-  // seeding — re-seeding must never silently move it back). This only
-  // ensures a default exists on a truly fresh database.
+  // Ensures a default exists on a truly fresh database only — never moves
+  // the default off whatever plan an admin has since set, and never runs at
+  // all once any plan is flagged isDefault (which will always be true after
+  // the very first seed on a given database).
   const anyDefault = await prisma.subscriptionPlan.findFirst({ where: { isDefault: true } });
   if (!anyDefault) {
     const freePlan = SUBSCRIPTION_PLANS.find((p) => p.isDefault);
@@ -1531,7 +1492,7 @@ async function seedSubscriptionPlans(): Promise<void> {
     }
   }
 
-  console.info(`Seeded ${SUBSCRIPTION_PLANS.length} subscription plans.`);
+  console.info(`Subscription plans: ${createdCount} created, ${SUBSCRIPTION_PLANS.length - createdCount} already existed (left untouched).`);
 }
 
 export async function seedPermissionsAndRoles(): Promise<void> {
