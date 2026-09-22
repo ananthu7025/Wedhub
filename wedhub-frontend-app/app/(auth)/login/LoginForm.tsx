@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { FieldError } from "@/components/ui/FieldError";
 import { Button } from "@/components/ui/Button";
 import { GoogleSignInButton } from "@/components/shared/GoogleSignInButton";
@@ -24,6 +25,7 @@ export function LoginForm() {
   const { showToast } = useToast();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [touched, setTouched] = useState<{ identifier?: boolean; password?: boolean }>({});
   const [pending, setPending] = useState(false);
 
@@ -37,7 +39,7 @@ export function LoginForm() {
     if (!isFormValid) return;
 
     setPending(true);
-    const result = await login(identifier, password);
+    const result = await login(identifier, password, rememberMe);
 
     if (!result.success) {
       showToast(formatApiError(result.error), "error");
@@ -75,8 +77,7 @@ export function LoginForm() {
         {touched.identifier && <FieldError message={identifierError} />}
       </div>
       <div className="mb-4">
-        <Input
-          type="password"
+        <PasswordInput
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -86,6 +87,16 @@ export function LoginForm() {
         />
         {touched.password && <FieldError message={passwordError} />}
       </div>
+
+      <label className="mb-4 flex items-center gap-2 text-[13px] text-text-grey">
+        <input
+          type="checkbox"
+          checked={rememberMe}
+          onChange={(e) => setRememberMe(e.target.checked)}
+          className="h-4 w-4 rounded border-border accent-brand-primary"
+        />
+        Remember me
+      </label>
 
       <Button type="submit" variant="primary" block disabled={pending} className="mb-4">
         {pending ? "Logging in…" : "Log in"}

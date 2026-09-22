@@ -4,6 +4,11 @@ import { env } from "../../config/env";
 export interface NotificationContent {
   title: string;
   body: string;
+  // Optional: when a template wants a styled CTA button in the EMAIL
+  // rendering instead of (or in addition to) a plain-text link inside body —
+  // see VERIFICATION below. Ignored by IN_APP/other channels and by
+  // renderEmailHtml's generic branch for any template that doesn't set it.
+  cta?: { label: string; url: string };
 }
 
 // Keys are a subset of the fields a given event's template needs — callers
@@ -44,9 +49,11 @@ const TEMPLATES: Record<NotificationEventType, Template> = {
         body: "Verify your email to unlock all account features.",
       };
     }
+    const verifyUrl = `${env.FRONTEND_URL}/verify-email?token=${data.token ?? ""}`;
     return {
       title: "Welcome to itsmyKalyanam — verify your email",
-      body: `Your account has been created. Confirm your email address to activate it: ${env.FRONTEND_URL}/verify-email?token=${data.token ?? ""}`,
+      body: `Your account has been created. Confirm your email address to activate it: ${verifyUrl}`,
+      cta: { label: "Verify email address", url: verifyUrl },
     };
   },
   PASSWORD_RESET: (data, channel) => {
@@ -56,9 +63,11 @@ const TEMPLATES: Record<NotificationEventType, Template> = {
         body: "A password reset was requested for your account. Check your email for the reset link. If this wasn't you, secure your account.",
       };
     }
+    const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${data.token ?? ""}`;
     return {
       title: "Reset your password",
-      body: `We received a request to reset your password. Use this link to choose a new one: ${env.FRONTEND_URL}/reset-password?token=${data.token ?? ""}. If you didn't request this, you can ignore this email.`,
+      body: `We received a request to reset your password. Use this link to choose a new one: ${resetUrl}. If you didn't request this, you can ignore this email.`,
+      cta: { label: "Reset password", url: resetUrl },
     };
   },
   VENDOR_APPROVED: (data) => ({
@@ -136,9 +145,11 @@ const TEMPLATES: Record<NotificationEventType, Template> = {
         body: "Confirm your new email address to finish changing your account email. Check your email for the confirmation link.",
       };
     }
+    const confirmUrl = `${env.FRONTEND_URL}/confirm-email-change?token=${data.token ?? ""}`;
     return {
       title: "Confirm your new email address",
-      body: `Confirm this email address to finish changing your itsmyKalyanam account email: ${env.FRONTEND_URL}/confirm-email-change?token=${data.token ?? ""}. Your current email stays active until you confirm. If you didn't request this, you can ignore this email.`,
+      body: `Confirm this email address to finish changing your itsmyKalyanam account email: ${confirmUrl}. Your current email stays active until you confirm. If you didn't request this, you can ignore this email.`,
+      cta: { label: "Confirm new email", url: confirmUrl },
     };
   },
 };
@@ -151,11 +162,88 @@ export function renderNotification(
   return TEMPLATES[eventType](data, channel);
 }
 
+const BRAND_PRIMARY = "#e00b41";
+const BRAND_INK = "#111111";
+const TEXT_GREY = "#526170";
+
+// HTML-escapes template data before it lands in the email — content.title/body
+// are built from our own template strings above, but data.businessName,
+// data.reviewerName, etc. (see the TEMPLATES map) originate from user input
+// (a vendor's business name, a reviewer's display name) and flow through
+// unescaped otherwise, which would let one user's chosen name break another
+// recipient's email markup.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Table-based layout with inline styles throughout — the only markup style
+// that renders consistently across Outlook/Gmail/Apple Mail, none of which
+// reliably support a <style> block or modern CSS layout. Kept intentionally
+// simple (single card, one optional button) rather than a full design
+// system: this covers all 16 NotificationEventType templates through one
+// shared shell, not a different layout per event.
 export function renderEmailHtml(content: NotificationContent): string {
-  return `<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-    <h2>${content.title}</h2>
-    <p>${content.body}</p>
-    <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-    <p style="color: #888; font-size: 12px;">itsmyKalyanam</p>
-  </div>`;
+  const title = escapeHtml(content.title);
+  // content.body already embeds a raw URL for CTA-less templates (every
+  // event except VERIFICATION/PASSWORD_RESET/EMAIL_CHANGE_CONFIRMATION) —
+  // turn that into a clickable link rather than plain text, since escaping
+  // alone would leave it unclickable.
+  const bodyHtml = escapeHtml(content.body).replace(
+    /(https?:\/\/[^\s]+)/g,
+    (url) => `<a href="${url}" style="color: ${BRAND_PRIMARY};">${url}</a>`,
+  );
+
+  const button = content.cta
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+        <tr>
+          <td style="border-radius: 8px; background-color: ${BRAND_PRIMARY};">
+            <a href="${content.cta.url}" style="display: inline-block; padding: 14px 28px; font-size: 15px; font-weight: 700; color: #ffffff; text-decoration: none; border-radius: 8px;">
+              ${escapeHtml(content.cta.label)}
+            </a>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0 0 24px; font-size: 12px; color: ${TEXT_GREY}; word-break: break-all;">
+        Or paste this link into your browser:<br />
+        <a href="${content.cta.url}" style="color: ${BRAND_PRIMARY};">${content.cta.url}</a>
+      </p>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html>
+  <body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; background-color: #ffffff; border-radius: 12px; overflow: hidden;">
+            <tr>
+              <td style="padding: 28px 32px 0;">
+                <span style="font-size: 18px; font-weight: 800; color: ${BRAND_INK};">itsmy<span style="color: ${BRAND_PRIMARY};">Kalyanam</span></span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 24px 32px 32px;">
+                <h1 style="margin: 0 0 12px; font-size: 20px; font-weight: 700; color: ${BRAND_INK};">${title}</h1>
+                <p style="margin: 0 0 4px; font-size: 14px; line-height: 1.6; color: ${TEXT_GREY};">${bodyHtml}</p>
+                ${button}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 20px 32px; border-top: 1px solid #eeeeee;">
+                <p style="margin: 0; font-size: 12px; color: #9aa3ab;">
+                  itsmyKalyanam &middot; You're receiving this because of activity on your account.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 }

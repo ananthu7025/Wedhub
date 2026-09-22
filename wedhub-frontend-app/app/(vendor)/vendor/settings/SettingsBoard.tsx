@@ -20,6 +20,7 @@ import type { NotificationChannel, NotificationEventType, NotificationPreference
 import { formatApiError } from "@/lib/utils/error";
 import { Input } from "@/components/ui/Input";
 import { FieldError } from "@/components/ui/FieldError";
+import { useToast } from "@/components/ui/Toast";
 import { emailSchema, optionalPhoneSchema, validateField } from "@/lib/validation/auth-schemas";
 
 /**
@@ -128,6 +129,7 @@ function SectionShell({
 
 function BusinessInfoSection({ vendor, me }: { vendor: VendorSelf; me: MeResponse }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const profile = vendor.profile;
   const [businessName, setBusinessName] = useState(vendor.businessName);
   const [firstName, setFirstName] = useState(me.profile?.firstName ?? "");
@@ -169,6 +171,7 @@ function BusinessInfoSection({ vendor, me }: { vendor: VendorSelf; me: MeRespons
     setSaving(false);
     if (vendorResult.success && userResult.success && profileResult.success) {
       setSaved(true);
+      showToast("Changes saved.", "success");
       setTimeout(() => setSaved(false), 2000);
       router.refresh();
       return;
@@ -258,6 +261,7 @@ function CategoryLocationSection({
   cities: LocationSelf[];
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? null;
   const subcategoryIds = vendor.categories.filter((c) => !c.isPrimary).map((c) => c.categoryId);
 
@@ -447,6 +451,7 @@ function CategoryLocationSection({
 
 function PricingPoliciesSection({ vendor }: { vendor: VendorSelf }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const profile = vendor.profile;
   const [startingPrice, setStartingPrice] = useState(profile?.startingPrice ?? "");
   const [priceRangeMin, setPriceRangeMin] = useState(profile?.priceRangeMin ?? "");
@@ -490,6 +495,7 @@ function PricingPoliciesSection({ vendor }: { vendor: VendorSelf }) {
       return;
     }
     setSaved(true);
+    showToast("Changes saved.", "success");
     setTimeout(() => setSaved(false), 2000);
     router.refresh();
   }
@@ -594,6 +600,7 @@ function optionalEmailError(rawValue: string): string | null {
 
 function ContactSocialSection({ vendor }: { vendor: VendorSelf }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const profile = vendor.profile;
   const [website, setWebsite] = useState(profile?.website ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
@@ -644,6 +651,7 @@ function ContactSocialSection({ vendor }: { vendor: VendorSelf }) {
       return;
     }
     setSaved(true);
+    showToast("Changes saved.", "success");
     setTimeout(() => setSaved(false), 2000);
     router.refresh();
   }
@@ -742,6 +750,7 @@ function ContactSocialSection({ vendor }: { vendor: VendorSelf }) {
 
 function MoreDetailsSection({ vendor }: { vendor: VendorSelf }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const profile = vendor.profile;
   const [yearsExperience, setYearsExperience] = useState(profile?.yearsExperience?.toString() ?? "");
   const [eventsCompletedRange, setEventsCompletedRange] = useState(profile?.eventsCompletedRange ?? "");
@@ -786,6 +795,7 @@ function MoreDetailsSection({ vendor }: { vendor: VendorSelf }) {
       return;
     }
     setSaved(true);
+    showToast("Changes saved.", "success");
     setTimeout(() => setSaved(false), 2000);
     router.refresh();
   }
@@ -870,6 +880,7 @@ function MoreDetailsSection({ vendor }: { vendor: VendorSelf }) {
 // status just shows their current listing status.
 function SubmitForReviewSection({ vendor }: { vendor: VendorSelf }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -888,6 +899,7 @@ function SubmitForReviewSection({ vendor }: { vendor: VendorSelf }) {
       if (Array.isArray(missingDetail)) setMissingFields(missingDetail as string[]);
       return;
     }
+    showToast("Submitted for review.", "success");
     router.push("/vendor/dashboard");
     router.refresh();
   }
@@ -948,6 +960,7 @@ export function SettingsBoard({
   initialPreferences: NotificationPreference[];
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [preferences, setPreferences] = useState(initialPreferences);
   const [savingToggle, setSavingToggle] = useState<string | null>(null);
   const [notificationError, setNotificationError] = useState<string | null>(null);

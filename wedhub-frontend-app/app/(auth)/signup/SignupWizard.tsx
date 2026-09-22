@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { FieldError } from "@/components/ui/FieldError";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
-import { register, login, resendVerificationEmail, refreshSession } from "@/lib/api/auth-client";
+import { register, login, resendVerificationEmail } from "@/lib/api/auth-client";
 import { updateMyProfile } from "@/lib/api/users-client";
 import { GoogleSignInButton } from "@/components/shared/GoogleSignInButton";
 import { formatApiError } from "@/lib/utils/error";
@@ -141,8 +142,7 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
         </div>
         <div className="mb-4.5">
           <span className="mb-2 block text-[13px] font-bold">Create password</span>
-          <Input
-            type="password"
+          <PasswordInput
             placeholder="Min. 8 characters"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -189,26 +189,14 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
   }
 
   if (step === "verify") {
-    return (
-      <VerifyEmailStep
-        email={email}
-        onVerified={() => {
-          // Item 3, 2026-09-16: vendor onboarding is now a full multi-step
-          // wizard (business name, category, city, pricing, description —
-          // see (auth)/vendor-onboarding/VendorOnboardingForm.tsx), not just
-          // a business-name field. Routing a freshly-verified vendor there
-          // directly (instead of this wizard's own inline "profile" step,
-          // which only ever collected business name) means every vendor
-          // signs up through that one richer flow — no separate, thinner
-          // vendor-creation path left to keep in sync with it.
-          if (accountType === "VENDOR") {
-            router.push("/vendor-onboarding");
-            return;
-          }
-          setStep("profile");
-        }}
-      />
-    );
+    // No onVerified callback anymore — verification now happens entirely via
+    // the emailed link (VerifyEmailStatus.tsx), which redirects the session
+    // straight to /verify-email/pending -> the right role's home route
+    // (/vendor-onboarding for a vendor with no Vendor record yet, since
+    // requireVendorOwnership treats that 404 as "needs onboarding"; see
+    // lib/auth/require-vendor.ts). This wizard step just waits and offers a
+    // resend — it never sees the moment verification actually completes.
+    return <VerifyEmailStep email={email} />;
   }
 
   if (step === "profile") {
@@ -251,15 +239,12 @@ const RESEND_COOLDOWN_SECONDS = 30;
 
 // Shown right after registration, before profile setup — item 1: profile
 // setup only happens after email verification, for both roles. Clicking the
-// emailed link (verify-email/page.tsx) is what actually verifies the
-// account; onVerified below is triggered by refreshSession() re-minting an
-// access token that reflects the now-current emailVerifiedAt (see
-// verify-email/pending/VerifyEmailPendingPanel.tsx's identical pattern,
-// which this mirrors for the case where the user never leaves this wizard).
-function VerifyEmailStep({ email, onVerified }: { email: string; onVerified: () => void }) {
+// emailed link (verify-email/page.tsx) now verifies AND redirects on its own
+// (see VerifyEmailStatus.tsx), so this step has no "I've verified" button —
+// it just waits, with a way to resend the link if it doesn't arrive.
+function VerifyEmailStep({ email }: { email: string }) {
   const { showToast } = useToast();
   const [pending, setPending] = useState(false);
-  const [checking, setChecking] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
   async function handleResend() {
@@ -283,33 +268,17 @@ function VerifyEmailStep({ email, onVerified }: { email: string; onVerified: () 
     }, 1000);
   }
 
-  async function handleCheckAgain() {
-    setChecking(true);
-    const result = await refreshSession();
-    setChecking(false);
-    if (!result.success) {
-      showToast(formatApiError(result.error), "error");
-      return;
-    }
-    onVerified();
-  }
-
   return (
     <div className="w-full max-w-md text-center">
       <h1 className="mb-2 text-xl font-bold">Verify your email</h1>
       <p className="mb-7 text-[13px] text-text-grey">
         We&apos;ve sent a verification link to <span className="font-semibold text-text-dark">{email}</span>. Check
-        your inbox and click the link to continue.
+        your inbox and click the link to continue — it&apos;ll take you straight to your dashboard.
       </p>
 
-      <Button type="button" variant="primary" block disabled={checking} onClick={handleCheckAgain}>
-        {checking ? "Checking…" : "I've verified — continue"}
+      <Button type="button" variant="secondary" block disabled={pending || cooldown > 0} onClick={handleResend}>
+        {pending ? "Sending…" : cooldown > 0 ? `Resend email (${cooldown}s)` : "Resend verification email"}
       </Button>
-      <div className="mt-3">
-        <Button type="button" variant="secondary" block disabled={pending || cooldown > 0} onClick={handleResend}>
-          {pending ? "Sending…" : cooldown > 0 ? `Resend email (${cooldown}s)` : "Resend verification email"}
-        </Button>
-      </div>
     </div>
   );
 }

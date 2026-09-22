@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { FieldError } from "@/components/ui/FieldError";
 import { useToast } from "@/components/ui/Toast";
 import { GoogleSignInButton } from "./GoogleSignInButton";
@@ -180,8 +181,7 @@ export function SignInModal({
 
           <div className="mb-1.5">
             <span className="mb-2 block text-[13px] font-bold">Password</span>
-            <Input
-              type="password"
+            <PasswordInput
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

@@ -5,6 +5,7 @@ import { changeEmail } from "@/lib/api/auth-client";
 import { formatApiError } from "@/lib/utils/error";
 import { useToast } from "@/components/ui/Toast";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { FieldError } from "@/components/ui/FieldError";
 import { emailSchema, validateField } from "@/lib/validation/auth-schemas";
 
@@ -80,8 +81,7 @@ export function ChangeEmailForm() {
       </label>
       <label className="mb-3 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">Current password</span>
-        <Input
-          type="password"
+        <PasswordInput
           value={currentPassword}
           onChange={(e) => setCurrentPassword(e.target.value)}
           onBlur={() => setTouched((t) => ({ ...t, currentPassword: true }))}

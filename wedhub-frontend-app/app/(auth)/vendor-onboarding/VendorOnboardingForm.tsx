@@ -9,19 +9,21 @@ import { useToast } from "@/components/ui/Toast";
 import { WizardGuard } from "@/components/shared/WizardGuard";
 import { useWizardDraft } from "@/lib/hooks/useWizardDraft";
 import { createVendor } from "@/lib/api/vendor-onboarding-client";
-import { setMyCategories, upsertMyProfile } from "@/lib/api/vendor-self-client";
+import { setMyCategories, setMyServiceAreas, upsertMyProfile } from "@/lib/api/vendor-self-client";
 import { listCategoriesClient, listLocationsClient } from "@/lib/api/catalog-client";
 import type { Category, Location } from "@/lib/api/vendors.types";
 import { formatApiError } from "@/lib/utils/error";
 
 const DRAFT_STORAGE_KEY = "wedhub:vendor-onboarding-draft";
-const STEPS = ["Business name", "Category & city", "Pricing & description", "Review"] as const;
+const STEPS = ["Business name", "Category & city", "Service areas", "Pricing & description", "Review"] as const;
 
 interface VendorOnboardingDraft {
   businessName: string;
   phone: string;
   categoryId: string;
   cityId: string;
+  serviceAreaIds: string[];
+  servesAllAreas: boolean;
   startingPrice: string;
   priceRangeMin: string;
   priceRangeMax: string;
@@ -33,6 +35,8 @@ const EMPTY_DRAFT: VendorOnboardingDraft = {
   phone: "",
   categoryId: "",
   cityId: "",
+  serviceAreaIds: [],
+  servesAllAreas: false,
   startingPrice: "",
   priceRangeMin: "",
   priceRangeMax: "",
@@ -94,7 +98,10 @@ export function VendorOnboardingForm() {
       if (!state.cityId) errors.cityId = "Please select your city.";
     }
 
-    if (currentStep === 2) {
+    // Step 2 (service areas) has no required fields — a vendor can leave it
+    // blank and add areas later from Settings, same as pricing below.
+
+    if (currentStep === 3) {
       const min = state.priceRangeMin ? Number(state.priceRangeMin) : undefined;
       const max = state.priceRangeMax ? Number(state.priceRangeMax) : undefined;
       if (min !== undefined && max !== undefined && min > max) {
@@ -118,7 +125,7 @@ export function VendorOnboardingForm() {
   }
 
   async function handleSubmit() {
-    if (!validateStep(0) || !validateStep(1) || !validateStep(2)) {
+    if (!validateStep(0) || !validateStep(1) || !validateStep(3)) {
       showToast("Please fix the errors in earlier steps before submitting.", "error");
       return;
     }
@@ -153,11 +160,25 @@ export function VendorOnboardingForm() {
     }
 
     const categoriesResult = await setMyCategories({ primaryCategoryId: state.categoryId, subcategoryIds: [] });
-    setSubmitting(false);
     if (!categoriesResult.success) {
+      setSubmitting(false);
       showToast(formatApiError(categoriesResult.error), "error");
       return;
     }
+
+    // Optional — a vendor may leave every box unchecked and add areas later
+    // from Settings, so an empty selection here is not treated as an error.
+    if (state.servesAllAreas || state.serviceAreaIds.length > 0) {
+      const serviceAreaResult = await setMyServiceAreas({
+        locationIds: state.servesAllAreas ? cities.map((c) => c.id) : state.serviceAreaIds,
+      });
+      if (!serviceAreaResult.success) {
+        setSubmitting(false);
+        showToast(formatApiError(serviceAreaResult.error), "error");
+        return;
+      }
+    }
+    setSubmitting(false);
 
     markSubmitted();
     clearDraft();
@@ -267,6 +288,48 @@ export function VendorOnboardingForm() {
       {step === 2 && (
         <div className="space-y-5">
           <div>
+            <span className="mb-2 block text-xs font-bold tracking-wide uppercase text-text-grey">
+              Service areas (optional)
+            </span>
+            <label className="mb-2.5 flex items-center gap-2 text-[13px] font-semibold">
+              <input
+                type="checkbox"
+                checked={state.servesAllAreas}
+                onChange={(e) => updateField("servesAllAreas", e.target.checked)}
+                className="accent-brand-primary"
+              />
+              I serve all areas
+            </label>
+            {!state.servesAllAreas && (
+              <div className="grid grid-cols-2 gap-2">
+                {cities.map((city) => (
+                  <label key={city.id} className="flex items-center gap-2 text-[13px]">
+                    <input
+                      type="checkbox"
+                      checked={state.serviceAreaIds.includes(city.id)}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...state.serviceAreaIds, city.id]
+                          : state.serviceAreaIds.filter((id) => id !== city.id);
+                        updateField("serviceAreaIds", next);
+                      }}
+                      className="accent-brand-primary"
+                    />
+                    {city.name}
+                  </label>
+                ))}
+              </div>
+            )}
+            <p className="mt-1.5 text-xs text-text-grey">
+              Cities you&apos;re willing to travel to for weddings. You can change this anytime from Settings.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="space-y-5">
+          <div>
             <label className="mb-2 block text-xs font-bold tracking-wide uppercase text-text-grey">
               Starting price (₹, optional)
             </label>
@@ -309,7 +372,7 @@ export function VendorOnboardingForm() {
         </div>
       )}
 
-      {step === 3 && (
+      {step === 4 && (
         <div className="space-y-3 text-sm">
           <p>
             <span className="font-bold">Business name:</span> {state.businessName}
@@ -323,6 +386,17 @@ export function VendorOnboardingForm() {
           </p>
           <p>
             <span className="font-bold">City:</span> {cities.find((c) => c.id === state.cityId)?.name ?? "—"}
+          </p>
+          <p>
+            <span className="font-bold">Service areas:</span>{" "}
+            {state.servesAllAreas
+              ? "All areas"
+              : state.serviceAreaIds.length > 0
+                ? cities
+                    .filter((c) => state.serviceAreaIds.includes(c.id))
+                    .map((c) => c.name)
+                    .join(", ")
+                : "Not set (can add later)"}
           </p>
           {state.startingPrice && (
             <p>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { FieldError } from "@/components/ui/FieldError";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -46,8 +46,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-sm" noValidate>
       <div className="mb-4.5">
-        <Input
-          type="password"
+        <PasswordInput
           placeholder="New password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

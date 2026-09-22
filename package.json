@@ -1,0 +1,14 @@
+{
+  "name": "wedhub",
+  "private": true,
+  "description": "Root-level dev orchestration only — each project (wedhub-backend, wedhub-frontend-app, wedhub-website-builder) still has its own package.json and is deployed independently via ecosystem.config.js. This file exists solely so `npm run dev` can start the backend API, its BullMQ worker, and the frontend together — running the API alone leaves notification emails (verification, etc.) queued but never sent, since delivery happens in the separate worker process.",
+  "scripts": {
+    "dev": "concurrently -n api,worker,web -c blue,magenta,green \"npm:dev:api\" \"npm:dev:worker\" \"npm:dev:web\"",
+    "dev:api": "npm run dev --prefix wedhub-backend",
+    "dev:worker": "npm run worker --prefix wedhub-backend",
+    "dev:web": "npm run dev --prefix wedhub-frontend-app"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

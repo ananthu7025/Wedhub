@@ -20,8 +20,8 @@ async function postJson<T>(path: string, body: unknown): Promise<ApiResponse<T>>
   return (await response.json()) as ApiResponse<T>;
 }
 
-export function login(identifier: string, password: string) {
-  return postJson<{ user: AuthenticatedUser }>("/api/auth/login", { identifier, password });
+export function login(identifier: string, password: string, rememberMe?: boolean) {
+  return postJson<{ user: AuthenticatedUser }>("/api/auth/login", { identifier, password, rememberMe });
 }
 
 // role is omitted on the plain /login page (no signup-intent context there)

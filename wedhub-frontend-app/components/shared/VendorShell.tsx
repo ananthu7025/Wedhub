@@ -156,9 +156,11 @@ export async function VendorShell({
   const visibleNavLinks = navLinks.filter((link) => link.href !== "/vendor/store" || hasStoreEligibleCategory);
 
   return (
-    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden">
-      {/* Desktop Sidebar (hidden on screens < 1024px) */}
-      <aside className="hidden lg:flex w-[240px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
+    <div className="flex h-screen w-full max-w-full overflow-x-hidden">
+      {/* Desktop Sidebar (hidden on screens < 1024px) — fixed height, scrolls
+          independently of the main content if the nav list ever outgrows
+          the viewport. */}
+      <aside className="hidden lg:flex w-[240px] flex-shrink-0 flex-col gap-1 overflow-y-auto border-r border-border bg-white p-4">
         <BrandLogo variant="dark" href="/vendor/dashboard" className="mb-5 px-1" />
 
         {visibleNavLinks.map((link) => {
@@ -190,8 +192,9 @@ export async function VendorShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
-        {/* Desktop Header (hidden on screens < 1024px) */}
-        <header className="hidden lg:flex h-16 items-center justify-end gap-3 border-b border-border bg-white px-6">
+        {/* Desktop Header (hidden on screens < 1024px) — sticky so it stays
+            pinned to the top of this column while <main> below scrolls. */}
+        <header className="sticky top-0 z-20 hidden lg:flex h-16 flex-shrink-0 items-center justify-end gap-3 border-b border-border bg-white px-6">
           {resolvedSlug && isApproved && (
             <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
           )}
@@ -261,8 +264,10 @@ export async function VendorShell({
           </div>
         </header>
 
-        {/* Page Content with safe-area bottom padding for the mobile bottom nav */}
-        <main className="flex-1 min-w-0 bg-surface-page p-3 sm:p-5 lg:p-6 pb-24 lg:pb-6">{children}</main>
+        {/* Page Content with safe-area bottom padding for the mobile bottom nav.
+            overflow-y-auto makes this the sole scroll container on desktop,
+            so the sidebar/header above stay fixed in place. */}
+        <main className="flex-1 min-w-0 overflow-y-auto bg-surface-page p-3 sm:p-5 lg:p-6 pb-24 lg:pb-6">{children}</main>
       </div>
 
       {/* Mobile Bottom Navigation Bar & Slide-Over Drawer */}

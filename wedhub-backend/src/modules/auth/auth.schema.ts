@@ -134,6 +134,7 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   identifier: identifierSchema,
   password: loginPasswordSchema,
+  rememberMe: z.boolean().optional(),
 });
 
 export const googleLoginSchema = z.object({

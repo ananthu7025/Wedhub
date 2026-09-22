@@ -83,6 +83,7 @@ export function ProfileEditor({ vendor, categories }: { vendor: VendorSelf; cate
     }
 
     setStatus("saved");
+    showToast("Changes saved.", "success");
     router.refresh();
     setTimeout(() => setStatus("idle"), 2000);
   }

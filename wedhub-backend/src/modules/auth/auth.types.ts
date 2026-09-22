@@ -10,6 +10,7 @@ export interface RegisterInput {
 export interface LoginInput {
   identifier: string;
   password: string;
+  rememberMe?: boolean | undefined;
 }
 
 export interface GoogleLoginInput {

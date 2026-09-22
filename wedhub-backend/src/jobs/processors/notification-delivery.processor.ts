@@ -4,13 +4,15 @@ import { logger } from "../../config/logger";
 import { prisma } from "../../config/database";
 import { sendEmail } from "../../integrations/email/resend.client";
 import { telegramProvider } from "../../integrations/telegram/telegram.client";
-import { renderEmailHtml } from "../../modules/notifications/notification.templates";
+import { renderEmailHtml, renderNotification, type TemplateData } from "../../modules/notifications/notification.templates";
 import * as notificationRepository from "../../modules/notifications/notification.repository";
 import type { NotificationDeliveryJobData } from "../queues/notification-delivery.queue";
+import type { NotificationEventType } from "@prisma/client";
 
 async function deliverEmail(notification: {
   id: string;
   userId: string;
+  eventType: NotificationEventType;
   title: string;
   body: string;
   data: unknown;
@@ -40,10 +42,24 @@ async function deliverEmail(notification: {
     to = user.email;
   }
 
+  // Re-render (rather than trust the persisted title/body alone) so the CTA
+  // button can be reconstructed: notify() only persists {title, body} on the
+  // Notification row (never the template's `cta`, since for
+  // VERIFICATION/PASSWORD_RESET/EMAIL_CHANGE_CONFIRMATION that URL embeds the
+  // same raw token the EMAIL row's `data` column already carries — see
+  // notify()'s per-channel token-stripping comment). Re-rendering here is
+  // deterministic (same eventType + data + "EMAIL" channel notify() used) and
+  // touches nothing not already sitting in this row.
+  const content = renderNotification(
+    notification.eventType,
+    (notification.data as TemplateData | null) ?? {},
+    "EMAIL",
+  );
+
   await sendEmail({
     to,
     subject: notification.title,
-    html: renderEmailHtml({ title: notification.title, body: notification.body }),
+    html: renderEmailHtml(content),
   });
 }
 

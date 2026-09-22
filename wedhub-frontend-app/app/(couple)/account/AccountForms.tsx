@@ -73,6 +73,7 @@ export function WeddingDetailsForm({ me }: { me: MeResponse }) {
     setSaving(false);
     if (result.success) {
       setSaved(true);
+      showToast("Changes saved.", "success");
       router.refresh();
     } else {
       showToast(formatApiError(result.error), "error");
@@ -164,6 +165,7 @@ export function AccountDetailsForm({ me }: { me: MeResponse }) {
     setSaving(false);
     if (result.success) {
       setSaved(true);
+      showToast("Changes saved.", "success");
       router.refresh();
     } else {
       showToast(formatApiError(result.error), "error");

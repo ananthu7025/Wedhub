@@ -407,6 +407,12 @@ const CATEGORY_ATTRIBUTES: Record<string, AttributeSeed[]> = {
     { key: "per_plate_rate_veg_sadya", label: "Per Plate Rate - Pure Veg Sadya (INR)", dataType: "NUMBER", isRequired: true, helpText: "Cost range for traditional veg feast", isComparable: true },
     { key: "per_plate_rate_non_veg", label: "Per Plate Rate - Non-Veg Menu (INR)", dataType: "NUMBER", isRequired: true, helpText: "Cost range for non-veg buffet", isComparable: true },
     {
+      key: "pricing_open_to_discussion",
+      label: "Pricing Is Open to Discussion",
+      dataType: "BOOLEAN",
+      helpText: "Turn this on if per-plate rates vary by menu/guest count and you're open to negotiating — advertises that your pricing is flexible and fully customizable.",
+    },
+    {
       key: "inclusions_in_per_plate_rate",
       label: "Inclusions in Per Plate Rate",
       dataType: "MULTI_SELECT",

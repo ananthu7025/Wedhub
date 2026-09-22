@@ -153,9 +153,11 @@ const sections: NavSection[] = [
 
 export function AdminShell({ children, activeHref }: { children: React.ReactNode; activeHref: string }) {
   return (
-    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden">
-      {/* Desktop sidebar (hidden below 1024px) */}
-      <aside className="hidden lg:flex w-[250px] flex-shrink-0 flex-col gap-1 border-r border-border bg-white p-4">
+    <div className="flex h-screen w-full max-w-full overflow-x-hidden">
+      {/* Desktop sidebar (hidden below 1024px) — fixed height, scrolls
+          independently of the main content if the nav list ever outgrows
+          the viewport. */}
+      <aside className="hidden lg:flex w-[250px] flex-shrink-0 flex-col gap-1 overflow-y-auto border-r border-border bg-white p-4">
         <div className="mb-5 flex items-center justify-between px-1">
           <BrandLogo variant="dark" href="/admin/dashboard" />
         </div>
@@ -188,15 +190,18 @@ export function AdminShell({ children, activeHref }: { children: React.ReactNode
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
-        {/* Desktop header (hidden below 1024px) */}
-        <header className="hidden lg:flex h-16 items-center justify-end gap-4 border-b border-border bg-white px-6">
+        {/* Desktop header (hidden below 1024px) — sticky so it stays pinned
+            to the top of this column while <main> below scrolls. */}
+        <header className="sticky top-0 z-20 hidden lg:flex h-16 flex-shrink-0 items-center justify-end gap-4 border-b border-border bg-white px-6">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-primary text-xs font-bold text-white">AD</div>
         </header>
 
         {/* Mobile sticky header + hamburger-triggered drawer (below 1024px) */}
         <AdminMobileNav sections={sections} />
 
-        <main className="flex-1 min-w-0 bg-surface-page p-3 sm:p-5 lg:p-6">{children}</main>
+        {/* overflow-y-auto makes this the sole scroll container on desktop,
+            so the sidebar/header above stay fixed in place. */}
+        <main className="flex-1 min-w-0 overflow-y-auto bg-surface-page p-3 sm:p-5 lg:p-6">{children}</main>
       </div>
     </div>
   );

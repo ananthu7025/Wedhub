@@ -44,10 +44,11 @@ export async function issueTokenPair(
   role: Role,
   context: RequestContext,
   emailVerifiedAt: Date | null = null,
+  rememberMe = false,
 ): Promise<TokenPair> {
   const accessToken = signAccessToken({ sub: userId, role, emailVerified: emailVerifiedAt != null });
   const refreshToken = generateOpaqueToken();
-  const refreshTokenExpiresAt = refreshTokenExpiryDate();
+  const refreshTokenExpiresAt = refreshTokenExpiryDate(rememberMe);
 
   await authRepository.createRefreshToken({
     userId,
@@ -168,7 +169,13 @@ export async function login(
   }
 
   await authRepository.recordSuccessfulLogin(user.id);
-  const tokens = await issueTokenPair(user.id, user.role as Role, context, user.emailVerifiedAt);
+  const tokens = await issueTokenPair(
+    user.id,
+    user.role as Role,
+    context,
+    user.emailVerifiedAt,
+    input.rememberMe,
+  );
 
   return { user: toAuthenticatedUserView(user), tokens };
 }

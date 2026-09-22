@@ -33,7 +33,12 @@ export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export function refreshTokenExpiryDate(): Date {
-  const days = env.JWT_REFRESH_TOKEN_TTL_DAYS;
+// "Remember me" multiplies the default refresh-token lifetime rather than
+// hardcoding a second env var — keeps the extended TTL proportional to
+// whatever JWT_REFRESH_TOKEN_TTL_DAYS is configured as (e.g. 30 -> 90 days).
+const REMEMBER_ME_TTL_MULTIPLIER = 3;
+
+export function refreshTokenExpiryDate(rememberMe = false): Date {
+  const days = env.JWT_REFRESH_TOKEN_TTL_DAYS * (rememberMe ? REMEMBER_ME_TTL_MULTIPLIER : 1);
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 }

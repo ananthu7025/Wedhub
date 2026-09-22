@@ -3,3 +3,4 @@ server.md
 rzp-key*.csv
 client_secret_*.json
 wedhub-frontend/
+node_modules/

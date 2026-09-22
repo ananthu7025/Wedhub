@@ -66,12 +66,14 @@ export async function createInvitation(
   // resent even if this particular send fails.
   if (invitedEmail) {
     try {
+      const claimUrl = `${env.FRONTEND_URL}/vendor-claim?token=${token}`;
       await sendEmail({
         to: invitedEmail,
         subject: "You're invited to claim your itsmyKalyanam vendor profile",
         html: renderEmailHtml({
           title: "Claim your vendor profile",
-          body: `You've been invited to claim "${vendor.businessName}" on itsmyKalyanam. Use this link to set up your account: ${env.FRONTEND_URL}/vendor-claim?token=${token}`,
+          body: `You've been invited to claim "${vendor.businessName}" on itsmyKalyanam. Use this link to set up your account: ${claimUrl}`,
+          cta: { label: "Claim your profile", url: claimUrl },
         }),
       });
     } catch (err) {
