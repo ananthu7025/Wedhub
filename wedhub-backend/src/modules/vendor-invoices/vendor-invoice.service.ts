@@ -2,6 +2,7 @@ import type { VendorInvoiceStatus } from "@prisma/client";
 import { prisma } from "../../config/database";
 import { omitUndefined } from "../../common/utils/object.util";
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
+import { assertVendorFeatureAccess } from "../entitlements/entitlement.service";
 import * as vendorRepository from "../vendors/vendor.repository";
 import * as invoiceRepository from "./vendor-invoice.repository";
 import type {
@@ -201,6 +202,7 @@ export async function getBillingProfile(vendorId: string) {
 }
 
 export async function upsertBillingProfile(vendorId: string, input: UpsertBillingProfileInput) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Invoicing & Billing");
   return invoiceRepository.upsertBillingProfile(vendorId, input);
 }
 
@@ -225,6 +227,7 @@ export async function createInvoice(
   userId: string,
   input: CreateVendorInvoiceInput,
 ) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Invoicing & Billing");
   const vendor = await vendorRepository.findVendorById(vendorId);
   if (!vendor) throw new NotFoundError("Vendor not found");
 
@@ -331,6 +334,7 @@ export async function updateInvoice(
   invoiceId: string,
   input: UpdateVendorInvoiceInput,
 ) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Invoicing & Billing");
   const existing = await invoiceRepository.findInvoiceById(vendorId, invoiceId);
   if (!existing) throw new NotFoundError("Invoice not found");
 
@@ -424,6 +428,7 @@ export async function deleteInvoice(vendorId: string, invoiceId: string) {
 }
 
 export async function issueInvoice(vendorId: string, userId: string, invoiceId: string) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Invoicing & Billing");
   const existing = await invoiceRepository.findInvoiceById(vendorId, invoiceId);
   if (!existing) throw new NotFoundError("Invoice not found");
 
@@ -532,6 +537,7 @@ export async function recordPayment(
   invoiceId: string,
   input: RecordPaymentInput,
 ) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Invoicing & Billing");
   const existing = await invoiceRepository.findInvoiceById(vendorId, invoiceId);
   if (!existing) throw new NotFoundError("Invoice not found");
 
@@ -655,7 +661,11 @@ export async function deletePayment(
   });
 }
 
+// getLeadPrefill's only purpose is starting a new invoice draft (its sole
+// frontend caller is InvoiceEditor.tsx, confirmed via repo-wide search) —
+// gated the same as createInvoice, since it sits directly upstream of it.
 export async function getLeadPrefill(vendorId: string, leadId: string) {
+  await assertVendorFeatureAccess(vendorId, "invoicing_access", "Invoicing & Billing");
   const lead = await invoiceRepository.findLeadForPrefill(vendorId, leadId);
   if (!lead) {
     throw new NotFoundError("Lead not found");

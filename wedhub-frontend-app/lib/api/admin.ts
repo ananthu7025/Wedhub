@@ -13,6 +13,7 @@ import type {
   AdminPermission,
   AdminPlan,
   AdminPopularSearchCard,
+  FeatureDefinition,
   AdminReviewDetail,
   AdminReviewListItem,
   AdminRole,
@@ -135,6 +136,10 @@ export function listAdminFlaggedCommunityPosts(params: { page?: number; limit?: 
  */
 export function listAdminPlans() {
   return apiFetch<AdminPlan[]>("/admin/plans");
+}
+
+export function getAdminPlanFeatureCatalog() {
+  return apiFetch<FeatureDefinition[]>("/admin/plans/feature-catalog");
 }
 
 export function listAdminRoles() {

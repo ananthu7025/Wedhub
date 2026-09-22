@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { UnavailablePanel } from "@/components/admin/UnavailablePanel";
 import { createAdminPlan, updateAdminPlan, createAdminCoupon } from "@/lib/api/admin-client";
-import type { AdminPlan, BillingInterval, CouponDiscountType, PlanTier } from "@/lib/api/admin.types";
+import type { AdminPlan, BillingInterval, CouponDiscountType, FeatureDefinition } from "@/lib/api/admin.types";
 import { formatApiError } from "@/lib/utils/error";
 import { PlanFormModal } from "./PlanFormModal";
 
@@ -29,17 +29,29 @@ const TABS: Array<{ id: TabId; label: string }> = [
   { id: "coupons", label: "Coupons" },
 ];
 
-function tierBadgeVariant(tier: PlanTier): "grey" | "crimson" {
-  return tier === "PREMIUM" ? "crimson" : "grey";
-}
-
-export function SubscriptionsBoard({ initialPlans }: { initialPlans: AdminPlan[] }) {
+export function SubscriptionsBoard({
+  initialPlans,
+  featureCatalog,
+}: {
+  initialPlans: AdminPlan[];
+  featureCatalog: FeatureDefinition[];
+}) {
   const [tab, setTab] = useState<TabId>("plans");
   const [plans, setPlans] = useState(initialPlans);
   const [editingPlan, setEditingPlan] = useState<AdminPlan | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleCreate(body: { tier: PlanTier; billingInterval: BillingInterval; name: string; price: number; trialDays: number }): Promise<{ success: boolean; error?: string }> {
+  async function handleCreate(body: {
+    slug: string;
+    billingInterval: BillingInterval;
+    name: string;
+    price: number;
+    trialDays: number;
+    isDefault: boolean;
+    sortOrder: number;
+    features: Record<string, boolean>;
+    limits: Record<string, number>;
+  }): Promise<{ success: boolean; error?: string }> {
     const result = await createAdminPlan(body);
     if (!result.success) {
       const errMsg = formatApiError(result.error);
@@ -51,14 +63,30 @@ export function SubscriptionsBoard({ initialPlans }: { initialPlans: AdminPlan[]
     return { success: true };
   }
 
-  async function handleUpdate(id: string, body: { name: string; price: number; trialDays: number; isActive: boolean }): Promise<{ success: boolean; error?: string }> {
+  async function handleUpdate(
+    id: string,
+    body: {
+      name: string;
+      price: number;
+      trialDays: number;
+      sortOrder: number;
+      isDefault: boolean;
+      isActive: boolean;
+      features: Record<string, boolean>;
+      limits: Record<string, number>;
+    },
+  ): Promise<{ success: boolean; error?: string }> {
     const result = await updateAdminPlan(id, body);
     if (!result.success) {
       const errMsg = formatApiError(result.error);
       setError(errMsg);
       return { success: false, error: errMsg };
     }
-    setPlans((prev) => prev.map((p) => (p.id === id ? result.data : p)));
+    // A successful isDefault change moves the flag off every other plan
+    // server-side (see plan.repository.ts's setDefaultPlan transaction) —
+    // reflect that locally too, rather than only patching the one plan just
+    // saved, so the "Default" pill doesn't linger on two cards until reload.
+    setPlans((prev) => prev.map((p) => (p.id === id ? result.data : body.isDefault ? { ...p, isDefault: false } : p)));
     setEditingPlan(null);
     return { success: true };
   }
@@ -107,39 +135,56 @@ export function SubscriptionsBoard({ initialPlans }: { initialPlans: AdminPlan[]
             </button>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {plans.map((plan) => (
-              <div key={plan.id} className={`rounded-xl border p-5 ${plan.tier === "PREMIUM" ? "border-brand-primary" : "border-border"}`}>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <Badge variant={tierBadgeVariant(plan.tier)}>
-                    {plan.tier} · {plan.billingInterval}
-                  </Badge>
-                  <Badge variant={plan.isActive ? "green" : "grey"}>{plan.isActive ? "Active" : "Inactive"}</Badge>
-                </div>
-                <p className="mb-1 text-lg font-bold">{plan.name}</p>
-                <p className="mb-3 text-2xl font-bold">
-                  ₹{Number(plan.price).toLocaleString("en-IN")}
-                  <span className="text-xs font-medium text-text-grey"> /{plan.billingInterval === "MONTHLY" ? "month" : "year"}</span>
-                </p>
-                <p className="mb-3 text-xs text-text-grey">
-                  {plan.trialDays > 0 ? `${plan.trialDays}-day trial · ` : ""}
-                  {plan.limits.portfolio_limit ?? "—"} portfolio images · {plan.limits.video_limit ?? "—"} videos
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setEditingPlan(plan)}
-                    className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-xs font-bold text-text-dark"
-                  >
-                    Edit plan
-                  </button>
-                  <button
-                    onClick={() => handleToggleActive(plan)}
-                    className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-xs font-bold text-text-dark"
-                  >
-                    {plan.isActive ? "Deactivate" : "Reactivate"}
-                  </button>
-                </div>
-              </div>
-            ))}
+            {[...plans]
+              .sort((a, b) => a.sortOrder - b.sortOrder || Number(a.price) - Number(b.price))
+              .map((plan) => {
+                const enabledFeatures = featureCatalog.filter(
+                  (f) => f.valueType === "boolean" && (plan.features as Record<string, unknown>)[f.key],
+                );
+                return (
+                  <div key={plan.id} className={`rounded-xl border p-5 ${plan.isDefault ? "border-brand-primary" : "border-border"}`}>
+                    <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                      <Badge variant="grey">{plan.billingInterval}</Badge>
+                      {plan.isDefault && <Badge variant="crimson">Default</Badge>}
+                      <Badge variant={plan.isActive ? "green" : "grey"}>{plan.isActive ? "Active" : "Inactive"}</Badge>
+                    </div>
+                    <p className="mb-1 text-lg font-bold">{plan.name}</p>
+                    <p className="mb-3 text-2xl font-bold">
+                      ₹{Number(plan.price).toLocaleString("en-IN")}
+                      <span className="text-xs font-medium text-text-grey"> /{plan.billingInterval === "MONTHLY" ? "month" : "year"}</span>
+                    </p>
+                    <p className="mb-2 text-xs text-text-grey">
+                      {plan.trialDays > 0 ? `${plan.trialDays}-day trial · ` : ""}
+                      {plan.limits.portfolio_limit ?? "—"} portfolio images · {plan.limits.video_limit ?? "—"} videos
+                    </p>
+                    {enabledFeatures.length > 0 && (
+                      <div className="mb-3 flex flex-wrap gap-1">
+                        {enabledFeatures.map((f) => (
+                          <span key={f.key} className="rounded-full bg-neutral-grey-20 px-2 py-0.5 text-[11px] font-semibold text-text-grey">
+                            {f.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setEditingPlan(plan)}
+                        className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-xs font-bold text-text-dark"
+                      >
+                        Edit plan
+                      </button>
+                      <button
+                        onClick={() => handleToggleActive(plan)}
+                        disabled={plan.isDefault}
+                        title={plan.isDefault ? "Set a different plan as default first" : undefined}
+                        className="flex-1 rounded-md border border-border bg-white px-3 py-2 text-xs font-bold text-text-dark disabled:opacity-50"
+                      >
+                        {plan.isActive ? "Deactivate" : "Reactivate"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}
@@ -180,6 +225,7 @@ export function SubscriptionsBoard({ initialPlans }: { initialPlans: AdminPlan[]
       {editingPlan && (
         <PlanFormModal
           plan={editingPlan === "new" ? null : editingPlan}
+          featureCatalog={featureCatalog}
           onClose={() => setEditingPlan(null)}
           onCreate={handleCreate}
           onUpdate={handleUpdate}

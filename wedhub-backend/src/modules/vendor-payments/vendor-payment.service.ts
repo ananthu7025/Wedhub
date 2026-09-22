@@ -2,6 +2,7 @@ import { prisma } from "../../config/database";
 import { env } from "../../config/env";
 import { logger } from "../../config/logger";
 import { NotFoundError, ValidationError } from "../../common/errors";
+import { assertVendorFeatureAccess } from "../entitlements/entitlement.service";
 import { getOwnedVendorOrThrow } from "../vendors/vendor.policy";
 import * as razorpayClient from "../../integrations/payment/razorpay.client";
 import * as paymentRepository from "./vendor-payment.repository";
@@ -46,6 +47,7 @@ export async function onboardVendorPaymentAccount(
   input: OnboardPaymentAccountInput,
 ): Promise<VendorPaymentAccountSummary> {
   const vendor = await getOwnedVendorOrThrow(userId);
+  await assertVendorFeatureAccess(vendor.id, "store_access", "Vendor Store");
 
   // Mask bank account number before persisting
   const cleanAcc = input.accountNumber.trim();
@@ -174,6 +176,7 @@ export async function onboardVendorPaymentAccount(
 
 export async function createVendorKycLink(userId: string): Promise<{ shortUrl: string }> {
   const vendor = await getOwnedVendorOrThrow(userId);
+  await assertVendorFeatureAccess(vendor.id, "store_access", "Vendor Store");
   const account = await paymentRepository.findPaymentAccountByVendorId(vendor.id);
   if (!account) {
     throw new NotFoundError("No linked payment account found. Please connect your bank account first.");
@@ -599,6 +602,11 @@ export async function syncVendorPaymentAccountFromRazorpay(vendorId: string) {
   return paymentRepository.findPaymentAccountByVendorId(vendorId);
 }
 
+// Deliberately NOT gated: a vendor who downgrades still has a real Razorpay
+// Route sub-account/KYC status living outside this app's database. If they
+// upgrade again later, re-syncing that external state back in must keep
+// working regardless of the plan they were on when it drifted — this is a
+// read-and-reconcile action, not new value creation.
 export async function syncVendorPaymentAccount(userId: string) {
   const vendor = await getOwnedVendorOrThrow(userId);
   return syncVendorPaymentAccountFromRazorpay(vendor.id);
@@ -610,6 +618,7 @@ export async function refundStoreOrder(
   input: RefundStoreOrderInput,
 ) {
   const vendor = await getOwnedVendorOrThrow(userId);
+  await assertVendorFeatureAccess(vendor.id, "store_access", "Vendor Store");
   const order = await paymentRepository.findStoreOrderById(orderId);
 
   if (!order || order.store.vendorId !== vendor.id) {

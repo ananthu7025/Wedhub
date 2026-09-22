@@ -3,6 +3,7 @@ import { successResponse, paginatedResponse } from "../../common/utils/api-respo
 import { AuthenticationError, NotFoundError } from "../../common/errors";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
 import { getVendorAnalytics } from "../entitlements/vendor-analytics.service";
+import { getEffectivePlan } from "../entitlements/entitlement.service";
 import { getOwnedVendorOrThrow } from "./vendor.policy";
 import * as vendorService from "./vendor.service";
 import * as vendorRepository from "./vendor.repository";
@@ -194,6 +195,18 @@ export async function getMyAnalytics(req: Request, res: Response): Promise<void>
   const owned = await getOwnedVendorOrThrow(userId);
   const analytics = await getVendorAnalytics(owned.id);
   res.json(successResponse(analytics));
+}
+
+// Backs page-level upgrade prompts (e.g. /vendor/store, /vendor/invoices)
+// so a vendor sees "this needs a plan upgrade" before investing effort in a
+// form, not just as a 403 after submitting. Deliberately returns only
+// { planId, planName, features } — never `limits` internals the frontend
+// doesn't need for this purpose.
+export async function getMyEffectivePlan(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const owned = await getOwnedVendorOrThrow(userId);
+  const plan = await getEffectivePlan(owned.id);
+  res.json(successResponse({ planId: plan.planId, planName: plan.planName, features: plan.features }));
 }
 
 // Contact fields (phone/email/website) are never sent in the public vendor

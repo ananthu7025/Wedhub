@@ -1,6 +1,7 @@
 import { NotFoundError, ValidationError } from "../../common/errors";
 import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
 import { getPublicUrl } from "../../integrations/storage/r2.client";
+import { assertVendorFeatureAccess } from "../entitlements/entitlement.service";
 import { getOwnedVendorOrThrow } from "../vendors/vendor.policy";
 import * as storeRepository from "./vendor-store.repository";
 import * as vendorInvoiceService from "../vendor-invoices/vendor-invoice.service";
@@ -71,6 +72,7 @@ export async function getVendorStoreProfile(userId: string) {
 
 export async function updateVendorStoreProfile(userId: string, input: UpsertStoreProfileInput) {
   const vendor = await getOwnedVendorOrThrow(userId);
+  await assertVendorFeatureAccess(vendor.id, "store_access", "Vendor Store");
   const isEligible = await storeRepository.checkVendorStoreEligibility(vendor.id);
 
   if (!isEligible) {
@@ -141,6 +143,7 @@ export async function listVendorStoreItems(userId: string) {
 
 export async function createStoreItem(userId: string, input: CreateStoreItemInput) {
   const vendor = await getOwnedVendorOrThrow(userId);
+  await assertVendorFeatureAccess(vendor.id, "store_access", "Vendor Store");
   const isEligible = await storeRepository.checkVendorStoreEligibility(vendor.id);
   if (!isEligible) {
     throw new ValidationError("Category is not eligible for vendor store");
@@ -180,6 +183,7 @@ export async function createStoreItem(userId: string, input: CreateStoreItemInpu
 
 export async function updateStoreItem(userId: string, itemId: string, input: UpdateStoreItemInput) {
   const vendor = await getOwnedVendorOrThrow(userId);
+  await assertVendorFeatureAccess(vendor.id, "store_access", "Vendor Store");
   const existing = await storeRepository.findStoreItemById(itemId);
   if (!existing || existing.store.vendorId !== vendor.id) {
     throw new NotFoundError("Store item not found");
@@ -211,6 +215,8 @@ export async function deleteStoreItem(userId: string, itemId: string) {
     throw new NotFoundError("Store item not found");
   }
 
+  // Deletion (removing value, not creating it) stays ungated — a vendor
+  // whose plan lapses must still be able to clean up their own store.
   await storeRepository.deleteStoreItem(itemId);
   return { success: true };
 }
@@ -258,6 +264,7 @@ export async function updateStoreOrderStatus(
   input: UpdateOrderStatusInput,
 ) {
   const vendor = await getOwnedVendorOrThrow(userId);
+  await assertVendorFeatureAccess(vendor.id, "store_access", "Vendor Store");
   const order = await storeRepository.findStoreOrderById(orderId);
   if (!order || order.store.vendorId !== vendor.id) {
     throw new NotFoundError("Order not found");
@@ -277,6 +284,8 @@ export async function updateStoreOrderStatus(
 
 export async function createOrderInvoice(userId: string, orderId: string) {
   const vendor = await getOwnedVendorOrThrow(userId);
+  await assertVendorFeatureAccess(vendor.id, "store_access", "Vendor Store");
+  await assertVendorFeatureAccess(vendor.id, "invoicing_access", "Invoicing & Billing");
   const order = await storeRepository.findStoreOrderById(orderId);
   if (!order || order.store.vendorId !== vendor.id) {
     throw new NotFoundError("Order not found");

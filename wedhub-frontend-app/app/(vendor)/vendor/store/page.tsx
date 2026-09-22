@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { VendorShell } from "@/components/shared/VendorShell";
+import { UpgradePrompt } from "@/components/shared/UpgradePrompt";
 import { requireVendorOwnership } from "@/lib/auth/require-vendor";
+import { getMyEffectivePlan } from "@/lib/api/vendor-self";
 import { fetchVendorStoreProfile } from "@/lib/api/vendor-store";
 import { StoreNavTabs } from "@/components/vendor-store/StoreNavTabs";
 import { ShareStoreCard } from "./ShareStoreCard";
@@ -13,6 +15,19 @@ export const metadata: Metadata = {
 
 export default async function VendorStorePage() {
   const vendor = await requireVendorOwnership();
+
+  const { data: plan } = await getMyEffectivePlan();
+  if (!plan.features.store_access) {
+    return (
+      <UpgradePrompt
+        feature="Vendor Store"
+        description="Sell wedding products, floral setups, rental gear, and packages directly to couples with a branded storefront and WhatsApp ordering."
+        activeHref="/vendor/store"
+        vendorName={vendor.businessName}
+        vendorSlug={vendor.slug}
+      />
+    );
+  }
 
   let profile;
   try {

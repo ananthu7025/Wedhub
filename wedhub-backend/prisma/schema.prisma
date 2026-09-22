@@ -1598,21 +1598,31 @@ enum BillingInterval {
 }
 
 // Admin-configurable pricing (product.md §26: "Never hardcode plan prices").
-// One row per tier×interval combination (e.g. PRO/MONTHLY and PRO/YEARLY are
-// two separate rows) since yearly pricing is not simply monthly×12 in
-// practice (annual discounts). `features`/`limits` are JSONB rather than
-// typed columns — unlike CategoryAttribute's typed-value precedent, plan
-// features are read by application code as a whole bundle (EntitlementService
-// in Arch Phase 12), not queried/filtered column-by-column the way vendor
-// attributes are, so a flexible blob is the right tool here.
+// Plans are fully admin-created — any name/price/count, not limited to fixed
+// tiers (Arch Phase "dynamic plans" redesign, 2026-09-22 — see
+// PLAN-2026-09-22-dynamic-plans-and-feature-registry.md). `tier` is kept only
+// as a legacy/cosmetic display hint (nullable — new plans don't need one); no
+// code branches on it after that pass. `isDefault` replaces the old implicit
+// "FREE" convention: exactly one plan (enforced by a partial unique index in
+// migration SQL, see subscription_plans_one_default_idx) is the fallback for
+// a vendor with no Subscription row, and where a cancelled/expired vendor
+// lands. `slug` is the stable identifier plans are looked up/upserted by,
+// replacing the old tier+interval compound key. `sortOrder` drives admin/
+// vendor display order. `features`/`limits` are JSONB rather than typed
+// columns — read by application code as a whole bundle against the fixed
+// FEATURE_CATALOG in entitlement.constants.ts (never queried/filtered
+// column-by-column), so a flexible blob is the right tool here.
 model SubscriptionPlan {
   id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tier            PlanTier
+  tier            PlanTier?
   billingInterval BillingInterval @map("billing_interval")
   name            String
+  slug            String          @unique
   price           Decimal         @db.Decimal(10, 2)
   currency        String          @default("INR")
   trialDays       Int             @default(0) @map("trial_days")
+  isDefault       Boolean         @default(false) @map("is_default")
+  sortOrder       Int             @default(0) @map("sort_order")
   features        Json            @default("{}")
   limits          Json            @default("{}")
   isActive        Boolean         @default(true) @map("is_active")
@@ -1622,7 +1632,7 @@ model SubscriptionPlan {
   subscriptions   Subscription[]
   pendingPayments Payment[]
 
-  @@unique([tier, billingInterval])
+  @@index([isActive, sortOrder])
   @@map("subscription_plans")
 }
 

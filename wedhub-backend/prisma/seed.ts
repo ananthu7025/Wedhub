@@ -1389,99 +1389,105 @@ export async function seedLocations(): Promise<void> {
   console.info(`Seeded India, ${INDIA_STATES.length} states, and ${cityCount} cities.`);
 }
 
-// product.md §26's three initial plans, with real prices and the
-// entitlement keys Arch Phase 12's EntitlementService reads (see
-// entitlement.constants.ts) — never hardcoded in application code, only
-// here as seed data admins can subsequently edit via /admin/plans.
+// Dynamic-plans redesign (2026-09-22, see
+// PLAN-2026-09-22-dynamic-plans-and-feature-registry.md) — plans are fully
+// admin-created via /admin/plans; this is starting data, not a fixed set.
+// `slug` is the upsert key (replacing the old tier+interval compound key —
+// tier no longer has to be unique per plan). Exactly one plan should carry
+// isDefault: true — the fallback for a vendor with no Subscription row, and
+// where a cancelled/expired vendor lands. Feature keys here must match
+// entitlement.constants.ts's FEATURE_CATALOG.
 interface PlanSeed {
-  tier: "FREE" | "PRO" | "PREMIUM";
+  slug: string;
   billingInterval: "MONTHLY" | "YEARLY";
   name: string;
   price: number;
   trialDays: number;
+  isDefault: boolean;
+  sortOrder: number;
   limits: Record<string, number>;
   features: Record<string, unknown>;
 }
 
 const SUBSCRIPTION_PLANS: PlanSeed[] = [
   {
-    tier: "FREE",
+    slug: "free",
     billingInterval: "MONTHLY",
     name: "Free",
     price: 0,
     trialDays: 0,
+    isDefault: true,
+    sortOrder: 1,
     limits: { portfolio_limit: 10, video_limit: 1 },
     features: {
-      analytics_level: "basic",
-      lead_access: true,
+      analytics_level: false,
       featured_eligibility: false,
-      promotional_placement: false,
-      response_tools: false,
-      priority_support: false,
+      store_access: false,
+      invoicing_access: false,
     },
   },
   {
-    tier: "PRO",
+    slug: "pro",
     billingInterval: "MONTHLY",
     name: "Pro",
     price: 5999,
     trialDays: 14,
+    isDefault: false,
+    sortOrder: 2,
     limits: { portfolio_limit: 100, video_limit: 10 },
     features: {
-      analytics_level: "advanced",
-      lead_access: true,
+      analytics_level: true,
       featured_eligibility: false,
-      promotional_placement: false,
-      response_tools: true,
-      priority_support: false,
+      store_access: true,
+      invoicing_access: true,
     },
   },
   {
-    tier: "PRO",
+    slug: "pro-yearly",
     billingInterval: "YEARLY",
     name: "Pro (Yearly)",
     price: 59990,
     trialDays: 14,
+    isDefault: false,
+    sortOrder: 3,
     limits: { portfolio_limit: 100, video_limit: 10 },
     features: {
-      analytics_level: "advanced",
-      lead_access: true,
+      analytics_level: true,
       featured_eligibility: false,
-      promotional_placement: false,
-      response_tools: true,
-      priority_support: false,
+      store_access: true,
+      invoicing_access: true,
     },
   },
   {
-    tier: "PREMIUM",
+    slug: "premium",
     billingInterval: "MONTHLY",
     name: "Premium",
     price: 12999,
     trialDays: 14,
+    isDefault: false,
+    sortOrder: 4,
     limits: { portfolio_limit: 500, video_limit: 50 },
     features: {
-      analytics_level: "advanced",
-      lead_access: true,
+      analytics_level: true,
       featured_eligibility: true,
-      promotional_placement: true,
-      response_tools: true,
-      priority_support: true,
+      store_access: true,
+      invoicing_access: true,
     },
   },
   {
-    tier: "PREMIUM",
+    slug: "premium-yearly",
     billingInterval: "YEARLY",
     name: "Premium (Yearly)",
     price: 129990,
     trialDays: 14,
+    isDefault: false,
+    sortOrder: 5,
     limits: { portfolio_limit: 500, video_limit: 50 },
     features: {
-      analytics_level: "advanced",
-      lead_access: true,
+      analytics_level: true,
       featured_eligibility: true,
-      promotional_placement: true,
-      response_tools: true,
-      priority_support: true,
+      store_access: true,
+      invoicing_access: true,
     },
   },
 ];
@@ -1489,25 +1495,40 @@ const SUBSCRIPTION_PLANS: PlanSeed[] = [
 async function seedSubscriptionPlans(): Promise<void> {
   for (const plan of SUBSCRIPTION_PLANS) {
     await prisma.subscriptionPlan.upsert({
-      where: { tier_billingInterval: { tier: plan.tier, billingInterval: plan.billingInterval } },
+      where: { slug: plan.slug },
       update: {
         name: plan.name,
         price: plan.price,
         trialDays: plan.trialDays,
+        sortOrder: plan.sortOrder,
         limits: plan.limits,
         features: plan.features,
       },
       create: {
-        tier: plan.tier,
+        slug: plan.slug,
         billingInterval: plan.billingInterval,
         name: plan.name,
         price: plan.price,
         currency: "INR",
         trialDays: plan.trialDays,
+        isDefault: plan.isDefault,
+        sortOrder: plan.sortOrder,
         limits: plan.limits,
         features: plan.features,
       },
     });
+  }
+
+  // isDefault is intentionally excluded from the `update` branch above (an
+  // admin may have deliberately moved the default to a different plan since
+  // seeding — re-seeding must never silently move it back). This only
+  // ensures a default exists on a truly fresh database.
+  const anyDefault = await prisma.subscriptionPlan.findFirst({ where: { isDefault: true } });
+  if (!anyDefault) {
+    const freePlan = SUBSCRIPTION_PLANS.find((p) => p.isDefault);
+    if (freePlan) {
+      await prisma.subscriptionPlan.update({ where: { slug: freePlan.slug }, data: { isDefault: true } });
+    }
   }
 
   console.info(`Seeded ${SUBSCRIPTION_PLANS.length} subscription plans.`);

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { initiateUpgrade, cancelMySubscription, undoMyCancellation, getMySubscriptionClient } from "@/lib/api/subscriptions-client";
+import { BOOLEAN_FEATURE_CATALOG } from "@/lib/api/subscriptions.types";
 import type { Invoice, Subscription, SubscriptionPlan, SubscriptionStatus } from "@/lib/api/subscriptions.types";
 import { trackEvent } from "@/lib/analytics/track";
 import { formatApiError } from "@/lib/utils/error";
@@ -14,12 +15,14 @@ import { CheckoutButton } from "./CheckoutButton";
  * + invoice history. Real backend behaviors this UI must respect (see
  * lib/api/subscriptions.types.ts's header comment and
  * frontenddocs/10-risks-and-open-questions.md):
- * - subscription === null means the vendor is on the implicit FREE plan —
- *   not an error/loading state.
- * - There is no dedicated "downgrade" endpoint — downgrading to Free is
- *   cancelSubscription (immediate or at period end), same as the mockup's
- *   disabled "Downgrade to Free" button implies is Free-card-specific (it's
- *   actually just "Cancel subscription" reframed).
+ * - subscription === null means the vendor is implicitly on whichever plan
+ *   is flagged isDefault — not an error/loading state.
+ * - There is no dedicated "downgrade" endpoint — downgrading to the default
+ *   plan is cancelSubscription (immediate or at period end); clicking the
+ *   default plan's card triggers this instead of an upgrade (see
+ *   plan.isDefault checks below — this replaced a hardcoded tier==="FREE"
+ *   check as part of the dynamic-plans redesign, 2026-09-22, see
+ *   PLAN-2026-09-22-dynamic-plans-and-feature-registry.md).
  * - A trial-eligible paid plan (trialDays > 0) activates immediately with
  *   no payment (checkout: null in the response) — the UI must handle that
  *   path distinctly from a real checkout.
@@ -27,6 +30,8 @@ import { CheckoutButton } from "./CheckoutButton";
  *   the mockup's simple 3-card layout); YEARLY variants exist in the real
  *   plan data but aren't surfaced in this pass — a billing-interval toggle
  *   is a reasonable follow-up, not required to match the mockup.
+ * - Plans are admin-created and unbounded in count — the grid is
+ *   responsive (auto-fit), not a fixed 3 columns.
  */
 
 function billingLabel(interval: SubscriptionPlan["billingInterval"]): string {
@@ -68,8 +73,11 @@ export function SubscriptionBoard({
   const [checkout, setCheckout] = useState<{ plan: SubscriptionPlan; orderId: string; amount: string; currency: string } | null>(null);
   const [polling, setPolling] = useState(false);
 
-  const monthlyPlans = initialPlans.filter((p) => p.billingInterval === "MONTHLY").sort((a, b) => Number(a.price) - Number(b.price));
-  const currentTier = subscription?.plan?.tier ?? "FREE";
+  const monthlyPlans = initialPlans
+    .filter((p) => p.billingInterval === "MONTHLY")
+    .sort((a, b) => a.sortOrder - b.sortOrder || Number(a.price) - Number(b.price));
+  const currentPlanId = subscription?.planId ?? monthlyPlans.find((p) => p.isDefault)?.id;
+  const currentPlanName = subscription?.plan?.name ?? "your current plan";
 
   useEffect(() => {
     // Arch Phase 18 Stage A — "Subscription view" (product.md §46).
@@ -77,16 +85,16 @@ export function SubscriptionBoard({
     // deciding has no server-side write to hang an event off, unlike
     // checkout_started (subscription.service.ts) which only fires once the
     // vendor actually initiates a real upgrade.
-    trackEvent({ eventType: "subscription_viewed", metadata: { currentTier } });
+    trackEvent({ eventType: "subscription_viewed", metadata: { currentPlanId } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSelectPlan(plan: SubscriptionPlan) {
-    if (plan.tier === currentTier) return;
+    if (plan.id === currentPlanId) return;
     setError(null);
 
-    if (plan.tier === "FREE") {
-      if (!confirm(`Downgrade to Free? You'll lose ${currentTier} benefits at the end of the current billing cycle.`)) return;
+    if (plan.isDefault) {
+      if (!confirm(`Switch to ${plan.name}? You'll lose ${currentPlanName} benefits at the end of the current billing cycle.`)) return;
       setPending(plan.id);
       const result = await cancelMySubscription({ immediate: false });
       setPending(null);
@@ -187,13 +195,14 @@ export function SubscriptionBoard({
         </div>
       )}
 
-      <div className="mb-7 grid grid-cols-3 gap-5 max-[900px]:grid-cols-1">
+      <div className="mb-7 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
         {monthlyPlans.map((plan) => {
-          const isCurrent = plan.tier === currentTier;
+          const isCurrent = plan.id === currentPlanId;
+          const enabledFeatures = BOOLEAN_FEATURE_CATALOG.filter((f) => plan.features[f.key]);
           return (
             <div
               key={plan.id}
-              data-testid={`plan-card-${plan.tier}`}
+              data-testid={`plan-card-${plan.id}`}
               className={`relative flex flex-col rounded-xl border bg-white p-6 ${isCurrent ? "border-2 border-brand-primary" : "border-border"}`}
             >
               {isCurrent && (
@@ -212,11 +221,9 @@ export function SubscriptionBoard({
               <ul className="mb-5.5 flex-1 list-none space-y-1.5 p-0 text-[13.5px] text-text-body">
                 <li>Portfolio limit: {plan.limits.portfolio_limit ?? 10}</li>
                 <li>Video limit: {plan.limits.video_limit ?? 1}</li>
-                <li>Analytics: {plan.features.analytics_level === "advanced" ? "Advanced" : "Basic"}</li>
-                {plan.features.featured_eligibility && <li>Featured placement eligible</li>}
-                {plan.features.promotional_placement && <li>Promotional placement</li>}
-                {plan.features.response_tools && <li>Response tools</li>}
-                {plan.features.priority_support && <li>Priority support</li>}
+                {enabledFeatures.map((f) => (
+                  <li key={f.key}>{f.label}</li>
+                ))}
               </ul>
               <button
                 onClick={() => handleSelectPlan(plan)}
@@ -224,7 +231,7 @@ export function SubscriptionBoard({
                 className={`w-full rounded-md py-2.5 text-center text-sm font-bold ${
                   isCurrent
                     ? "cursor-default border border-border bg-white text-text-grey opacity-60"
-                    : plan.tier === "FREE"
+                    : plan.isDefault
                       ? "border border-border bg-white text-text-dark hover:bg-surface-input"
                       : "bg-brand-primary text-white hover:opacity-90"
                 }`}
@@ -233,8 +240,8 @@ export function SubscriptionBoard({
                   ? "Current plan"
                   : pending === plan.id
                     ? "Please wait…"
-                    : plan.tier === "FREE"
-                      ? "Downgrade to Free"
+                    : plan.isDefault
+                      ? `Switch to ${plan.name}`
                       : `Upgrade to ${plan.name}`}
               </button>
             </div>
@@ -289,7 +296,7 @@ export function SubscriptionBoard({
               </button>
             </div>
           ) : (
-            subscription.plan?.tier !== "FREE" && (
+            !subscription.plan?.isDefault && (
               <button
                 onClick={handleCancel}
                 disabled={pending === "cancel"}

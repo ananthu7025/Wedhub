@@ -1,5 +1,6 @@
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { getPublicUrl } from "../../integrations/storage/r2.client";
+import { assertVendorFeatureAccess } from "../entitlements/entitlement.service";
 import * as categoryRepository from "../categories/categories.repository";
 import * as locationRepository from "../locations/locations.repository";
 import * as featuredListingRepository from "./featured-listing.repository";
@@ -50,6 +51,11 @@ export async function createFeaturedListing(
   },
 ) {
   await assertReferencesExist(input);
+  // Admin-assigned, not vendor self-serve — but the vendor being assigned a
+  // slot must still be on a plan that includes it. Only creation is gated;
+  // an admin can still edit/cancel a listing already granted to a vendor
+  // whose plan later changes (never retroactively punish existing state).
+  await assertVendorFeatureAccess(input.vendorId, "featured_eligibility", "Featured Placement");
   try {
     return await featuredListingRepository.createFeaturedListing({ ...input, createdByUserId });
   } catch (err) {

@@ -3,7 +3,8 @@ import { prisma } from "../../config/database";
 // "What plan is this vendor on right now" is derived from the latest
 // TRIALING/ACTIVE/PAST_DUE subscription row rather than a denormalized
 // column on Vendor — confirmed with the user. No matching row means the
-// vendor is implicitly on FREE.
+// vendor falls back to whichever plan is flagged isDefault (see
+// entitlement.service.ts::getDefaultPlan).
 export function findCurrentSubscription(vendorId: string) {
   return prisma.subscription.findFirst({
     where: { vendorId, status: { in: ["TRIALING", "ACTIVE", "PAST_DUE"] } },

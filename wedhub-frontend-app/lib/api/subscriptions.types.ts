@@ -2,19 +2,27 @@
  * Backend response shapes for the vendor-facing subscription/billing
  * surface (GET /plans, /subscriptions/me/*) — verified against
  * wedhub-backend/src/modules/{plans,subscriptions} during Frontend Arch
- * Phase 7 research.
+ * Phase 7 research, updated for the dynamic-plans redesign (2026-09-22, see
+ * PLAN-2026-09-22-dynamic-plans-and-feature-registry.md).
  *
  * Prisma Decimal fields (price, amount) serialize as strings over JSON.
  *
+ * Plans are no longer a fixed FREE/PRO/PREMIUM tier — `tier` is kept only as
+ * a legacy/cosmetic display hint (nullable, admin UI only) and nothing in
+ * this frontend should branch on it. `isDefault` identifies the plan a
+ * vendor with no Subscription row is implicitly on, replacing the old
+ * "tier === FREE" convention.
+ *
  * Real backend gaps confirmed during research (see
  * frontenddocs/10-risks-and-open-questions.md for the full entries):
- * - No entitlements HTTP endpoint exists — plan limits/features are read
- *   directly from SubscriptionPlan.limits/features JSON (embedded in
- *   GET /subscriptions/me's `plan`), which does NOT merge in FREE-tier
- *   defaults for missing keys the way the backend's internal
- *   entitlement.service.ts does. A vendor with no Subscription row at all
- *   (implicit FREE) has `subscription: null` — the frontend must render
- *   FREE-tier defaults itself in that case, not assume a `plan` object.
+ * - No entitlements HTTP endpoint exists for GET /plans data — plan
+ *   limits/features there are read directly from
+ *   SubscriptionPlan.limits/features JSON (embedded in GET /subscriptions/me's
+ *   `plan`), which does NOT merge in default-plan fallbacks for missing keys
+ *   the way the backend's internal entitlement.service.ts does. A vendor
+ *   with no Subscription row at all has `subscription: null` — use
+ *   GET /vendors/me/effective-plan (server-merged) rather than re-deriving
+ *   defaults client-side wherever that endpoint is available.
  * - Payment confirmation is 100% webhook-driven — there is no "verify
  *   payment" endpoint. After Razorpay Checkout's client-side success
  *   callback, the only correct next step is to poll GET /subscriptions/me
@@ -37,29 +45,54 @@ export interface PlanLimits {
 }
 
 export interface PlanFeatures {
-  analytics_level?: "basic" | "advanced";
-  lead_access?: boolean;
+  analytics_level?: boolean;
   featured_eligibility?: boolean;
-  promotional_placement?: boolean;
-  response_tools?: boolean;
-  priority_support?: boolean;
+  store_access?: boolean;
+  invoicing_access?: boolean;
 }
 
 // ---- GET /plans (public) ----
 export interface SubscriptionPlan {
   id: string;
-  tier: PlanTier;
+  tier: PlanTier | null;
+  slug: string;
   billingInterval: BillingInterval;
   name: string;
   price: string;
   currency: string;
   trialDays: number;
+  isDefault: boolean;
+  sortOrder: number;
   features: PlanFeatures;
   limits: PlanLimits;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+// ---- GET /vendors/me/effective-plan ----
+export interface EffectivePlan {
+  planId: string;
+  planName: string;
+  features: {
+    analytics_level: "basic" | "advanced";
+    featured_eligibility: boolean;
+    store_access: boolean;
+    invoicing_access: boolean;
+  };
+}
+
+// Display-only mirror of the backend's FEATURE_CATALOG
+// (entitlement.constants.ts) — labels/order for rendering a plan's boolean
+// features as a list without a hardcoded <li> per key. Not the source of
+// truth for enforcement (the backend is), just for "what to call each
+// feature" in plan cards (SubscriptionBoard.tsx) and the admin plan form.
+export const BOOLEAN_FEATURE_CATALOG: Array<{ key: keyof PlanFeatures; label: string }> = [
+  { key: "analytics_level", label: "Advanced Analytics" },
+  { key: "featured_eligibility", label: "Featured Placement" },
+  { key: "store_access", label: "Vendor Store" },
+  { key: "invoicing_access", label: "Invoicing & Billing" },
+];
 
 // ---- GET /subscriptions/me ----
 export interface Subscription {

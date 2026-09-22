@@ -62,17 +62,15 @@ test.describe("Admin subscriptions & payments", () => {
     await page.goto("/admin/subscriptions");
     await expect(page.getByRole("heading", { name: "Subscriptions & payments" })).toBeVisible();
 
-    // Real plan create. Every real tier x interval combination except
-    // FREE/YEARLY is already occupied by seeded plans (subscription_plans
-    // has a real uniqueness constraint on tier+billingInterval) — the
-    // form defaults to PRO/MONTHLY, which always 409s. FREE/YEARLY is the
-    // one genuinely free slot.
+    // Real plan create. Dynamic-plans redesign (2026-09-22) removed the
+    // tier+billingInterval uniqueness constraint — plans are now identified
+    // by a unique slug instead, so any name/slug combination is free to use
+    // (no more "which tier x interval slot is still open" bookkeeping).
     await page.getByRole("button", { name: "+ Create plan" }).click();
-    await page.getByLabel("Tier").selectOption("FREE");
-    await page.getByLabel("Billing interval").selectOption("YEARLY");
     const planName = `Phase10 Plan ${Date.now()}`;
     createdPlanName = planName;
     await page.getByLabel("Plan name").fill(planName);
+    await page.getByLabel("Billing interval").selectOption("YEARLY");
     await page.getByLabel("Price (₹)").fill("999");
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText(planName)).toBeVisible({ timeout: 10000 });

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { VendorShell } from "@/components/shared/VendorShell";
 import { requireVendorOwnership } from "@/lib/auth/require-vendor";
+import { getMyEffectivePlan } from "@/lib/api/vendor-self";
 import { listMyQuotations, getMyQuotationMetrics } from "@/lib/api/vendor-quotations";
 import { listMyInvoices, getMyInvoiceMetrics } from "@/lib/api/vendor-invoices";
 import type { QuotationSummaryMetrics, VendorQuotation } from "@/lib/api/vendor-quotations.types";
@@ -23,6 +24,10 @@ export default async function FinancesPage({ searchParams }: FinancesPageProps) 
   const vendor = await requireVendorOwnership();
   const params = await searchParams;
   const initialTab = params.tab === "invoices" ? "invoices" : "quotes";
+
+  const invoicingAccess = await getMyEffectivePlan()
+    .then((r) => r.data.features.invoicing_access)
+    .catch(() => false);
 
   let quotations: VendorQuotation[] = [];
   let quotationMetrics: QuotationSummaryMetrics = {
@@ -77,6 +82,7 @@ export default async function FinancesPage({ searchParams }: FinancesPageProps) 
           initialInvoices={invoices}
           invoiceMetrics={invoiceMetrics}
           initialTab={initialTab}
+          invoicingAccess={invoicingAccess}
         />
       </Suspense>
     </VendorShell>

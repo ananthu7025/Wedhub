@@ -54,8 +54,8 @@ export async function initiateUpgrade(
   if (!plan || !plan.isActive) {
     throw new NotFoundError("Plan not found");
   }
-  if (plan.tier === "FREE") {
-    throw new ValidationError("Cannot create a paid checkout for the FREE plan");
+  if (plan.isDefault) {
+    throw new ValidationError("This plan is not available for paid checkout.");
   }
 
   const existing = await subscriptionRepository.findCurrentSubscription(vendorId);
@@ -136,7 +136,7 @@ export async function initiateUpgrade(
     userId: ownerUserId,
     eventType: "checkout_started",
     vendorId,
-    metadata: { planId: plan.id, planTier: plan.tier, amount: finalAmount, currency: plan.currency, isUpgrade: existing !== null },
+    metadata: { planId: plan.id, planName: plan.name, amount: finalAmount, currency: plan.currency, isUpgrade: existing !== null },
   });
 
   return { subscription: null, checkout: { orderId, paymentId: payment.id, amount: finalAmount, currency: plan.currency } };
@@ -144,9 +144,10 @@ export async function initiateUpgrade(
 
 // Vendor cancellation (Scenario F). Default is cancel_at_period_end=true
 // per product.md's explicit recommendation — immediate cancellation must be
-// opted into. This is also how a vendor downgrades to FREE: there is no
-// separate "downgrade" endpoint — Premium/Pro → Free is simply "cancel,
-// don't renew" — confirmed with the user.
+// opted into. This is also how a vendor downgrades: there is no separate
+// "downgrade" endpoint — cancelling a paid plan is simply "fall back to
+// whatever plan is flagged isDefault, don't renew" — confirmed with the
+// user.
 export async function cancelSubscription(vendorId: string, ownerUserId: string, immediate: boolean) {
   await getOwnedVendorOrThrow(vendorId, ownerUserId);
   const subscription = await subscriptionRepository.findCurrentSubscription(vendorId);
@@ -156,9 +157,13 @@ export async function cancelSubscription(vendorId: string, ownerUserId: string, 
 
   if (immediate) {
     const cancelled = await subscriptionRepository.cancelImmediately(subscription.id);
-    // Scenario G: immediate cancellation drops the vendor to FREE right now,
-    // not at some future period end — sweep excess media in the same beat.
-    await entitlementService.sweepMediaToLimits(vendorId, entitlementService.FREE_PLAN_DEFAULT_LIMITS);
+    // Scenario G: immediate cancellation drops the vendor to the default
+    // plan right now, not at some future period end — sweep excess media in
+    // the same beat. Read the default plan's ACTUAL current limits (not a
+    // hardcoded constant) so an admin editing the default plan's limits is
+    // reflected immediately, with no drift between the two.
+    const defaultPlan = await entitlementService.getDefaultPlan();
+    await entitlementService.sweepMediaToLimits(vendorId, entitlementService.readLimits(defaultPlan));
     await logAnalyticsEvent({
       userId: ownerUserId,
       eventType: "subscription_cancelled",

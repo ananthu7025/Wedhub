@@ -1,15 +1,19 @@
 // architecture.md §26's canonical entitlement keys. Every plan-gated check in
 // the codebase must go through one of these keys via entitlement.service —
-// never a raw `plan.tier === "PREMIUM"` check (Coding Rule 8).
+// never a raw `plan.tier === "PREMIUM"` check (Coding Rule 8; also, plans no
+// longer have a meaningful tier at all — see PLAN-2026-09-22-dynamic-plans-
+// and-feature-registry.md). This is a FIXED catalog, not admin-definable:
+// every key here must have real enforcement code somewhere in the app. An
+// admin can configure per-plan VALUES for these keys (on/off, or a limit
+// number) through /admin/subscriptions, but cannot invent a new key from the
+// UI — a toggle with no code behind it would silently do nothing.
 export const Entitlement = {
   PORTFOLIO_LIMIT: "portfolio_limit",
   VIDEO_LIMIT: "video_limit",
-  LEAD_ACCESS: "lead_access",
   ANALYTICS_LEVEL: "analytics_level",
   FEATURED_ELIGIBILITY: "featured_eligibility",
-  PROMOTIONAL_PLACEMENT: "promotional_placement",
-  RESPONSE_TOOLS: "response_tools",
-  PRIORITY_SUPPORT: "priority_support",
+  STORE_ACCESS: "store_access",
+  INVOICING_ACCESS: "invoicing_access",
 } as const;
 
 export type EntitlementKey = (typeof Entitlement)[keyof typeof Entitlement];
@@ -23,29 +27,95 @@ export interface PlanLimits {
 
 export interface PlanFeatures {
   analytics_level: AnalyticsLevel;
-  lead_access: boolean;
   featured_eligibility: boolean;
-  promotional_placement: boolean;
-  response_tools: boolean;
-  priority_support: boolean;
+  store_access: boolean;
+  invoicing_access: boolean;
 }
 
-// product.md §54: "do not make free vendors useless" — a vendor with no
-// SubscriptionPlan row seeded for FREE yet (or no Subscription row at all,
-// which is the normal case per Scenario A) still gets these defaults. This
-// is the ONE place a default lives; every other module must read through
-// entitlement.service rather than re-declaring a number/flag of its own —
-// this is exactly what replaces the old env.MEDIA_MAX_PORTFOLIO_ITEMS global.
-export const FREE_PLAN_DEFAULT_LIMITS: PlanLimits = {
+// The boolean-typed subset of PlanFeatures — the union canVendorUse()/
+// assertVendorFeatureAccess() accept. Derived once here so adding a new
+// boolean feature to the catalog below never requires touching those
+// functions' type signatures by hand.
+export type BooleanFeatureKey = Exclude<keyof PlanFeatures, "analytics_level">;
+
+export type FeatureValueType = "boolean" | "limit";
+
+export interface FeatureDefinition {
+  key: EntitlementKey;
+  label: string;
+  description: string;
+  valueType: FeatureValueType;
+  defaultValue: boolean | number;
+}
+
+// The single source of truth for "what features can a plan have," rendered
+// generically by PlanFormModal.tsx (admin) and the vendor plan-card feature
+// list — both loop over this array rather than hardcoding a <li>/<input> per
+// key, so adding a 7th feature here is the only code change needed for it to
+// show up in both UIs (its enforcement call site is a separate, deliberate
+// change — see entitlement.service.ts).
+//
+// analytics_level is a string enum ("basic"|"advanced") internally, but
+// modeled as a boolean toggle here ("Advanced Analytics: on/off") since
+// that's the only real distinction — readFeatures() maps the toggle to the
+// string under the hood.
+export const FEATURE_CATALOG: FeatureDefinition[] = [
+  {
+    key: Entitlement.PORTFOLIO_LIMIT,
+    label: "Portfolio Images",
+    description: "Maximum number of active portfolio photos",
+    valueType: "limit",
+    defaultValue: 10,
+  },
+  {
+    key: Entitlement.VIDEO_LIMIT,
+    label: "Videos",
+    description: "Maximum number of active portfolio videos",
+    valueType: "limit",
+    defaultValue: 1,
+  },
+  {
+    key: Entitlement.ANALYTICS_LEVEL,
+    label: "Advanced Analytics",
+    description: "90-day history with daily breakdown (vs. basic 30-day history)",
+    valueType: "boolean",
+    defaultValue: false,
+  },
+  {
+    key: Entitlement.FEATURED_ELIGIBILITY,
+    label: "Featured Placement",
+    description: "Vendor can be assigned homepage/category/city/search featured slots by admin",
+    valueType: "boolean",
+    defaultValue: false,
+  },
+  {
+    key: Entitlement.STORE_ACCESS,
+    label: "Vendor Store",
+    description: "Branded storefront with WhatsApp ordering",
+    valueType: "boolean",
+    defaultValue: false,
+  },
+  {
+    key: Entitlement.INVOICING_ACCESS,
+    label: "Invoicing & Billing",
+    description: "GST invoices and payment tracking",
+    valueType: "boolean",
+    defaultValue: false,
+  },
+];
+
+// Last-resort fallback if, somehow, no SubscriptionPlan row is currently
+// flagged isDefault (should be unreachable given the DB's partial unique
+// index plus seed data, but getEffectivePlan() must never throw for a vendor
+// with no subscription — every other module depends on that invariant).
+export const FALLBACK_PLAN_LIMITS: PlanLimits = {
   portfolio_limit: 10,
   video_limit: 1,
 };
 
-export const FREE_PLAN_DEFAULT_FEATURES: PlanFeatures = {
+export const FALLBACK_PLAN_FEATURES: PlanFeatures = {
   analytics_level: "basic",
-  lead_access: true,
   featured_eligibility: false,
-  promotional_placement: false,
-  response_tools: false,
-  priority_support: false,
+  store_access: false,
+  invoicing_access: false,
 };

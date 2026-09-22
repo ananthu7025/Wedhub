@@ -14,5 +14,6 @@ planRouter.get("/", asyncHandler(planController.listPlans));
 export const planAdminRouter = Router();
 planAdminRouter.use(authenticateMiddleware, authorize(Role.ADMIN));
 planAdminRouter.get("/", asyncHandler(planController.listPlansAdmin));
+planAdminRouter.get("/feature-catalog", asyncHandler(planController.getFeatureCatalog));
 planAdminRouter.post("/", validateBody(createPlanSchema), asyncHandler(planController.createPlan));
 planAdminRouter.patch("/:id", validateBody(updatePlanSchema), asyncHandler(planController.updatePlan));

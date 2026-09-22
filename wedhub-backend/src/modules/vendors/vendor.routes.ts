@@ -55,6 +55,8 @@ vendorRouter.get("/me/detail", authenticateMiddleware, asyncHandler(vendorContro
 
 vendorRouter.get("/me/analytics", authenticateMiddleware, asyncHandler(vendorController.getMyAnalytics));
 
+vendorRouter.get("/me/effective-plan", authenticateMiddleware, asyncHandler(vendorController.getMyEffectivePlan));
+
 vendorRouter.patch(
   "/me/detail",
   authenticateMiddleware,

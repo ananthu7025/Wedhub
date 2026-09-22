@@ -437,16 +437,20 @@ export interface AdminReviewStatusUpdateResult {
  */
 
 // ---- GET /plans (public), GET /admin/plans, POST/PATCH /admin/plans ----
+// Dynamic-plans redesign (2026-09-22, see
+// PLAN-2026-09-22-dynamic-plans-and-feature-registry.md): plans are
+// admin-created, not limited to 3 fixed tiers. `tier` is kept only as a
+// legacy/cosmetic display hint (nullable) — nothing branches on it.
+// `isDefault` is the real "what does a vendor with no subscription get"
+// flag, and `slug` is the stable identifier plans are referenced by.
 export type PlanTier = "FREE" | "PRO" | "PREMIUM";
 export type BillingInterval = "MONTHLY" | "YEARLY";
 
 export interface AdminPlanFeatures {
-  analytics_level?: "basic" | "advanced";
-  lead_access?: boolean;
+  analytics_level?: boolean;
   featured_eligibility?: boolean;
-  promotional_placement?: boolean;
-  response_tools?: boolean;
-  priority_support?: boolean;
+  store_access?: boolean;
+  invoicing_access?: boolean;
 }
 
 export interface AdminPlanLimits {
@@ -454,14 +458,30 @@ export interface AdminPlanLimits {
   video_limit?: number;
 }
 
+// Mirrors the backend's FEATURE_CATALOG (entitlement.constants.ts) — served
+// by GET /admin/plans/feature-catalog so the admin form never hardcodes
+// which features exist or how to render each one.
+export type FeatureValueType = "boolean" | "limit";
+
+export interface FeatureDefinition {
+  key: string;
+  label: string;
+  description: string;
+  valueType: FeatureValueType;
+  defaultValue: boolean | number;
+}
+
 export interface AdminPlan {
   id: string;
-  tier: PlanTier;
+  tier: PlanTier | null;
+  slug: string;
   billingInterval: BillingInterval;
   name: string;
   price: string;
   currency: string;
   trialDays: number;
+  isDefault: boolean;
+  sortOrder: number;
   features: AdminPlanFeatures;
   limits: AdminPlanLimits;
   isActive: boolean;
@@ -469,15 +489,17 @@ export interface AdminPlan {
   updatedAt: string;
 }
 
-// tier/billingInterval/currency are only settable at creation — confirmed
-// via updatePlanSchema, which omits all three.
+// billingInterval/currency are only settable at creation — confirmed via
+// updatePlanSchema, which omits both.
 export interface AdminCreatePlanBody {
-  tier: PlanTier;
+  slug: string;
   billingInterval: BillingInterval;
   name: string;
   price: number;
   currency?: string;
   trialDays?: number;
+  isDefault?: boolean;
+  sortOrder?: number;
   features?: AdminPlanFeatures;
   limits?: AdminPlanLimits;
 }
@@ -486,6 +508,8 @@ export interface AdminUpdatePlanBody {
   name?: string;
   price?: number;
   trialDays?: number;
+  sortOrder?: number;
+  isDefault?: boolean;
   features?: AdminPlanFeatures;
   limits?: AdminPlanLimits;
   isActive?: boolean;

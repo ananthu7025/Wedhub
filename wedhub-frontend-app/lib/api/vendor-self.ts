@@ -8,6 +8,7 @@ import type {
   VendorSelf,
   WeddingStorySelf,
 } from "./vendor-self.types";
+import type { EffectivePlan } from "./subscriptions.types";
 
 /**
  * Server-only, authenticated reads for the vendor self-service surface
@@ -20,6 +21,13 @@ export function getMyVendor() {
 
 export function getMyAnalytics() {
   return apiFetch<VendorAnalytics>("/vendors/me/analytics");
+}
+
+// Backs page-level upgrade prompts (e.g. /vendor/store, /vendor/invoices) —
+// server-merged against the plan's real defaults, so this never needs the
+// client-side "?? fallback" duplication GET /plans data requires.
+export function getMyEffectivePlan() {
+  return apiFetch<EffectivePlan>("/vendors/me/effective-plan");
 }
 
 export function listMyMedia() {

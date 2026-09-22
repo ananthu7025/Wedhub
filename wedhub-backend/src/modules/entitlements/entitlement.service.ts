@@ -2,71 +2,105 @@ import type { MediaType, SubscriptionPlan } from "@prisma/client";
 import { AuthorizationError } from "../../common/errors";
 import { logger } from "../../config/logger";
 import { GRACE_PERIOD_DAYS } from "../subscriptions/billing-period.util";
+import * as planRepository from "../plans/plan.repository";
 import * as subscriptionRepository from "../subscriptions/subscription.repository";
 import * as entitlementRepository from "./entitlement.repository";
 import {
   Entitlement,
-  FREE_PLAN_DEFAULT_FEATURES,
-  FREE_PLAN_DEFAULT_LIMITS,
+  FALLBACK_PLAN_FEATURES,
+  FALLBACK_PLAN_LIMITS,
+  FEATURE_CATALOG,
   type AnalyticsLevel,
+  type BooleanFeatureKey,
   type EntitlementKey,
   type PlanFeatures,
   type PlanLimits,
 } from "./entitlement.constants";
 
-export { FREE_PLAN_DEFAULT_LIMITS, FREE_PLAN_DEFAULT_FEATURES } from "./entitlement.constants";
+export { FALLBACK_PLAN_LIMITS, FALLBACK_PLAN_FEATURES, FEATURE_CATALOG } from "./entitlement.constants";
 
 interface EffectivePlan {
   limits: PlanLimits;
   features: PlanFeatures;
-  tier: "FREE" | "PRO" | "PREMIUM";
+  planId: string;
+  planName: string;
 }
 
 // Exported so callers that just activated/renewed a specific plan (trial
 // start, webhook renewal/activation) can pass that plan's limits straight
-// into restoreInactiveMediaToLimits without re-deriving FREE defaults
+// into restoreInactiveMediaToLimits without re-deriving fallback defaults
 // themselves — this stays the one place those defaults are declared.
 export function readLimits(plan: SubscriptionPlan): PlanLimits {
   const raw = plan.limits as Partial<PlanLimits> | null;
-  return {
-    portfolio_limit: raw?.portfolio_limit ?? FREE_PLAN_DEFAULT_LIMITS.portfolio_limit,
-    video_limit: raw?.video_limit ?? FREE_PLAN_DEFAULT_LIMITS.video_limit,
-  };
+  const result = {} as PlanLimits;
+  for (const def of FEATURE_CATALOG) {
+    if (def.valueType !== "limit") continue;
+    const key = def.key as keyof PlanLimits;
+    result[key] = (raw?.[key] as number | undefined) ?? (def.defaultValue as number);
+  }
+  return result;
 }
 
 function readFeatures(plan: SubscriptionPlan): PlanFeatures {
-  const raw = plan.features as Partial<PlanFeatures> | null;
-  return {
-    analytics_level: (raw?.analytics_level as AnalyticsLevel) ?? FREE_PLAN_DEFAULT_FEATURES.analytics_level,
-    lead_access: raw?.lead_access ?? FREE_PLAN_DEFAULT_FEATURES.lead_access,
-    featured_eligibility: raw?.featured_eligibility ?? FREE_PLAN_DEFAULT_FEATURES.featured_eligibility,
-    promotional_placement: raw?.promotional_placement ?? FREE_PLAN_DEFAULT_FEATURES.promotional_placement,
-    response_tools: raw?.response_tools ?? FREE_PLAN_DEFAULT_FEATURES.response_tools,
-    priority_support: raw?.priority_support ?? FREE_PLAN_DEFAULT_FEATURES.priority_support,
-  };
+  const raw = plan.features as Partial<Record<BooleanFeatureKey, boolean>> | null;
+  const result = { analytics_level: FALLBACK_PLAN_FEATURES.analytics_level } as PlanFeatures;
+  for (const def of FEATURE_CATALOG) {
+    if (def.valueType !== "boolean" || def.key === Entitlement.ANALYTICS_LEVEL) continue;
+    const key = def.key as BooleanFeatureKey;
+    result[key] = raw?.[key] ?? (def.defaultValue as boolean);
+  }
+  // analytics_level is stored/edited as a boolean toggle on the plan's
+  // features JSON but exposed as the "basic"|"advanced" string everywhere
+  // else in the app — this is the one place that mapping happens.
+  const advancedToggle = (plan.features as Record<string, unknown> | null)?.[Entitlement.ANALYTICS_LEVEL];
+  result.analytics_level = advancedToggle === true ? "advanced" : "basic";
+  return result;
 }
 
-const FREE_EFFECTIVE_PLAN: EffectivePlan = {
-  limits: FREE_PLAN_DEFAULT_LIMITS,
-  features: FREE_PLAN_DEFAULT_FEATURES,
-  tier: "FREE",
-};
+function synthesizeFallbackPlan(): SubscriptionPlan {
+  return {
+    id: "__fallback__",
+    name: "Fallback",
+    features: FALLBACK_PLAN_FEATURES,
+    limits: FALLBACK_PLAN_LIMITS,
+  } as unknown as SubscriptionPlan;
+}
+
+// Replaces the old hardcoded FREE_EFFECTIVE_PLAN constant. Reads the real DB
+// row flagged isDefault — the plan a vendor with no Subscription row gets,
+// and where a lapsed/cancelled vendor lands. Falls back to code defaults only
+// if, somehow, no plan is currently flagged isDefault (should be unreachable
+// given the DB's partial unique index + seed data, but this function must
+// never throw for a vendor with no subscription — every other module depends
+// on that invariant).
+export async function getDefaultPlan(): Promise<SubscriptionPlan> {
+  const plan = await planRepository.findDefaultPlan();
+  if (plan) return plan;
+  logger.error("No plan flagged isDefault — falling back to hardcoded feature-catalog defaults. This should never happen.");
+  return synthesizeFallbackPlan();
+}
+
+async function effectivePlanFor(plan: SubscriptionPlan): Promise<EffectivePlan> {
+  return { limits: readLimits(plan), features: readFeatures(plan), planId: plan.id, planName: plan.name };
+}
 
 // The single place "what plan is this vendor really on right now" is decided.
-// Scenario A: no Subscription row at all → implicit FREE, no DB write needed.
-// Scenario E: a PAST_DUE subscription whose grace period has elapsed is lazily
-// flipped to EXPIRED here (product.md §28E — "after grace period, paid
-// entitlements are removed... vendor falls back to FREE").
-// Scenario F: a subscription with cancelAtPeriodEnd=true whose currentPeriodEnd
-// has already passed (the vendor kept paid benefits until then, as promised)
-// is also lazily expired here.
-// Both cases sweep the vendor's media down to FREE limits in the same pass,
-// rather than running a separate scheduler — confirmed with the user, since
-// no cron/repeatable-job infrastructure exists yet in this codebase.
+// Scenario A: no Subscription row at all → the current default plan, no DB
+// write needed.
+// Scenario E: a PAST_DUE subscription whose grace period has elapsed is
+// lazily flipped to EXPIRED here (product.md §28E — "after grace period,
+// paid entitlements are removed... vendor falls back to the default plan").
+// Scenario F: a subscription with cancelAtPeriodEnd=true whose
+// currentPeriodEnd has already passed (the vendor kept paid benefits until
+// then, as promised) is also lazily expired here.
+// Both cases sweep the vendor's media down to the default plan's limits in
+// the same pass, rather than running a separate scheduler — confirmed with
+// the user, since no cron/repeatable-job infrastructure exists yet in this
+// codebase.
 export async function getEffectivePlan(vendorId: string): Promise<EffectivePlan> {
   const subscription = await subscriptionRepository.findCurrentSubscription(vendorId);
   if (!subscription) {
-    return FREE_EFFECTIVE_PLAN;
+    return effectivePlanFor(await getDefaultPlan());
   }
 
   const now = new Date();
@@ -77,20 +111,21 @@ export async function getEffectivePlan(vendorId: string): Promise<EffectivePlan>
     graceDeadline.setDate(graceDeadline.getDate() + GRACE_PERIOD_DAYS);
     if (graceDeadline < now) {
       expired = true;
-      logger.info({ vendorId, subscriptionId: subscription.id }, "Grace period elapsed — subscription expired, entitlements fell back to FREE");
+      logger.info({ vendorId, subscriptionId: subscription.id }, "Grace period elapsed — subscription expired, entitlements fell back to the default plan");
     }
   } else if (subscription.status === "ACTIVE" && subscription.cancelAtPeriodEnd && subscription.currentPeriodEnd < now) {
     expired = true;
-    logger.info({ vendorId, subscriptionId: subscription.id }, "Cancel-at-period-end reached — subscription expired, entitlements fell back to FREE");
+    logger.info({ vendorId, subscriptionId: subscription.id }, "Cancel-at-period-end reached — subscription expired, entitlements fell back to the default plan");
   }
 
   if (expired) {
     await subscriptionRepository.expireSubscription(subscription.id);
-    await sweepMediaToLimits(vendorId, FREE_EFFECTIVE_PLAN.limits);
-    return FREE_EFFECTIVE_PLAN;
+    const defaultPlan = await getDefaultPlan();
+    await sweepMediaToLimits(vendorId, readLimits(defaultPlan));
+    return effectivePlanFor(defaultPlan);
   }
 
-  return { limits: readLimits(subscription.plan), features: readFeatures(subscription.plan), tier: subscription.plan.tier };
+  return effectivePlanFor(subscription.plan);
 }
 
 function mediaTypeFor(key: "portfolio_limit" | "video_limit"): MediaType {
@@ -139,18 +174,26 @@ export async function canVendorAccess(vendorId: string, key: Extract<Entitlement
   return key === Entitlement.ANALYTICS_LEVEL ? plan.features.analytics_level : "basic";
 }
 
-export async function canVendorUse(
-  vendorId: string,
-  key: Extract<EntitlementKey, "featured_eligibility" | "promotional_placement" | "response_tools" | "priority_support" | "lead_access">,
-): Promise<boolean> {
+// Generic over every boolean-typed catalog feature — adding a new boolean
+// feature to FEATURE_CATALOG never requires touching this signature.
+export async function canVendorUse(vendorId: string, key: BooleanFeatureKey): Promise<boolean> {
   const plan = await getEffectivePlan(vendorId);
-  return Boolean(plan.features[key as keyof PlanFeatures]);
+  return Boolean(plan.features[key]);
 }
 
-// Throws (403) rather than returning a boolean — every call site is a
-// "the vendor is trying to do this right now" upload gate, so an exception
-// matches the rest of the codebase's guard-clause style (see vendor.policy's
-// getOwnedVendorOrThrow) and can't be silently ignored by a forgetful caller.
+// Throws (403) rather than returning a boolean — every real call site is a
+// "the vendor/admin is trying to do this right now" gate, so an exception
+// matches the rest of the codebase's guard-clause style (see
+// canVendorUpload below) and can't be silently ignored by a forgetful
+// caller. featureLabel is passed by the caller so the 403 message is
+// specific without duplicating string literals per call site.
+export async function assertVendorFeatureAccess(vendorId: string, key: BooleanFeatureKey, featureLabel: string): Promise<void> {
+  const allowed = await canVendorUse(vendorId, key);
+  if (!allowed) {
+    throw new AuthorizationError(`${featureLabel} is not included in this vendor's current plan. Upgrade the plan to unlock it.`);
+  }
+}
+
 export async function canVendorUpload(vendorId: string, mediaType: MediaType): Promise<void> {
   if (mediaType !== "PORTFOLIO" && mediaType !== "VIDEO") {
     return; // LOGO/COVER are profile assets, not portfolio capacity — never limited
