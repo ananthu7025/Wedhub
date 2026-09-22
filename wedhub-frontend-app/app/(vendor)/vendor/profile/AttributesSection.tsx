@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { CategoryAttributeSelf, MediaItem } from "@/lib/api/vendor-self.types";
 import { LogoCoverPicker } from "./LogoCoverPicker";
+import { SearchableOptionPicker } from "./SearchableOptionPicker";
 
 type NumberRangeValue = { min: number; max: number };
 type TimeValue = { time: string };
@@ -31,8 +33,18 @@ export function AttributesSection({
   onChange: (next: AttributeValueMap) => void;
   mediaByAttributeId: Record<string, MediaItem>;
 }) {
+  // Item 3: locally overrides an attribute's options list right after a
+  // vendor adds a new one, so the picker reflects it immediately without
+  // waiting for a full page reload (the server write already made it
+  // permanent and shared — see SearchableOptionPicker's own comment).
+  const [optionOverrides, setOptionOverrides] = useState<Record<string, string[]>>({});
+
   function setValue(attributeId: string, value: AttributeValue) {
     onChange({ ...values, [attributeId]: value });
+  }
+
+  function optionsFor(attribute: CategoryAttributeSelf): string[] {
+    return optionOverrides[attribute.id] ?? attribute.options ?? [];
   }
 
   function labelWithMarker(attribute: CategoryAttributeSelf) {
@@ -284,22 +296,18 @@ export function AttributesSection({
             );
           }
           return (
-            <label key={attribute.id} className="block text-sm">
+            <div key={attribute.id} className="text-sm">
               <span className="mb-1.5 block font-bold text-[13px]">{labelWithMarker(attribute)}</span>
-              <select
-                value={typeof value === "string" ? value : ""}
-                onChange={(e) => setValue(attribute.id, e.target.value)}
-                className="w-full rounded-md border border-border px-3 py-2.5 text-sm"
-              >
-                <option value="">Select…</option>
-                {(attribute.options ?? []).map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <SearchableOptionPicker
+                attributeId={attribute.id}
+                options={optionsFor(attribute)}
+                selected={typeof value === "string" && value ? [value] : []}
+                multiple={false}
+                onSelectionChange={(next) => setValue(attribute.id, next[0] ?? "")}
+                onOptionsChange={(next) => setOptionOverrides((prev) => ({ ...prev, [attribute.id]: next }))}
+              />
               {helpText(attribute)}
-            </label>
+            </div>
           );
         }
 
@@ -308,24 +316,14 @@ export function AttributesSection({
         return (
           <div key={attribute.id} className="text-sm">
             <span className="mb-1.5 block font-bold text-[13px]">{labelWithMarker(attribute)}</span>
-            <div className="flex flex-col gap-1.5">
-              {(attribute.options ?? []).map((option) => (
-                <label key={option} className="flex items-center gap-2 text-[13px]">
-                  <input
-                    type="checkbox"
-                    checked={selectedOptions.includes(option)}
-                    onChange={(e) => {
-                      const next = e.target.checked
-                        ? [...selectedOptions, option]
-                        : selectedOptions.filter((o) => o !== option);
-                      setValue(attribute.id, next);
-                    }}
-                    className="accent-brand-primary"
-                  />
-                  {option}
-                </label>
-              ))}
-            </div>
+            <SearchableOptionPicker
+              attributeId={attribute.id}
+              options={optionsFor(attribute)}
+              selected={selectedOptions}
+              multiple
+              onSelectionChange={(next) => setValue(attribute.id, next)}
+              onOptionsChange={(next) => setOptionOverrides((prev) => ({ ...prev, [attribute.id]: next }))}
+            />
             {helpText(attribute)}
           </div>
         );

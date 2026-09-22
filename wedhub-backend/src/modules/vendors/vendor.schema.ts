@@ -85,6 +85,15 @@ export const setHiddenSectionsSchema = z.object({
   hiddenSections: z.array(z.enum(HIDEABLE_PROFILE_SECTIONS)).max(HIDEABLE_PROFILE_SECTIONS.length),
 });
 
+// Item 3 (2026-09-22): lets a vendor add a new option to a shared
+// SELECT/MULTI_SELECT CategoryAttribute's options list from the profile
+// form itself — see vendor.service.ts's addCategoryAttributeOption for the
+// dataType/category-ownership checks this doesn't cover (those need the
+// attribute row loaded, so they live in the service, not here).
+export const addAttributeOptionSchema = z.object({
+  option: z.string().trim().min(1).max(100),
+});
+
 // Shape-only validation — well-formed JSON matching one of these shapes.
 // Semantic validation (regex format, min<=max, start<end, option
 // membership) happens in vendor.service.ts's setAttributeValues, where the
@@ -141,6 +150,7 @@ export type UpsertProfileBody = z.infer<typeof upsertProfileSchema>;
 export type SetCategoriesBody = z.infer<typeof setCategoriesSchema>;
 export type SetServiceAreasBody = z.infer<typeof setServiceAreasSchema>;
 export type SetHiddenSectionsBody = z.infer<typeof setHiddenSectionsSchema>;
+export type AddAttributeOptionBody = z.infer<typeof addAttributeOptionSchema>;
 export type SetAttributesBody = z.infer<typeof setAttributesSchema>;
 export type CreatePackageBody = z.infer<typeof createPackageSchema>;
 export type UpdatePackageBody = z.infer<typeof updatePackageSchema>;

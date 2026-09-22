@@ -157,6 +157,47 @@ export async function setHiddenSections(vendorId: string, hiddenSections: string
   return vendorRepository.findVendorById(vendorId);
 }
 
+const OPTION_MAX_LENGTH = 100;
+
+// Item 3 (2026-09-22 request): a vendor filling in a SELECT/MULTI_SELECT
+// category-attribute can add an option that doesn't exist yet — it's
+// appended to that CategoryAttribute's shared `options` list (see
+// vendor.repository.ts's appendCategoryAttributeOption), so it's
+// immediately available to every other vendor in that category too, not
+// just saved as this vendor's own free-text value. Restricted to
+// SELECT/MULTI_SELECT attributes belonging to one of the CALLING vendor's
+// own categories — a vendor can't add options to a field on a category
+// they don't belong to, and TEXT/NUMBER/etc. fields have no shared option
+// list to append to in the first place.
+export async function addCategoryAttributeOption(vendorId: string, attributeId: string, rawOption: string) {
+  const option = rawOption.trim();
+  if (option.length === 0) {
+    throw new ValidationError("Option cannot be blank");
+  }
+  if (option.length > OPTION_MAX_LENGTH) {
+    throw new ValidationError(`Option must be at most ${OPTION_MAX_LENGTH} characters`);
+  }
+
+  const attribute = await vendorRepository.findAttributeById(attributeId);
+  if (!attribute) {
+    throw new NotFoundError("Attribute not found");
+  }
+  if (attribute.dataType !== "SELECT" && attribute.dataType !== "MULTI_SELECT") {
+    throw new ValidationError(`"${attribute.label}" does not accept custom options`);
+  }
+
+  const ownCategoryIds = await vendorRepository.findOwnCategoryIds(vendorId);
+  if (!ownCategoryIds.includes(attribute.categoryId)) {
+    throw new ValidationError("You can only add options to attributes in your own category");
+  }
+
+  const updated = await vendorRepository.appendCategoryAttributeOption(attributeId, option);
+  if (!updated) {
+    throw new NotFoundError("Attribute not found");
+  }
+  return updated;
+}
+
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const PHONE_PATTERN = /^\+?[0-9][0-9\s\-()]{6,19}$/;
 

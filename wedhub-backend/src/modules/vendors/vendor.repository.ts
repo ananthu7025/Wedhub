@@ -198,6 +198,41 @@ export function findAttributesByIds(attributeIds: string[]) {
   return prisma.categoryAttribute.findMany({ where: { id: { in: attributeIds } } });
 }
 
+export function findAttributeById(attributeId: string) {
+  return prisma.categoryAttribute.findUnique({ where: { id: attributeId } });
+}
+
+// All of the vendor's categories (primary + subcategories), not just
+// primary — an option-add should work for any SELECT/MULTI_SELECT field the
+// vendor's form actually shows, and AttributesSection.tsx renders every
+// category the vendor belongs to, not only the primary one.
+export async function findOwnCategoryIds(vendorId: string): Promise<string[]> {
+  const rows = await prisma.vendorCategory.findMany({ where: { vendorId }, select: { categoryId: true } });
+  return rows.map((r) => r.categoryId);
+}
+
+// Appends a new option to a shared CategoryAttribute.options list (item 3:
+// a vendor-added option becomes available to every other vendor in that
+// category, not just their own value) — case-insensitively deduped against
+// the current list at write time inside a transaction, so two vendors
+// racing to add "DJ" and "dj" in the same moment can't both succeed and
+// leave two near-duplicate entries. Returns the updated attribute, or null
+// if the option was already present (case-insensitively) — the caller
+// treats that as a no-op success, not an error.
+export async function appendCategoryAttributeOption(attributeId: string, option: string) {
+  return prisma.$transaction(async (tx) => {
+    const attribute = await tx.categoryAttribute.findUnique({ where: { id: attributeId } });
+    if (!attribute) return null;
+    const existing = (attribute.options as string[] | null) ?? [];
+    const alreadyExists = existing.some((o) => o.toLowerCase() === option.toLowerCase());
+    if (alreadyExists) return attribute;
+    return tx.categoryAttribute.update({
+      where: { id: attributeId },
+      data: { options: [...existing, option] as Prisma.InputJsonValue },
+    });
+  });
+}
+
 export function findMediaByIds(mediaIds: string[]) {
   return prisma.media.findMany({ where: { id: { in: mediaIds } } });
 }

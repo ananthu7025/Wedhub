@@ -2,6 +2,7 @@
 
 import type { ApiResponse } from "./types";
 import type {
+  CategoryAttributeSelf,
   CreateAlbumBody,
   CreatePackageBody,
   CreateUploadRequestBody,
@@ -58,6 +59,16 @@ export function setMyServiceAreas(body: SetServiceAreasBody) {
 
 export function setMyHiddenSections(body: SetHiddenSectionsBody) {
   return call<VendorSelf>("/vendors/me/hidden-sections", "PUT", body);
+}
+
+// Item 3 (2026-09-22): adds a new option to a shared SELECT/MULTI_SELECT
+// CategoryAttribute — becomes available to every other vendor in that
+// category, not just this vendor's own saved value (backend appends to
+// CategoryAttribute.options; see vendor.service.ts's
+// addCategoryAttributeOption). Returns the updated attribute so the caller
+// can refresh its local options list without a full page reload.
+export function addMyAttributeOption(attributeId: string, option: string) {
+  return call<CategoryAttributeSelf>(`/vendors/me/attributes/${attributeId}/options`, "POST", { option });
 }
 
 export function setMyAttributes(body: SetAttributesBody) {

@@ -8,6 +8,7 @@ import { vendorCreateRateLimiter } from "../../common/middleware/rate-limit.midd
 import { Role } from "../../common/enums/roles.enum";
 import * as vendorController from "./vendor.controller";
 import {
+  addAttributeOptionSchema,
   createPackageSchema,
   createVendorSchema,
   listVendorsQuerySchema,
@@ -94,6 +95,13 @@ vendorRouter.put(
   authenticateMiddleware,
   validateBody(setAttributesSchema),
   asyncHandler(vendorController.setAttributes),
+);
+
+vendorRouter.post(
+  "/me/attributes/:attributeId/options",
+  authenticateMiddleware,
+  validateBody(addAttributeOptionSchema),
+  asyncHandler(vendorController.addAttributeOption),
 );
 
 vendorRouter.post(

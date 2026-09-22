@@ -7,6 +7,7 @@ import { getOwnedVendorOrThrow } from "./vendor.policy";
 import * as vendorService from "./vendor.service";
 import * as vendorRepository from "./vendor.repository";
 import type {
+  AddAttributeOptionBody,
   CreatePackageBody,
   CreateVendorBody,
   ListVendorsQuery,
@@ -120,6 +121,18 @@ export async function setHiddenSections(req: Request, res: Response): Promise<vo
   const body = req.body as SetHiddenSectionsBody;
   const vendor = await vendorService.setHiddenSections(owned.id, body.hiddenSections);
   res.json(successResponse(vendor));
+}
+
+export async function addAttributeOption(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const owned = await getOwnedVendorOrThrow(userId);
+  const body = req.body as AddAttributeOptionBody;
+  const attribute = await vendorService.addCategoryAttributeOption(
+    owned.id,
+    req.params.attributeId as string,
+    body.option,
+  );
+  res.json(successResponse(attribute));
 }
 
 export async function setAttributes(req: Request, res: Response): Promise<void> {
