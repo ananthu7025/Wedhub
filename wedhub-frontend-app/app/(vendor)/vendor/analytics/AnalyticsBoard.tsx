@@ -81,7 +81,13 @@ export function AnalyticsBoard({
         </div>
         <div className="rounded-xl border border-border bg-white p-3.5 sm:p-5 shadow-xs col-span-2 sm:col-span-1">
           <p className="mb-1 text-[11px] sm:text-xs font-semibold text-text-grey truncate">Conversion rate</p>
-          <p className="text-xl sm:text-2xl font-bold text-text-dark">{formatPercent(leadAnalytics.conversionRate)}</p>
+          {leadAnalytics.conversionRate === null ? (
+            <a href="/vendor/subscription" className="text-xs font-semibold text-brand-primary">
+              Upgrade to unlock
+            </a>
+          ) : (
+            <p className="text-xl sm:text-2xl font-bold text-text-dark">{formatPercent(leadAnalytics.conversionRate)}</p>
+          )}
         </div>
       </div>
 

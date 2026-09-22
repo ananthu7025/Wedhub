@@ -42,6 +42,7 @@ export type InvoiceStatus = "ISSUED" | "PAID" | "VOID";
 export interface PlanLimits {
   portfolio_limit?: number;
   video_limit?: number;
+  monthly_lead_limit?: number;
 }
 
 export interface PlanFeatures {
@@ -49,6 +50,7 @@ export interface PlanFeatures {
   featured_eligibility?: boolean;
   store_access?: boolean;
   invoicing_access?: boolean;
+  portfolio_page_access?: boolean;
 }
 
 // ---- GET /plans (public) ----
@@ -79,6 +81,7 @@ export interface EffectivePlan {
     featured_eligibility: boolean;
     store_access: boolean;
     invoicing_access: boolean;
+    portfolio_page_access: boolean;
   };
 }
 
@@ -92,6 +95,7 @@ export const BOOLEAN_FEATURE_CATALOG: Array<{ key: keyof PlanFeatures; label: st
   { key: "featured_eligibility", label: "Featured Placement" },
   { key: "store_access", label: "Vendor Store" },
   { key: "invoicing_access", label: "Invoicing & Billing" },
+  { key: "portfolio_page_access", label: "Shareable Portfolio Page" },
 ];
 
 // ---- GET /subscriptions/me ----

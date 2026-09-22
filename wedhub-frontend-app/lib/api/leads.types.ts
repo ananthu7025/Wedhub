@@ -60,6 +60,17 @@ export interface VendorLead {
   dedupeKey: string;
   createdAt: string;
   updatedAt: string;
+  // Null on the raw DB row; the backend never sends null vs. a real
+  // timestamp here directly — it sends the derived hasFullContactInfo flag
+  // below instead (see lead.service.ts::redactLeadContact). Kept as an
+  // optional field anyway since findLeadById/listVendorLeads do return the
+  // real value on the underlying row and some call sites may pass it through.
+  contactUnlockedAt?: string | null;
+  // False = enquiry.contactName/contactPhone/contactEmail on this lead are
+  // redacted (Free-tier vendor, not yet unlocked) — see §6c/§6d of
+  // PLAN-2026-09-22-premium-feature-buildout.md. Unlock via
+  // POST /leads/:id/unlock.
+  hasFullContactInfo: boolean;
   enquiry: LeadEnquiry;
 }
 
@@ -111,7 +122,18 @@ export interface LeadAnalytics {
   qualifiedLeads: number;
   wonLeads: number;
   lostLeads: number;
-  conversionRate: number;
+  // Null for a basic-analytics-tier vendor — gated behind analytics_level,
+  // same distinction as the profile-view daily breakdown elsewhere. See
+  // PLAN-2026-09-22-premium-feature-buildout.md §5.
+  conversionRate: number | null;
+}
+
+// ---- POST /leads/:id/unlock ----
+export interface LeadUnlockCheckout {
+  orderId: string;
+  paymentId: string;
+  amount: number;
+  currency: string;
 }
 
 // ---- GET /leads/profile-viewers (item 17) ----

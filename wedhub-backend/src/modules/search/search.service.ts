@@ -1,5 +1,6 @@
 import { getPublicUrl } from "../../integrations/storage/r2.client";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
+import { getEffectivePlan } from "../entitlements/entitlement.service";
 import * as searchRepository from "./search.repository";
 import { rankVendors } from "./vendor-ranking.service";
 import type { SearchVendorsQuery } from "./search.schema";
@@ -10,7 +11,7 @@ export interface SearchVendorsResult {
   total: number;
 }
 
-function toPublicVendorSummary(row: VendorSearchRow) {
+function toPublicVendorSummary(row: VendorSearchRow & { isPremiumEligible?: boolean }) {
   return {
     id: row.id,
     businessName: row.businessName,
@@ -22,7 +23,16 @@ function toPublicVendorSummary(row: VendorSearchRow) {
     logoUrl: row.logoObjectKey ? getPublicUrl(row.logoObjectKey) : null,
     logoBlurDataUrl: row.logoBlurDataUrl,
     avgResponseTimeMs: row.avgResponseTimeMs,
+    isPremiumEligible: row.isPremiumEligible ?? false,
   };
+}
+
+// One batch query for this page's vendor IDs (not N+1) — see
+// PLAN-2026-09-22-premium-feature-buildout.md §4b, option (a).
+async function withPremiumEligibility(rows: VendorSearchRow[]): Promise<(VendorSearchRow & { isPremiumEligible: boolean })[]> {
+  const plans = await Promise.all(rows.map(async (row) => [row.id, await getEffectivePlan(row.id)] as const));
+  const eligibleByVendorId = new Map(plans.map(([id, plan]) => [id, plan.features.featured_eligibility]));
+  return rows.map((row) => ({ ...row, isPremiumEligible: eligibleByVendorId.get(row.id) ?? false }));
 }
 
 export async function searchVendors(
@@ -44,7 +54,13 @@ export async function searchVendors(
   };
 
   const { rows, total } = await searchRepository.searchVendors(filters, query.sort);
-  const ranked = query.sort === "recommended" ? rankVendors(rows) : rows;
+  // businessVisibility (vendor-ranking.service.ts §4 of the premium-feature
+  // buildout plan) only matters for sort=recommended — a single batch query
+  // for this page's vendor IDs, not N+1 per vendor.
+  const ranked =
+    query.sort === "recommended"
+      ? rankVendors(await withPremiumEligibility(rows))
+      : rows;
 
   void logSearch({ query, loggedInUserId, resultCount: total });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ApiResponse, PaginationMeta } from "./types";
-import type { LeadNote, UpdateLeadStatusBody, VendorLead, VendorLeadDetail } from "./leads.types";
+import type { LeadNote, LeadUnlockCheckout, UpdateLeadStatusBody, VendorLead, VendorLeadDetail } from "./leads.types";
 
 /**
  * Client-side calls through the generic authenticated proxy
@@ -47,4 +47,13 @@ export function updateMyLeadStatus(leadId: string, body: UpdateLeadStatusBody) {
 
 export function addMyLeadNote(leadId: string, body: string) {
   return call<LeadNote>(`/leads/${leadId}/notes`, "POST", { body });
+}
+
+// §6d of PLAN-2026-09-22-premium-feature-buildout.md — pay to unlock one
+// lead's redacted contact info. Returns Razorpay checkout info, same
+// shape/flow as subscription upgrade (CheckoutButton.tsx) — the frontend
+// polls for hasFullContactInfo to flip true after the webhook confirms
+// payment, rather than trusting the client-side checkout callback.
+export function unlockMyLeadContact(leadId: string) {
+  return call<LeadUnlockCheckout>(`/leads/${leadId}/unlock`, "POST");
 }

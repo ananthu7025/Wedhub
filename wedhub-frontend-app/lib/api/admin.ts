@@ -12,6 +12,7 @@ import type {
   AdminLeadListItem,
   AdminPermission,
   AdminPlan,
+  AdminPlatformSetting,
   AdminPopularSearchCard,
   FeatureDefinition,
   AdminReviewDetail,
@@ -140,6 +141,10 @@ export function listAdminPlans() {
 
 export function getAdminPlanFeatureCatalog() {
   return apiFetch<FeatureDefinition[]>("/admin/plans/feature-catalog");
+}
+
+export function getAdminPlatformSettings() {
+  return apiFetch<AdminPlatformSetting[]>("/admin/settings");
 }
 
 export function listAdminRoles() {

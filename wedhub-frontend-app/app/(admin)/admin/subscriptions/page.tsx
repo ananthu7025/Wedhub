@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AdminShell } from "@/components/shared/AdminShell";
 import { requireAdmin } from "@/lib/auth/require-admin";
-import { listAdminPlans, getAdminPlanFeatureCatalog } from "@/lib/api/admin";
+import { listAdminPlans, getAdminPlanFeatureCatalog, getAdminPlatformSettings } from "@/lib/api/admin";
 import { SubscriptionsBoard } from "./SubscriptionsBoard";
 
 export const metadata: Metadata = {
@@ -10,11 +10,15 @@ export const metadata: Metadata = {
 
 export default async function AdminSubscriptionsPage() {
   await requireAdmin();
-  const [{ data: plans }, { data: featureCatalog }] = await Promise.all([listAdminPlans(), getAdminPlanFeatureCatalog()]);
+  const [{ data: plans }, { data: featureCatalog }, { data: settings }] = await Promise.all([
+    listAdminPlans(),
+    getAdminPlanFeatureCatalog(),
+    getAdminPlatformSettings(),
+  ]);
 
   return (
     <AdminShell activeHref="/admin/subscriptions">
-      <SubscriptionsBoard initialPlans={plans} featureCatalog={featureCatalog} />
+      <SubscriptionsBoard initialPlans={plans} featureCatalog={featureCatalog} initialSettings={settings} />
     </AdminShell>
   );
 }

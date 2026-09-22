@@ -10,10 +10,12 @@
 export const Entitlement = {
   PORTFOLIO_LIMIT: "portfolio_limit",
   VIDEO_LIMIT: "video_limit",
+  MONTHLY_LEAD_LIMIT: "monthly_lead_limit",
   ANALYTICS_LEVEL: "analytics_level",
   FEATURED_ELIGIBILITY: "featured_eligibility",
   STORE_ACCESS: "store_access",
   INVOICING_ACCESS: "invoicing_access",
+  PORTFOLIO_PAGE_ACCESS: "portfolio_page_access",
 } as const;
 
 export type EntitlementKey = (typeof Entitlement)[keyof typeof Entitlement];
@@ -23,6 +25,11 @@ export type AnalyticsLevel = "basic" | "advanced";
 export interface PlanLimits {
   portfolio_limit: number;
   video_limit: number;
+  // 0 means unlimited — the one sentinel value in this catalog's limits
+  // (every other limit is a real, always-enforced cap). See FEATURE_CATALOG's
+  // entry below and entitlement.service.ts's enforcement for where this
+  // matters. Documented here too since PlanLimits is the type callers read.
+  monthly_lead_limit: number;
 }
 
 export interface PlanFeatures {
@@ -30,6 +37,7 @@ export interface PlanFeatures {
   featured_eligibility: boolean;
   store_access: boolean;
   invoicing_access: boolean;
+  portfolio_page_access: boolean;
 }
 
 // The boolean-typed subset of PlanFeatures — the union canVendorUse()/
@@ -75,6 +83,13 @@ export const FEATURE_CATALOG: FeatureDefinition[] = [
     defaultValue: 1,
   },
   {
+    key: Entitlement.MONTHLY_LEAD_LIMIT,
+    label: "Monthly Leads",
+    description: "Maximum new leads received per calendar month (0 = unlimited)",
+    valueType: "limit",
+    defaultValue: 0,
+  },
+  {
     key: Entitlement.ANALYTICS_LEVEL,
     label: "Advanced Analytics",
     description: "90-day history with daily breakdown (vs. basic 30-day history)",
@@ -102,6 +117,13 @@ export const FEATURE_CATALOG: FeatureDefinition[] = [
     valueType: "boolean",
     defaultValue: false,
   },
+  {
+    key: Entitlement.PORTFOLIO_PAGE_ACCESS,
+    label: "Shareable Portfolio Page",
+    description: "Public /portfolio/:slug page vendors can share via link, QR code, or social bio",
+    valueType: "boolean",
+    defaultValue: false,
+  },
 ];
 
 // Last-resort fallback if, somehow, no SubscriptionPlan row is currently
@@ -111,6 +133,7 @@ export const FEATURE_CATALOG: FeatureDefinition[] = [
 export const FALLBACK_PLAN_LIMITS: PlanLimits = {
   portfolio_limit: 10,
   video_limit: 1,
+  monthly_lead_limit: 0,
 };
 
 export const FALLBACK_PLAN_FEATURES: PlanFeatures = {
@@ -118,4 +141,5 @@ export const FALLBACK_PLAN_FEATURES: PlanFeatures = {
   featured_eligibility: false,
   store_access: false,
   invoicing_access: false,
+  portfolio_page_access: false,
 };

@@ -26,6 +26,11 @@ export function createEnquiryWithLeads(
   enquiryData: CreateEnquiryData,
   vendorIds: string[],
   dedupeKeyFor: (vendorId: string) => string,
+  // Vendors whose new Lead should have contactUnlockedAt set immediately
+  // (Premium-eligible — see enquiry.service.ts::resolveAutoUnlockVendorIds).
+  // Optional/defaults to none so every other existing caller of this
+  // function (none currently pass a 4th arg) is unaffected.
+  autoUnlockVendorIds: Set<string> = new Set(),
 ) {
   const optionalFields = omitUndefined({
     userId: enquiryData.userId,
@@ -56,7 +61,12 @@ export function createEnquiryWithLeads(
     const leads = await Promise.all(
       vendorIds.map((vendorId) =>
         tx.lead.create({
-          data: { enquiryId: enquiry.id, vendorId, dedupeKey: dedupeKeyFor(vendorId) },
+          data: {
+            enquiryId: enquiry.id,
+            vendorId,
+            dedupeKey: dedupeKeyFor(vendorId),
+            contactUnlockedAt: autoUnlockVendorIds.has(vendorId) ? new Date() : null,
+          },
         }),
       ),
     );

@@ -26,6 +26,9 @@ export const vendorRouter = Router();
 // Public routes
 vendorRouter.get("/", validateQuery(listVendorsQuerySchema), asyncHandler(vendorController.listPublicVendors));
 vendorRouter.get("/:slug", optionalAuthenticateMiddleware, asyncHandler(vendorController.getPublicVendor));
+// Public, unauthenticated — backs the /portfolio/:slug page's frontend-only
+// plan gate (see getPortfolioPageAccess's doc comment).
+vendorRouter.get("/:slug/portfolio-access", asyncHandler(vendorController.getPortfolioPageAccess));
 
 // Requires a logged-in couple — contact details are only ever revealed to
 // an identified viewer, never anonymously (see revealVendorContact's doc

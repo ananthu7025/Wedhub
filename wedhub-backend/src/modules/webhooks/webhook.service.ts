@@ -4,6 +4,7 @@ import { logger } from "../../config/logger";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
 import { verifyWebhookSignature } from "../../integrations/payment/razorpay.client";
 import * as entitlementService from "../entitlements/entitlement.service";
+import * as leadRepository from "../leads/lead.repository";
 import * as notificationService from "../notifications/notification.service";
 import { notifyWeddingWebsitePublished } from "../telegram/telegram.webhook.service";
 import { prisma } from "../../config/database";
@@ -163,6 +164,29 @@ async function handlePaymentCaptured(payload: RazorpayWebhookPayload): Promise<v
     // — no Telegram conversation can exist for this weddingWebsiteId, so
     // unlike handlePaymentLinkPaid above there's no bot push to send here.
     await weddingWebsiteService.publishWeddingWebsite(payment.weddingWebsiteId);
+    return;
+  }
+
+  // §6d of PLAN-2026-09-22-premium-feature-buildout.md — a Free-tier vendor
+  // paying to unlock one lead's contact details. Same shape as
+  // WEDDING_WEBSITE above: no subscription/pendingPlan concept at all,
+  // dispatched before falling into the subscription-shaped logic below.
+  // markLeadContactUnlocked is idempotent by nature (setting a timestamp
+  // that's already set is a no-op), matching this handler's own duplicate-
+  // capture defense above.
+  if (payment.purpose === "LEAD_UNLOCK") {
+    if (!payment.unlockedLeadId) {
+      logger.warn({ paymentId: payment.id }, "LEAD_UNLOCK payment with no unlockedLeadId — ignoring");
+      return;
+    }
+    await subscriptionRepository.markPaymentCaptured(payment.id, paymentEntity.id);
+    await leadRepository.markLeadContactUnlocked(payment.unlockedLeadId);
+    await logAnalyticsEvent({
+      userId: undefined,
+      eventType: "lead_contact_unlocked",
+      vendorId: payment.pendingVendorId ?? undefined,
+      metadata: { paymentId: payment.id, leadId: payment.unlockedLeadId, amount: Number(payment.amount) },
+    });
     return;
   }
 

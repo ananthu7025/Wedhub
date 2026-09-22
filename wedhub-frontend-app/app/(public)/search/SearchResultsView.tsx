@@ -185,6 +185,7 @@ export function SearchResultsView({
               startingPrice={vendor.startingPrice}
               currency={vendor.currency}
               verificationLevel={vendor.verificationLevel}
+              isPremiumEligible={vendor.isPremiumEligible}
               isAuthenticated={isAuthenticated}
               viewMode="list"
               cityName={selectedCity?.name}
@@ -209,6 +210,7 @@ export function SearchResultsView({
               startingPrice={vendor.startingPrice}
               currency={vendor.currency}
               verificationLevel={vendor.verificationLevel}
+              isPremiumEligible={vendor.isPremiumEligible}
               isAuthenticated={isAuthenticated}
               viewMode="grid"
               cityName={selectedCity?.name}

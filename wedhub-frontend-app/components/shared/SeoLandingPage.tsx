@@ -150,6 +150,7 @@ export async function SeoLandingPage({ seo }: { seo: SeoPageData }) {
                 shortDescription={vendor.shortDescription}
                 startingPrice={vendor.startingPrice}
                 currency={vendor.currency}
+                isPremiumEligible={vendor.isPremiumEligible}
                 isAuthenticated={session !== null}
                 listContext="seo_landing_page"
               />

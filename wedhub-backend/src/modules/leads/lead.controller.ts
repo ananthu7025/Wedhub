@@ -56,6 +56,13 @@ export async function addNote(req: Request, res: Response): Promise<void> {
   res.status(201).json(successResponse(note));
 }
 
+export async function unlockLeadContact(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const vendor = await getOwnedVendorOrThrow(userId);
+  const checkout = await leadService.initiateLeadUnlock(vendor.id, req.params.id as string);
+  res.status(201).json(successResponse(checkout));
+}
+
 export async function getAnalytics(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
   const vendor = await getOwnedVendorOrThrow(userId);

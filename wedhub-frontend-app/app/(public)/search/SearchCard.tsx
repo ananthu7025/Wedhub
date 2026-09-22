@@ -19,6 +19,8 @@ interface SearchCardProps {
   startingPrice: string | null;
   currency: string | null;
   verificationLevel?: VerificationLevel;
+  /** plan.features.featured_eligibility — rendered as a small inline badge next to the business name, distinct from the image-overlay "Verified" badge above. */
+  isPremiumEligible?: boolean;
   isAuthenticated: boolean;
   viewMode?: "grid" | "list";
   cityName?: string;
@@ -41,6 +43,7 @@ export function SearchCard({
   startingPrice,
   currency,
   verificationLevel,
+  isPremiumEligible = false,
   isAuthenticated,
   viewMode = "grid",
   cityName,
@@ -144,8 +147,13 @@ export function SearchCard({
           <div>
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#e00b41] transition-colors">
+                <h3 className="flex items-center gap-1.5 text-lg font-bold text-gray-900 group-hover:text-[#e00b41] transition-colors">
                   {businessName}
+                  {isPremiumEligible && (
+                    <span className="flex-shrink-0 rounded-full bg-crimson-10 px-1.5 py-0.5 text-[10px] font-bold text-crimson-70" title="Premium Vendor">
+                      ⭐
+                    </span>
+                  )}
                 </h3>
                 <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
                   {cityName && (
@@ -261,8 +269,13 @@ export function SearchCard({
       <div className="flex flex-1 flex-col justify-between p-4">
         <div>
           <div className="flex items-center justify-between gap-1">
-            <h3 className="truncate text-sm sm:text-base font-bold text-gray-900 group-hover:text-[#e00b41] transition-colors">
-              {businessName}
+            <h3 className="flex min-w-0 items-center gap-1 truncate text-sm sm:text-base font-bold text-gray-900 group-hover:text-[#e00b41] transition-colors">
+              <span className="truncate">{businessName}</span>
+              {isPremiumEligible && (
+                <span className="flex-shrink-0 rounded-full bg-crimson-10 px-1.5 py-0.5 text-[10px] font-bold text-crimson-70" title="Premium Vendor">
+                  ⭐
+                </span>
+              )}
             </h3>
             {cityName && (
               <span className="text-[11px] text-gray-500 truncate max-w-[100px]">

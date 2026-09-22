@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getVendorAlbums, getVendorBySlug, getVendorReviews } from "@/lib/api/catalog";
+import { getPortfolioAccess, getVendorAlbums, getVendorBySlug, getVendorReviews } from "@/lib/api/catalog";
 import { ApiRequestError } from "@/lib/api/types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { VendorPortfolioView } from "@/components/portfolio/VendorPortfolioView";
@@ -69,6 +69,21 @@ export async function generateMetadata({ params }: PortfolioPageProps): Promise<
 export default async function VendorPortfolioPage({ params }: PortfolioPageProps) {
   const { slug } = await params;
   const vendor = await loadVendor(slug);
+
+  // Frontend-only gate — GET /vendors/:slug (loadVendor above) stays fully
+  // ungated since it's shared with the discovery page. See
+  // PLAN-2026-09-22-premium-feature-buildout.md §2c.
+  const { data: access } = await getPortfolioAccess(slug).catch(() => ({ data: { available: false } }));
+  if (!access.available) {
+    return (
+      <div className="mx-auto flex max-w-lg flex-col items-center justify-center px-6 py-24 text-center">
+        <h1 className="mb-2 text-xl font-bold text-text-dark">This page isn&apos;t available</h1>
+        <p className="text-sm text-text-grey">
+          {vendor.businessName} doesn&apos;t have a shareable portfolio page active right now.
+        </p>
+      </div>
+    );
+  }
 
   const [{ data: albums }, reviewsResult] = await Promise.all([
     getVendorAlbums(slug).catch(() => ({ data: [] })),

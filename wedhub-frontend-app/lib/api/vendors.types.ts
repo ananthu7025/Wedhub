@@ -43,6 +43,9 @@ export interface VendorSearchResult {
   // Item 4: all-time average, denormalized on Vendor — null until the
   // vendor has at least one responded lead.
   avgResponseTimeMs: number | null;
+  // See VendorDetail's identical field — reused as the "Premium vendor"
+  // badge/ranking signal here too.
+  isPremiumEligible: boolean;
 }
 
 export const SEARCH_SORT_OPTIONS = ["relevance", "price_low", "price_high", "newest", "recommended", "fastest_reply"] as const;
@@ -216,6 +219,15 @@ export interface VendorDetail {
   packages: VendorPackage[];
   attributeValues: VendorAttributeValue[];
   city: Location | null;
+  // Reuses plan.features.featured_eligibility as the "Premium vendor" signal
+  // (badge, search-ranking boost) — see
+  // PLAN-2026-09-22-premium-feature-buildout.md §3a.
+  isPremiumEligible: boolean;
+}
+
+// ---- GET /vendors/:slug/portfolio-access ----
+export interface PortfolioPageAccess {
+  available: boolean;
 }
 
 // ---- GET /vendors/:slug/albums ----

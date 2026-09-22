@@ -36,9 +36,11 @@ import type {
   AdminLeadStatusUpdateResult,
   AdminModerateReviewBody,
   AdminPlan,
+  AdminPlatformSetting,
   AdminPopularSearchCard,
   AdminPopularSearchImageConfirmResult,
   AdminPopularSearchImageUploadRequestResult,
+  PlatformSettingKey,
   AdminReasonBody,
   AdminReorderAttributesBody,
   AdminReviewStatusUpdateResult,
@@ -203,6 +205,10 @@ export function updateAdminPlan(id: string, body: AdminUpdatePlanBody) {
 // via research). Kept here rather than admin.ts since it's a mutation.
 export function createAdminCoupon(body: AdminCreateCouponBody) {
   return call<AdminCoupon>("/admin/subscriptions/coupons", "POST", body);
+}
+
+export function updateAdminPlatformSetting(key: PlatformSettingKey, value: number) {
+  return call<AdminPlatformSetting>(`/admin/settings/${key}`, "PATCH", { value });
 }
 
 // Real R2 presigned upload flow for admin-owned platform images (e.g. a

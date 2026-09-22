@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { UnavailablePanel } from "@/components/admin/UnavailablePanel";
-import { createAdminPlan, updateAdminPlan, createAdminCoupon } from "@/lib/api/admin-client";
-import type { AdminPlan, BillingInterval, CouponDiscountType, FeatureDefinition } from "@/lib/api/admin.types";
+import { createAdminPlan, updateAdminPlan, createAdminCoupon, updateAdminPlatformSetting } from "@/lib/api/admin-client";
+import type { AdminPlan, AdminPlatformSetting, BillingInterval, CouponDiscountType, FeatureDefinition } from "@/lib/api/admin.types";
 import { formatApiError } from "@/lib/utils/error";
 import { PlanFormModal } from "./PlanFormModal";
 
@@ -32,12 +32,16 @@ const TABS: Array<{ id: TabId; label: string }> = [
 export function SubscriptionsBoard({
   initialPlans,
   featureCatalog,
+  initialSettings,
 }: {
   initialPlans: AdminPlan[];
   featureCatalog: FeatureDefinition[];
+  initialSettings: AdminPlatformSetting[];
 }) {
   const [tab, setTab] = useState<TabId>("plans");
   const [plans, setPlans] = useState(initialPlans);
+  const [settings, setSettings] = useState(initialSettings);
+  const [savingSetting, setSavingSetting] = useState(false);
   const [editingPlan, setEditingPlan] = useState<AdminPlan | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +104,18 @@ export function SubscriptionsBoard({
     setPlans((prev) => prev.map((p) => (p.id === plan.id ? result.data : p)));
   }
 
+  async function handleUpdateSetting(key: "lead_unlock_price_inr", value: number) {
+    setSavingSetting(true);
+    setError(null);
+    const result = await updateAdminPlatformSetting(key, value);
+    setSavingSetting(false);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    setSettings((prev) => prev.map((s) => (s.key === key ? result.data : s)));
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -134,6 +150,20 @@ export function SubscriptionsBoard({
               + Create plan
             </button>
           </div>
+
+          <div className="mb-5 rounded-xl border border-border bg-white p-4">
+            <h3 className="mb-1 text-[13px] font-bold">Lead unlock price</h3>
+            <p className="mb-3 text-xs text-text-grey">
+              What a Free-tier vendor pays to unlock one lead&apos;s full contact details. Not a per-plan value —
+              applies platform-wide to any vendor without invoicing_access.
+            </p>
+            <PlatformSettingInput
+              value={settings.find((s) => s.key === "lead_unlock_price_inr")?.value ?? 49}
+              saving={savingSetting}
+              onSave={(value) => handleUpdateSetting("lead_unlock_price_inr", value)}
+            />
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[...plans]
               .sort((a, b) => a.sortOrder - b.sortOrder || Number(a.price) - Number(b.price))
@@ -314,5 +344,37 @@ function CreateCouponForm({ onCreated, onError }: { onCreated: () => void; onErr
         </button>
       </div>
     </form>
+  );
+}
+
+function PlatformSettingInput({
+  value,
+  saving,
+  onSave,
+}: {
+  value: number;
+  saving: boolean;
+  onSave: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-text-grey">₹</span>
+      <input
+        type="number"
+        min={0}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        className="w-28 rounded-md border border-border px-3 py-2 text-sm"
+      />
+      <button
+        onClick={() => onSave(Number(draft))}
+        disabled={saving || Number(draft) === value}
+        className="rounded-md bg-brand-primary px-3.5 py-2 text-xs font-bold text-white disabled:opacity-60"
+      >
+        {saving ? "Saving…" : "Save"}
+      </button>
+    </div>
   );
 }

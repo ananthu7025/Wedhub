@@ -10,6 +10,7 @@ import type {
   Location,
   LocationType,
   PopularSearchCard,
+  PortfolioPageAccess,
   SearchVendorsParams,
   SeoCombination,
   SeoPageData,
@@ -74,6 +75,14 @@ export function searchVendors(params: SearchVendorsParams) {
 
 export function getVendorBySlug(slug: string) {
   return apiFetch<VendorDetail>(`/vendors/${slug}`, { skipAuth: true, public: true, next: { revalidate: 300 } });
+}
+
+// Backs /portfolio/[slug]'s frontend-only plan gate — see
+// PLAN-2026-09-22-premium-feature-buildout.md §2. Not cached as long as the
+// vendor payload itself (a plan can change any time an admin/vendor acts,
+// and this is a cheap boolean check, not worth risking staleness for).
+export function getPortfolioAccess(slug: string) {
+  return apiFetch<PortfolioPageAccess>(`/vendors/${slug}/portfolio-access`, { skipAuth: true, public: true });
 }
 
 export function getVendorAlbums(slug: string) {

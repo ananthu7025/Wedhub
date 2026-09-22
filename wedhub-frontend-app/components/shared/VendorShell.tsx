@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getMyUnreadNotificationCount } from "@/lib/api/account";
 import { getMyUnreadMessageCount } from "@/lib/api/messaging";
-import { getMyVendor } from "@/lib/api/vendor-self";
+import { getMyEffectivePlan, getMyVendor } from "@/lib/api/vendor-self";
 import { BrandLogo } from "./BrandLogo";
 import { VendorLogoutButton } from "./VendorLogoutButton";
 import { SharePortfolioButton } from "@/components/vendor/SharePortfolioButton";
@@ -127,7 +127,7 @@ export async function VendorShell({
   vendorSlug?: string;
 }) {
   const initials = vendorName.slice(0, 2).toUpperCase();
-  const [unreadCount, unreadMessageCount, vendorResult] = await Promise.all([
+  const [unreadCount, unreadMessageCount, vendorResult, planResult] = await Promise.all([
     getMyUnreadNotificationCount()
       .then((r) => r.data.count)
       .catch(() => 0),
@@ -138,14 +138,19 @@ export async function VendorShell({
     // categories are needed to gate the share-portfolio button and the
     // Store nav link below, not just to resolve a slug.
     getMyVendor().catch(() => undefined),
+    getMyEffectivePlan().catch(() => undefined),
   ]);
 
   const resolvedSlug = vendorSlug ?? vendorResult?.data.slug;
   // A DRAFT/PENDING/REJECTED vendor's public /portfolio/[slug] page already
   // 404s (the backend's public GET /vendors/:slug only ever returns
   // APPROVED vendors) — showing a "share your portfolio" button before
-  // that point just hands out a broken link.
+  // that point just hands out a broken link. Also requires
+  // portfolio_page_access on the vendor's current plan (§2d of
+  // PLAN-2026-09-22-premium-feature-buildout.md) — sharing a link to a page
+  // that now shows "unavailable" would be a broken experience.
   const isApproved = vendorResult?.data.status === "APPROVED";
+  const canSharePortfolio = isApproved && Boolean(planResult?.data.features.portfolio_page_access);
   // Mirrors the backend's own store-eligibility check (vendor-store.service.ts:
   // category.hasStoreEnabled && category.isActive on any of the vendor's
   // categories) — same principle as the public portfolio page's Online
@@ -195,7 +200,7 @@ export async function VendorShell({
         {/* Desktop Header (hidden on screens < 1024px) — sticky so it stays
             pinned to the top of this column while <main> below scrolls. */}
         <header className="sticky top-0 z-20 hidden lg:flex h-16 flex-shrink-0 items-center justify-end gap-3 border-b border-border bg-white px-6">
-          {resolvedSlug && isApproved && (
+          {resolvedSlug && canSharePortfolio && (
             <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
           )}
 
@@ -240,7 +245,7 @@ export async function VendorShell({
             <BrandLogo variant="dark" href="/vendor/dashboard" />
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {resolvedSlug && isApproved && (
+            {resolvedSlug && canSharePortfolio && (
               <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
             )}
             <Link

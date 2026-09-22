@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
-import { getMyLeadClient, updateMyLeadStatus, addMyLeadNote } from "@/lib/api/leads-client";
+import { getMyLeadClient, updateMyLeadStatus, addMyLeadNote, unlockMyLeadContact } from "@/lib/api/leads-client";
+import { CheckoutButton } from "@/app/(vendor)/vendor/subscription/CheckoutButton";
 import type { LeadStatus } from "@/lib/api/account.types";
 import { ALL_LEAD_STATUSES, TERMINAL_LEAD_STATUSES } from "@/lib/api/leads.types";
 import type { LeadNote, ProfileViewer, VendorLead, VendorLeadDetail } from "@/lib/api/leads.types";
@@ -85,6 +86,9 @@ export function LeadsBoard({ initialLeads, profileViewers }: { initialLeads: Ven
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "detail">("list");
+  const [unlockCheckout, setUnlockCheckout] = useState<{ orderId: string; amount: string; currency: string } | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
+  const [polling, setPolling] = useState(false);
 
   async function selectLead(id: string) {
     setSelectedId(id);
@@ -128,6 +132,34 @@ export function LeadsBoard({ initialLeads, profileViewers }: { initialLeads: Ven
     }
     setDetail({ ...detail, notes: [result.data, ...detail.notes] });
     setNoteDraft("");
+  }
+
+  async function handleStartUnlock() {
+    if (!detail) return;
+    setUnlocking(true);
+    setError(null);
+    const result = await unlockMyLeadContact(detail.id);
+    setUnlocking(false);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    setUnlockCheckout({ orderId: result.data.orderId, amount: String(result.data.amount), currency: result.data.currency });
+  }
+
+  async function pollForUnlock() {
+    if (!detail) return;
+    setPolling(true);
+    for (let i = 0; i < 10; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const result = await getMyLeadClient(detail.id);
+      if (result.success && result.data.hasFullContactInfo) {
+        setDetail(result.data);
+        break;
+      }
+    }
+    setPolling(false);
+    setUnlockCheckout(null);
   }
 
   const visibleLeads = filterStatus === "ALL" ? leads : leads.filter((l) => l.status === filterStatus);
@@ -291,30 +323,63 @@ export function LeadsBoard({ initialLeads, profileViewers }: { initialLeads: Ven
                     </div>
                   </div>
 
-                  <div className="mb-4.5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-[13px]">
-                    <div className="min-w-0">
-                      <span className="mb-0.5 block text-text-grey">Phone</span>
-                      {detail.enquiry.contactPhone ? (
+                  {detail.hasFullContactInfo ? (
+                    <div className="mb-4.5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-[13px]">
+                      <div className="min-w-0">
+                        <span className="mb-0.5 block text-text-grey">Phone</span>
+                        {detail.enquiry.contactPhone ? (
+                          <a
+                            href={`tel:${detail.enquiry.contactPhone}`}
+                            className="font-semibold text-text-dark hover:text-brand-primary transition-colors"
+                          >
+                            {detail.enquiry.contactPhone}
+                          </a>
+                        ) : (
+                          <span className="font-semibold text-text-grey">—</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="mb-0.5 block text-text-grey">Email</span>
                         <a
-                          href={`tel:${detail.enquiry.contactPhone}`}
-                          className="font-semibold text-text-dark hover:text-brand-primary transition-colors"
+                          href={`mailto:${detail.enquiry.contactEmail}`}
+                          className="font-semibold text-text-dark hover:text-brand-primary break-all transition-colors block"
                         >
-                          {detail.enquiry.contactPhone}
+                          {detail.enquiry.contactEmail}
                         </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mb-4.5 rounded-lg border border-dashed border-border bg-surface-input p-4 text-center">
+                      {unlockCheckout ? (
+                        <>
+                          <p className="mb-3 text-[13px] text-text-grey">
+                            Complete payment to reveal this lead&apos;s phone and email.
+                          </p>
+                          <CheckoutButton
+                            orderId={unlockCheckout.orderId}
+                            amount={unlockCheckout.amount}
+                            currency={unlockCheckout.currency}
+                            planName="Lead Unlock"
+                            onSuccess={pollForUnlock}
+                          />
+                          {polling && <p className="mt-3 text-xs text-text-grey">Waiting for payment confirmation…</p>}
+                        </>
                       ) : (
-                        <span className="font-semibold text-text-grey">—</span>
+                        <>
+                          <p className="mb-3 text-[13px] text-text-grey">
+                            Phone and email are hidden on your current plan. Unlock this lead to see full contact details.
+                          </p>
+                          <button
+                            onClick={handleStartUnlock}
+                            disabled={unlocking}
+                            className="rounded-md bg-brand-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+                          >
+                            {unlocking ? "Please wait…" : "Unlock contact details"}
+                          </button>
+                        </>
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <span className="mb-0.5 block text-text-grey">Email</span>
-                      <a
-                        href={`mailto:${detail.enquiry.contactEmail}`}
-                        className="font-semibold text-text-dark hover:text-brand-primary break-all transition-colors block"
-                      >
-                        {detail.enquiry.contactEmail}
-                      </a>
-                    </div>
-                  </div>
+                  )}
 
                   <div className="mb-4.5 grid grid-cols-2 gap-3.5 text-[13px]">
                     <div className="min-w-0">

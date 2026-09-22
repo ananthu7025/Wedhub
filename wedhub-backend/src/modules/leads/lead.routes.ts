@@ -32,6 +32,7 @@ leadRouter.patch(
   asyncHandler(leadController.updateStatus),
 );
 leadRouter.post("/:id/notes", validateBody(createLeadNoteSchema), asyncHandler(leadController.addNote));
+leadRouter.post("/:id/unlock", asyncHandler(leadController.unlockLeadContact));
 
 export const leadAdminRouter = Router();
 

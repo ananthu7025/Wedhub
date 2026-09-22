@@ -257,6 +257,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                       <div className="flex flex-wrap items-center gap-2.5">
                         <h1 className="text-2xl font-bold text-white drop-shadow-sm sm:text-[32px]">{vendor.businessName}</h1>
                         {verificationLabel && <Badge variant="green">{verificationLabel}</Badge>}
+                        {vendor.isPremiumEligible && <Badge variant="crimson">⭐ Premium Vendor</Badge>}
                         {hasRating && (
                           <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-xs">
                             ★ {Number(vendor.averageRating).toFixed(1)}
@@ -306,6 +307,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                     <div className="flex flex-wrap items-center gap-2.5">
                       <h1 className="text-2xl font-bold">{vendor.businessName}</h1>
                       {verificationLabel && <Badge variant="green">{verificationLabel}</Badge>}
+                      {vendor.isPremiumEligible && <Badge variant="crimson">⭐ Premium Vendor</Badge>}
                       {hasRating && (
                         <span className="flex items-center gap-1 text-xs font-bold text-text-dark">
                           ★ {Number(vendor.averageRating).toFixed(1)}

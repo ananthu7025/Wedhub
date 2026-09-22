@@ -1423,12 +1423,13 @@ const SUBSCRIPTION_PLANS: PlanSeed[] = [
     trialDays: 0,
     isDefault: true,
     sortOrder: 1,
-    limits: { portfolio_limit: 10, video_limit: 1 },
+    limits: { portfolio_limit: 10, video_limit: 1, monthly_lead_limit: 0 },
     features: {
       analytics_level: false,
       featured_eligibility: false,
       store_access: false,
       invoicing_access: false,
+      portfolio_page_access: false,
     },
   },
   {
@@ -1439,12 +1440,13 @@ const SUBSCRIPTION_PLANS: PlanSeed[] = [
     trialDays: 14,
     isDefault: false,
     sortOrder: 2,
-    limits: { portfolio_limit: 500, video_limit: 50 },
+    limits: { portfolio_limit: 500, video_limit: 50, monthly_lead_limit: 0 },
     features: {
       analytics_level: true,
       featured_eligibility: true,
       store_access: true,
       invoicing_access: true,
+      portfolio_page_access: true,
     },
   },
 ];

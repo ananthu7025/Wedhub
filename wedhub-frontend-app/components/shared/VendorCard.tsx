@@ -41,6 +41,7 @@ export function VendorCard({
   startingPrice,
   currency,
   featured = false,
+  isPremiumEligible = false,
   isAuthenticated = false,
   listContext,
   onFavoriteToggle,
@@ -54,6 +55,8 @@ export function VendorCard({
   startingPrice: string | null;
   currency: string | null;
   featured?: boolean;
+  /** plan.features.featured_eligibility — a small text-area badge, kept distinct from the image-overlay "Featured" badge above (FeaturedListing, an unrelated admin-placement system) to avoid visual collision. */
+  isPremiumEligible?: boolean;
   isAuthenticated?: boolean;
   /** Where this card is being rendered — carried as event metadata so impressions/clicks from search results, featured listings, and carousels can be told apart later. */
   listContext?: string;
@@ -110,7 +113,14 @@ export function VendorCard({
         )}
       </div>
       <div className="p-3.5">
-        <div className="mb-0.5 truncate text-sm font-bold">{businessName}</div>
+        <div className="mb-0.5 flex items-center gap-1.5">
+          <span className="truncate text-sm font-bold">{businessName}</span>
+          {isPremiumEligible && (
+            <span className="flex-shrink-0 rounded-full bg-crimson-10 px-1.5 py-0.5 text-[10px] font-bold text-crimson-70" title="Premium Vendor">
+              ⭐
+            </span>
+          )}
+        </div>
         {shortDescription && <p className="mb-2 line-clamp-2 text-xs text-text-grey">{shortDescription}</p>}
         {startingPrice && (
           <div className="text-[13px] font-bold">

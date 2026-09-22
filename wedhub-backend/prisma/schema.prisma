@@ -41,6 +41,7 @@ model User {
   weddingProfile           WeddingProfile?
   adminUser                AdminUser?
   auditLogs                AuditLog[]
+  platformSettingsUpdated  PlatformSetting[]
   refreshTokens            RefreshToken[]
   emailVerificationTokens  EmailVerificationToken[]
   passwordResetTokens      PasswordResetToken[]
@@ -255,6 +256,24 @@ model AuditLog {
   @@index([actorId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// Minimal, deliberately narrow key-value store for the small number of
+// platform-wide numeric/config values that don't belong on any single
+// domain model (e.g. the price a Free-tier vendor pays to unlock one lead's
+// contact details — not a per-plan value, so it doesn't belong in
+// SubscriptionPlan.features/limits). Not a general settings framework —
+// see PLAN-2026-09-22-premium-feature-buildout.md §7 for why this stays
+// this narrow rather than growing into one.
+model PlatformSetting {
+  key             String   @id
+  value           Json
+  updatedByUserId String?  @map("updated_by_user_id") @db.Uuid
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  updatedBy User? @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@map("platform_settings")
 }
 
 model RefreshToken {
@@ -1476,6 +1495,15 @@ model Lead {
   respondedAt DateTime?  @map("responded_at")
   isSpam      Boolean    @default(false) @map("is_spam")
   dedupeKey   String     @map("dedupe_key")
+  // Null = the owning vendor's plan does not include full contact-detail
+  // access for this lead yet (Free tier, capped by monthly_lead_limit).
+  // Set automatically at creation time for a Premium-eligible vendor
+  // (entitlement.service::canVendorUse "featured_eligibility"), or via a
+  // one-off paid unlock (Payment.purpose = LEAD_UNLOCK, see webhook.service).
+  // Deliberately never unset once set — a vendor who downgrades keeps access
+  // to leads they already paid for or already saw while Premium, matching
+  // the never-destroy principle sweepMediaToLimits uses for portfolio media.
+  contactUnlockedAt DateTime? @map("contact_unlocked_at")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
@@ -1488,6 +1516,7 @@ model Lead {
   conversations        Conversation[]
   bookings             VendorBooking[]
   quotations           VendorQuotation[]
+  unlockPayments       Payment[]
 
   @@index([vendorId, status])
   @@index([vendorId, createdAt])
@@ -1700,6 +1729,11 @@ enum PaymentStatus {
 enum PaymentPurpose {
   SUBSCRIPTION
   WEDDING_WEBSITE
+  // A Free-tier vendor paying to unlock one Lead's full contact details —
+  // one-off, never touches Subscription, follows the exact same shape as
+  // WEDDING_WEBSITE (populates unlockedLeadId instead of weddingWebsiteId).
+  // See PLAN-2026-09-22-premium-feature-buildout.md §6d.
+  LEAD_UNLOCK
 }
 
 // A Payment can exist BEFORE any Subscription does — per product.md §28
@@ -1719,6 +1753,7 @@ model Payment {
   pendingPlanId         String?        @map("pending_plan_id") @db.Uuid
   pendingCouponId       String?        @map("pending_coupon_id") @db.Uuid
   weddingWebsiteId      String?        @map("wedding_website_id") @db.Uuid
+  unlockedLeadId        String?        @map("unlocked_lead_id") @db.Uuid
   provider              String         @default("razorpay")
   razorpayOrderId       String?        @unique @map("razorpay_order_id")
   razorpayPaymentId     String?        @unique @map("razorpay_payment_id")
@@ -1743,6 +1778,7 @@ model Payment {
   pendingPlan     SubscriptionPlan? @relation(fields: [pendingPlanId], references: [id], onDelete: Restrict)
   pendingCoupon   Coupon?           @relation(fields: [pendingCouponId], references: [id], onDelete: SetNull)
   weddingWebsite  WeddingWebsite?   @relation(fields: [weddingWebsiteId], references: [id], onDelete: Cascade)
+  unlockedLead    Lead?             @relation(fields: [unlockedLeadId], references: [id], onDelete: Cascade)
   invoice         Invoice?
   refunds         Refund[]
   featuredListing FeaturedListing?
@@ -1750,6 +1786,7 @@ model Payment {
   @@index([subscriptionId])
   @@index([pendingVendorId])
   @@index([weddingWebsiteId])
+  @@index([unlockedLeadId])
   @@map("payments")
 }
 

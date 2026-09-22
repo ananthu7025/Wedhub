@@ -19,6 +19,31 @@ export function findLeadById(id: string) {
   return prisma.lead.findUnique({ where: { id }, include: LEAD_DETAIL_INCLUDE });
 }
 
+// Used by enquiry.service.ts to enforce monthly_lead_limit before routing a
+// new enquiry to a vendor — counts every lead regardless of status/isSpam,
+// matching "leads received" rather than "leads worth pursuing" (a vendor's
+// cap is about inbound volume, not lead quality).
+export function countLeadsSince(vendorId: string, since: Date): Promise<number> {
+  return prisma.lead.count({ where: { vendorId, createdAt: { gte: since } } });
+}
+
+// Used by the same cap check to batch-resolve multiple candidate vendors in
+// one query (multi-vendor enquiry fan-out) rather than one count() per
+// vendor.
+export async function countLeadsSinceForVendors(vendorIds: string[], since: Date): Promise<Map<string, number>> {
+  if (vendorIds.length === 0) return new Map();
+  const rows = await prisma.lead.groupBy({
+    by: ["vendorId"],
+    where: { vendorId: { in: vendorIds }, createdAt: { gte: since } },
+    _count: { _all: true },
+  });
+  const counts = new Map(rows.map((r) => [r.vendorId, r._count._all]));
+  for (const vendorId of vendorIds) {
+    if (!counts.has(vendorId)) counts.set(vendorId, 0);
+  }
+  return counts;
+}
+
 export interface LeadListFilter {
   vendorId: string;
   status: LeadStatus | undefined;
@@ -262,4 +287,31 @@ export async function recalculateAvgResponseTime(vendorId: string): Promise<void
     responseTimesMs.length > 0 ? Math.round(responseTimesMs.reduce((a, b) => a + b, 0) / responseTimesMs.length) : null;
 
   await prisma.vendor.update({ where: { id: vendorId }, data: { avgResponseTimeMs } });
+}
+
+// Pay-per-lead contact unlock (Free-tier vendor). Same shape as
+// wedding-website.repository.ts's createPendingPayment — a one-off Payment
+// with no Subscription involved, purpose-discriminated. See
+// PLAN-2026-09-22-premium-feature-buildout.md §6d.
+export function createPendingUnlockPayment(data: {
+  leadId: string;
+  vendorId: string;
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+}) {
+  return prisma.payment.create({
+    data: {
+      purpose: "LEAD_UNLOCK",
+      unlockedLeadId: data.leadId,
+      pendingVendorId: data.vendorId,
+      razorpayOrderId: data.razorpayOrderId,
+      amount: data.amount,
+      currency: data.currency,
+    },
+  });
+}
+
+export function markLeadContactUnlocked(leadId: string) {
+  return prisma.lead.update({ where: { id: leadId }, data: { contactUnlockedAt: new Date() } });
 }

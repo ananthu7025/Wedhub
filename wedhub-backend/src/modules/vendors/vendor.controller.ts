@@ -209,6 +209,23 @@ export async function getMyEffectivePlan(req: Request, res: Response): Promise<v
   res.json(successResponse({ planId: plan.planId, planName: plan.planName, features: plan.features }));
 }
 
+// Public, unauthenticated — backs the /portfolio/:slug page's frontend-only
+// gate (§2 of PLAN-2026-09-22-premium-feature-buildout.md). Deliberately
+// NOT gating GET /vendors/:slug itself: that endpoint is shared by both the
+// discovery page (/vendors/[slug]) and the portfolio page (/portfolio/[slug])
+// — confirmed via audit both call the exact same backend route — so gating
+// it there would break vendor discovery/search for every vendor regardless
+// of plan. This is a separate, cheap yes/no check the portfolio page alone
+// calls before deciding what to render.
+export async function getPortfolioPageAccess(req: Request, res: Response): Promise<void> {
+  const vendor = await vendorRepository.findApprovedVendorBySlug(req.params.slug as string);
+  if (!vendor) {
+    throw new NotFoundError("Vendor not found");
+  }
+  const plan = await getEffectivePlan(vendor.id);
+  res.json(successResponse({ available: plan.features.portfolio_page_access }));
+}
+
 // Contact fields (phone/email/website) are never sent in the public vendor
 // payload — a browser inspecting the page source or network response can't
 // read them just because the profile page loaded. They're only returned by
@@ -264,7 +281,12 @@ export async function getPublicVendor(req: Request, res: Response): Promise<void
   // Feeds the vendor's own basic/advanced analytics view (Arch Phase 12) —
   // best-effort, never blocks the response (see logAnalyticsEvent).
   void logAnalyticsEvent({ userId: req.user?.id, eventType: "vendor_profile_viewed", vendorId: vendor.id });
-  res.json(successResponse(redactContactFields(redactHiddenSections(vendor))));
+  // Reuses featured_eligibility as the "this vendor is on a plan that
+  // includes Premium perks" signal (badge, search-ranking boost) rather than
+  // a near-identical new key — see
+  // PLAN-2026-09-22-premium-feature-buildout.md §3a/§4a.
+  const plan = await getEffectivePlan(vendor.id);
+  res.json(successResponse({ ...redactContactFields(redactHiddenSections(vendor)), isPremiumEligible: plan.features.featured_eligibility }));
 }
 
 // Explicit "Reveal contact details" action from the public profile —

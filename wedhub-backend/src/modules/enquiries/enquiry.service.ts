@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { ConflictError, NotFoundError } from "../../common/errors";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
 import { logger } from "../../config/logger";
+import { getEffectivePlan } from "../entitlements/entitlement.service";
+import * as leadRepository from "../leads/lead.repository";
 import * as messagingService from "../messaging/messaging.service";
 import * as notificationService from "../notifications/notification.service";
 import * as searchRepository from "../search/search.repository";
@@ -81,6 +83,65 @@ async function assertVendorIsPublic(vendorId: string): Promise<void> {
   if (!vendor || vendor.status !== "APPROVED") {
     throw new NotFoundError("Vendor not found");
   }
+}
+
+function startOfCurrentMonth(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+// Which vendors, among a Premium-eligible cohort, should have their new
+// lead's contact info unlocked immediately at creation time — never
+// redacted, no payment flow ever triggered for them. Reuses
+// featured_eligibility as the "this vendor is on a plan that includes full
+// lead access" signal rather than introducing a near-identical boolean key
+// (same reuse decision as the badge/search-ranking features — see plan §3a).
+async function resolveAutoUnlockVendorIds(vendorIds: string[]): Promise<Set<string>> {
+  const plans = await Promise.all(vendorIds.map(async (vendorId) => [vendorId, await getEffectivePlan(vendorId)] as const));
+  return new Set(plans.filter(([, plan]) => plan.features.featured_eligibility).map(([vendorId]) => vendorId));
+}
+
+// Deliberately does NOT throw and only applies to MULTI-vendor auto-matching
+// (see PLAN-2026-09-22-premium-feature-buildout.md §6b-note — a couple's
+// direct, single-vendor enquiry is never filtered by this, regardless of
+// that vendor's cap). Every other entitlement gate in this codebase
+// (assertVendorFeatureAccess, canVendorUpload) throws a 403 because the
+// VENDOR is the one taking the gated action. Here the COUPLE is submitting
+// the enquiry — a vendor's monthly_lead_limit is not something the couple
+// knows about or can do anything about, so blocking the submission would
+// silently fail a real couple's enquiry over a vendor-side plan limit. This
+// instead filters the candidate vendor list down to only vendors still under
+// their cap; a capped vendor simply stops being routed new leads until their
+// cap resets next month, with no error surfaced to anyone.
+async function filterVendorsForLeadRouting(vendorIds: string[]): Promise<{
+  routableVendorIds: string[];
+  autoUnlockVendorIds: Set<string>;
+}> {
+  if (vendorIds.length === 0) return { routableVendorIds: [], autoUnlockVendorIds: new Set() };
+
+  const since = startOfCurrentMonth();
+  const [counts, plans] = await Promise.all([
+    leadRepository.countLeadsSinceForVendors(vendorIds, since),
+    Promise.all(vendorIds.map(async (vendorId) => [vendorId, await getEffectivePlan(vendorId)] as const)),
+  ]);
+
+  const routableVendorIds: string[] = [];
+  const autoUnlockVendorIds = new Set<string>();
+
+  for (const [vendorId, plan] of plans) {
+    const cap = plan.limits.monthly_lead_limit;
+    const receivedThisMonth = counts.get(vendorId) ?? 0;
+    if (cap > 0 && receivedThisMonth >= cap) {
+      logger.info({ vendorId, cap, receivedThisMonth }, "Vendor at monthly lead cap — enquiry not routed to this vendor");
+      continue;
+    }
+    routableVendorIds.push(vendorId);
+    if (plan.features.featured_eligibility) {
+      autoUnlockVendorIds.add(vendorId);
+    }
+  }
+
+  return { routableVendorIds, autoUnlockVendorIds };
 }
 
 // Opens (or reuses — upsertConversation is idempotent) an in-app
@@ -223,6 +284,12 @@ export async function createSingleVendorEnquiry(
   });
   await assertNotDuplicate(dedupeKey);
 
+  // No cap filtering here — a couple's direct, single-vendor enquiry always
+  // creates a Lead regardless of that vendor's monthly_lead_limit (see the
+  // comment on filterVendorsForLeadRouting). Only resolves whether this one
+  // vendor is Premium-eligible, for the auto-unlock-contact-info decision.
+  const autoUnlockVendorIds = await resolveAutoUnlockVendorIds([input.vendorId]);
+
   const { enquiry, leads } = await enquiryRepository.createEnquiryWithLeads(
     {
       userId,
@@ -242,6 +309,7 @@ export async function createSingleVendorEnquiry(
     },
     [input.vendorId],
     () => dedupeKey,
+    autoUnlockVendorIds,
   );
 
   await queueNotificationsAndAnalytics(enquiry.id, leads, userId, "SINGLE_VENDOR");
@@ -309,6 +377,19 @@ export async function createMultiVendorEnquiry(
     await assertNotDuplicate(dedupeKey);
   }
 
+  // Vendors at their monthly cap are dropped from this auto-matched fan-out
+  // (never for a couple's direct single-vendor enquiry — see
+  // filterVendorsForLeadRouting's comment). Not backfilled from the next-best
+  // ranked candidate beyond the top MULTI_VENDOR_SELECTION_SIZE — a matched
+  // enquiry ending up with fewer than 3 leads because one vendor was capped
+  // is an acceptable, minor degradation; re-running selection against a
+  // wider candidate pool is out of scope here.
+  const { routableVendorIds, autoUnlockVendorIds } = await filterVendorsForLeadRouting(vendorIds);
+
+  if (routableVendorIds.length === 0) {
+    throw new NotFoundError("No suitable vendors were found for this request");
+  }
+
   const { enquiry, leads } = await enquiryRepository.createEnquiryWithLeads(
     {
       userId,
@@ -326,8 +407,9 @@ export async function createMultiVendorEnquiry(
       guestCount: input.guestCount,
       message: input.message,
     },
-    vendorIds,
+    routableVendorIds,
     (vendorId) => dedupeKeys.get(vendorId) as string,
+    autoUnlockVendorIds,
   );
 
   await queueNotificationsAndAnalytics(enquiry.id, leads, userId, "MULTI_VENDOR");

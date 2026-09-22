@@ -451,11 +451,13 @@ export interface AdminPlanFeatures {
   featured_eligibility?: boolean;
   store_access?: boolean;
   invoicing_access?: boolean;
+  portfolio_page_access?: boolean;
 }
 
 export interface AdminPlanLimits {
   portfolio_limit?: number;
   video_limit?: number;
+  monthly_lead_limit?: number;
 }
 
 // Mirrors the backend's FEATURE_CATALOG (entitlement.constants.ts) — served
@@ -513,6 +515,16 @@ export interface AdminUpdatePlanBody {
   features?: AdminPlanFeatures;
   limits?: AdminPlanLimits;
   isActive?: boolean;
+}
+
+// ---- GET /admin/settings, PATCH /admin/settings/:key ----
+// Minimal, fixed key-value store for platform-wide values that don't belong
+// on any per-plan model — see PLAN-2026-09-22-premium-feature-buildout.md §7.
+export type PlatformSettingKey = "lead_unlock_price_inr";
+
+export interface AdminPlatformSetting {
+  key: PlatformSettingKey;
+  value: number;
 }
 
 // ---- POST /admin/subscriptions/coupons ----

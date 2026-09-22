@@ -1,8 +1,42 @@
+import { randomUUID } from "node:crypto";
 import type { LeadStatus } from "@prisma/client";
-import { NotFoundError, ValidationError } from "../../common/errors";
+import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { logAnalyticsEvent } from "../../common/utils/analytics.util";
+import { createOrder } from "../../integrations/payment/razorpay.client";
+import { canVendorAccess } from "../entitlements/entitlement.service";
+import { getNumericSetting, PlatformSettingKey } from "../platform-settings";
 import * as notificationService from "../notifications/notification.service";
 import * as leadRepository from "./lead.repository";
+
+// Free-tier vendors see a redacted contact name/phone/email on a lead until
+// it's unlocked (contactUnlockedAt set — either because the vendor is
+// Premium-eligible, in which case it's set automatically at creation, or
+// because they paid to unlock this specific lead — see
+// PLAN-2026-09-22-premium-feature-buildout.md §6c/§6d). This is a different
+// direction from the existing couple-facing redactContactFields
+// (vendor.controller.ts), which hides a VENDOR's contact info from a
+// COUPLE — this hides a LEAD's contact info from the VENDOR who received it.
+// Same naming convention (hasFullContactInfo) for consistency with that
+// established pattern.
+function redactLeadContact<T extends { contactUnlockedAt: Date | null; enquiry: { contactName: string; contactPhone: string | null; contactEmail: string } }>(
+  lead: T,
+): T & { hasFullContactInfo: boolean } {
+  if (lead.contactUnlockedAt) {
+    return { ...lead, hasFullContactInfo: true };
+  }
+  const [firstName, ...rest] = lead.enquiry.contactName.trim().split(/\s+/);
+  const lastInitial = rest.length > 0 ? `${rest[rest.length - 1]!.charAt(0).toUpperCase()}.` : "";
+  return {
+    ...lead,
+    enquiry: {
+      ...lead.enquiry,
+      contactName: lastInitial ? `${firstName} ${lastInitial}` : (firstName ?? lead.enquiry.contactName),
+      contactPhone: null,
+      contactEmail: "",
+    },
+    hasFullContactInfo: false,
+  };
+}
 
 const TERMINAL_STATUSES: LeadStatus[] = ["WON", "LOST", "SPAM", "CLOSED"];
 
@@ -29,18 +63,20 @@ async function getOwnedLeadOrThrow(vendorId: string, leadId: string) {
   return lead;
 }
 
-export function listOwnLeads(
+export async function listOwnLeads(
   vendorId: string,
   filter: { status: LeadStatus | undefined; search: string | undefined; page: number; limit: number },
 ) {
-  return Promise.all([
+  const [leads, total] = await Promise.all([
     leadRepository.listVendorLeads({ vendorId, ...filter }),
     leadRepository.countVendorLeads({ vendorId, ...filter }),
   ]);
+  return [leads.map(redactLeadContact), total] as const;
 }
 
 export async function getOwnLead(vendorId: string, leadId: string) {
-  return getOwnedLeadOrThrow(vendorId, leadId);
+  const lead = await getOwnedLeadOrThrow(vendorId, leadId);
+  return redactLeadContact(lead);
 }
 
 export async function updateStatus(
@@ -112,8 +148,21 @@ export async function addNote(vendorId: string, authorId: string, leadId: string
   return leadRepository.createNote(leadId, authorId, body);
 }
 
-export function getAnalytics(vendorId: string) {
-  return leadRepository.getVendorLeadAnalytics(vendorId);
+// conversionRate is gated behind analytics_level (basic vs advanced) — the
+// same distinction that already gates profile-view daily breakdowns
+// elsewhere (vendor-analytics.service.ts). Every other field here (received/
+// contacted/response-rate/qualified/won/lost counts) stays available to
+// every vendor — baseline visibility into your own leads, not a "conversion
+// analytics" feature. See PLAN-2026-09-22-premium-feature-buildout.md §5.
+export async function getAnalytics(vendorId: string) {
+  const [analytics, analyticsLevel] = await Promise.all([
+    leadRepository.getVendorLeadAnalytics(vendorId),
+    canVendorAccess(vendorId, "analytics_level"),
+  ]);
+  if (analyticsLevel === "basic") {
+    return { ...analytics, conversionRate: null };
+  }
+  return analytics;
 }
 
 // Item 17: separate, lower-priority read model — see the repository
@@ -157,4 +206,43 @@ export async function updateStatusAdmin(
   });
   await notifyCoupleOfStatusChange(lead, nextStatus);
   return updated;
+}
+
+// §6d: a Free-tier vendor paying to unlock one lead's full contact details.
+// Same order-then-webhook-confirm shape as subscription checkout and the
+// ₹49 wedding-website publish — no Subscription/Plan involved here, this is
+// a pure one-off purchase keyed by leadId (see webhook.service.ts's
+// LEAD_UNLOCK branch for where contactUnlockedAt actually gets set).
+export async function initiateLeadUnlock(vendorId: string, leadId: string) {
+  const lead = await getOwnedLeadOrThrow(vendorId, leadId);
+  if (lead.contactUnlockedAt) {
+    throw new ConflictError("This lead's contact details are already unlocked");
+  }
+
+  const amount = await getNumericSetting(PlatformSettingKey.LEAD_UNLOCK_PRICE_INR);
+  const amountInSmallestUnit = Math.round(amount * 100);
+
+  const { orderId } = await createOrder({
+    amountInSmallestUnit,
+    currency: "INR",
+    receipt: `lu_${randomUUID().replace(/-/g, "").slice(0, 24)}`,
+    notes: { vendorId, leadId },
+  });
+
+  const payment = await leadRepository.createPendingUnlockPayment({
+    leadId,
+    vendorId,
+    razorpayOrderId: orderId,
+    amount,
+    currency: "INR",
+  });
+
+  await logAnalyticsEvent({
+    userId: vendorId,
+    eventType: "lead_unlock_checkout_started",
+    vendorId,
+    metadata: { leadId, amount },
+  });
+
+  return { orderId, paymentId: payment.id, amount, currency: "INR" };
 }
