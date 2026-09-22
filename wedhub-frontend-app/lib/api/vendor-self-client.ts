@@ -9,6 +9,7 @@ import type {
   PackageSelf,
   SetAttributesBody,
   SetCategoriesBody,
+  SetHiddenSectionsBody,
   SetServiceAreasBody,
   StoryCollaboratorSelf,
   SubmitWeddingStoryBody,
@@ -53,6 +54,10 @@ export function setMyCategories(body: SetCategoriesBody) {
 
 export function setMyServiceAreas(body: SetServiceAreasBody) {
   return call<VendorSelf>("/vendors/me/service-areas", "PUT", body);
+}
+
+export function setMyHiddenSections(body: SetHiddenSectionsBody) {
+  return call<VendorSelf>("/vendors/me/hidden-sections", "PUT", body);
 }
 
 export function setMyAttributes(body: SetAttributesBody) {

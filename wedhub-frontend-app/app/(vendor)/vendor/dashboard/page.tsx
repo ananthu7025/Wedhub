@@ -48,6 +48,35 @@ function getGreeting(): string {
   return "Good Evening!";
 }
 
+// Deep-links each unmet checklist item straight to the section that fixes
+// it, instead of always sending the vendor to a generic /vendor/settings
+// with every section collapsed. "Category attribute values" lives on the
+// separate Profile page (../profile/ProfileEditor.tsx), not Settings — see
+// that page's own header comment on why the two were split.
+function checklistItemHref(label: string): string {
+  switch (label) {
+    case "Business name":
+    case "Short description":
+    case "Full description":
+      return "/vendor/settings#business-info";
+    case "Primary category":
+    case "Primary city":
+    case "At least one service area":
+      return "/vendor/settings#category-location";
+    case "Pricing information":
+      return "/vendor/settings#pricing";
+    case "At least one package":
+      return "/vendor/packages";
+    case "Contact email":
+    case "Phone number":
+      return "/vendor/settings#contact-social";
+    case "Category attribute values":
+      return "/vendor/profile";
+    default:
+      return "/vendor/settings";
+  }
+}
+
 function isChecklistItemMet(label: string, vendor: Awaited<ReturnType<typeof requireVendorOwnership>>): boolean {
   switch (label) {
     case "Business name":
@@ -374,11 +403,8 @@ export default async function VendorDashboardPage() {
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
               {COMPLETENESS_CHECKS.map((check) => {
                 const met = isChecklistItemMet(check.label, vendor);
-                return (
-                  <div
-                    key={check.label}
-                    className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-page p-2.5 text-xs"
-                  >
+                const content = (
+                  <>
                     <span
                       className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                         met ? "bg-emerald-10 text-emerald-70" : "bg-neutral-grey-20 text-text-grey"
@@ -390,14 +416,37 @@ export default async function VendorDashboardPage() {
                       {check.label}
                       {check.requiredForSubmission && !met && " *"}
                     </span>
-                  </div>
+                  </>
+                );
+
+                if (met) {
+                  return (
+                    <div
+                      key={check.label}
+                      className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-page p-2.5 text-xs"
+                    >
+                      {content}
+                    </div>
+                  );
+                }
+
+                return (
+                  <Link
+                    key={check.label}
+                    href={checklistItemHref(check.label)}
+                    className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-page p-2.5 text-xs no-underline transition-colors hover:border-brand-primary hover:bg-brand-primary-soft/40"
+                  >
+                    {content}
+                  </Link>
                 );
               })}
             </div>
 
             <div className="mt-5 flex justify-end">
               <Link
-                href="/vendor/settings"
+                href={checklistItemHref(
+                  COMPLETENESS_CHECKS.find((check) => !isChecklistItemMet(check.label, vendor))?.label ?? "",
+                )}
                 className="rounded-md bg-brand-primary px-6 py-2.5 text-xs font-bold text-white shadow-[0_4px_12px_rgba(224,11,65,0.18)] transition-all hover:bg-brand-primary-hover"
               >
                 Complete your profile →

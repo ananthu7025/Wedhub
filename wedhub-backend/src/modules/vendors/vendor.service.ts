@@ -149,6 +149,14 @@ export async function setServiceAreas(vendorId: string, input: SetServiceAreasIn
   return vendorRepository.findVendorById(vendorId);
 }
 
+// Item 12: doesn't touch profileCompleteness — hiding a section is a
+// visibility preference, not missing information (the underlying data is
+// still there, e.g. reviews still exist even if hidden from public view).
+export async function setHiddenSections(vendorId: string, hiddenSections: string[]) {
+  await vendorRepository.updateHiddenSections(vendorId, hiddenSections);
+  return vendorRepository.findVendorById(vendorId);
+}
+
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const PHONE_PATTERN = /^\+?[0-9][0-9\s\-()]{6,19}$/;
 

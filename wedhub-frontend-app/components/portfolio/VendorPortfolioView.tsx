@@ -37,7 +37,15 @@ const SECTIONS = [
 export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolioViewProps) {
   const [enquiryModalOpen, setEnquiryModalOpen] = useState(false);
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>("portfolio");
+  // Item 12: sections the vendor has hidden from this public page — the
+  // backend has already stripped the underlying packages/attributeValues/
+  // serviceAreas/socialLinks data for a hidden section (see
+  // vendor.controller.ts's redactHiddenSections), this just also skips
+  // rendering that section's heading/wrapper and nav-bar entry rather than
+  // showing an empty shell for it.
+  const hiddenSections = new Set(vendor.hiddenProfileSections ?? []);
+  const visibleSections = SECTIONS.filter(({ id }) => !hiddenSections.has(id));
+  const [activeSection, setActiveSection] = useState<string>(visibleSections[0]?.id ?? "portfolio");
   // Pagination state for the portfolio grid below — VendorPortfolioGallery
   // shows 7 photos per page (see its own PAGE_SIZE), so the header's
   // prev/next controls need the same page-count math to know when to
@@ -84,12 +92,13 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
       { rootMargin: "-45% 0px -50% 0px", threshold: 0 }
     );
 
-    SECTIONS.forEach(({ id }) => {
+    visibleSections.forEach(({ id }) => {
       const el = sectionRefs.current[id];
       if (el) observer.observe(el);
     });
 
     return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleSections is derived from vendor.hiddenProfileSections, which never changes after initial load (no client-side toggle on this page); re-running this effect on every render would re-attach the same observer repeatedly for no benefit.
   }, []);
 
   const scrollToSection = useCallback((id: string) => {
@@ -304,7 +313,7 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
       {/* Section nav — scroll-spy pills, sticky under top bar */}
       <div className="sticky top-0 z-40 w-full border-b border-neutral-200 bg-white/95 backdrop-blur-md">
         <nav className="mx-auto flex max-w-6xl space-x-1 overflow-x-auto no-scrollbar px-4 sm:px-6 lg:px-8" aria-label="Sections">
-          {SECTIONS.map(({ id, label }) => {
+          {visibleSections.map(({ id, label }) => {
             const count =
               id === "portfolio" ? totalPhotosCount :
               id === "packages" ? activePackagesCount :
@@ -346,6 +355,7 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
       {/* Main Content Area — single flowing page */}
       <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16">
         {/* Portfolio Gallery */}
+        {!hiddenSections.has("portfolio") && (
         <section
           id="portfolio"
           ref={(el) => { sectionRefs.current.portfolio = el; }}
@@ -383,10 +393,12 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
           </div>
           <VendorPortfolioGallery albums={albums} businessName={businessName} page={portfolioPage} onPageChange={setPortfolioPage} />
         </section>
+        )}
 
         {/* About + Featured Packages preview, two-column like the reference — packages surfaced
             here (right sidebar) since pricing is a top decision factor, with the full detailed
             grid further down under its own anchor. */}
+        {!hiddenSections.has("about") && (
         <section
           id="about"
           ref={(el) => { sectionRefs.current.about = el; }}
@@ -420,8 +432,10 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
             }
           />
         </section>
+        )}
 
         {/* Packages — full detailed grid */}
+        {!hiddenSections.has("packages") && (
         <section
           id="packages"
           ref={(el) => { sectionRefs.current.packages = el; }}
@@ -442,8 +456,10 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
             onEnquireClick={handleOpenEnquiry}
           />
         </section>
+        )}
 
         {/* Client Reviews */}
+        {!hiddenSections.has("reviews") && (
         <section
           id="reviews"
           ref={(el) => { sectionRefs.current.reviews = el; }}
@@ -462,16 +478,21 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
             businessName={businessName}
           />
         </section>
+        )}
 
-        {/* Service Areas — only if the vendor has any configured */}
-        <VendorPortfolioServiceAreas
-          serviceAreas={vendor.serviceAreas}
-          baseCityName={vendor.city?.name}
-          onCheckAvailability={handleOpenAvailability}
-        />
+        {/* Service Areas — only if the vendor has any configured and hasn't hidden this section */}
+        {!hiddenSections.has("serviceAreas") && (
+          <VendorPortfolioServiceAreas
+            serviceAreas={vendor.serviceAreas}
+            baseCityName={vendor.city?.name}
+            onCheckAvailability={handleOpenAvailability}
+          />
+        )}
 
-        {/* Instagram — only if a handle/link exists */}
-        <VendorPortfolioInstagram instagram={profile?.socialLinks?.instagram} />
+        {/* Instagram — only if a handle/link exists and hasn't been hidden */}
+        {!hiddenSections.has("instagram") && (
+          <VendorPortfolioInstagram instagram={profile?.socialLinks?.instagram} />
+        )}
       </main>
 
       {/* Floating Sticky WhatsApp Button for mobile */}

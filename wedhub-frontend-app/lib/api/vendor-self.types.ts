@@ -255,6 +255,9 @@ export interface VendorSelf {
   submittedAt: string | null;
   approvedAt: string | null;
   rejectionReason: string | null;
+  // Item 12: public-profile sections this vendor has chosen to hide — see
+  // VendorDetail's identical field for the public-facing counterpart.
+  hiddenProfileSections: string[];
 
   profile: VendorProfileSelf | null;
   categories: Array<{ vendorId: string; categoryId: string; isPrimary: boolean; category: CategorySelf }>;
@@ -322,6 +325,22 @@ export interface SetCategoriesBody {
 
 export interface SetServiceAreasBody {
   locationIds: string[];
+}
+
+// Item 12: mirrors HIDEABLE_PROFILE_SECTIONS in wedhub-backend's
+// vendor.schema.ts — matches VendorPortfolioView.tsx's SECTIONS ids plus its
+// two standalone sections below the tab bar.
+export const HIDEABLE_PROFILE_SECTIONS = [
+  { id: "portfolio", label: "Portfolio gallery" },
+  { id: "about", label: "About & details" },
+  { id: "packages", label: "Packages & pricing" },
+  { id: "reviews", label: "Client reviews" },
+  { id: "serviceAreas", label: "Service areas" },
+  { id: "instagram", label: "Instagram" },
+] as const;
+
+export interface SetHiddenSectionsBody {
+  hiddenSections: string[];
 }
 
 export interface SetAttributesBody {

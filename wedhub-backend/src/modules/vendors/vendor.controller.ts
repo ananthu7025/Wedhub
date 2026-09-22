@@ -12,6 +12,7 @@ import type {
   ListVendorsQuery,
   SetAttributesBody,
   SetCategoriesBody,
+  SetHiddenSectionsBody,
   SetServiceAreasBody,
   UpdatePackageBody,
   UpdateVendorBody,
@@ -113,6 +114,14 @@ export async function setServiceAreas(req: Request, res: Response): Promise<void
   res.json(successResponse(vendor));
 }
 
+export async function setHiddenSections(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const owned = await getOwnedVendorOrThrow(userId);
+  const body = req.body as SetHiddenSectionsBody;
+  const vendor = await vendorService.setHiddenSections(owned.id, body.hiddenSections);
+  res.json(successResponse(vendor));
+}
+
 export async function setAttributes(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
   const owned = await getOwnedVendorOrThrow(userId);
@@ -190,6 +199,37 @@ function redactContactFields<
   return { ...vendor, profile: { ...vendor.profile, phone: null, email: null, website: null, hasContactInfo } };
 }
 
+// Item 12: strips the underlying data for any section the vendor has hidden
+// (vendor.hiddenProfileSections), not just a flag the frontend could choose
+// to ignore — a visitor inspecting the raw API response can't recover
+// packages/reviews/attributes the vendor turned off, the same defense-in-
+// depth principle redactContactFields already applies to phone/email/
+// website. "portfolio" (albums) isn't stripped here since GET /vendors/:slug
+// doesn't carry albums at all — the public page fetches those separately
+// via a different endpoint, gated the same way in that route instead.
+function redactHiddenSections<
+  T extends {
+    hiddenProfileSections: string[];
+    packages?: unknown[];
+    attributeValues?: unknown[];
+    serviceAreas?: unknown[];
+    profile: { socialLinks?: unknown } | null;
+  },
+>(vendor: T): T {
+  const hidden = new Set(vendor.hiddenProfileSections);
+  if (hidden.size === 0) return vendor;
+  return {
+    ...vendor,
+    packages: hidden.has("packages") ? [] : vendor.packages,
+    attributeValues: hidden.has("about") ? [] : vendor.attributeValues,
+    serviceAreas: hidden.has("serviceAreas") ? [] : vendor.serviceAreas,
+    profile:
+      hidden.has("instagram") && vendor.profile
+        ? { ...vendor.profile, socialLinks: undefined }
+        : vendor.profile,
+  };
+}
+
 export async function getPublicVendor(req: Request, res: Response): Promise<void> {
   const vendor = await vendorRepository.findApprovedVendorBySlug(req.params.slug as string);
   if (!vendor) {
@@ -198,7 +238,7 @@ export async function getPublicVendor(req: Request, res: Response): Promise<void
   // Feeds the vendor's own basic/advanced analytics view (Arch Phase 12) —
   // best-effort, never blocks the response (see logAnalyticsEvent).
   void logAnalyticsEvent({ userId: req.user?.id, eventType: "vendor_profile_viewed", vendorId: vendor.id });
-  res.json(successResponse(redactContactFields(vendor)));
+  res.json(successResponse(redactContactFields(redactHiddenSections(vendor))));
 }
 
 // Explicit "Reveal contact details" action from the public profile —

@@ -13,6 +13,7 @@ import {
   listVendorsQuerySchema,
   setAttributesSchema,
   setCategoriesSchema,
+  setHiddenSectionsSchema,
   setServiceAreasSchema,
   updatePackageSchema,
   updateVendorSchema,
@@ -79,6 +80,13 @@ vendorRouter.put(
   authenticateMiddleware,
   validateBody(setServiceAreasSchema),
   asyncHandler(vendorController.setServiceAreas),
+);
+
+vendorRouter.put(
+  "/me/hidden-sections",
+  authenticateMiddleware,
+  validateBody(setHiddenSectionsSchema),
+  asyncHandler(vendorController.setHiddenSections),
 );
 
 vendorRouter.put(

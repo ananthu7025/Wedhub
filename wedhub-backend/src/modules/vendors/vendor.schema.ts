@@ -72,6 +72,19 @@ export const setServiceAreasSchema = z.object({
   locationIds: z.array(z.string().uuid()).max(100),
 });
 
+// Item 12: closed set of public-profile regions a vendor can hide, matching
+// wedhub-frontend-app's VendorPortfolioView.tsx SECTIONS ids ("portfolio",
+// "about", "packages", "reviews") plus its two standalone sections below the
+// tab bar ("serviceAreas", "instagram"). Validated against this fixed enum
+// (not a free-form string array) so a typo or a stale client can't silently
+// write an unrecognized key that would never match anything the public page
+// actually checks.
+export const HIDEABLE_PROFILE_SECTIONS = ["portfolio", "about", "packages", "reviews", "serviceAreas", "instagram"] as const;
+
+export const setHiddenSectionsSchema = z.object({
+  hiddenSections: z.array(z.enum(HIDEABLE_PROFILE_SECTIONS)).max(HIDEABLE_PROFILE_SECTIONS.length),
+});
+
 // Shape-only validation — well-formed JSON matching one of these shapes.
 // Semantic validation (regex format, min<=max, start<end, option
 // membership) happens in vendor.service.ts's setAttributeValues, where the
@@ -127,6 +140,7 @@ export type UpdateVendorBody = z.infer<typeof updateVendorSchema>;
 export type UpsertProfileBody = z.infer<typeof upsertProfileSchema>;
 export type SetCategoriesBody = z.infer<typeof setCategoriesSchema>;
 export type SetServiceAreasBody = z.infer<typeof setServiceAreasSchema>;
+export type SetHiddenSectionsBody = z.infer<typeof setHiddenSectionsSchema>;
 export type SetAttributesBody = z.infer<typeof setAttributesSchema>;
 export type CreatePackageBody = z.infer<typeof createPackageSchema>;
 export type UpdatePackageBody = z.infer<typeof updatePackageSchema>;

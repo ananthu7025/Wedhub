@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   setMyCategories,
+  setMyHiddenSections,
   setMyServiceAreas,
   submitMyVendor,
   updateMyVendorDetail,
@@ -14,7 +15,13 @@ import { setNotificationPreference } from "@/lib/api/notification-preferences-cl
 import { deactivateAccount } from "@/lib/api/account-client";
 import { logout, logoutAllDevices } from "@/lib/api/auth-client";
 import { ChangeEmailForm } from "@/components/shared/ChangeEmailForm";
-import { EVENTS_COMPLETED_RANGES, type CategorySelf, type LocationSelf, type VendorSelf } from "@/lib/api/vendor-self.types";
+import {
+  EVENTS_COMPLETED_RANGES,
+  HIDEABLE_PROFILE_SECTIONS,
+  type CategorySelf,
+  type LocationSelf,
+  type VendorSelf,
+} from "@/lib/api/vendor-self.types";
 import type { MeResponse } from "@/lib/api/account.types";
 import type { NotificationChannel, NotificationEventType, NotificationPreference } from "@/lib/api/notification-preferences.types";
 import { formatApiError } from "@/lib/utils/error";
@@ -100,19 +107,38 @@ function SectionStatus({ saving, saved, error }: { saving: boolean; saved: boole
 }
 
 function SectionShell({
+  id,
   title,
   description,
   defaultOpen,
   children,
 }: {
+  id?: string;
   title: string;
   description?: string;
   defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+
+  // Lets the dashboard's "Complete your profile" checklist deep-link into
+  // the exact section a vendor is missing (e.g. /vendor/settings#pricing)
+  // instead of always dropping them on Settings with every section
+  // collapsed — native <details> doesn't open or scroll to a URL hash on
+  // its own, so this does both once on arrival.
+  useEffect(() => {
+    if (!id || typeof window === "undefined") return;
+    if (window.location.hash === `#${id}`) {
+      ref.current?.setAttribute("open", "");
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [id]);
+
   return (
     <details
-      className="group mb-4 rounded-xl border border-border bg-white shadow-xs [&_summary::-webkit-details-marker]:hidden"
+      ref={ref}
+      id={id}
+      className="group mb-4 rounded-xl border border-border bg-white shadow-xs scroll-mt-20 [&_summary::-webkit-details-marker]:hidden"
       open={defaultOpen}
     >
       <summary className="flex cursor-pointer items-center justify-between gap-3 p-4 sm:p-6">
@@ -181,7 +207,7 @@ function BusinessInfoSection({ vendor, me }: { vendor: VendorSelf; me: MeRespons
   }
 
   return (
-    <SectionShell title="Business info" description="Your name, description, and owner details" defaultOpen>
+    <SectionShell id="business-info" title="Business info" description="Your name, description, and owner details" defaultOpen>
       <form onSubmit={handleSubmit} noValidate>
         <div className="mb-4 grid grid-cols-2 gap-4 max-[700px]:grid-cols-1">
           <label className="block">
@@ -328,12 +354,13 @@ function CategoryLocationSection({
     }
 
     setSaved(true);
+    showToast("Changes saved.", "success");
     setTimeout(() => setSaved(false), 2000);
     router.refresh();
   }
 
   return (
-    <SectionShell title="Category & location" description="Where you're based and what you offer">
+    <SectionShell id="category-location" title="Category & location" description="Where you're based and what you offer">
       <form onSubmit={handleSubmit}>
         <label className="mb-3.5 block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">Category</span>
@@ -501,7 +528,7 @@ function PricingPoliciesSection({ vendor }: { vendor: VendorSelf }) {
   }
 
   return (
-    <SectionShell title="Pricing & policies" description="Starting price, range, and cancellation terms">
+    <SectionShell id="pricing" title="Pricing & policies" description="Starting price, range, and cancellation terms">
       <form onSubmit={handleSubmit} noValidate>
         <label className="mb-3.5 block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">Starting price (₹)</span>
@@ -657,7 +684,7 @@ function ContactSocialSection({ vendor }: { vendor: VendorSelf }) {
   }
 
   return (
-    <SectionShell title="Contact & social" description="How couples reach you, and your social links">
+    <SectionShell id="contact-social" title="Contact & social" description="How couples reach you, and your social links">
       <form onSubmit={handleSubmit} noValidate>
         <label className="mb-3.5 block text-sm">
           <span className="mb-1.5 block font-bold text-[13px]">Website</span>
@@ -871,6 +898,94 @@ function MoreDetailsSection({ vendor }: { vendor: VendorSelf }) {
   );
 }
 
+// Item 12: lets a vendor hide whole sections from their public profile
+// (/vendors/[slug] and the /portfolio/[slug] share page) without deleting
+// the underlying data — e.g. a new vendor with no reviews yet might hide
+// "Client reviews" rather than show an empty section. The backend strips
+// the actual section data server-side for a hidden section (see
+// vendor.controller.ts's redactHiddenSections), not just a display flag the
+// public page could choose to ignore. "Portfolio" here means the photo/video
+// gallery, not this Settings page itself.
+function ProfileVisibilitySection({ vendor }: { vendor: VendorSelf }) {
+  const router = useRouter();
+  const { showToast } = useToast();
+  const [hidden, setHidden] = useState<Set<string>>(new Set(vendor.hiddenProfileSections));
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setSaved(false);
+    setError(null);
+
+    const result = await setMyHiddenSections({ hiddenSections: Array.from(hidden) });
+    setSaving(false);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    setSaved(true);
+    showToast("Changes saved.", "success");
+    setTimeout(() => setSaved(false), 2000);
+    router.refresh();
+  }
+
+  return (
+    <SectionShell
+      id="profile-visibility"
+      title="Public profile visibility"
+      description="Choose what shows on your public profile, and preview it as a couple would see it"
+    >
+      <form onSubmit={handleSubmit}>
+        {error && <p className="mb-3 rounded-md bg-red-10 p-2.5 text-[13px] text-red-70">{error}</p>}
+
+        <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          {HIDEABLE_PROFILE_SECTIONS.map((section) => (
+            <label
+              key={section.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-page px-3.5 py-2.5 text-[13px]"
+            >
+              <span className="font-semibold">{section.label}</span>
+              <input
+                type="checkbox"
+                checked={!hidden.has(section.id)}
+                onChange={(e) => {
+                  const next = new Set(hidden);
+                  if (e.target.checked) next.delete(section.id);
+                  else next.add(section.id);
+                  setHidden(next);
+                }}
+                className="h-4 w-4 accent-brand-primary"
+                aria-label={`Show ${section.label} on public profile`}
+              />
+            </label>
+          ))}
+        </div>
+        <p className="mb-4 text-xs text-text-grey">
+          Unchecking a section hides it (and its data) from your public profile — it stays saved here and can be
+          turned back on anytime.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <SectionStatus saving={saving} saved={saved} error={null} />
+          {vendor.slug && vendor.status === "APPROVED" && (
+            <a
+              href={`/vendors/${vendor.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[13px] font-bold text-brand-primary hover:underline"
+            >
+              Preview my public profile →
+            </a>
+          )}
+        </div>
+      </form>
+    </SectionShell>
+  );
+}
+
 // Item 12/21: this is now where "Submit for review" lives, since Business
 // Info/Category & Location/Pricing/Contact above cover 4 of the 5 fields
 // vendor.completeness.ts requires for submission (description, category,
@@ -960,7 +1075,6 @@ export function SettingsBoard({
   initialPreferences: NotificationPreference[];
 }) {
   const router = useRouter();
-  const { showToast } = useToast();
   const [preferences, setPreferences] = useState(initialPreferences);
   const [savingToggle, setSavingToggle] = useState<string | null>(null);
   const [notificationError, setNotificationError] = useState<string | null>(null);
@@ -1026,6 +1140,7 @@ export function SettingsBoard({
       <PricingPoliciesSection vendor={vendor} />
       <ContactSocialSection vendor={vendor} />
       <MoreDetailsSection vendor={vendor} />
+      <ProfileVisibilitySection vendor={vendor} />
 
       <SectionShell title="Notification preferences">
         {notificationError && <p className="mb-3 rounded-md bg-red-10 p-2.5 text-[13px] text-red-70">{notificationError}</p>}

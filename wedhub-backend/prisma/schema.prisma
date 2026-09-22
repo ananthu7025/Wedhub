@@ -526,6 +526,18 @@ model Vendor {
   // (see lead.repository.ts::getVendorLeadAnalytics, which computes this
   // the expensive way for the vendor's own private analytics view).
   avgResponseTimeMs   Int?                 @map("avg_response_time_ms")
+  // Section-level public-profile visibility (item 12): ids matching
+  // VendorPortfolioView.tsx's SECTIONS list ("portfolio", "about",
+  // "packages", "reviews") plus "serviceAreas"/"instagram" for the two
+  // standalone sections below the tab bar. A section's id in this array
+  // means the vendor has hidden it from their public page — empty by
+  // default (everything visible), so no existing vendor's page changes
+  // until they explicitly opt to hide something. One array rather than a
+  // boolean-per-section column: this is a closed, small set of page
+  // regions, not per-field granularity (see item 12's user decision on
+  // scope), so a schema migration isn't needed every time a new section is
+  // added to the portfolio page — just append its id here.
+  hiddenProfileSections String[]           @default([]) @map("hidden_profile_sections")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
   deletedAt           DateTime?            @map("deleted_at")

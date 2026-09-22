@@ -202,6 +202,13 @@ export interface VendorDetail {
   // vendor has at least one responded lead.
   avgResponseTimeMs: number | null;
   createdAt: string;
+  // Item 12: which public-profile sections this vendor has hidden. The
+  // backend already strips the underlying packages/attributeValues/
+  // serviceAreas/socialLinks data for a hidden section (see
+  // vendor.controller.ts's redactHiddenSections) — this array is only kept
+  // here so pages can also skip rendering an empty section's heading/
+  // wrapper, not to re-derive what's hidden from scratch.
+  hiddenProfileSections: string[];
 
   profile: VendorProfile | null;
   categories: Array<{ vendorId: string; categoryId: string; isPrimary: boolean; category: Category }>;

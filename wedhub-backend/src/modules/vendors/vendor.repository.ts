@@ -123,6 +123,10 @@ export function updateProfileCompleteness(id: string, score: number) {
   return prisma.vendor.update({ where: { id }, data: { profileCompleteness: score } });
 }
 
+export function updateHiddenSections(id: string, hiddenSections: string[]) {
+  return prisma.vendor.update({ where: { id }, data: { hiddenProfileSections: hiddenSections } });
+}
+
 export function upsertVendorProfile(vendorId: string, data: Record<string, unknown>) {
   const fields = omitUndefined(data);
   return prisma.vendorProfile.upsert({

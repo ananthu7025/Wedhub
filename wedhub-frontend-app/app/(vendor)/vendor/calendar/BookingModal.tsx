@@ -9,6 +9,8 @@ import type {
 } from "@/lib/api/vendor-calendar.types";
 import { createMyBooking, updateMyBooking } from "@/lib/api/vendor-calendar-client";
 import { formatApiError } from "@/lib/utils/error";
+import { LeadPicker } from "./LeadPicker";
+import type { VendorLead } from "@/lib/api/leads.types";
 
 interface BookingModalProps {
   open: boolean;
@@ -36,8 +38,6 @@ export function BookingModal({
   initialDate,
   existingBooking,
 }: BookingModalProps) {
-  if (!open) return null;
-
   const todayStr = new Date().toISOString().slice(0, 10);
   const defaultDate = existingBooking?.startDate ?? initialDate ?? todayStr;
 
@@ -75,6 +75,16 @@ export function BookingModal({
     if (!existingBooking && (!title || title === `${clientName} ${eventType}`)) {
       setTitle(`${val} ${eventType}`.trim());
     }
+  }
+
+  // Picking a lead fills in whatever contact details it has on file
+  // (WhatsApp number, email) so the vendor doesn't have to re-type them —
+  // still just a starting point, every field stays editable afterward.
+  function handleLeadPick(lead: VendorLead) {
+    handleClientNameChange(lead.enquiry.contactName);
+    setClientPhone(lead.enquiry.contactPhone ?? "");
+    setClientEmail(lead.enquiry.contactEmail);
+    if (lead.enquiry.weddingLocation) setVenueCity(lead.enquiry.weddingLocation);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -136,6 +146,15 @@ export function BookingModal({
     }
   }
 
+  // Moved below every hook declaration — an early return before useState
+  // calls violates React's rules of hooks (order must stay identical across
+  // renders); harmless in practice only because this component happens to
+  // fully unmount/remount via its parent's `open &&` gate rather than
+  // toggling `open` on a kept-alive instance, but still a latent footgun the
+  // linter now catches (react-hooks/rules-of-hooks) now that a second hook-
+  // consuming child (LeadPicker) was added after it.
+  if (!open) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto" onClick={onClose}>
       <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl border border-border my-8" onClick={(e) => e.stopPropagation()}>
@@ -174,6 +193,7 @@ export function BookingModal({
             <h4 className="text-xs font-bold text-text-dark uppercase tracking-wider">
               Client / Couple Details
             </h4>
+            {!existingBooking && <LeadPicker onPick={handleLeadPick} />}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-text-grey mb-1">

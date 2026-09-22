@@ -155,14 +155,23 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
     .map((sa) => sa.location.name)
     .filter((name) => name !== vendor.city?.name);
 
-  const galleryMedia = albums.flatMap((a) => a.media);
+  // Item 12: sections the vendor has hidden — the backend has already
+  // stripped the underlying packages/attributeValues/serviceAreas/
+  // socialLinks data for a hidden section (see vendor.controller.ts's
+  // redactHiddenSections), which alone would make hasAbout/hasPackages
+  // below naturally false for a hidden section too. "reviews" and
+  // "portfolio" (albums) aren't part of that redaction (fetched via
+  // separate endpoints), so they're gated explicitly here.
+  const hiddenSections = new Set(vendor.hiddenProfileSections ?? []);
+  const galleryMedia = hiddenSections.has("portfolio") ? [] : albums.flatMap((a) => a.media);
   const hasAbout =
-    Boolean(vendor.profile?.description) ||
-    Boolean(vendor.profile?.address) ||
-    Boolean(vendor.profile?.shortDescription) ||
-    vendor.attributeValues.length > 0;
-  const hasPackages = vendor.packages.some((pkg) => pkg.isActive);
-  const hasReviews = reviews.length > 0;
+    !hiddenSections.has("about") &&
+    (Boolean(vendor.profile?.description) ||
+      Boolean(vendor.profile?.address) ||
+      Boolean(vendor.profile?.shortDescription) ||
+      vendor.attributeValues.length > 0);
+  const hasPackages = !hiddenSections.has("packages") && vendor.packages.some((pkg) => pkg.isActive);
+  const hasReviews = !hiddenSections.has("reviews") && reviews.length > 0;
   // The fetched review page equals the vendor's real total only when the
   // count matches — see VendorRatingDistribution's own comment on why a
   // partial sample must never be shown as if it were a complete breakdown.
