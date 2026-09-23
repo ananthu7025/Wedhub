@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   deleteMyCatalogItem,
   downloadMyCatalogImportTemplate,
@@ -33,6 +33,55 @@ export function CatalogItemsManager({
   const [importError, setImportError] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Storefront customization state
+  const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [heroHeadline, setHeroHeadline] = useState("");
+  const [heroTagline, setHeroTagline] = useState("");
+  const [heroSubtitle, setHeroSubtitle] = useState("");
+  const [announcementText, setAnnouncementText] = useState("");
+  const [trialButtonText, setTrialButtonText] = useState("");
+  const [shopButtonText, setShopButtonText] = useState("");
+  const [savedSettingsNotice, setSavedSettingsNotice] = useState(false);
+
+  // Load custom storefront settings from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined" && vendorSlug) {
+      try {
+        const raw = localStorage.getItem(`wedhub_storefront_${vendorSlug}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setHeroHeadline(parsed.heroHeadline || "");
+          setHeroTagline(parsed.heroTagline || "");
+          setHeroSubtitle(parsed.heroSubtitle || "");
+          setAnnouncementText(parsed.announcementText || "");
+          setTrialButtonText(parsed.trialButtonText || "");
+          setShopButtonText(parsed.shopButtonText || "");
+        }
+      } catch {
+        // Fallback
+      }
+    }
+  }, [vendorSlug]);
+
+  function handleSaveStorefrontConfig() {
+    if (typeof window !== "undefined" && vendorSlug) {
+      const config = {
+        heroHeadline: heroHeadline.trim(),
+        heroTagline: heroTagline.trim(),
+        heroSubtitle: heroSubtitle.trim(),
+        announcementText: announcementText.trim(),
+        trialButtonText: trialButtonText.trim(),
+        shopButtonText: shopButtonText.trim(),
+      };
+      localStorage.setItem(`wedhub_storefront_${vendorSlug}`, JSON.stringify(config));
+      setSavedSettingsNotice(true);
+      setTimeout(() => {
+        setSavedSettingsNotice(false);
+        setCustomizerOpen(false);
+      }, 1500);
+    }
+  }
 
   const filteredItems = items.filter((item) => {
     if (search.trim() && !item.title.toLowerCase().includes(search.trim().toLowerCase())) return false;
@@ -134,8 +183,10 @@ export function CatalogItemsManager({
         <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-teal-50/40 to-white p-5 shadow-xs">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">
-              <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shrink-0 shadow-xs">
-                🏪
+              <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <svg className="w-5 h-5 fill-none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009 9.35c.663 0 1.285-.216 1.79-.582a3.003 3.003 0 004.42 0c.505.366 1.127.582 1.79.582a2.993 2.993 0 002.46-1.214 3.001 3.001 0 003.75.614m-16.5 0v-4.5a3 3 0 013-3h10.5a3 3 0 013 3v4.5" />
+                </svg>
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -158,17 +209,30 @@ export function CatalogItemsManager({
             <div className="flex flex-wrap items-center gap-2 shrink-0">
               <button
                 type="button"
+                onClick={() => setCustomizerOpen(true)}
+                className="px-3.5 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-800 text-xs font-bold hover:bg-neutral-50 transition flex items-center gap-1.5 shadow-xs"
+              >
+                <svg className="w-3.5 h-3.5 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                </svg>
+                <span>Customize Storefront</span>
+              </button>
+              <button
+                type="button"
                 onClick={handleShareStorefrontWhatsApp}
                 className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-1.5 shadow-sm"
               >
-                <span>💬 Share on WhatsApp</span>
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.698.073-2.112-.513-1.636-.68-2.69-2.339-2.772-2.449-.082-.11-1.391-1.85-1.391-3.529 0-1.678.877-2.503 1.189-2.846.312-.343.681-.43 1.093-.43.136 0 .257.007.366.015.318.016.478.038.687.542.261.626.892 2.176.97 2.335.078.16.13.348.026.557-.104.209-.156.339-.312.521-.156.183-.328.409-.469.549-.156.157-.319.327-.137.64.182.313.809 1.334 1.735 2.16 1.191 1.061 2.195 1.389 2.508 1.545.313.156.496.13.679-.079.183-.209.782-.913.991-1.226.209-.313.418-.261.698-.157.28.104 1.776.837 2.081.989.305.153.508.228.583.355.074.128.074.743-.07 1.148z" />
+                </svg>
+                <span>Share WhatsApp</span>
               </button>
               <button
                 type="button"
                 onClick={handleCopyStorefrontLink}
                 className="px-3.5 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-800 text-xs font-bold hover:bg-neutral-50 transition flex items-center gap-1.5"
               >
-                <span>{copiedLink ? "✓ Copied!" : "📋 Copy Link"}</span>
+                <span>{copiedLink ? "✓ Copied!" : "Copy Link"}</span>
               </button>
               <Link
                 href={`/catalog/${vendorSlug}`}
@@ -176,7 +240,8 @@ export function CatalogItemsManager({
                 rel="noopener noreferrer"
                 className="px-3.5 py-2 rounded-xl border border-neutral-900 bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 transition flex items-center gap-1"
               >
-                <span>Preview Storefront ↗</span>
+                <span>View Storefront</span>
+                <span className="text-[10px]">↗</span>
               </Link>
             </div>
           </div>
@@ -273,7 +338,11 @@ export function CatalogItemsManager({
       <div className="rounded-xl border border-border bg-white overflow-hidden shadow-sm">
         {filteredItems.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="mx-auto w-12 h-12 rounded-full bg-surface-input flex items-center justify-center text-text-grey mb-3">🗂️</div>
+            <div className="mx-auto w-12 h-12 rounded-full bg-surface-input flex items-center justify-center text-text-grey mb-3">
+              <svg className="w-6 h-6 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
+              </svg>
+            </div>
             <h3 className="text-sm font-bold text-text-dark">No catalog items found</h3>
             <p className="mt-1 text-xs text-text-grey max-w-sm mx-auto">
               {items.length === 0
@@ -319,7 +388,11 @@ export function CatalogItemsManager({
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={imgUrl} alt={item.title} className="h-full w-full object-cover" />
                             ) : (
-                              <div className="h-full w-full flex items-center justify-center text-base">🗂️</div>
+                              <div className="h-full w-full flex items-center justify-center text-neutral-400">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
+                                </svg>
+                              </div>
                             )}
                           </div>
                           <div>
@@ -354,13 +427,16 @@ export function CatalogItemsManager({
                               type="button"
                               onClick={() => {
                                 const fullUrl = `${window.location.origin}/catalog/${vendorSlug}`;
-                                const msg = `✨ Check out *${item.title}* (${priceLabel(item)}) from our bridal rental collection:\n${fullUrl}\n\nContact us on WhatsApp for availability and booking!`;
+                                const msg = `Check out *${item.title}* (${priceLabel(item)}) from our rental collection:\n${fullUrl}\n\nContact us on WhatsApp for availability and booking!`;
                                 window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
                               }}
-                              className="rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-colors flex items-center gap-1"
+                              className="rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-colors flex items-center gap-1.5"
                               title="Share item on WhatsApp"
                             >
-                              <span>💬 Share</span>
+                              <svg className="w-3 h-3 fill-current text-emerald-600" viewBox="0 0 24 24">
+                                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.698.073-2.112-.513-1.636-.68-2.69-2.339-2.772-2.449-.082-.11-1.391-1.85-1.391-3.529 0-1.678.877-2.503 1.189-2.846.312-.343.681-.43 1.093-.43.136 0 .257.007.366.015.318.016.478.038.687.542.261.626.892 2.176.97 2.335.078.16.13.348.026.557-.104.209-.156.339-.312.521-.156.183-.328.409-.469.549-.156.157-.319.327-.137.64.182.313.809 1.334 1.735 2.16 1.191 1.061 2.195 1.389 2.508 1.545.313.156.496.13.679-.079.183-.209.782-.913.991-1.226.209-.313.418-.261.698-.157.28.104 1.776.837 2.081.989.305.153.508.228.583.355.074.128.074.743-.07 1.148z" />
+                              </svg>
+                              <span>WhatsApp</span>
                             </button>
                           )}
                           <Link
@@ -408,6 +484,132 @@ export function CatalogItemsManager({
           }}
           onSaved={handleSaved}
         />
+      )}
+
+      {/* Storefront Customizer Modal */}
+      {customizerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-6 sm:p-7 space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-neutral-900">Customize Storefront</h3>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Update the headline, description, and announcements displayed on your public catalog.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCustomizerOpen(false)}
+                className="p-1 rounded-full hover:bg-neutral-100 text-neutral-400 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-neutral-800 mb-1">
+                  Hero Main Headline
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Exquisite Bridal Suites for Your Special Day"
+                  value={heroHeadline}
+                  onChange={(e) => setHeroHeadline(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-neutral-800 mb-1">
+                  Pre-Heading Tagline
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Tradition Meets Timeless Beauty"
+                  value={heroTagline}
+                  onChange={(e) => setHeroTagline(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-neutral-800 mb-1">
+                  Hero Description / Subtitle
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Handcrafted rental pieces curated for unforgettable moments."
+                  value={heroSubtitle}
+                  onChange={(e) => setHeroSubtitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-neutral-800 mb-1">
+                  Top Announcement Ticker
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 100% Sanitized & Handcrafted Suites · Studio Trials Available · Flexible Rental Dates"
+                  value={announcementText}
+                  onChange={(e) => setAnnouncementText(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-neutral-800 mb-1">
+                    Shop CTA Button Label
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Shop Collection"
+                    value={shopButtonText}
+                    onChange={(e) => setShopButtonText(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-neutral-800 mb-1">
+                    Trial CTA Button Label
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Book a Studio Trial"
+                    value={trialButtonText}
+                    onChange={(e) => setTrialButtonText(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-neutral-100 flex items-center justify-between">
+              <span className="text-xs font-semibold text-emerald-600">
+                {savedSettingsNotice ? "✓ Saved successfully! Refreshing storefront." : ""}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCustomizerOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-700 hover:bg-neutral-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveStorefrontConfig}
+                  className="px-5 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover shadow-sm"
+                >
+                  Save Storefront Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
