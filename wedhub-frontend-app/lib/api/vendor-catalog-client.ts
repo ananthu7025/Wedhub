@@ -6,8 +6,10 @@ import type {
   CatalogAvailabilityStatus,
   CatalogImportResult,
   CatalogItem,
+  CatalogStoreSettings,
   CreateCatalogItemInput,
   UpdateCatalogItemInput,
+  UpdateCatalogStoreSettingsInput,
 } from "./vendor-catalog.types";
 
 async function call<T>(path: string, method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE", body?: unknown): Promise<ApiResponse<T>> {
@@ -72,6 +74,14 @@ export function getPublicCatalogItemAvailability(itemId: string, from?: string, 
 
 export function importMyCatalogItems(csvContent: string) {
   return call<CatalogImportResult>("/catalog/me/items/import", "POST", { csvContent });
+}
+
+export function getMyCatalogStoreSettings() {
+  return call<CatalogStoreSettings>("/catalog/me/settings", "GET");
+}
+
+export function updateMyCatalogStoreSettings(body: UpdateCatalogStoreSettingsInput) {
+  return call<CatalogStoreSettings>("/catalog/me/settings", "PUT", body);
 }
 
 // Not routed through call() — the backend returns a raw text/csv response

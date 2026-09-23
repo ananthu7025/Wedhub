@@ -9,6 +9,7 @@ import type {
   UpsertCatalogVariantFieldInput,
   ReorderCatalogVariantFieldsInput,
   ImportCatalogItemsInput,
+  UpsertCatalogStoreSettingsInput,
 } from "./catalog.types";
 
 export async function listItems(req: Request, res: Response): Promise<void> {
@@ -69,6 +70,17 @@ export async function importItems(req: Request, res: Response): Promise<void> {
   res.json(successResponse(result));
 }
 
+export async function getMyStoreSettings(req: Request, res: Response): Promise<void> {
+  const settings = await catalogService.getVendorStoreSettings(req.user!.id);
+  res.json(successResponse(settings));
+}
+
+export async function updateMyStoreSettings(req: Request, res: Response): Promise<void> {
+  const input = req.body as UpsertCatalogStoreSettingsInput;
+  const settings = await catalogService.updateVendorStoreSettings(req.user!.id, input);
+  res.json(successResponse(settings));
+}
+
 // ---------------------------------------------------------------------------
 // Public
 // ---------------------------------------------------------------------------
@@ -82,6 +94,11 @@ export async function getPublicAvailability(req: Request, res: Response): Promis
   const { from, to } = req.query as { from?: string; to?: string };
   const availability = await catalogService.getPublicItemAvailability(req.params.id as string, from, to);
   res.json(successResponse(availability));
+}
+
+export async function getPublicStoreSettings(req: Request, res: Response): Promise<void> {
+  const settings = await catalogService.getPublicStoreSettings(req.params.slug as string);
+  res.json(successResponse(settings));
 }
 
 // ---------------------------------------------------------------------------

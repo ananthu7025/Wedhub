@@ -1,26 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   deleteMyCatalogItem,
   downloadMyCatalogImportTemplate,
   getMyCatalogItems,
   importMyCatalogItems,
 } from "@/lib/api/vendor-catalog-client";
-import type { CatalogImportResult, CatalogItem, CatalogVariantField } from "@/lib/api/vendor-catalog.types";
+import type { CatalogImportResult, CatalogItem, CatalogStoreSettings, CatalogVariantField } from "@/lib/api/vendor-catalog.types";
 import { CatalogItemModal } from "./CatalogItemModal";
+import { CatalogStorefrontCustomizer } from "./CatalogStorefrontCustomizer";
 
 export function CatalogItemsManager({
   initialItems,
   variantFields,
   vendorSlug,
   vendorName,
+  initialStoreSettings,
 }: {
   initialItems: CatalogItem[];
   variantFields: CatalogVariantField[];
   vendorSlug?: string;
   vendorName?: string;
+  initialStoreSettings?: CatalogStoreSettings | null;
 }) {
   const [items, setItems] = useState<CatalogItem[]>(initialItems);
   const [search, setSearch] = useState("");
@@ -34,54 +37,7 @@ export function CatalogItemsManager({
   const [copiedLink, setCopiedLink] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Storefront customization state
   const [customizerOpen, setCustomizerOpen] = useState(false);
-  const [heroHeadline, setHeroHeadline] = useState("");
-  const [heroTagline, setHeroTagline] = useState("");
-  const [heroSubtitle, setHeroSubtitle] = useState("");
-  const [announcementText, setAnnouncementText] = useState("");
-  const [trialButtonText, setTrialButtonText] = useState("");
-  const [shopButtonText, setShopButtonText] = useState("");
-  const [savedSettingsNotice, setSavedSettingsNotice] = useState(false);
-
-  // Load custom storefront settings from localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined" && vendorSlug) {
-      try {
-        const raw = localStorage.getItem(`wedhub_storefront_${vendorSlug}`);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          setHeroHeadline(parsed.heroHeadline || "");
-          setHeroTagline(parsed.heroTagline || "");
-          setHeroSubtitle(parsed.heroSubtitle || "");
-          setAnnouncementText(parsed.announcementText || "");
-          setTrialButtonText(parsed.trialButtonText || "");
-          setShopButtonText(parsed.shopButtonText || "");
-        }
-      } catch {
-        // Fallback
-      }
-    }
-  }, [vendorSlug]);
-
-  function handleSaveStorefrontConfig() {
-    if (typeof window !== "undefined" && vendorSlug) {
-      const config = {
-        heroHeadline: heroHeadline.trim(),
-        heroTagline: heroTagline.trim(),
-        heroSubtitle: heroSubtitle.trim(),
-        announcementText: announcementText.trim(),
-        trialButtonText: trialButtonText.trim(),
-        shopButtonText: shopButtonText.trim(),
-      };
-      localStorage.setItem(`wedhub_storefront_${vendorSlug}`, JSON.stringify(config));
-      setSavedSettingsNotice(true);
-      setTimeout(() => {
-        setSavedSettingsNotice(false);
-        setCustomizerOpen(false);
-      }, 1500);
-    }
-  }
 
   const filteredItems = items.filter((item) => {
     if (search.trim() && !item.title.toLowerCase().includes(search.trim().toLowerCase())) return false;
@@ -486,130 +442,11 @@ export function CatalogItemsManager({
         />
       )}
 
-      {/* Storefront Customizer Modal */}
       {customizerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-6 sm:p-7 space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <div>
-                <h3 className="font-bold text-base text-neutral-900">Customize Storefront</h3>
-                <p className="text-xs text-neutral-500 mt-0.5">
-                  Update the headline, description, and announcements displayed on your public catalog.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCustomizerOpen(false)}
-                className="p-1 rounded-full hover:bg-neutral-100 text-neutral-400 font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-neutral-800 mb-1">
-                  Hero Main Headline
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Exquisite Bridal Suites for Your Special Day"
-                  value={heroHeadline}
-                  onChange={(e) => setHeroHeadline(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-neutral-800 mb-1">
-                  Pre-Heading Tagline
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Tradition Meets Timeless Beauty"
-                  value={heroTagline}
-                  onChange={(e) => setHeroTagline(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-neutral-800 mb-1">
-                  Hero Description / Subtitle
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Handcrafted rental pieces curated for unforgettable moments."
-                  value={heroSubtitle}
-                  onChange={(e) => setHeroSubtitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-neutral-800 mb-1">
-                  Top Announcement Ticker
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 100% Sanitized & Handcrafted Suites · Studio Trials Available · Flexible Rental Dates"
-                  value={announcementText}
-                  onChange={(e) => setAnnouncementText(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-neutral-800 mb-1">
-                    Shop CTA Button Label
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Shop Collection"
-                    value={shopButtonText}
-                    onChange={(e) => setShopButtonText(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-neutral-800 mb-1">
-                    Trial CTA Button Label
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Book a Studio Trial"
-                    value={trialButtonText}
-                    onChange={(e) => setTrialButtonText(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-neutral-100 flex items-center justify-between">
-              <span className="text-xs font-semibold text-emerald-600">
-                {savedSettingsNotice ? "✓ Saved successfully! Refreshing storefront." : ""}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCustomizerOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-700 hover:bg-neutral-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveStorefrontConfig}
-                  className="px-5 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover shadow-sm"
-                >
-                  Save Storefront Settings
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CatalogStorefrontCustomizer
+          initialSettings={initialStoreSettings}
+          onClose={() => setCustomizerOpen(false)}
+        />
       )}
     </div>
   );

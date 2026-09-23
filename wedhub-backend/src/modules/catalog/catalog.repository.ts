@@ -1,5 +1,5 @@
 import { prisma } from "../../config/database";
-import { Prisma, type AttributeDataType, type CatalogAvailabilityStatus } from "@prisma/client";
+import { Prisma, type AttributeDataType, type CatalogAvailabilityStatus, type StoreAccentColor } from "@prisma/client";
 import { omitUndefined } from "../../common/utils/object.util";
 
 export async function checkVendorCatalogEligibility(vendorId: string): Promise<boolean> {
@@ -364,4 +364,61 @@ export function reorderVariantFields(categoryId: string, fieldIds: string[]) {
       }),
     ),
   );
+}
+
+// ---- Public catalog page settings ----
+
+const STORE_SETTINGS_INCLUDE = {
+  bannerMedia: {
+    select: { id: true, originalObjectKey: true, optimizedObjectKey: true },
+  },
+} satisfies Prisma.CatalogStoreSettingsInclude;
+
+export function findStoreSettingsByVendorId(vendorId: string) {
+  return prisma.catalogStoreSettings.findUnique({
+    where: { vendorId },
+    include: STORE_SETTINGS_INCLUDE,
+  });
+}
+
+export interface UpsertStoreSettingsData {
+  bannerMediaId?: string | null | undefined;
+  heroHeadline?: string | null | undefined;
+  heroTagline?: string | null | undefined;
+  heroSubtitle?: string | null | undefined;
+  announcementText?: string | null | undefined;
+  shopButtonText?: string | null | undefined;
+  trialButtonText?: string | null | undefined;
+  accentColor?: StoreAccentColor | undefined;
+  categorySectionHeading?: string | null | undefined;
+  categorySectionSubheading?: string | null | undefined;
+  featuredSectionHeading?: string | null | undefined;
+  featuredSectionSubheading?: string | null | undefined;
+  promoEyebrow?: string | null | undefined;
+  promoHeading?: string | null | undefined;
+  promoDescription?: string | null | undefined;
+  promoQuote?: string | null | undefined;
+  galleryHeading?: string | null | undefined;
+  gallerySubheading?: string | null | undefined;
+  instagramUrl?: string | null | undefined;
+  trustBadges?: { title: string; subtitle: string }[] | null | undefined;
+  footerAboutText?: string | null | undefined;
+  footerQuickLinksHeading?: string | null | undefined;
+  footerSupportHeading?: string | null | undefined;
+  footerSocialHeading?: string | null | undefined;
+  footerLinks?: { label: string; url: string }[] | null | undefined;
+}
+
+export function upsertStoreSettings(vendorId: string, data: UpsertStoreSettingsData) {
+  const fields = omitUndefined({
+    ...data,
+    trustBadges: data.trustBadges as Prisma.InputJsonValue | undefined,
+    footerLinks: data.footerLinks as Prisma.InputJsonValue | undefined,
+  });
+  return prisma.catalogStoreSettings.upsert({
+    where: { vendorId },
+    create: { vendorId, ...fields },
+    update: fields,
+    include: STORE_SETTINGS_INCLUDE,
+  });
 }

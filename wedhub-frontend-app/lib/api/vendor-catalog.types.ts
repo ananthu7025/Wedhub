@@ -15,6 +15,8 @@ export type AttributeDataType =
 
 export type CatalogAvailabilityStatus = "BOOKED" | "BLOCKED";
 
+export type StoreAccentColor = "CRIMSON" | "EMERALD" | "NAVY" | "AMBER" | "PLUM" | "SLATE";
+
 export interface CatalogVariantField {
   id: string;
   categoryId: string;
@@ -136,4 +138,73 @@ export interface CatalogImportResult {
   created: number;
   failed: number;
   results: CatalogImportRowResult[];
+}
+
+// ---- Public catalog page settings ----
+
+export interface CatalogTrustBadge {
+  title: string;
+  subtitle: string;
+}
+
+export interface CatalogFooterLink {
+  label: string;
+  url: string;
+}
+
+export interface CatalogStoreSettings {
+  vendorId: string;
+  bannerUrl: string | null;
+  heroHeadline: string | null;
+  heroTagline: string | null;
+  heroSubtitle: string | null;
+  announcementText: string | null;
+  shopButtonText: string | null;
+  trialButtonText: string | null;
+  accentColor: StoreAccentColor;
+  categorySectionHeading: string | null;
+  categorySectionSubheading: string | null;
+  featuredSectionHeading: string | null;
+  featuredSectionSubheading: string | null;
+  promoEyebrow: string | null;
+  promoHeading: string | null;
+  promoDescription: string | null;
+  promoQuote: string | null;
+  galleryHeading: string | null;
+  gallerySubheading: string | null;
+  instagramUrl: string | null;
+  trustBadges: CatalogTrustBadge[] | null;
+  footerAboutText: string | null;
+  footerQuickLinksHeading: string | null;
+  footerSupportHeading: string | null;
+  footerSocialHeading: string | null;
+  footerLinks: CatalogFooterLink[] | null;
+}
+
+export interface UpdateCatalogStoreSettingsInput {
+  bannerMediaId?: string | null;
+  heroHeadline?: string | null;
+  heroTagline?: string | null;
+  heroSubtitle?: string | null;
+  announcementText?: string | null;
+  shopButtonText?: string | null;
+  trialButtonText?: string | null;
+  accentColor?: StoreAccentColor;
+  categorySectionHeading?: string | null;
+  categorySectionSubheading?: string | null;
+  featuredSectionHeading?: string | null;
+  featuredSectionSubheading?: string | null;
+  promoEyebrow?: string | null;
+  promoHeading?: string | null;
+  promoDescription?: string | null;
+  promoQuote?: string | null;
+  galleryHeading?: string | null;
+  gallerySubheading?: string | null;
+  instagramUrl?: string | null;
+  trustBadges?: CatalogTrustBadge[] | null;
+  footerAboutText?: string | null;
+  footerQuickLinksHeading?: string | null;
+  footerSupportHeading?: string | null;
+  footerSocialHeading?: string | null;
+  footerLinks?: CatalogFooterLink[] | null;
 }

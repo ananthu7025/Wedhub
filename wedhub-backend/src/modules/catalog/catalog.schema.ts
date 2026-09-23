@@ -18,6 +18,8 @@ export const attributeDataTypeEnum = z.enum([
 
 export const catalogAvailabilityStatusEnum = z.enum(["BOOKED", "BLOCKED"]);
 
+export const storeAccentColorEnum = z.enum(["CRIMSON", "EMERALD", "NAVY", "AMBER", "PLUM", "SLATE"]);
+
 // ---- Vendor: catalog items ----
 
 export const createCatalogItemVariantSchema = z.object({
@@ -102,6 +104,52 @@ export const importCatalogItemsSchema = z.object({
   csvContent: z.string().min(1).max(2_000_000), // ~2MB of CSV text
 });
 
+// ---- Vendor: public catalog page settings ----
+
+export const catalogTrustBadgeSchema = z.object({
+  title: z.string().min(1).max(60),
+  subtitle: z.string().min(1).max(120),
+});
+
+export const catalogFooterLinkSchema = z.object({
+  label: z.string().min(1).max(60),
+  url: z.string().min(1).max(500),
+});
+
+export const upsertCatalogStoreSettingsSchema = z.object({
+  bannerMediaId: z.string().uuid().nullable().optional(),
+  heroHeadline: z.string().max(200).nullable().optional(),
+  heroTagline: z.string().max(150).nullable().optional(),
+  heroSubtitle: z.string().max(500).nullable().optional(),
+  announcementText: z.string().max(300).nullable().optional(),
+  shopButtonText: z.string().max(60).nullable().optional(),
+  trialButtonText: z.string().max(60).nullable().optional(),
+  accentColor: storeAccentColorEnum.optional(),
+
+  categorySectionHeading: z.string().max(150).nullable().optional(),
+  categorySectionSubheading: z.string().max(250).nullable().optional(),
+
+  featuredSectionHeading: z.string().max(150).nullable().optional(),
+  featuredSectionSubheading: z.string().max(250).nullable().optional(),
+
+  promoEyebrow: z.string().max(60).nullable().optional(),
+  promoHeading: z.string().max(150).nullable().optional(),
+  promoDescription: z.string().max(500).nullable().optional(),
+  promoQuote: z.string().max(150).nullable().optional(),
+
+  galleryHeading: z.string().max(150).nullable().optional(),
+  gallerySubheading: z.string().max(250).nullable().optional(),
+  instagramUrl: z.string().max(300).nullable().optional(),
+
+  trustBadges: z.array(catalogTrustBadgeSchema).max(4).nullable().optional(),
+
+  footerAboutText: z.string().max(500).nullable().optional(),
+  footerQuickLinksHeading: z.string().max(60).nullable().optional(),
+  footerSupportHeading: z.string().max(60).nullable().optional(),
+  footerSocialHeading: z.string().max(60).nullable().optional(),
+  footerLinks: z.array(catalogFooterLinkSchema).max(12).nullable().optional(),
+});
+
 export type CreateCatalogItemInput = z.infer<typeof createCatalogItemSchema>;
 export type UpdateCatalogItemInput = z.infer<typeof updateCatalogItemSchema>;
 export type SetAvailabilityInput = z.infer<typeof setAvailabilitySchema>;
@@ -109,3 +157,6 @@ export type ClearAvailabilityInput = z.infer<typeof clearAvailabilitySchema>;
 export type UpsertCatalogVariantFieldInput = z.infer<typeof upsertCatalogVariantFieldSchema>;
 export type ReorderCatalogVariantFieldsInput = z.infer<typeof reorderCatalogVariantFieldsSchema>;
 export type ImportCatalogItemsInput = z.infer<typeof importCatalogItemsSchema>;
+export type UpsertCatalogStoreSettingsInput = z.infer<typeof upsertCatalogStoreSettingsSchema>;
+export type CatalogTrustBadgeInput = z.infer<typeof catalogTrustBadgeSchema>;
+export type CatalogFooterLinkInput = z.infer<typeof catalogFooterLinkSchema>;

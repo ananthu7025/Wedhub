@@ -1,6 +1,6 @@
 import "server-only";
 import { apiFetch } from "./client";
-import type { CatalogAvailabilityEntry, CatalogItem } from "./vendor-catalog.types";
+import type { CatalogAvailabilityEntry, CatalogItem, CatalogStoreSettings } from "./vendor-catalog.types";
 
 export function fetchVendorCatalogItems() {
   return apiFetch<CatalogItem[]>("/catalog/me/items", {
@@ -30,6 +30,19 @@ export function fetchPublicCatalogItems(vendorSlug: string) {
 export function fetchPublicCatalogItemAvailability(itemId: string, from?: string, to?: string) {
   return apiFetch<CatalogAvailabilityEntry[]>(`/public-catalog/items/${itemId}/availability`, {
     query: { from, to },
+    skipAuth: true,
+    cache: "no-store",
+  });
+}
+
+export function fetchVendorCatalogStoreSettings() {
+  return apiFetch<CatalogStoreSettings>("/catalog/me/settings", {
+    cache: "no-store",
+  });
+}
+
+export function fetchPublicCatalogStoreSettings(vendorSlug: string) {
+  return apiFetch<CatalogStoreSettings>(`/public-catalog/vendors/${encodeURIComponent(vendorSlug)}/settings`, {
     skipAuth: true,
     cache: "no-store",
   });

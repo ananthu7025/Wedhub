@@ -14,7 +14,43 @@ import type {
   UpsertCatalogVariantFieldInput,
   ReorderCatalogVariantFieldsInput,
   ImportCatalogItemsInput,
+  UpsertCatalogStoreSettingsInput,
 } from "./catalog.types";
+
+type StoreSettingsWithRelations = Awaited<ReturnType<typeof catalogRepository.findStoreSettingsByVendorId>>;
+
+function formatStoreSettings(settings: StoreSettingsWithRelations | null, vendorId: string) {
+  return {
+    vendorId,
+    bannerUrl: settings?.bannerMedia
+      ? getPublicUrl(settings.bannerMedia.optimizedObjectKey ?? settings.bannerMedia.originalObjectKey)
+      : null,
+    heroHeadline: settings?.heroHeadline ?? null,
+    heroTagline: settings?.heroTagline ?? null,
+    heroSubtitle: settings?.heroSubtitle ?? null,
+    announcementText: settings?.announcementText ?? null,
+    shopButtonText: settings?.shopButtonText ?? null,
+    trialButtonText: settings?.trialButtonText ?? null,
+    accentColor: settings?.accentColor ?? "CRIMSON",
+    categorySectionHeading: settings?.categorySectionHeading ?? null,
+    categorySectionSubheading: settings?.categorySectionSubheading ?? null,
+    featuredSectionHeading: settings?.featuredSectionHeading ?? null,
+    featuredSectionSubheading: settings?.featuredSectionSubheading ?? null,
+    promoEyebrow: settings?.promoEyebrow ?? null,
+    promoHeading: settings?.promoHeading ?? null,
+    promoDescription: settings?.promoDescription ?? null,
+    promoQuote: settings?.promoQuote ?? null,
+    galleryHeading: settings?.galleryHeading ?? null,
+    gallerySubheading: settings?.gallerySubheading ?? null,
+    instagramUrl: settings?.instagramUrl ?? null,
+    trustBadges: (settings?.trustBadges as { title: string; subtitle: string }[] | null) ?? null,
+    footerAboutText: settings?.footerAboutText ?? null,
+    footerQuickLinksHeading: settings?.footerQuickLinksHeading ?? null,
+    footerSupportHeading: settings?.footerSupportHeading ?? null,
+    footerSocialHeading: settings?.footerSocialHeading ?? null,
+    footerLinks: (settings?.footerLinks as { label: string; url: string }[] | null) ?? null,
+  };
+}
 
 type CatalogItemWithRelations = Awaited<ReturnType<typeof catalogRepository.findCatalogItems>>[number];
 
@@ -409,4 +445,55 @@ export async function listPublicCatalogItems(vendorSlug: string) {
   }
   const items = await catalogRepository.findCatalogItems(vendor.id, false);
   return items.map(formatItem);
+}
+
+// ---- Public catalog page settings ----
+
+export async function getVendorStoreSettings(userId: string) {
+  const vendor = await getOwnedVendorOrThrow(userId);
+  const settings = await catalogRepository.findStoreSettingsByVendorId(vendor.id);
+  return formatStoreSettings(settings, vendor.id);
+}
+
+export async function updateVendorStoreSettings(userId: string, input: UpsertCatalogStoreSettingsInput) {
+  const vendor = await getOwnedVendorOrThrow(userId);
+  await assertVendorFeatureAccess(vendor.id, "catalog_access", "Catalog");
+
+  const settings = await catalogRepository.upsertStoreSettings(vendor.id, {
+    bannerMediaId: input.bannerMediaId,
+    heroHeadline: input.heroHeadline,
+    heroTagline: input.heroTagline,
+    heroSubtitle: input.heroSubtitle,
+    announcementText: input.announcementText,
+    shopButtonText: input.shopButtonText,
+    trialButtonText: input.trialButtonText,
+    accentColor: input.accentColor,
+    categorySectionHeading: input.categorySectionHeading,
+    categorySectionSubheading: input.categorySectionSubheading,
+    featuredSectionHeading: input.featuredSectionHeading,
+    featuredSectionSubheading: input.featuredSectionSubheading,
+    promoEyebrow: input.promoEyebrow,
+    promoHeading: input.promoHeading,
+    promoDescription: input.promoDescription,
+    promoQuote: input.promoQuote,
+    galleryHeading: input.galleryHeading,
+    gallerySubheading: input.gallerySubheading,
+    instagramUrl: input.instagramUrl,
+    trustBadges: input.trustBadges,
+    footerAboutText: input.footerAboutText,
+    footerQuickLinksHeading: input.footerQuickLinksHeading,
+    footerSupportHeading: input.footerSupportHeading,
+    footerSocialHeading: input.footerSocialHeading,
+    footerLinks: input.footerLinks,
+  });
+  return formatStoreSettings(settings, vendor.id);
+}
+
+export async function getPublicStoreSettings(vendorSlug: string) {
+  const vendor = await findApprovedVendorBySlug(vendorSlug);
+  if (!vendor) {
+    throw new NotFoundError("Vendor not found");
+  }
+  const settings = await catalogRepository.findStoreSettingsByVendorId(vendor.id);
+  return formatStoreSettings(settings, vendor.id);
 }

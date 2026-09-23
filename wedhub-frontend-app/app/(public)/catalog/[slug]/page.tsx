@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getVendorBySlug } from "@/lib/api/catalog";
-import { fetchPublicCatalogItems } from "@/lib/api/vendor-catalog";
+import { fetchPublicCatalogItems, fetchPublicCatalogStoreSettings } from "@/lib/api/vendor-catalog";
 import { ApiRequestError } from "@/lib/api/types";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import type { CatalogStoreSettings } from "@/lib/api/vendor-catalog.types";
 import { ShopifyCatalogView } from "./ShopifyCatalogView";
 
 interface CatalogPageProps {
@@ -46,14 +47,17 @@ export default async function PublicCatalogStorePage({ params }: CatalogPageProp
 
   let vendor;
   let items = [];
+  let storeSettings: CatalogStoreSettings | null = null;
 
   try {
-    const [vendorRes, itemsRes] = await Promise.all([
+    const [vendorRes, itemsRes, settingsRes] = await Promise.all([
       getVendorBySlug(slug),
       fetchPublicCatalogItems(slug).catch(() => ({ data: [] })),
+      fetchPublicCatalogStoreSettings(slug).catch(() => ({ data: undefined })),
     ]);
     vendor = vendorRes.data;
     items = itemsRes.data || [];
+    storeSettings = settingsRes.data ?? null;
   } catch (err) {
     if (err instanceof ApiRequestError && err.status === 404) {
       notFound();
@@ -65,5 +69,5 @@ export default async function PublicCatalogStorePage({ params }: CatalogPageProp
     notFound();
   }
 
-  return <ShopifyCatalogView vendor={vendor} initialItems={items} />;
+  return <ShopifyCatalogView vendor={vendor} initialItems={items} storeSettings={storeSettings} />;
 }

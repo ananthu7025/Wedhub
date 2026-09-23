@@ -606,6 +606,7 @@ model Vendor {
   attributeValues         VendorAttributeValue[]
   packages                Package[]
   catalogItems            CatalogItem[]
+  catalogStoreSettings    CatalogStoreSettings?
   invitations             VendorInvitation[]
   statusHistory           VendorStatusHistory[]
   media                   Media[]
@@ -903,6 +904,66 @@ model CatalogItemAvailability {
   @@map("catalog_item_availability")
 }
 
+// Vendor-editable public catalog page settings (banner, hero copy, accent
+// color) — one row per vendor, created lazily on first save. Mirrors
+// VendorStore's tagline/aboutStore/accentColor customization pattern so the
+// "Customize Storefront" UI (previously localStorage-only, never actually
+// persisted) has a real backend to save to.
+model CatalogStoreSettings {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId         String           @unique @map("vendor_id") @db.Uuid
+  bannerMediaId    String?          @map("banner_media_id") @db.Uuid
+  heroHeadline     String?          @map("hero_headline")
+  heroTagline      String?          @map("hero_tagline")
+  heroSubtitle     String?          @map("hero_subtitle") @db.Text
+  announcementText String?          @map("announcement_text")
+  shopButtonText   String?          @map("shop_button_text")
+  trialButtonText  String?          @map("trial_button_text")
+  accentColor      StoreAccentColor @default(CRIMSON) @map("accent_color")
+
+  // "Shop by Category" section — hidden if heading is unset (no fallback
+  // hardcoded English copy; see catalog.service.ts formatStoreSettings).
+  categorySectionHeading    String? @map("category_section_heading")
+  categorySectionSubheading String? @map("category_section_subheading")
+
+  // "Featured Collections" section
+  featuredSectionHeading    String? @map("featured_section_heading")
+  featuredSectionSubheading String? @map("featured_section_subheading")
+
+  // Studio-trial / promo banner block
+  promoEyebrow     String? @map("promo_eyebrow")
+  promoHeading     String? @map("promo_heading")
+  promoDescription String? @map("promo_description") @db.Text
+  promoQuote       String? @map("promo_quote")
+
+  // "Real Brides, Real Moments" photo gallery section — real catalog photos
+  // only, no fabricated testimonial quotes/names (no such data model exists).
+  galleryHeading    String? @map("gallery_heading")
+  gallerySubheading String? @map("gallery_subheading")
+  instagramUrl      String? @map("instagram_url")
+
+  // Up to 4 {title, subtitle} pairs, vendor-ordered — icon stays fixed per
+  // position, only the copy is vendor-editable. A JSON list rather than 8
+  // flat fields since the count/order is vendor-controlled, not fixed.
+  trustBadges Json? @map("trust_badges")
+
+  // Footer customization — column headings plus a single ordered list of
+  // {label, url} links replacing the two previously-fixed 5-link columns.
+  footerAboutText         String? @map("footer_about_text") @db.Text
+  footerQuickLinksHeading String? @map("footer_quick_links_heading")
+  footerSupportHeading    String? @map("footer_support_heading")
+  footerSocialHeading     String? @map("footer_social_heading")
+  footerLinks             Json?   @map("footer_links")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  vendor      Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  bannerMedia Media? @relation("CatalogStoreBanner", fields: [bannerMediaId], references: [id], onDelete: SetNull)
+
+  @@map("catalog_store_settings")
+}
+
 model VendorInvitation {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   vendorId         String    @map("vendor_id") @db.Uuid
@@ -1085,6 +1146,7 @@ model Media {
   challengeEntryPhotoFor       ChallengeEntryPhoto?   @relation("ChallengeEntryAdditionalPhoto")
   ruleBookFor                  Vendor[]               @relation("VendorRuleBook")
   messageAttachmentFor         Message[]              @relation("MessageAttachment")
+  catalogStoreBannerFor        CatalogStoreSettings[] @relation("CatalogStoreBanner")
 
   @@index([vendorId])
   @@index([userId])

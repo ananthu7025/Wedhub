@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { VendorShell } from "@/components/shared/VendorShell";
 import { requireVendorOwnership } from "@/lib/auth/require-vendor";
-import { fetchVendorCatalogItems } from "@/lib/api/vendor-catalog";
+import { fetchVendorCatalogItems, fetchVendorCatalogStoreSettings } from "@/lib/api/vendor-catalog";
 import { getCategoryBySlug } from "@/lib/api/catalog";
 import { getMyEffectivePlan } from "@/lib/api/vendor-self";
 import { CatalogItemsManager } from "./CatalogItemsManager";
-import type { CatalogItem, CatalogVariantField } from "@/lib/api/vendor-catalog.types";
+import type { CatalogItem, CatalogStoreSettings, CatalogVariantField } from "@/lib/api/vendor-catalog.types";
 
 export const metadata: Metadata = {
   title: "Catalog | WedHub Vendor Hub",
@@ -25,15 +25,18 @@ export default async function VendorCatalogPage() {
 
   let items: CatalogItem[] = [];
   let variantFields: CatalogVariantField[] = [];
+  let storeSettings: CatalogStoreSettings | null = null;
 
   if (isEligible && primaryCategory) {
     try {
-      const [itemsRes, categoryRes] = await Promise.all([
+      const [itemsRes, categoryRes, settingsRes] = await Promise.all([
         fetchVendorCatalogItems(),
         getCategoryBySlug(primaryCategory.slug),
+        fetchVendorCatalogStoreSettings().catch(() => ({ data: undefined })),
       ]);
       items = itemsRes.data ?? [];
       variantFields = categoryRes.data?.catalogVariantFields ?? [];
+      storeSettings = settingsRes.data ?? null;
     } catch {
       items = [];
       variantFields = [];
@@ -78,6 +81,7 @@ export default async function VendorCatalogPage() {
             variantFields={variantFields}
             vendorSlug={vendor.slug}
             vendorName={vendor.businessName}
+            initialStoreSettings={storeSettings}
           />
         )}
       </div>

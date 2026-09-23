@@ -12,6 +12,7 @@ import {
   reorderCatalogVariantFieldsSchema,
   setAvailabilitySchema,
   updateCatalogItemSchema,
+  upsertCatalogStoreSettingsSchema,
   upsertCatalogVariantFieldSchema,
 } from "./catalog.schema";
 
@@ -45,11 +46,19 @@ catalogRouter.post(
 catalogRouter.get("/me/import-template", asyncHandler(controller.getImportTemplate));
 catalogRouter.post("/me/items/import", validateBody(importCatalogItemsSchema), asyncHandler(controller.importItems));
 
+catalogRouter.get("/me/settings", asyncHandler(controller.getMyStoreSettings));
+catalogRouter.put(
+  "/me/settings",
+  validateBody(upsertCatalogStoreSettingsSchema),
+  asyncHandler(controller.updateMyStoreSettings),
+);
+
 // ---------------------------------------------------------------------------
 // Public Endpoints: /api/v1/catalog/*
 // ---------------------------------------------------------------------------
 publicCatalogRouter.get("/vendors/:slug/items", asyncHandler(controller.listPublicItems));
 publicCatalogRouter.get("/items/:id/availability", asyncHandler(controller.getPublicAvailability));
+publicCatalogRouter.get("/vendors/:slug/settings", asyncHandler(controller.getPublicStoreSettings));
 
 // ---------------------------------------------------------------------------
 // Admin: /api/v1/admin/categories/:categoryId/catalog-variant-fields

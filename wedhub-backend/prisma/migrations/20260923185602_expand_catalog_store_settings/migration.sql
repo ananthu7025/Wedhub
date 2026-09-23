@@ -1,0 +1,18 @@
+-- AlterTable
+ALTER TABLE "catalog_store_settings" ADD COLUMN     "category_section_heading" TEXT,
+ADD COLUMN     "category_section_subheading" TEXT,
+ADD COLUMN     "featured_section_heading" TEXT,
+ADD COLUMN     "featured_section_subheading" TEXT,
+ADD COLUMN     "footer_about_text" TEXT,
+ADD COLUMN     "footer_links" JSONB,
+ADD COLUMN     "footer_quick_links_heading" TEXT,
+ADD COLUMN     "footer_social_heading" TEXT,
+ADD COLUMN     "footer_support_heading" TEXT,
+ADD COLUMN     "gallery_heading" TEXT,
+ADD COLUMN     "gallery_subheading" TEXT,
+ADD COLUMN     "instagram_url" TEXT,
+ADD COLUMN     "promo_description" TEXT,
+ADD COLUMN     "promo_eyebrow" TEXT,
+ADD COLUMN     "promo_heading" TEXT,
+ADD COLUMN     "promo_quote" TEXT,
+ADD COLUMN     "trust_badges" JSONB;

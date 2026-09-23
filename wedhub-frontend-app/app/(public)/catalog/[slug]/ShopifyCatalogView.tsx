@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { VendorDetail } from "@/lib/api/vendors.types";
-import type { CatalogItem, CatalogItemVariant } from "@/lib/api/vendor-catalog.types";
+import type { CatalogItem, CatalogItemVariant, CatalogStoreSettings } from "@/lib/api/vendor-catalog.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
+import { themeForCatalog } from "./catalog-theme";
 
 // --- Clean SVG Icon Definitions (No System Icons / Emojis) ---
 
@@ -113,6 +114,22 @@ function ChevronDownSvg({ className = "w-3 h-3" }: { className?: string }) {
   );
 }
 
+function ChevronLeftSvg({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+    </svg>
+  );
+}
+
+function ChevronRightSvg({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+    </svg>
+  );
+}
+
 function ArrowRightSvg({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -129,23 +146,18 @@ function InstagramSvg({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
+// Fixed icon per trust-badge position — only the title/subtitle text is
+// vendor-editable (see CatalogStoreSettings.trustBadges), matching the
+// project's convention elsewhere of closed icon/preset sets rather than
+// free-form icon choice.
+const TRUST_BADGE_ICONS = [SanitizedSvg, CalendarSvg, WhatsAppSvg, ShieldCheckSvg];
+
 function CheckSvg({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
     </svg>
   );
-}
-
-// --- Dynamic Storefront Config Structure ---
-
-export interface CustomStorefrontConfig {
-  heroHeadline?: string;
-  heroSubtitle?: string;
-  heroTagline?: string;
-  announcementText?: string;
-  trialButtonText?: string;
-  shopButtonText?: string;
 }
 
 interface CartItemEntry {
@@ -158,30 +170,27 @@ interface CartItemEntry {
 export function ShopifyCatalogView({
   vendor,
   initialItems,
+  storeSettings,
 }: {
   vendor: VendorDetail;
   initialItems: CatalogItem[];
+  storeSettings?: CatalogStoreSettings | null;
 }) {
   const [items] = useState<CatalogItem[]>(initialItems);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [activeTab, setActiveTab] = useState<"new-arrivals" | "best-sellers" | "featured">("new-arrivals");
 
-  // Load any vendor-saved custom storefront config from localStorage
-  const [customConfig, setCustomConfig] = useState<CustomStorefrontConfig>({});
+  // Vendor-saved storefront settings, persisted server-side via /catalog/me/settings
+  const customConfig = storeSettings ?? null;
+  const theme = themeForCatalog(storeSettings?.accentColor ?? "CRIMSON");
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && vendor.slug) {
-      try {
-        const saved = localStorage.getItem(`wedhub_storefront_${vendor.slug}`);
-        if (saved) {
-          setCustomConfig(JSON.parse(saved));
-        }
-      } catch {
-        // Fallback to defaults
-      }
-    }
-  }, [vendor.slug]);
+  // Vendor-authored footer links split across the two footer columns —
+  // one ordered list rather than two fixed 5-link columns, so the vendor
+  // controls count/order/labels/urls entirely.
+  const footerLinks = customConfig?.footerLinks ?? [];
+  const footerLinksFirstHalf = footerLinks.slice(0, Math.ceil(footerLinks.length / 2));
+  const footerLinksSecondHalf = footerLinks.slice(Math.ceil(footerLinks.length / 2));
 
   // Wishlist state
   const [wishlist, setWishlist] = useState<string[]>([]);
@@ -209,18 +218,16 @@ export function ShopifyCatalogView({
   const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category?.name || "Bridal Rentals";
   const cityName = vendor.city?.name || "Studio";
 
-  // Dynamic texts configured by vendor or derived directly from vendor profile (NO HARDCODED STATIC TEXT)
-  const heroPreheading = customConfig.heroTagline || "Tradition Meets Timeless Beauty";
-  const heroTitle = customConfig.heroHeadline || `Exquisite ${primaryCategory} for Your Special Day`;
-  const heroSubtitle =
-    customConfig.heroSubtitle ||
-    vendor.profile?.shortDescription ||
-    `Premium ${primaryCategory.toLowerCase()} collections, handcrafted with love for unforgettable celebrations.`;
-  const trialBtnLabel = customConfig.trialButtonText || "Book a Trial";
-  const shopBtnLabel = customConfig.shopButtonText || "Shop Collection";
-  const topAnnouncement =
-    customConfig.announcementText ||
-    `100% Sanitized & Handcrafted Suites · Studio Trials Available · Free Delivery in ${cityName} · Flexible Rental Dates`;
+  // All vendor-facing marketing copy comes only from customConfig (real
+  // settings, saved via the "Customize Storefront" modal) or from the
+  // vendor's own profile data — never a hardcoded marketing fallback string.
+  // A field that's unset simply doesn't render (see each section's guard).
+  const heroPreheading = customConfig?.heroTagline || null;
+  const heroTitle = customConfig?.heroHeadline || vendor.businessName;
+  const heroSubtitle = customConfig?.heroSubtitle || vendor.profile?.shortDescription || null;
+  const trialBtnLabel = customConfig?.trialButtonText || null;
+  const shopBtnLabel = customConfig?.shopButtonText || null;
+  const topAnnouncement = customConfig?.announcementText || null;
 
   // Dynamically derive categories strictly from the vendor's actual catalog items & categories
   const dynamicCategories = useMemo(() => {
@@ -432,8 +439,10 @@ export function ShopifyCatalogView({
     window.open(whatsappUrl, "_blank");
   }
 
-  // Cover image from vendor profile or first catalog item (NO EXTERNAL STATIC IMAGES)
+  // Custom banner (vendor-uploaded via "Customize Storefront") takes priority,
+  // then vendor's cover photo, then the first catalog item's photo (NO EXTERNAL STATIC IMAGES)
   const heroImage =
+    customConfig?.bannerUrl ||
     (vendor.profile?.coverMedia
       ? getPublicMediaUrl(
           vendor.profile.coverMedia.optimizedObjectKey ?? vendor.profile.coverMedia.originalObjectKey
@@ -442,32 +451,71 @@ export function ShopifyCatalogView({
     items[0]?.media[0]?.url ||
     null;
 
+  // Hero carousel: the custom/cover banner first (if set), then a few more
+  // catalog item photos so there's something to page through even without
+  // a dedicated multi-image hero upload flow.
+  const heroImages = useMemo(() => {
+    const seen = new Set<string>();
+    const images: string[] = [];
+    if (heroImage) {
+      images.push(heroImage);
+      seen.add(heroImage);
+    }
+    for (const item of items) {
+      for (const m of item.media) {
+        const url = m.url ?? m.thumbnailUrl;
+        if (url && !seen.has(url)) {
+          images.push(url);
+          seen.add(url);
+        }
+        if (images.length >= 5) break;
+      }
+      if (images.length >= 5) break;
+    }
+    return images;
+  }, [heroImage, items]);
+
+  const [heroSlide, setHeroSlide] = useState(0);
+  const activeHeroImage = heroImages[heroSlide] ?? null;
+
+  function goToHeroSlide(index: number) {
+    if (heroImages.length === 0) return;
+    setHeroSlide(((index % heroImages.length) + heroImages.length) % heroImages.length);
+  }
+
+  // "Real Brides, Real Moments" — real catalog photos only, no fabricated
+  // customer names/quotes (there's no testimonial data model). Excludes
+  // whatever's already shown in the hero carousel so it reads as more photos,
+  // not repeats.
+  const galleryPhotos = useMemo(() => {
+    const excluded = new Set(heroImages);
+    const photos: string[] = [];
+    for (const item of items) {
+      for (const m of item.media) {
+        const url = m.url ?? m.thumbnailUrl;
+        if (url && !excluded.has(url) && !photos.includes(url)) {
+          photos.push(url);
+        }
+        if (photos.length >= 6) break;
+      }
+      if (photos.length >= 6) break;
+    }
+    return photos;
+  }, [items, heroImages]);
+
   return (
     <div className="min-h-screen bg-[#FCFBF7] text-[#1E1E1E] font-sans antialiased selection:bg-[#8F6B38] selection:text-white">
-      {/* 1. Top Announcement Bar (Clean SVGs, no emojis) */}
+      {/* 1. Top Announcement Bar — single vendor-authored line, hidden if unset */}
       <div className="bg-[#141414] text-[#E0D9CE] text-[11px] sm:text-xs py-2 px-4 sm:px-8 border-b border-[#2A2A2A]">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="hidden lg:flex items-center gap-6">
-            <span className="flex items-center gap-1.5">
+          {topAnnouncement ? (
+            <div className="hidden lg:flex items-center gap-1.5">
               <SparklesSvg className="w-3.5 h-3.5 text-[#D8B478]" />
-              <span>100% Sanitized &amp; Handcrafted Suites</span>
-            </span>
-            <span className="text-[#3A3A3A]">|</span>
-            <span className="flex items-center gap-1.5">
-              <HomeSvg className="w-3.5 h-3.5 text-[#D8B478]" />
-              <span>Studio Trials Available</span>
-            </span>
-            <span className="text-[#3A3A3A]">|</span>
-            <span className="flex items-center gap-1.5">
-              <MapPinSvg className="w-3.5 h-3.5 text-[#D8B478]" />
-              <span>Free Delivery in {cityName}</span>
-            </span>
-            <span className="text-[#3A3A3A]">|</span>
-            <span className="flex items-center gap-1.5">
-              <CalendarSvg className="w-3.5 h-3.5 text-[#D8B478]" />
-              <span>Flexible Rental Dates</span>
-            </span>
-          </div>
+              <span>{topAnnouncement}</span>
+            </div>
+          ) : (
+            <div className="hidden lg:block" />
+          )}
 
           <div className="flex items-center justify-between w-full lg:w-auto gap-4 text-[11px]">
             <a
@@ -595,34 +643,44 @@ export function ShopifyCatalogView({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20 flex flex-col lg:flex-row items-center justify-between gap-12">
           {/* Left Hero Content */}
           <div className="max-w-xl z-10">
-            <span className="text-[11px] uppercase tracking-widest text-[#9A743D] font-bold">
-              {heroPreheading}
-            </span>
+            {heroPreheading && (
+              <span className="text-[11px] uppercase tracking-widest text-[#9A743D] font-bold">
+                {heroPreheading}
+              </span>
+            )}
             <h1 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-serif text-[#1C1A17] font-normal leading-[1.15]">
               {heroTitle}
             </h1>
-            <p className="mt-4 text-sm sm:text-base text-[#615A52] leading-relaxed font-light">
-              {heroSubtitle}
-            </p>
+            {heroSubtitle && (
+              <p className="mt-4 text-sm sm:text-base text-[#615A52] leading-relaxed font-light">
+                {heroSubtitle}
+              </p>
+            )}
 
-            <div className="mt-8 flex flex-wrap items-center gap-4">
-              <a
-                href="#catalog-grid"
-                className="px-7 py-3.5 rounded-lg bg-[#966E36] hover:bg-[#805C2B] text-white text-xs sm:text-sm font-semibold tracking-wide transition shadow-sm flex items-center gap-2"
-              >
-                <span>{shopBtnLabel}</span>
-                <ArrowRightSvg className="w-4 h-4" />
-              </a>
-              <a
-                href={`https://wa.me/${vendorPhone}?text=${encodeURIComponent(`Hi ${vendor.businessName}, I would like to book a trial appointment.`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-6 py-3.5 rounded-lg border border-[#8C7A65] text-[#2F2922] hover:bg-white text-xs sm:text-sm font-semibold tracking-wide transition flex items-center gap-2"
-              >
-                <span>{trialBtnLabel}</span>
-                <CalendarSvg className="w-4 h-4" />
-              </a>
-            </div>
+            {(shopBtnLabel || trialBtnLabel) && (
+              <div className="mt-8 flex flex-wrap items-center gap-4">
+                {shopBtnLabel && (
+                  <a
+                    href="#catalog-grid"
+                    className={`px-7 py-3.5 rounded-lg ${theme.accentBgClass} ${theme.accentBgHoverClass} text-white text-xs sm:text-sm font-semibold tracking-wide transition shadow-sm flex items-center gap-2`}
+                  >
+                    <span>{shopBtnLabel}</span>
+                    <ArrowRightSvg className="w-4 h-4" />
+                  </a>
+                )}
+                {trialBtnLabel && (
+                  <a
+                    href={`https://wa.me/${vendorPhone}?text=${encodeURIComponent(`Hi ${vendor.businessName}, I would like to book a trial appointment.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-3.5 rounded-lg border border-[#8C7A65] text-[#2F2922] hover:bg-white text-xs sm:text-sm font-semibold tracking-wide transition flex items-center gap-2"
+                  >
+                    <span>{trialBtnLabel}</span>
+                    <CalendarSvg className="w-4 h-4" />
+                  </a>
+                )}
+              </div>
+            )}
 
             {/* Micro Trust Indicators */}
             <div className="mt-10 pt-6 border-t border-[#E2DBD0] flex items-center gap-6 sm:gap-8 text-xs text-[#524B43]">
@@ -650,12 +708,12 @@ export function ShopifyCatalogView({
             </div>
           </div>
 
-          {/* Right Hero Image Card (Vendor's real cover or luxury SVG badge) */}
+          {/* Right Hero Image Carousel (Vendor's real photos or luxury SVG badge) */}
           <div className="relative w-full max-w-lg aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-[#EFE9DF]">
-            {heroImage ? (
+            {activeHeroImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={heroImage}
+                src={activeHeroImage}
                 alt={vendor.businessName}
                 className="w-full h-full object-cover"
               />
@@ -675,6 +733,40 @@ export function ShopifyCatalogView({
               </span>
               <div className="w-16 h-0.5 bg-[#D4AF37] ml-auto mt-2" />
             </div>
+
+            {heroImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => goToHeroSlide(heroSlide - 1)}
+                  aria-label="Previous photo"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/85 backdrop-blur-xs flex items-center justify-center text-[#2E2A25] hover:bg-white transition shadow-sm"
+                >
+                  <ChevronLeftSvg className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToHeroSlide(heroSlide + 1)}
+                  aria-label="Next photo"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/85 backdrop-blur-xs flex items-center justify-center text-[#2E2A25] hover:bg-white transition shadow-sm"
+                >
+                  <ChevronRightSvg className="w-4 h-4" />
+                </button>
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                  {heroImages.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => goToHeroSlide(idx)}
+                      aria-label={`Go to photo ${idx + 1}`}
+                      className={`h-1.5 rounded-full transition-all ${
+                        idx === heroSlide ? "w-5 bg-white" : "w-1.5 bg-white/50 hover:bg-white/75"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -684,12 +776,16 @@ export function ShopifyCatalogView({
         <section id="catalog-grid" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="flex items-end justify-between mb-8">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">
-                Shop by Category
-              </h2>
-              <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
-                Explore our handcrafted collections
-              </p>
+              {customConfig?.categorySectionHeading && (
+                <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">
+                  {customConfig.categorySectionHeading}
+                </h2>
+              )}
+              {customConfig?.categorySectionSubheading && (
+                <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
+                  {customConfig.categorySectionSubheading}
+                </p>
+              )}
             </div>
             <button
               type="button"
@@ -709,7 +805,7 @@ export function ShopifyCatalogView({
                   key={cat.name}
                   onClick={() => setSelectedCategory(isSelected ? "ALL" : cat.name)}
                   className={`group relative aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer shadow-sm transition-all duration-300 hover:shadow-lg bg-[#EFE9DF] ${
-                    isSelected ? "ring-2 ring-[#916B33] scale-[1.02]" : ""
+                    isSelected ? `ring-2 ${theme.accentRingClass} scale-[1.02]` : ""
                   }`}
                 >
                   {cat.sampleImage ? (
@@ -742,12 +838,16 @@ export function ShopifyCatalogView({
       <section id="featured-collections" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-[#EAE5DC]">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">
-              Featured Collections
-            </h2>
-            <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
-              Our most loved pieces, curated for you
-            </p>
+            {customConfig?.featuredSectionHeading && (
+              <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">
+                {customConfig.featuredSectionHeading}
+              </h2>
+            )}
+            {customConfig?.featuredSectionSubheading && (
+              <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
+                {customConfig.featuredSectionSubheading}
+              </p>
+            )}
           </div>
 
           {/* Collection Tab Filters */}
@@ -851,7 +951,7 @@ export function ShopifyCatalogView({
                       )}
 
                       {/* "New" Ochre Badge */}
-                      <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-[#D4AF37] text-white text-[10px] font-bold tracking-wide">
+                      <span className={`absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full ${theme.accentBgClass} text-white text-[10px] font-bold tracking-wide`}>
                         New
                       </span>
 
@@ -920,153 +1020,200 @@ export function ShopifyCatalogView({
         )}
       </section>
 
-      {/* 6. Value Proposition 4-Card Strip (SVGs, no emojis) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          <div className="bg-white p-5 rounded-2xl border border-[#EDE8E0] shadow-xs flex items-center gap-4">
-            <div className="h-11 w-11 rounded-full bg-[#FAF6EE] border border-[#E8DFC8] flex items-center justify-center text-[#9A743D] shrink-0">
-              <SanitizedSvg className="w-5 h-5" />
+      {/* 6. Value Proposition Card Strip — vendor-authored trust badges, icon fixed per position */}
+      {customConfig?.trustBadges && customConfig.trustBadges.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {customConfig.trustBadges.slice(0, 4).map((badge, idx) => {
+              const Icon = TRUST_BADGE_ICONS[idx] ?? SparklesSvg;
+              return (
+                <div key={idx} className="bg-white p-5 rounded-2xl border border-[#EDE8E0] shadow-xs flex items-center gap-4">
+                  <div className="h-11 w-11 rounded-full bg-[#FAF6EE] border border-[#E8DFC8] flex items-center justify-center text-[#9A743D] shrink-0">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs sm:text-sm text-[#1C1A17]">{badge.title}</h4>
+                    <p className="text-[11px] text-[#7A7165] mt-0.5">{badge.subtitle}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* 7. Studio Trials / promo banner — fully vendor-authored, hidden if unset */}
+      {customConfig?.promoHeading && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="bg-[#EFE9DF] rounded-3xl overflow-hidden border border-[#E0D7C8] flex flex-col md:flex-row items-center justify-between shadow-sm">
+            <div className="w-full md:w-1/2 aspect-[16/9] md:aspect-auto h-56 md:h-72 overflow-hidden bg-[#E2DBD0]">
+              {items[1]?.media[0]?.url || heroImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={items[1]?.media[0]?.url || heroImage || ""}
+                  alt={customConfig.promoHeading}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[#9A743D]">
+                  <HomeSvg className="w-12 h-12" />
+                </div>
+              )}
             </div>
+
+            <div className="p-8 md:p-12 w-full md:w-1/2 relative">
+              {customConfig.promoEyebrow && (
+                <span className="text-[10px] uppercase tracking-widest text-[#8F6B38] font-bold">
+                  {customConfig.promoEyebrow}
+                </span>
+              )}
+              <h3 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] mt-1.5 font-normal">
+                {customConfig.promoHeading}
+              </h3>
+              {customConfig.promoDescription && (
+                <p className="mt-2 text-xs sm:text-sm text-[#61584C] font-light max-w-md leading-relaxed">
+                  {customConfig.promoDescription}
+                </p>
+              )}
+
+              {trialBtnLabel && (
+                <a
+                  href={`https://wa.me/${vendorPhone}?text=${encodeURIComponent(`Hi ${vendor.businessName}, I would like to book a studio appointment.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#181818] text-white text-xs sm:text-sm font-semibold hover:bg-black transition shadow-sm"
+                >
+                  <span>{trialBtnLabel}</span>
+                  <ArrowRightSvg className="w-4 h-4" />
+                </a>
+              )}
+
+              {customConfig.promoQuote && (
+                <div className="hidden sm:block absolute right-8 bottom-6 font-serif italic text-2xl text-[#8F6B38]/80">
+                  {customConfig.promoQuote}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 7b. Vendor-authored photo gallery — real catalog photos only, no
+          fabricated testimonial quotes/names. Hidden unless the vendor has
+          both set a heading and there are photos to show. */}
+      {galleryPhotos.length > 0 && customConfig?.galleryHeading && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="flex items-end justify-between mb-6">
             <div>
-              <h4 className="font-bold text-xs sm:text-sm text-[#1C1A17]">100% Sanitized</h4>
-              <p className="text-[11px] text-[#7A7165] mt-0.5">Steam cleaned &amp; boxed safely</p>
+              <h2 className="text-xl sm:text-2xl font-serif text-[#1F1C18] font-medium">
+                {customConfig.galleryHeading}
+              </h2>
+              {customConfig.gallerySubheading && (
+                <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
+                  {customConfig.gallerySubheading}
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-[#EDE8E0] shadow-xs flex items-center gap-4">
-            <div className="h-11 w-11 rounded-full bg-[#FAF6EE] border border-[#E8DFC8] flex items-center justify-center text-[#9A743D] shrink-0">
-              <CalendarSvg className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm text-[#1C1A17]">Flexible Rental Dates</h4>
-              <p className="text-[11px] text-[#7A7165] mt-0.5">Choose what works for you</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-[#EDE8E0] shadow-xs flex items-center gap-4">
-            <div className="h-11 w-11 rounded-full bg-[#FAF6EE] border border-[#E8DFC8] flex items-center justify-center text-[#9A743D] shrink-0">
-              <WhatsAppSvg className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm text-[#1C1A17]">Direct WhatsApp Support</h4>
-              <p className="text-[11px] text-[#7A7165] mt-0.5">Chat with our team instantly</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-[#EDE8E0] shadow-xs flex items-center gap-4">
-            <div className="h-11 w-11 rounded-full bg-[#FAF6EE] border border-[#E8DFC8] flex items-center justify-center text-[#9A743D] shrink-0">
-              <ShieldCheckSvg className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm text-[#1C1A17]">Secure &amp; Insured</h4>
-              <p className="text-[11px] text-[#7A7165] mt-0.5">Your peace of mind matters</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. "Try Before Your Big Day" Studio Trials Promo Banner */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-[#EFE9DF] rounded-3xl overflow-hidden border border-[#E0D7C8] flex flex-col md:flex-row items-center justify-between shadow-sm">
-          <div className="w-full md:w-1/2 aspect-[16/9] md:aspect-auto h-56 md:h-72 overflow-hidden bg-[#E2DBD0]">
-            {items[1]?.media[0]?.url || heroImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={items[1]?.media[0]?.url || heroImage || ""}
-                alt="Trials and studio fittings"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-[#9A743D]">
-                <HomeSvg className="w-12 h-12" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+            {galleryPhotos.map((url, idx) => (
+              <div
+                key={url}
+                className="aspect-[3/4] rounded-xl overflow-hidden bg-[#EFE9DF] border border-[#EDE8E0]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`${vendor.businessName} piece ${idx + 1}`}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                />
               </div>
+            ))}
+            {customConfig.instagramUrl && (
+              <a
+                href={customConfig.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="aspect-[3/4] rounded-xl border border-dashed border-[#D5CDBD] bg-[#FAF8F5] flex flex-col items-center justify-center gap-2 text-center px-3 hover:bg-[#F5F2EB] transition"
+              >
+                <InstagramSvg className="w-6 h-6 text-[#8F6B38]" />
+                <span className="text-[11px] font-bold text-[#1F1C18]">Follow us on Instagram</span>
+              </a>
             )}
           </div>
-
-          <div className="p-8 md:p-12 w-full md:w-1/2 relative">
-            <span className="text-[10px] uppercase tracking-widest text-[#8F6B38] font-bold">
-              Studio Trials
-            </span>
-            <h3 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] mt-1.5 font-normal">
-              Try Before Your Big Day
-            </h3>
-            <p className="mt-2 text-xs sm:text-sm text-[#61584C] font-light max-w-md leading-relaxed">
-              Visit our studio in {cityName} and experience our collections in person. Schedule a consultation directly with our stylist.
-            </p>
-
-            <a
-              href={`https://wa.me/${vendorPhone}?text=${encodeURIComponent(`Hi ${vendor.businessName}, I would like to book a studio appointment.`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#181818] text-white text-xs sm:text-sm font-semibold hover:bg-black transition shadow-sm"
-            >
-              <span>Book a Studio Trial</span>
-              <ArrowRightSvg className="w-4 h-4" />
-            </a>
-
-            <div className="hidden sm:block absolute right-8 bottom-6 font-serif italic text-2xl text-[#8F6B38]/80">
-              Make it Memorable
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 8. Luxury Shopify Brand Footer */}
       <footer className="bg-white border-t border-[#EDE8E0] pt-16 pb-12 text-xs text-[#6B6256]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-8 pb-12 border-b border-[#F0EBE3]">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-12 border-b border-[#F0EBE3]">
             {/* Brand Col */}
             <div className="space-y-3 md:col-span-1">
               <div className="font-serif tracking-widest text-base font-bold uppercase text-[#1C1A17]">
                 {vendor.businessName}
               </div>
-              <p className="text-[11px] leading-relaxed text-[#7A7165]">
-                {vendor.profile?.shortDescription ||
-                  `Premium ${primaryCategory.toLowerCase()} collections, handcrafted for unforgettable moments.`}
-              </p>
+              {(customConfig?.footerAboutText || vendor.profile?.shortDescription) && (
+                <p className="text-[11px] leading-relaxed text-[#7A7165]">
+                  {customConfig?.footerAboutText || vendor.profile?.shortDescription}
+                </p>
+              )}
               <div className="text-[11px] text-[#4A453E] font-medium flex items-center gap-1.5">
                 <MapPinSvg className="w-3.5 h-3.5 text-[#9A743D]" />
                 <span>{cityName}</span>
               </div>
             </div>
 
-            {/* Quick Links */}
-            <div>
-              <h5 className="font-bold text-[#1C1A17] text-xs mb-3">Quick Links</h5>
-              <ul className="space-y-2 text-[11px]">
-                <li><Link href={`/vendors/${vendor.slug}`} className="hover:text-black">About Us</Link></li>
-                <li><a href="#catalog-grid" className="hover:text-black">Shop</a></li>
-                <li><a href="#featured-collections" className="hover:text-black">Collections</a></li>
-                <li><a href={`https://wa.me/${vendorPhone}`} className="hover:text-black">Rental Guide</a></li>
-                <li><a href={`https://wa.me/${vendorPhone}`} className="hover:text-black">FAQs</a></li>
-              </ul>
-            </div>
+            {/* Quick Links (first half of vendor-authored footerLinks) */}
+            {footerLinksFirstHalf.length > 0 && (
+              <div>
+                {customConfig?.footerQuickLinksHeading && (
+                  <h5 className="font-bold text-[#1C1A17] text-xs mb-3">{customConfig.footerQuickLinksHeading}</h5>
+                )}
+                <ul className="space-y-2 text-[11px]">
+                  {footerLinksFirstHalf.map((link, idx) => (
+                    <li key={idx}>
+                      <a href={link.url} className="hover:text-black">{link.label}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-            {/* Customer Support */}
-            <div>
-              <h5 className="font-bold text-[#1C1A17] text-xs mb-3">Customer Support</h5>
-              <ul className="space-y-2 text-[11px]">
-                <li><a href={`https://wa.me/${vendorPhone}`} className="hover:text-black">Contact Us</a></li>
-                <li><a href={`https://wa.me/${vendorPhone}`} className="hover:text-black">WhatsApp Support</a></li>
-                <li><a href={`https://wa.me/${vendorPhone}`} className="hover:text-black">Shipping &amp; Delivery</a></li>
-                <li><a href={`https://wa.me/${vendorPhone}`} className="hover:text-black">Returns &amp; Refunds</a></li>
-                <li><a href={`https://wa.me/${vendorPhone}`} className="hover:text-black">Terms &amp; Conditions</a></li>
-              </ul>
-            </div>
+            {/* Customer Support (second half of vendor-authored footerLinks) */}
+            {footerLinksSecondHalf.length > 0 && (
+              <div>
+                {customConfig?.footerSupportHeading && (
+                  <h5 className="font-bold text-[#1C1A17] text-xs mb-3">{customConfig.footerSupportHeading}</h5>
+                )}
+                <ul className="space-y-2 text-[11px]">
+                  {footerLinksSecondHalf.map((link, idx) => (
+                    <li key={idx}>
+                      <a href={link.url} className="hover:text-black">{link.label}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Follow Us */}
             <div>
-              <h5 className="font-bold text-[#1C1A17] text-xs mb-3">Follow Us</h5>
+              {customConfig?.footerSocialHeading && (
+                <h5 className="font-bold text-[#1C1A17] text-xs mb-3">{customConfig.footerSocialHeading}</h5>
+              )}
               <div className="flex items-center gap-3 text-lg text-[#3E3830]">
-                <a
-                  href={`https://instagram.com`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-rose-600 transition"
-                  title="Instagram"
-                >
-                  <InstagramSvg className="w-4 h-4" />
-                </a>
+                {customConfig?.instagramUrl && (
+                  <a
+                    href={customConfig.instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-rose-600 transition"
+                    title="Instagram"
+                  >
+                    <InstagramSvg className="w-4 h-4" />
+                  </a>
+                )}
                 <a
                   href={`https://wa.me/${vendorPhone}`}
                   target="_blank"
@@ -1078,30 +1225,11 @@ export function ShopifyCatalogView({
                 </a>
               </div>
             </div>
-
-            {/* Newsletter Box */}
-            <div className="space-y-2">
-              <h5 className="font-bold text-[#1C1A17] text-xs mb-1">Join Our Newsletter</h5>
-              <p className="text-[11px] text-[#7A7165]">Get updates on new collections and offers</p>
-              <div className="flex items-center gap-1 mt-2">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1 px-3 py-2 text-xs rounded-lg border border-[#E0D7C8] outline-none bg-[#FAF8F5] focus:border-[#916B33]"
-                />
-                <button
-                  type="button"
-                  className="px-3 py-2 rounded-lg bg-[#2E2822] text-white text-xs hover:bg-black transition"
-                >
-                  <ArrowRightSvg className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
           </div>
 
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#8C8375]">
             <div>&copy; {new Date().getFullYear()} {vendor.businessName}. All rights reserved.</div>
-            <div>Crafted with care in {cityName} | Powered by Shopify</div>
+            <div>{cityName}</div>
           </div>
         </div>
       </footer>

@@ -6,4 +6,7 @@ export type {
   UpsertCatalogVariantFieldInput,
   ReorderCatalogVariantFieldsInput,
   ImportCatalogItemsInput,
+  UpsertCatalogStoreSettingsInput,
+  CatalogTrustBadgeInput,
+  CatalogFooterLinkInput,
 } from "./catalog.schema";
