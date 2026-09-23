@@ -73,7 +73,12 @@ export default async function VendorCatalogPage() {
             </Link>
           </div>
         ) : (
-          <CatalogItemsManager initialItems={items} variantFields={variantFields} />
+          <CatalogItemsManager
+            initialItems={items}
+            variantFields={variantFields}
+            vendorSlug={vendor.slug}
+            vendorName={vendor.businessName}
+          />
         )}
       </div>
     </VendorShell>

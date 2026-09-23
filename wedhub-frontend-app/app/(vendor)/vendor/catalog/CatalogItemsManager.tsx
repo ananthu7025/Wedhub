@@ -14,9 +14,13 @@ import { CatalogItemModal } from "./CatalogItemModal";
 export function CatalogItemsManager({
   initialItems,
   variantFields,
+  vendorSlug,
+  vendorName,
 }: {
   initialItems: CatalogItem[];
   variantFields: CatalogVariantField[];
+  vendorSlug?: string;
+  vendorName?: string;
 }) {
   const [items, setItems] = useState<CatalogItem[]>(initialItems);
   const [search, setSearch] = useState("");
@@ -27,6 +31,7 @@ export function CatalogItemsManager({
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<CatalogImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredItems = items.filter((item) => {
@@ -102,8 +107,82 @@ export function CatalogItemsManager({
     return "—";
   }
 
+  const publicCatalogUrl =
+    typeof window !== "undefined" && vendorSlug
+      ? `${window.location.origin}/catalog/${vendorSlug}`
+      : `/catalog/${vendorSlug || ""}`;
+
+  function handleCopyStorefrontLink() {
+    if (typeof window !== "undefined" && vendorSlug) {
+      const fullUrl = `${window.location.origin}/catalog/${vendorSlug}`;
+      navigator.clipboard.writeText(fullUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  }
+
+  function handleShareStorefrontWhatsApp() {
+    const fullUrl = typeof window !== "undefined" && vendorSlug ? `${window.location.origin}/catalog/${vendorSlug}` : "";
+    const msg = `✨ Browse our exclusive bridal rental collection & jewelry sets on our WedHub Storefront:\n${fullUrl}\n\nBook direct with us on WhatsApp!`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+  }
+
   return (
     <div className="space-y-5">
+      {/* Public Storefront Banner */}
+      {vendorSlug && (
+        <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-teal-50/40 to-white p-5 shadow-xs">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shrink-0 shadow-xs">
+                🏪
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-neutral-900">Your Shopify-Style Public Storefront is Live</h3>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Public Link
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-neutral-600 max-w-xl leading-relaxed">
+                  Couples can browse your entire rental catalog, filter by collection and price, view pieces checklists,
+                  and place rental orders directly to your WhatsApp with an itemized inquiry.
+                </p>
+                <div className="mt-2 text-xs font-mono text-emerald-800 font-semibold truncate max-w-md">
+                  {publicCatalogUrl}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleShareStorefrontWhatsApp}
+                className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-1.5 shadow-sm"
+              >
+                <span>💬 Share on WhatsApp</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyStorefrontLink}
+                className="px-3.5 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-800 text-xs font-bold hover:bg-neutral-50 transition flex items-center gap-1.5"
+              >
+                <span>{copiedLink ? "✓ Copied!" : "📋 Copy Link"}</span>
+              </button>
+              <Link
+                href={`/catalog/${vendorSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 rounded-xl border border-neutral-900 bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 transition flex items-center gap-1"
+              >
+                <span>Preview Storefront ↗</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-white p-4">
         <div>
           <p className="text-sm font-bold text-text-dark">Bulk import</p>
@@ -270,6 +349,20 @@ export function CatalogItemsManager({
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
+                          {vendorSlug && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const fullUrl = `${window.location.origin}/catalog/${vendorSlug}`;
+                                const msg = `✨ Check out *${item.title}* (${priceLabel(item)}) from our bridal rental collection:\n${fullUrl}\n\nContact us on WhatsApp for availability and booking!`;
+                                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
+                              }}
+                              className="rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-colors flex items-center gap-1"
+                              title="Share item on WhatsApp"
+                            >
+                              <span>💬 Share</span>
+                            </button>
+                          )}
                           <Link
                             href={`/vendor/catalog/${item.id}`}
                             className="rounded border border-border bg-white px-2.5 py-1 text-xs font-bold text-text-dark hover:bg-surface-input transition-colors"
