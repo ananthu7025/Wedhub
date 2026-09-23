@@ -3,6 +3,7 @@ import type {
   CategorySelf,
   LocationSelf,
   MediaItem,
+  RuleBookSelf,
   VendorAlbumSelf,
   VendorAnalytics,
   VendorSelf,
@@ -32,6 +33,12 @@ export function getMyEffectivePlan() {
 
 export function listMyMedia() {
   return apiFetch<MediaItem[]>("/media/me");
+}
+
+// Item 6 — never exposed on the public profile; only reachable by the
+// vendor themselves.
+export function getMyRuleBook() {
+  return apiFetch<RuleBookSelf | null>("/vendors/me/rule-book", { cache: "no-store" });
 }
 
 // Items 10/11

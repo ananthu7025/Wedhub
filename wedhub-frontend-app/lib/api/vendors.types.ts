@@ -12,6 +12,8 @@
  * before doing arithmetic.
  */
 
+import type { CatalogVariantField } from "./vendor-catalog.types";
+
 export type VerificationLevel = "UNVERIFIED" | "IDENTITY_VERIFIED" | "BUSINESS_VERIFIED" | "PLATFORM_VERIFIED";
 export type LocationType = "COUNTRY" | "STATE" | "CITY" | "AREA";
 export type AttributeDataType =
@@ -58,6 +60,12 @@ export interface SearchVendorsParams {
   serviceAreaId?: string;
   priceMin?: number;
   priceMax?: number;
+  // Item 11: scoped to catalog item/variant pricing, distinct from
+  // priceMin/priceMax above (VendorProfile.startingPrice). Only meaningful
+  // for catalog-enabled categories (Wedding Cars, Bridal/Groom Wear,
+  // Jewellery, Cakes & Desserts).
+  catalogPriceMin?: number;
+  catalogPriceMax?: number;
   verified?: boolean;
   attr?: Record<string, string>;
   // Item 4: coarse "replies within N hours" filter.
@@ -94,11 +102,13 @@ export interface Category {
   sortOrder: number;
   isActive: boolean;
   hasStoreEnabled?: boolean;
+  hasCatalogEnabled?: boolean;
   imageUrl: string | null;
   isFeaturedOnHomepage: boolean;
   homepageSortOrder: number;
   startingPriceLabel: string | null;
   attributes: CategoryAttribute[];
+  catalogVariantFields?: CatalogVariantField[];
   children?: Category[];
 }
 

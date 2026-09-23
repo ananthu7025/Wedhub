@@ -138,6 +138,20 @@ const TEMPLATES: Record<NotificationEventType, Template> = {
     title: "Your account was linked to Google sign-in",
     body: "Someone just signed in to your itsmyKalyanam account using Google for the first time. If this was you, no action is needed. If it wasn't, reset your password immediately.",
   }),
+  // Item 9 — data.businessName/data.completeness/data.missingCount come from
+  // profile-completion-reminder.schedule.ts. CTA always points at
+  // /vendor/settings so the vendor lands directly on the form, not just the
+  // dashboard.
+  PROFILE_COMPLETION_REMINDER: (data, channel) => {
+    const completeness = data.completeness ?? "your";
+    const settingsUrl = `${env.FRONTEND_URL}/vendor/settings`;
+    const title = "Your profile is this close to done 👀";
+    const body = `${data.businessName ?? "Your listing"} is ${completeness}% complete — couples can't fall in love with a profile they can't fully see. A few more details and you're ready to start getting enquiries.`;
+    if (channel !== "EMAIL") {
+      return { title, body };
+    }
+    return { title, body, cta: { label: "Finish my profile", url: settingsUrl } };
+  },
   EMAIL_CHANGE_CONFIRMATION: (data, channel) => {
     if (channel !== "EMAIL") {
       return {

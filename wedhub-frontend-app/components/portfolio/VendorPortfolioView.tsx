@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { VendorDetail, VendorAlbum, VendorReview } from "@/lib/api/vendors.types";
+import type { CatalogItem } from "@/lib/api/vendor-catalog.types";
 import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { formatTelUrl } from "@/lib/utils/whatsapp";
 import { trackEvent } from "@/lib/analytics/track";
@@ -11,6 +12,7 @@ import { VendorPortfolioGallery } from "./VendorPortfolioGallery";
 import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
 import { VendorPortfolioPackages } from "./VendorPortfolioPackages";
 import { VendorPortfolioFeaturedPackages } from "./VendorPortfolioFeaturedPackages";
+import { VendorPortfolioCatalog } from "./VendorPortfolioCatalog";
 import { VendorPortfolioAbout } from "./VendorPortfolioAbout";
 import { VendorPortfolioReviews } from "./VendorPortfolioReviews";
 import { VendorPortfolioServiceAreas } from "./VendorPortfolioServiceAreas";
@@ -25,25 +27,31 @@ interface VendorPortfolioViewProps {
   vendor: VendorDetail;
   albums: VendorAlbum[];
   reviews: VendorReview[];
+  catalogItems?: CatalogItem[];
 }
 
 const SECTIONS = [
   { id: "portfolio", label: "Portfolio Gallery" },
   { id: "about", label: "About & Details" },
   { id: "packages", label: "Packages & Pricing" },
+  { id: "catalog", label: "Catalog" },
   { id: "reviews", label: "Client Reviews" },
 ] as const;
 
-export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolioViewProps) {
+export function VendorPortfolioView({ vendor, albums, reviews, catalogItems = [] }: VendorPortfolioViewProps) {
   const [enquiryModalOpen, setEnquiryModalOpen] = useState(false);
   const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
+  const activeCatalogItems = catalogItems.filter((i) => i.isActive);
   // Item 12: sections the vendor has hidden from this public page — the
   // backend has already stripped the underlying packages/attributeValues/
   // serviceAreas/socialLinks data for a hidden section (see
   // vendor.controller.ts's redactHiddenSections), this just also skips
   // rendering that section's heading/wrapper and nav-bar entry rather than
-  // showing an empty shell for it.
-  const hiddenSections = new Set(vendor.hiddenProfileSections ?? []);
+  // showing an empty shell for it. "catalog" isn't part of that
+  // vendor-toggleable mechanism — it's structurally absent for the vast
+  // majority of vendors (only catalog-enabled categories have any items at
+  // all), so it's filtered on real content instead.
+  const hiddenSections = new Set([...(vendor.hiddenProfileSections ?? []), ...(activeCatalogItems.length === 0 ? ["catalog"] : [])]);
   const visibleSections = SECTIONS.filter(({ id }) => !hiddenSections.has(id));
   const [activeSection, setActiveSection] = useState<string>(visibleSections[0]?.id ?? "portfolio");
   // Pagination state for the portfolio grid below — VendorPortfolioGallery
@@ -317,6 +325,7 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
             const count =
               id === "portfolio" ? totalPhotosCount :
               id === "packages" ? activePackagesCount :
+              id === "catalog" ? activeCatalogItems.length :
               id === "reviews" ? reviewCount :
               null;
             return (
@@ -455,6 +464,21 @@ export function VendorPortfolioView({ vendor, albums, reviews }: VendorPortfolio
             businessName={businessName}
             onEnquireClick={handleOpenEnquiry}
           />
+        </section>
+        )}
+
+        {/* Catalog — individual items with pricing, variants, and availability */}
+        {!hiddenSections.has("catalog") && (
+        <section
+          id="catalog"
+          ref={(el) => { sectionRefs.current.catalog = el; }}
+          className="scroll-mt-36 pt-14"
+        >
+          <div className="mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-neutral-900">Catalog</h2>
+            <p className="text-xs text-neutral-500">Individual items with pricing and availability</p>
+          </div>
+          <VendorPortfolioCatalog vendorId={vendor.id} items={activeCatalogItems} onEnquireClick={handleOpenEnquiry} />
         </section>
         )}
 

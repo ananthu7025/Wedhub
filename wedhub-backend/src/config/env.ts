@@ -25,6 +25,7 @@ const envSchema = z.object({
 
   MEDIA_MAX_IMAGE_SIZE_MB: z.coerce.number().positive().default(10),
   MEDIA_MAX_VIDEO_SIZE_MB: z.coerce.number().positive().default(100),
+  MEDIA_MAX_DOCUMENT_SIZE_MB: z.coerce.number().positive().default(20),
 
   // ₹49 Instant Wedding Website (Arch Phase 26) — single source of truth
   // for the publish price and the one-time preview's expiry window. See

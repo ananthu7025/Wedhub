@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { listConversationMessagesClient, markConversationRead, sendMessage } from "@/lib/api/messaging-client";
 import type { ConversationListItem, Message } from "@/lib/api/messaging.types";
+import { getPublicMediaUrl } from "@/lib/media/url";
 import { formatApiError } from "@/lib/utils/error";
 
 /**
@@ -47,9 +48,21 @@ interface InboxViewProps {
   // conversation" link, or the matched-prospect message this same inbox will
   // receive once Phase 6 is built.
   initialConversationId?: string;
+  // Item 6 — vendor-only: the vendor's own current rule book Media id, if
+  // one is set. Passed down from the server (Settings page's GET
+  // /vendors/me/rule-book) rather than fetched here, since it rarely
+  // changes and every conversation shares the same one. Undefined/omitted
+  // for the couple side, where the "Send rule book" action never appears.
+  ruleBookMediaId?: string | null;
 }
 
-export function InboxView({ viewerRole, viewerUserId, initialConversations, initialConversationId }: InboxViewProps) {
+export function InboxView({
+  viewerRole,
+  viewerUserId,
+  initialConversations,
+  initialConversationId,
+  ruleBookMediaId,
+}: InboxViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [conversations, setConversations] = useState(initialConversations);
@@ -113,6 +126,25 @@ export function InboxView({ viewerRole, viewerUserId, initialConversations, init
     }
     setMessages((prev) => [...prev, result.data]);
     setDraft("");
+    setConversations((prev) =>
+      prev
+        .map((c) => (c.id === selectedId ? { ...c, lastMessage: { body, senderUserId: viewerUserId, createdAt: result.data.createdAt }, lastMessageAt: result.data.createdAt } : c))
+        .sort((a, b) => new Date(b.lastMessageAt ?? 0).getTime() - new Date(a.lastMessageAt ?? 0).getTime()),
+    );
+  }
+
+  async function handleSendRuleBook() {
+    if (!selectedId || !ruleBookMediaId) return;
+    setSending(true);
+    setError(null);
+    const body = "📄 Rule book";
+    const result = await sendMessage(selectedId, body, ruleBookMediaId);
+    setSending(false);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    setMessages((prev) => [...prev, result.data]);
     setConversations((prev) =>
       prev
         .map((c) => (c.id === selectedId ? { ...c, lastMessage: { body, senderUserId: viewerUserId, createdAt: result.data.createdAt }, lastMessageAt: result.data.createdAt } : c))
@@ -196,6 +228,18 @@ export function InboxView({ viewerRole, viewerUserId, initialConversations, init
                         }`}
                       >
                         {message.body}
+                        {message.media && (
+                          <a
+                            href={getPublicMediaUrl(message.media.originalObjectKey)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`mt-2 flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[12px] font-semibold ${
+                              isOwn ? "border-white/30 bg-white/10 text-white hover:bg-white/20" : "border-border bg-white text-text-dark hover:bg-surface-page"
+                            }`}
+                          >
+                            📄 Download document
+                          </a>
+                        )}
                         <div className={`mt-1 text-[10px] ${isOwn ? "text-white/70" : "text-text-grey"}`}>
                           {formatRelativeTime(message.createdAt)}
                         </div>
@@ -207,6 +251,19 @@ export function InboxView({ viewerRole, viewerUserId, initialConversations, init
             </div>
 
             {error && <p className="px-4 pb-1 text-[12px] text-red-70">{error}</p>}
+
+            {viewerRole === "VENDOR" && ruleBookMediaId && (
+              <div className="border-t border-border px-4 py-2">
+                <button
+                  type="button"
+                  onClick={handleSendRuleBook}
+                  disabled={sending}
+                  className="rounded-md border border-border bg-white px-3 py-1.5 text-[12px] font-bold text-text-dark hover:bg-surface-input disabled:opacity-60"
+                >
+                  📄 Send rule book
+                </button>
+              </div>
+            )}
 
             <form onSubmit={handleSend} className="flex gap-2 border-t border-border p-3">
               <input

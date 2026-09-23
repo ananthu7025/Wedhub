@@ -59,6 +59,8 @@ export function searchVendors(params: SearchVendorsParams) {
     serviceAreaId: params.serviceAreaId,
     priceMin: params.priceMin,
     priceMax: params.priceMax,
+    catalogPriceMin: params.catalogPriceMin,
+    catalogPriceMax: params.catalogPriceMax,
     verified: params.verified,
     maxReplyHours: params.maxReplyHours,
     sort: params.sort,

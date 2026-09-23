@@ -129,6 +129,8 @@ async function promptVendorMatches(data: EnquiryCollectedData): Promise<StepResu
       serviceAreaId: undefined,
       priceMin: undefined,
       priceMax: undefined,
+      catalogPriceMin: undefined,
+      catalogPriceMax: undefined,
       verified: undefined,
       attributes: undefined,
       maxAvgResponseTimeMs: undefined,

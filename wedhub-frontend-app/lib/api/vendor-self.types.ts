@@ -27,7 +27,9 @@ export type MediaType =
   | "VIDEO"
   | "STORE_ITEM_PHOTO"
   | "PACKAGE_PHOTO"
-  | "CATEGORY_ATTRIBUTE_PHOTO";
+  | "CATEGORY_ATTRIBUTE_PHOTO"
+  | "CATALOG_ITEM_PHOTO"
+  | "RULE_BOOK";
 
 export interface MediaItem {
   id: string;
@@ -45,6 +47,16 @@ export interface MediaItem {
   status: MediaStatus;
   moderationStatus: MediaModerationStatus;
   sortOrder: number;
+  createdAt: string;
+}
+
+// ---- GET/PUT /vendors/me/rule-book (item 6) ----
+export interface RuleBookSelf {
+  id: string;
+  status: MediaStatus;
+  mimeType: string;
+  fileSize: number;
+  originalObjectKey: string;
   createdAt: string;
 }
 
@@ -125,6 +137,7 @@ export interface CategorySelf {
   description: string | null;
   parentId: string | null;
   hasStoreEnabled?: boolean;
+  hasCatalogEnabled?: boolean;
   attributes: CategoryAttributeSelf[];
   children?: CategorySelf[];
 }

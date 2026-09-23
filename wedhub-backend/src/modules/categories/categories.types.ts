@@ -26,6 +26,7 @@ export interface UpdateCategoryInput {
   sortOrder: number | undefined;
   isActive: boolean | undefined;
   hasStoreEnabled?: boolean | undefined;
+  hasCatalogEnabled?: boolean | undefined;
   imageUrl: string | null | undefined;
   isFeaturedOnHomepage: boolean | undefined;
   homepageSortOrder: number | undefined;

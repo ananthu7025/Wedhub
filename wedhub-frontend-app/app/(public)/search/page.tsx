@@ -32,6 +32,8 @@ interface SearchPageProps {
     cityId?: string;
     priceMin?: string;
     priceMax?: string;
+    catalogPriceMin?: string;
+    catalogPriceMax?: string;
     verified?: string;
     // Item 4: "replies within N hours" — coarse filter, whole hours.
     maxReplyHours?: string;
@@ -61,6 +63,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const priceMin = typeof rawPriceMin === "number" && !isNaN(rawPriceMin) && rawPriceMin >= 0 ? rawPriceMin : undefined;
   const rawPriceMax = params.priceMax ? Number(params.priceMax) : undefined;
   const priceMax = typeof rawPriceMax === "number" && !isNaN(rawPriceMax) && rawPriceMax >= 0 ? rawPriceMax : undefined;
+  const rawCatalogPriceMin = params.catalogPriceMin ? Number(params.catalogPriceMin) : undefined;
+  const catalogPriceMin =
+    typeof rawCatalogPriceMin === "number" && !isNaN(rawCatalogPriceMin) && rawCatalogPriceMin >= 0 ? rawCatalogPriceMin : undefined;
+  const rawCatalogPriceMax = params.catalogPriceMax ? Number(params.catalogPriceMax) : undefined;
+  const catalogPriceMax =
+    typeof rawCatalogPriceMax === "number" && !isNaN(rawCatalogPriceMax) && rawCatalogPriceMax >= 0 ? rawCatalogPriceMax : undefined;
   const rawMaxReplyHours = params.maxReplyHours ? Number(params.maxReplyHours) : undefined;
   const maxReplyHours =
     typeof rawMaxReplyHours === "number" && !isNaN(rawMaxReplyHours) && rawMaxReplyHours > 0 ? rawMaxReplyHours : undefined;
@@ -72,6 +80,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       cityId: params.cityId || undefined,
       priceMin,
       priceMax,
+      catalogPriceMin,
+      catalogPriceMax,
       verified: params.verified === "true" ? true : undefined,
       maxReplyHours,
       sort: (params.sort as SearchSort) || undefined,
@@ -105,6 +115,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           currentCity={selectedCity}
           priceMin={priceMin}
           priceMax={priceMax}
+          catalogPriceMin={catalogPriceMin}
+          catalogPriceMax={catalogPriceMax}
           verified={params.verified === "true"}
           maxReplyHours={maxReplyHours}
           sort={(params.sort as SearchSort) || "relevance"}

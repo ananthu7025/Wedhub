@@ -7,7 +7,16 @@ export const startConversationSchema = z.object({
 });
 
 export const sendMessageSchema = z.object({
-  body: z.string().trim().min(1, "Message cannot be empty").max(4000),
+  // Item 6: an attachment message may carry an empty/short caption instead
+  // of real body text — still requires at least mediaId or non-empty body,
+  // enforced in superRefine below rather than making body fully optional
+  // (a message with neither would be meaningless).
+  body: z.string().trim().max(4000).default(""),
+  mediaId: z.string().uuid().optional(),
+}).superRefine((value, ctx) => {
+  if (!value.body && !value.mediaId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["body"], message: "Message cannot be empty" });
+  }
 });
 
 export const listConversationsQuerySchema = z.object({

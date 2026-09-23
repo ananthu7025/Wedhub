@@ -1,4 +1,5 @@
 import { AuthorizationError, NotFoundError, ValidationError } from "../../common/errors";
+import { assertVendorFeatureAccess } from "../entitlements/entitlement.service";
 import * as notificationService from "../notifications/notification.service";
 import * as vendorPolicy from "../vendors/vendor.policy";
 import * as vendorRepository from "../vendors/vendor.repository";
@@ -84,9 +85,28 @@ export async function listMessages(conversationId: string, viewerUserId: string,
 // design (item 7/8: both couples and vendors get an in-app inbox, and a
 // message from either side should notify the other). Never blocks the send
 // on notify() failing (notify()'s own "never throws" contract).
-export async function sendMessage(conversationId: string, senderUserId: string, body: string) {
+//
+// Item 6: mediaId (the rule book send flow's only use today) is
+// vendor-side-only and ownership-checked here — a couple attaching
+// arbitrary media, or a vendor attaching another vendor's media, must both
+// be impossible. Kept generic (any of the sender's own READY Media rows,
+// not a rule-book-specific parameter) since a message can only ever carry
+// one attachment regardless of what it represents.
+export async function sendMessage(conversationId: string, senderUserId: string, body: string, mediaId?: string) {
   const { conversation, isCouple } = await resolveParticipant(conversationId, senderUserId);
-  const message = await messagingRepository.createMessage({ conversationId, senderUserId, body });
+
+  if (mediaId) {
+    if (isCouple) {
+      throw new AuthorizationError("Only the vendor side of a conversation can send an attachment");
+    }
+    await assertVendorFeatureAccess(conversation.vendorId, "rule_book_access", "Rule Book Sharing");
+    const media = await messagingRepository.findOwnVendorMedia(conversation.vendorId, mediaId);
+    if (!media || media.status !== "READY") {
+      throw new ValidationError("mediaId must reference your own, fully-processed media");
+    }
+  }
+
+  const message = await messagingRepository.createMessage({ conversationId, senderUserId, body, mediaId });
 
   const recipientUserId = isCouple ? conversation.vendor.ownerUserId : conversation.coupleUserId;
   if (recipientUserId) {

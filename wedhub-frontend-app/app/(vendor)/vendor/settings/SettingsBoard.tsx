@@ -3,13 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  confirmMediaUpload,
+  createMediaUploadRequest,
   setMyCategories,
   setMyHiddenSections,
+  setMyRuleBook,
   setMyServiceAreas,
   submitMyVendor,
   updateMyVendorDetail,
   upsertMyProfile,
 } from "@/lib/api/vendor-self-client";
+import { UPLOAD_CACHE_CONTROL } from "@/lib/media/upload";
 import { updateMyProfile } from "@/lib/api/users-client";
 import { setNotificationPreference } from "@/lib/api/notification-preferences-client";
 import { deactivateAccount } from "@/lib/api/account-client";
@@ -20,6 +24,7 @@ import {
   HIDEABLE_PROFILE_SECTIONS,
   type CategorySelf,
   type LocationSelf,
+  type RuleBookSelf,
   type VendorSelf,
 } from "@/lib/api/vendor-self.types";
 import type { MeResponse } from "@/lib/api/account.types";
@@ -290,6 +295,11 @@ function CategoryLocationSection({
   const { showToast } = useToast();
   const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? null;
   const subcategoryIds = vendor.categories.filter((c) => !c.isPrimary).map((c) => c.categoryId);
+  // Item 13: venues are a single fixed location, not a coverage area — skip
+  // the service-area picker for this category rather than asking vendors to
+  // answer a question that doesn't apply to them.
+  const selectedCategory = categories.find((c) => c.id === primaryCategoryId) ?? primaryCategory;
+  const isVenueCategory = selectedCategory?.slug === "venues";
 
   const [primaryCategoryId, setPrimaryCategoryId] = useState(primaryCategory?.id ?? categories[0]?.id ?? "");
   const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState<Set<string>>(new Set(subcategoryIds));
@@ -341,17 +351,22 @@ function CategoryLocationSection({
       return;
     }
 
-    // "Serves all areas" (item 13) is expressed today as selecting every
-    // known city — see the note on the checkbox grid below for why this is
-    // an interim UI-level implementation, not a real servesAllAreas column.
-    const serviceAreaResult = await setMyServiceAreas({
-      locationIds: servesAllAreas ? cities.map((c) => c.id) : Array.from(serviceAreaIds),
-    });
-    setSaving(false);
-    if (!serviceAreaResult.success) {
-      setError(formatApiError(serviceAreaResult.error));
-      return;
+    // "Serves all areas" is expressed today as selecting every known city —
+    // see the note on the checkbox grid below for why this is an interim
+    // UI-level implementation, not a real servesAllAreas column. Venues
+    // don't have a service area at all (item 13), so this save is skipped
+    // for that category rather than persisting an empty/stale selection.
+    if (!isVenueCategory) {
+      const serviceAreaResult = await setMyServiceAreas({
+        locationIds: servesAllAreas ? cities.map((c) => c.id) : Array.from(serviceAreaIds),
+      });
+      if (!serviceAreaResult.success) {
+        setSaving(false);
+        setError(formatApiError(serviceAreaResult.error));
+        return;
+      }
     }
+    setSaving(false);
 
     setSaved(true);
     showToast("Changes saved.", "success");
@@ -405,44 +420,46 @@ function CategoryLocationSection({
           />
         </label>
 
-        <div className="mb-1 text-sm">
-          <span className="mb-1.5 block font-bold text-[13px]">Service areas</span>
-          <label className="mb-2.5 flex items-center gap-2 text-[13px] font-semibold">
-            <input
-              type="checkbox"
-              checked={servesAllAreas}
-              onChange={(e) => setServesAllAreas(e.target.checked)}
-              className="accent-brand-primary"
-            />
-            I serve all areas
-          </label>
-          {/* Item 13: interim implementation. There's no dedicated
-              "serves all areas" flag on the schema yet — checking this box
-              selects every known city as a service area, which is
-              functionally equivalent for search/filter matching today
-              without needing a schema migration. */}
-          {!servesAllAreas && (
-            <div className="grid grid-cols-2 gap-2">
-              {cities.map((city) => (
-                <label key={city.id} className="flex items-center gap-2 text-[13px]">
-                  <input
-                    type="checkbox"
-                    checked={serviceAreaIds.has(city.id)}
-                    onChange={(e) => {
-                      const next = new Set(serviceAreaIds);
-                      if (e.target.checked) next.add(city.id);
-                      else next.delete(city.id);
-                      setServiceAreaIds(next);
-                    }}
-                    className="accent-brand-primary"
-                  />
-                  {city.name}
-                </label>
-              ))}
-            </div>
-          )}
-          <p className="mt-1.5 text-xs text-text-grey">Cities you&apos;re willing to travel to for weddings.</p>
-        </div>
+        {!isVenueCategory && (
+          <div className="mb-1 text-sm">
+            <span className="mb-1.5 block font-bold text-[13px]">Service areas</span>
+            <label className="mb-2.5 flex items-center gap-2 text-[13px] font-semibold">
+              <input
+                type="checkbox"
+                checked={servesAllAreas}
+                onChange={(e) => setServesAllAreas(e.target.checked)}
+                className="accent-brand-primary"
+              />
+              I serve all areas
+            </label>
+            {/* Interim implementation. There's no dedicated "serves all
+                areas" flag on the schema yet — checking this box selects
+                every known city as a service area, which is functionally
+                equivalent for search/filter matching today without needing
+                a schema migration. */}
+            {!servesAllAreas && (
+              <div className="grid grid-cols-2 gap-2">
+                {cities.map((city) => (
+                  <label key={city.id} className="flex items-center gap-2 text-[13px]">
+                    <input
+                      type="checkbox"
+                      checked={serviceAreaIds.has(city.id)}
+                      onChange={(e) => {
+                        const next = new Set(serviceAreaIds);
+                        if (e.target.checked) next.add(city.id);
+                        else next.delete(city.id);
+                        setServiceAreaIds(next);
+                      }}
+                      className="accent-brand-primary"
+                    />
+                    {city.name}
+                  </label>
+                ))}
+              </div>
+            )}
+            <p className="mt-1.5 text-xs text-text-grey">Cities you&apos;re willing to travel to for weddings.</p>
+          </div>
+        )}
 
         <fieldset className="mb-4 mt-3.5">
           <legend className="mb-1.5 text-[13px] font-bold">Willing to travel for destination weddings?</legend>
@@ -1061,18 +1078,179 @@ function SubmitForReviewSection({ vendor }: { vendor: VendorSelf }) {
   );
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Item 6: never shown on the public profile — this section only writes
+// Vendor.ruleBookMediaId, which no public route/serializer ever reads. The
+// vendor shares it with a specific customer from inside an existing Inbox
+// conversation instead (see /vendor/inbox's "Send rule book" action, once
+// an engagement exists).
+function RuleBookSection({
+  initialRuleBook,
+  hasRuleBookAccess,
+}: {
+  initialRuleBook: RuleBookSelf | null;
+  hasRuleBookAccess: boolean;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [ruleBook, setRuleBookState] = useState<RuleBookSelf | null>(initialRuleBook);
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      setError("Only PDF files are supported.");
+      return;
+    }
+
+    setError(null);
+    setUploading(true);
+
+    const requestResult = await createMediaUploadRequest({
+      mediaType: "RULE_BOOK",
+      filename: file.name,
+      mimeType: file.type,
+      fileSize: file.size,
+    });
+    if (!requestResult.success) {
+      setError(formatApiError(requestResult.error));
+      setUploading(false);
+      return;
+    }
+
+    const { mediaId, uploadUrl } = requestResult.data;
+    const putResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type, "Cache-Control": UPLOAD_CACHE_CONTROL },
+      body: file,
+    });
+    if (!putResponse.ok) {
+      setError("Upload to storage failed");
+      setUploading(false);
+      return;
+    }
+
+    const confirmResult = await confirmMediaUpload(mediaId);
+    if (!confirmResult.success) {
+      setError(formatApiError(confirmResult.error));
+      setUploading(false);
+      return;
+    }
+
+    const setResult = await setMyRuleBook(mediaId);
+    setUploading(false);
+    if (!setResult.success) {
+      setError(formatApiError(setResult.error));
+      return;
+    }
+    setRuleBookState(setResult.data);
+  }
+
+  async function handleRemove() {
+    setRemoving(true);
+    setError(null);
+    const result = await setMyRuleBook(null);
+    setRemoving(false);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    setRuleBookState(null);
+  }
+
+  return (
+    <SectionShell id="rule-book" title="Rule book" description="A PDF you can send couples once an engagement begins">
+      <div className="rounded-lg border border-blue-100 bg-blue-50/80 p-3.5 text-xs text-blue-900 leading-relaxed mb-4">
+        This document is never shown on your public profile. Share it with a specific couple from your Inbox, once
+        you have an ongoing conversation with them.
+      </div>
+
+      {error && <p className="mb-3 rounded-md bg-red-10 p-2.5 text-[13px] text-red-70">{error}</p>}
+
+      {!hasRuleBookAccess && !ruleBook && (
+        <div className="rounded-lg border border-border bg-surface-page p-4 text-center">
+          <p className="text-sm font-bold text-text-dark">Rule book sharing is a Premium feature</p>
+          <p className="mt-1 text-xs text-text-grey">Upgrade your plan to upload and share a rule book with couples.</p>
+          <a
+            href="/vendor/subscription"
+            className="mt-3 inline-block rounded-lg bg-brand-primary px-4 py-2 text-xs font-bold text-white hover:bg-brand-primary-hover"
+          >
+            View plans
+          </a>
+        </div>
+      )}
+
+      {ruleBook ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3.5">
+          <div>
+            <p className="text-sm font-bold text-text-dark">Rule book uploaded</p>
+            <p className="text-xs text-text-grey">
+              {formatFileSize(ruleBook.fileSize)} · {ruleBook.status === "READY" ? "Ready" : "Processing…"}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {hasRuleBookAccess && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px] font-bold hover:bg-surface-input disabled:opacity-60"
+              >
+                {uploading ? "Uploading…" : "Replace"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleRemove}
+              disabled={removing || uploading}
+              className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px] font-bold text-red hover:bg-surface-input disabled:opacity-60"
+            >
+              {removing ? "Removing…" : "Remove"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        hasRuleBookAccess && (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px] font-bold hover:bg-surface-input disabled:opacity-60"
+          >
+            {uploading ? "Uploading…" : "Upload rule book (PDF)"}
+          </button>
+        )
+      )}
+
+      <input ref={fileInputRef} type="file" accept="application/pdf" hidden onChange={handleFileSelect} />
+    </SectionShell>
+  );
+}
+
 export function SettingsBoard({
   vendor,
   me,
   categories,
   cities,
   initialPreferences,
+  initialRuleBook,
+  hasRuleBookAccess,
 }: {
   vendor: VendorSelf;
   me: MeResponse;
   categories: CategorySelf[];
   cities: LocationSelf[];
   initialPreferences: NotificationPreference[];
+  initialRuleBook: RuleBookSelf | null;
+  hasRuleBookAccess: boolean;
 }) {
   const router = useRouter();
   const [preferences, setPreferences] = useState(initialPreferences);
@@ -1141,6 +1319,7 @@ export function SettingsBoard({
       <ContactSocialSection vendor={vendor} />
       <MoreDetailsSection vendor={vendor} />
       <ProfileVisibilitySection vendor={vendor} />
+      <RuleBookSection initialRuleBook={initialRuleBook} hasRuleBookAccess={hasRuleBookAccess} />
 
       <SectionShell title="Notification preferences">
         {notificationError && <p className="mb-3 rounded-md bg-red-10 p-2.5 text-[13px] text-red-70">{notificationError}</p>}

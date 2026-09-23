@@ -51,6 +51,8 @@ export interface PlanFeatures {
   store_access?: boolean;
   invoicing_access?: boolean;
   portfolio_page_access?: boolean;
+  catalog_access?: boolean;
+  rule_book_access?: boolean;
 }
 
 // ---- GET /plans (public) ----
@@ -82,6 +84,8 @@ export interface EffectivePlan {
     store_access: boolean;
     invoicing_access: boolean;
     portfolio_page_access: boolean;
+    catalog_access: boolean;
+    rule_book_access: boolean;
   };
 }
 
@@ -96,6 +100,8 @@ export const BOOLEAN_FEATURE_CATALOG: Array<{ key: keyof PlanFeatures; label: st
   { key: "store_access", label: "Vendor Store" },
   { key: "invoicing_access", label: "Invoicing & Billing" },
   { key: "portfolio_page_access", label: "Shareable Portfolio Page" },
+  { key: "catalog_access", label: "Catalog" },
+  { key: "rule_book_access", label: "Rule Book Sharing" },
 ];
 
 // ---- GET /subscriptions/me ----

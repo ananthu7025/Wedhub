@@ -219,6 +219,7 @@ export interface AdminUpdateCategoryBody {
   sortOrder?: number;
   isActive?: boolean;
   hasStoreEnabled?: boolean;
+  hasCatalogEnabled?: boolean;
   // Homepage presentation fields (added 2026-09-03) — nullable so an admin
   // can explicitly clear a previously-set image/price, not just leave it
   // unchanged.

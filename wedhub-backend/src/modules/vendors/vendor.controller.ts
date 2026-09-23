@@ -15,6 +15,7 @@ import type {
   SetAttributesBody,
   SetCategoriesBody,
   SetHiddenSectionsBody,
+  SetRuleBookBody,
   SetServiceAreasBody,
   UpdatePackageBody,
   UpdateVendorBody,
@@ -124,6 +125,21 @@ export async function setHiddenSections(req: Request, res: Response): Promise<vo
   res.json(successResponse(vendor));
 }
 
+export async function getRuleBook(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const owned = await getOwnedVendorOrThrow(userId);
+  const ruleBook = await vendorService.getRuleBook(owned.id);
+  res.json(successResponse(ruleBook));
+}
+
+export async function setRuleBook(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const owned = await getOwnedVendorOrThrow(userId);
+  const body = req.body as SetRuleBookBody;
+  const ruleBook = await vendorService.setRuleBook(owned.id, body.mediaId);
+  res.json(successResponse(ruleBook));
+}
+
 export async function addAttributeOption(req: Request, res: Response): Promise<void> {
   const userId = requireUserId(req);
   const owned = await getOwnedVendorOrThrow(userId);
@@ -226,6 +242,19 @@ export async function getPortfolioPageAccess(req: Request, res: Response): Promi
   res.json(successResponse({ available: plan.features.portfolio_page_access }));
 }
 
+// Item 6: ruleBookMediaId is a raw Vendor scalar column — VENDOR_FULL_INCLUDE
+// only `include`s relations, so Prisma returns every base-model scalar
+// (including this one) by default. Unlike hiddenProfileSections, there is no
+// vendor opt-in/opt-out for this: it is never public, unconditionally,
+// same defense-in-depth principle as redactContactFields/
+// redactHiddenSections below — a visitor inspecting the raw API response
+// must not be able to see even the id of the vendor's rule book document.
+function redactRuleBook<T extends { ruleBookMediaId: string | null }>(vendor: T): Omit<T, "ruleBookMediaId"> {
+  const rest: Partial<T> = { ...vendor };
+  delete rest.ruleBookMediaId;
+  return rest as Omit<T, "ruleBookMediaId">;
+}
+
 // Contact fields (phone/email/website) are never sent in the public vendor
 // payload — a browser inspecting the page source or network response can't
 // read them just because the profile page loaded. They're only returned by
@@ -286,7 +315,12 @@ export async function getPublicVendor(req: Request, res: Response): Promise<void
   // a near-identical new key — see
   // PLAN-2026-09-22-premium-feature-buildout.md §3a/§4a.
   const plan = await getEffectivePlan(vendor.id);
-  res.json(successResponse({ ...redactContactFields(redactHiddenSections(vendor)), isPremiumEligible: plan.features.featured_eligibility }));
+  res.json(
+    successResponse({
+      ...redactContactFields(redactHiddenSections(redactRuleBook(vendor))),
+      isPremiumEligible: plan.features.featured_eligibility,
+    }),
+  );
 }
 
 // Explicit "Reveal contact details" action from the public profile —
@@ -313,6 +347,14 @@ export async function revealVendorContact(req: Request, res: Response): Promise<
   );
 }
 
+// Unauthenticated (see vendor.routes.ts — no authenticateMiddleware on this
+// route), so this needs the exact same redaction pipeline getPublicVendor
+// applies. Pre-existing gap found alongside the item 6 rule book work: this
+// sibling public-listing endpoint was never updated when
+// redactContactFields/redactHiddenSections were added for getPublicVendor,
+// so it was already leaking raw phone/email/website and hidden-section data
+// on every row before ruleBookMediaId existed — fixed here together since
+// it's the same call site and the same class of bug.
 export async function listPublicVendors(req: Request, res: Response): Promise<void> {
   const query = req.validatedQuery as ListVendorsQuery;
   const filter = { categoryId: query.categoryId, cityId: query.cityId };
@@ -320,8 +362,9 @@ export async function listPublicVendors(req: Request, res: Response): Promise<vo
     vendorRepository.listApprovedVendors({ ...filter, page: query.page, limit: query.limit }),
     vendorRepository.countApprovedVendors(filter),
   ]);
+  const redacted = vendors.map((vendor) => redactContactFields(redactHiddenSections(redactRuleBook(vendor))));
   res.json(
-    paginatedResponse(vendors, {
+    paginatedResponse(redacted, {
       page: query.page,
       limit: query.limit,
       total,

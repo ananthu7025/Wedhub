@@ -41,6 +41,7 @@ import { vendorInvoiceRouter } from "../modules/vendor-invoices";
 import { vendorQuotationRouter } from "../modules/vendor-quotations";
 import { vendorCalendarRouter } from "../modules/vendor-calendar";
 import { vendorStoreRouter, publicStoreRouter } from "../modules/vendor-store/vendor-store.routes";
+import { catalogRouter, publicCatalogRouter, catalogVariantFieldAdminRouter } from "../modules/catalog/catalog.routes";
 import { adminStorePaymentsRouter } from "../modules/admin-store-payments";
 import {
   challengeRouter,
@@ -111,6 +112,15 @@ apiV1Router.use("/vendor-quotations", vendorQuotationRouter);
 apiV1Router.use("/vendor-calendar", vendorCalendarRouter);
 apiV1Router.use("/vendor-store", vendorStoreRouter);
 apiV1Router.use("/stores", publicStoreRouter);
+apiV1Router.use("/catalog", catalogRouter);
+// Separate prefix from /catalog, not a second router mounted at the same
+// path — vendorStoreRouter/publicStoreRouter follow the same split
+// (/vendor-store vs /stores). Two routers sharing one mount path doesn't
+// work here: catalogRouter's path-less authenticateMiddleware `.use()`
+// matches every /catalog/* request first, so a second router mounted at
+// the same prefix never gets a chance to handle public routes.
+apiV1Router.use("/public-catalog", publicCatalogRouter);
+apiV1Router.use("/admin/categories", catalogVariantFieldAdminRouter);
 apiV1Router.use("/admin/store-payments", adminStorePaymentsRouter);
 apiV1Router.use("/challenge-entry-media", challengeEntryMediaRouter);
 apiV1Router.use("/admin/challenge-entries", challengeEntryAdminRouter);

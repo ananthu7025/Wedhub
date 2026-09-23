@@ -2,6 +2,9 @@ import { z } from "zod";
 
 const IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const VIDEO_MIME_TYPES = ["video/mp4", "video/quicktime"];
+// Item 6 — the first non-image/video mediaType (RULE_BOOK). PDF only: a
+// rule book is a document, not a general file-attachment feature.
+const DOCUMENT_MIME_TYPES = ["application/pdf"];
 
 export const createUploadRequestSchema = z.object({
   mediaType: z.enum([
@@ -12,10 +15,12 @@ export const createUploadRequestSchema = z.object({
     "STORE_ITEM_PHOTO",
     "PACKAGE_PHOTO",
     "CATEGORY_ATTRIBUTE_PHOTO",
+    "CATALOG_ITEM_PHOTO",
+    "RULE_BOOK",
   ]),
   albumId: z.string().uuid().optional(),
   filename: z.string().min(1).max(255),
-  mimeType: z.enum([...IMAGE_MIME_TYPES, ...VIDEO_MIME_TYPES] as [string, ...string[]]),
+  mimeType: z.enum([...IMAGE_MIME_TYPES, ...VIDEO_MIME_TYPES, ...DOCUMENT_MIME_TYPES] as [string, ...string[]]),
   fileSize: z.coerce.number().int().positive(),
 });
 
@@ -39,4 +44,4 @@ export type UpdateMediaBody = z.infer<typeof updateMediaSchema>;
 export type ModerateMediaBody = z.infer<typeof moderateMediaSchema>;
 export type ListApprovedMediaAdminQuery = z.infer<typeof listApprovedMediaAdminQuerySchema>;
 
-export { IMAGE_MIME_TYPES, VIDEO_MIME_TYPES };
+export { IMAGE_MIME_TYPES, VIDEO_MIME_TYPES, DOCUMENT_MIME_TYPES };

@@ -16,6 +16,8 @@ export const Entitlement = {
   STORE_ACCESS: "store_access",
   INVOICING_ACCESS: "invoicing_access",
   PORTFOLIO_PAGE_ACCESS: "portfolio_page_access",
+  CATALOG_ACCESS: "catalog_access",
+  RULE_BOOK_ACCESS: "rule_book_access",
 } as const;
 
 export type EntitlementKey = (typeof Entitlement)[keyof typeof Entitlement];
@@ -38,6 +40,8 @@ export interface PlanFeatures {
   store_access: boolean;
   invoicing_access: boolean;
   portfolio_page_access: boolean;
+  catalog_access: boolean;
+  rule_book_access: boolean;
 }
 
 // The boolean-typed subset of PlanFeatures — the union canVendorUse()/
@@ -124,6 +128,20 @@ export const FEATURE_CATALOG: FeatureDefinition[] = [
     valueType: "boolean",
     defaultValue: false,
   },
+  {
+    key: Entitlement.CATALOG_ACCESS,
+    label: "Catalog",
+    description: "Individual catalog items with variants, pricing, photos, CSV import, and availability calendars (catalog-eligible categories only)",
+    valueType: "boolean",
+    defaultValue: false,
+  },
+  {
+    key: Entitlement.RULE_BOOK_ACCESS,
+    label: "Rule Book Sharing",
+    description: "Upload a rule book document and send it to a couple from an ongoing inbox conversation",
+    valueType: "boolean",
+    defaultValue: false,
+  },
 ];
 
 // Last-resort fallback if, somehow, no SubscriptionPlan row is currently
@@ -142,4 +160,6 @@ export const FALLBACK_PLAN_FEATURES: PlanFeatures = {
   store_access: false,
   invoicing_access: false,
   portfolio_page_access: false,
+  catalog_access: false,
+  rule_book_access: false,
 };

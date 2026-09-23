@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPortfolioAccess, getVendorAlbums, getVendorBySlug, getVendorReviews } from "@/lib/api/catalog";
+import { fetchPublicCatalogItems } from "@/lib/api/vendor-catalog";
 import { ApiRequestError } from "@/lib/api/types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { VendorPortfolioView } from "@/components/portfolio/VendorPortfolioView";
@@ -85,9 +86,12 @@ export default async function VendorPortfolioPage({ params }: PortfolioPageProps
     );
   }
 
-  const [{ data: albums }, reviewsResult] = await Promise.all([
+  const hasCatalogEligibleCategory = vendor.categories.some((vc) => vc.category.hasCatalogEnabled);
+
+  const [{ data: albums }, reviewsResult, catalogItemsResult] = await Promise.all([
     getVendorAlbums(slug).catch(() => ({ data: [] })),
     getVendorReviews(vendor.id, 1, 30).catch(() => ({ data: [] })),
+    hasCatalogEligibleCategory ? fetchPublicCatalogItems(slug).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
   ]);
 
   const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? vendor.categories[0]?.category;
@@ -118,7 +122,12 @@ export default async function VendorPortfolioPage({ params }: PortfolioPageProps
           reviewCount: vendor.reviewCount,
         })}
       />
-      <VendorPortfolioView vendor={vendor} albums={albums || []} reviews={reviewsResult.data || []} />
+      <VendorPortfolioView
+        vendor={vendor}
+        albums={albums || []}
+        reviews={reviewsResult.data || []}
+        catalogItems={catalogItemsResult.data || []}
+      />
     </>
   );
 }

@@ -15,6 +15,7 @@ import {
   setAttributesSchema,
   setCategoriesSchema,
   setHiddenSectionsSchema,
+  setRuleBookSchema,
   setServiceAreasSchema,
   updatePackageSchema,
   updateVendorSchema,
@@ -93,6 +94,16 @@ vendorRouter.put(
   authenticateMiddleware,
   validateBody(setHiddenSectionsSchema),
   asyncHandler(vendorController.setHiddenSections),
+);
+
+// Item 6 — never exposed via any public /vendors/:slug route; only reachable
+// by the vendor themselves.
+vendorRouter.get("/me/rule-book", authenticateMiddleware, asyncHandler(vendorController.getRuleBook));
+vendorRouter.put(
+  "/me/rule-book",
+  authenticateMiddleware,
+  validateBody(setRuleBookSchema),
+  asyncHandler(vendorController.setRuleBook),
 );
 
 vendorRouter.put(

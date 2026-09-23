@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vendor Pricing — itsmyKalyanam</title>
+<meta name="description" content="Free vs Premium plans for itsmyKalyanam wedding vendors — every feature listed is live and working today.">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #241318;
+    --ink-soft: #5c4550;
+    --paper: #fdf9f6;
+    --paper-raised: #ffffff;
+    --line: #ead9d3;
+    --crimson: #b3213e;
+    --crimson-soft: #f6e3e6;
+    --gold: #a67c2e;
+    --gold-soft: #f6efdd;
+    --green: #2f6b4f;
+    --green-soft: #e5f1ea;
+    --shadow: 0 1px 2px rgba(36,19,24,0.04), 0 8px 24px -12px rgba(36,19,24,0.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #f5ece8;
+      --ink-soft: #c9b3ba;
+      --paper: #1c1216;
+      --paper-raised: #241820;
+      --line: #3a2830;
+      --crimson: #e2607a;
+      --crimson-soft: #3a1e26;
+      --gold: #d9b25f;
+      --gold-soft: #332a18;
+      --green: #6fbf9a;
+      --green-soft: #14261e;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #f5ece8;
+    --ink-soft: #c9b3ba;
+    --paper: #1c1216;
+    --paper-raised: #241820;
+    --line: #3a2830;
+    --crimson: #e2607a;
+    --crimson-soft: #3a1e26;
+    --gold: #d9b25f;
+    --gold-soft: #332a18;
+    --green: #6fbf9a;
+    --green-soft: #14261e;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    padding-inline: 20px;
+    padding-block: 28px;
+  }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+  .wrap { max-width: 1060px; margin: 0 auto; }
+
+  .eyebrow {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--crimson);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 1px;
+    background: var(--crimson);
+  }
+
+  header.hero {
+    text-align: center;
+    padding-block: 12px 44px;
+  }
+  h1 {
+    font-size: clamp(34px, 6vw, 54px);
+    line-height: 1.06;
+    margin: 14px 0 14px;
+    text-wrap: balance;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  h1 em {
+    font-style: italic;
+    color: var(--crimson);
+  }
+  .hero p {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 15.5px;
+    color: var(--ink-soft);
+    max-width: 540px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .plans {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    margin-top: 40px;
+  }
+  @media (max-width: 720px) {
+    .plans { grid-template-columns: 1fr; }
+  }
+
+  .plan {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 30px 28px 28px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .plan.premium {
+    border-color: var(--crimson);
+    background: linear-gradient(180deg, var(--crimson-soft) 0%, var(--paper-raised) 130px);
+  }
+  .plan-badge {
+    position: absolute;
+    top: -13px;
+    left: 28px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--crimson);
+    color: #fff;
+    padding: 5px 12px;
+    border-radius: 999px;
+  }
+
+  .plan-name {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .plan.premium .plan-name { color: var(--crimson); }
+
+  .plan-tag {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    margin: 6px 0 20px;
+  }
+
+  .price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .price {
+    font-size: 42px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+  .price-period {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+  }
+  .price-note {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    min-height: 18px;
+    margin-bottom: 22px;
+  }
+
+  .cta {
+    font-family: 'Inter', system-ui, sans-serif;
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 13px 18px;
+    border-radius: 11px;
+    margin-bottom: 26px;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .cta:hover { opacity: 0.9; transform: translateY(-1px); }
+  .cta.ghost {
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .cta.solid {
+    background: var(--crimson);
+    color: #fff;
+    border: 1px solid var(--crimson);
+  }
+
+  .group-title {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 18px 0 10px;
+  }
+  .group-title:first-of-type { margin-top: 0; }
+
+  ul.feat {
+    list-style: none;
+    margin: 0 0 4px;
+    padding: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13.5px;
+  }
+  ul.feat li {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 6px 0;
+    line-height: 1.4;
+  }
+  .ico {
+    flex-shrink: 0;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+    font-size: 11px;
+  }
+  .ico.yes { background: var(--green-soft); color: var(--green); }
+  .ico.no { background: var(--line); color: var(--ink-soft); opacity: 0.6; }
+  li.muted { color: var(--ink-soft); opacity: 0.72; }
+  .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .footnote {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: 18px;
+    opacity: 0.8;
+  }
+
+  /* comparison table */
+  .compare-wrap {
+    margin-top: 64px;
+  }
+  .compare-head {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  .compare-head h2 {
+    font-size: clamp(24px, 4vw, 30px);
+    margin: 0 0 8px;
+    font-weight: 600;
+  }
+  .compare-head p {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+  }
+  table.compare {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+    background: var(--paper-raised);
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  table.compare th, table.compare td {
+    padding: 13px 18px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+  table.compare thead th {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--paper);
+    position: sticky;
+    top: 0;
+  }
+  table.compare thead th.plan-col {
+    text-align: center;
+  }
+  table.compare td.plan-col, table.compare th.plan-col {
+    text-align: center;
+    width: 130px;
+  }
+  table.compare tbody tr.group-row td {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: var(--gold-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  table.compare tbody tr:last-child td { border-bottom: none; }
+  table.compare .check { color: var(--green); }
+  table.compare .dash { color: var(--ink-soft); opacity: 0.4; }
+
+  footer.cta-band {
+    margin-top: 60px;
+    text-align: center;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 40px 24px;
+    box-shadow: var(--shadow);
+  }
+  footer.cta-band h3 {
+    font-size: 24px;
+    margin: 0 0 8px;
+    font-weight: 600;
+  }
+  footer.cta-band p {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin: 0 0 22px;
+  }
+  footer.cta-band .cta.solid {
+    display: inline-block;
+    padding: 13px 32px;
+    margin: 0;
+  }
+
+  .legal {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: 24px;
+    opacity: 0.65;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="hero">
+    <span class="eyebrow">itsmyKalyanam for vendors</span>
+    <h1>Get discovered by couples <em>actually</em> planning a wedding.</h1>
+    <p>Start free, list your business in minutes. Upgrade to Premium when you're ready to convert more enquiries into bookings.</p>
+  </header>
+
+  <div class="plans">
+    <!-- FREE -->
+    <div class="plan">
+      <div class="plan-name">Free</div>
+      <div class="plan-tag">Get listed and start receiving enquiries.</div>
+      <div class="price-row">
+        <span class="price">₹0</span>
+        <span class="price-period">forever</span>
+      </div>
+      <div class="price-note">No card required</div>
+      <a class="cta ghost" href="#">Create your free listing</a>
+
+      <div class="group-title">Profile &amp; portfolio</div>
+      <ul class="feat">
+        <li><span class="ico yes">✓</span> Public business profile &amp; listing</li>
+        <li><span class="ico yes">✓</span> <span class="num">10</span> portfolio photos</li>
+        <li><span class="ico yes">✓</span> <span class="num">1</span> video reel</li>
+        <li><span class="ico no">–</span> <span class="muted">Shareable portfolio microsite</span></li>
+        <li><span class="ico no">–</span> <span class="muted">Premium vendor badge</span></li>
+      </ul>
+
+      <div class="group-title">Leads &amp; enquiries</div>
+      <ul class="feat">
+        <li><span class="ico yes">✓</span> Unlimited enquiries received</li>
+        <li><span class="ico yes">✓</span> Full CRM — pipeline, status, notes</li>
+        <li><span class="ico no">–</span> <span class="muted">Full contact details are locked per lead — unlock individually for a small fee, or go Premium for all leads unlocked</span></li>
+      </ul>
+
+      <div class="group-title">Visibility &amp; search</div>
+      <ul class="feat">
+        <li><span class="ico no">–</span> <span class="muted">Priority placement in search</span></li>
+      </ul>
+
+      <div class="group-title">Business tools</div>
+      <ul class="feat">
+        <li><span class="ico yes">✓</span> Booking calendar</li>
+        <li><span class="ico yes">✓</span> In-app messaging with couples</li>
+        <li><span class="ico yes">✓</span> Review collection &amp; display</li>
+        <li><span class="ico no">–</span> <span class="muted">Quotation maker</span></li>
+        <li><span class="ico no">–</span> <span class="muted">GST invoicing</span></li>
+        <li><span class="ico no">–</span> <span class="muted">Branded online store</span></li>
+        <li><span class="ico no">–</span> <span class="muted">Item catalog with pricing &amp; availability</span></li>
+        <li><span class="ico no">–</span> <span class="muted">Rule book sharing with couples</span></li>
+      </ul>
+
+      <div class="group-title">Analytics</div>
+      <ul class="feat">
+        <li><span class="ico yes">✓</span> Profile views count</li>
+        <li><span class="ico yes">✓</span> Basic analytics — last 30 days</li>
+        <li><span class="ico no">–</span> <span class="muted">Lead conversion rate</span></li>
+      </ul>
+    </div>
+
+    <!-- PREMIUM -->
+    <div class="plan premium">
+      <span class="plan-badge">Most popular</span>
+      <div class="plan-name">Premium</div>
+      <div class="plan-tag">For vendors ready to grow bookings.</div>
+      <div class="price-row">
+        <span class="price">₹12,999</span>
+        <span class="price-period">/month</span>
+      </div>
+      <div class="price-note">Includes a 14-day free trial</div>
+      <a class="cta solid" href="#">Start your free trial</a>
+
+      <div class="group-title">Everything in Free, plus</div>
+      <ul class="feat">
+        <li><span class="ico yes">✓</span> <span class="num">500</span> portfolio photos</li>
+        <li><span class="ico yes">✓</span> <span class="num">50</span> video reels</li>
+        <li><span class="ico yes">✓</span> Shareable portfolio microsite — your own branded link</li>
+        <li><span class="ico yes">✓</span> Premium vendor badge on your profile</li>
+      </ul>
+
+      <div class="group-title">Leads &amp; enquiries</div>
+      <ul class="feat">
+        <li><span class="ico yes">✓</span> Every lead's contact details unlocked automatically</li>
+        <li><span class="ico yes">✓</span> No per-lead unlock fees</li>
+      </ul>
+
+      <div class="group-title">Visibility &amp; search</div>
+      <ul class="feat">
+        <li><span class="ico yes">✓</span> Priority placement in search results</li>
+      </ul>
+
+      <div class="group-title">Business tools</div>
+      <ul class="feat">
+        <li><span class="ico yes">✓</span> Quotation maker — branded, sent for e-acceptance</li>
+        <li><span class="ico yes">✓</span> GST invoicing with payment tracking</li>
+        <li><span class="ico yes">✓</span> Branded online store with WhatsApp ordering</li>
+        <li><span class="ico yes">✓</span> Item catalog — variants, pricing, photos &amp; an availability calendar</li>
+        <li><span class="ico yes">✓</span> CSV bulk import for catalog items</li>
+        <li><span class="ico yes">✓</span> Share your rule book with couples once you're in conversation</li>
+      </ul>
+
+      <div class="group-title">Analytics</div>
+      <ul class="feat">
+        <li><span class="ico yes">✓</span> Advanced analytics — last 90 days, daily breakdown</li>
+        <li><span class="ico yes">✓</span> Lead conversion rate</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="footnote">Prices shown are live from itsmyKalyanam's current plan configuration — captured 23 Sep 2026.</p>
+
+  <!-- COMPARISON TABLE -->
+  <div class="compare-wrap">
+    <div class="compare-head">
+      <h2>Compare Free and Premium, feature by feature</h2>
+      <p>Every row below is a real, working feature in your vendor dashboard today.</p>
+    </div>
+
+    <div class="table-scroll">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="plan-col">Free</th>
+            <th class="plan-col">Premium</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="group-row"><td colspan="3">Profile &amp; portfolio</td></tr>
+          <tr><td>Public business profile &amp; listing</td><td class="plan-col check">✓</td><td class="plan-col check">✓</td></tr>
+          <tr><td>Portfolio photos</td><td class="plan-col num">10</td><td class="plan-col num">500</td></tr>
+          <tr><td>Video reels</td><td class="plan-col num">1</td><td class="plan-col num">50</td></tr>
+          <tr><td>Shareable portfolio microsite</td><td class="plan-col dash">—</td><td class="plan-col check">✓</td></tr>
+          <tr><td>Premium vendor badge</td><td class="plan-col dash">—</td><td class="plan-col check">✓</td></tr>
+
+          <tr class="group-row"><td colspan="3">Leads &amp; enquiries</td></tr>
+          <tr><td>Enquiries received per month</td><td class="plan-col">Unlimited</td><td class="plan-col">Unlimited</td></tr>
+          <tr><td>Lead CRM — pipeline, notes, status tracking</td><td class="plan-col check">✓</td><td class="plan-col check">✓</td></tr>
+          <tr><td>Full lead contact details</td><td class="plan-col">Pay per lead</td><td class="plan-col check">Included</td></tr>
+
+          <tr class="group-row"><td colspan="3">Visibility &amp; search</td></tr>
+          <tr><td>Priority placement in search results</td><td class="plan-col dash">—</td><td class="plan-col check">✓</td></tr>
+
+          <tr class="group-row"><td colspan="3">Business tools</td></tr>
+          <tr><td>Booking calendar</td><td class="plan-col check">✓</td><td class="plan-col check">✓</td></tr>
+          <tr><td>In-app messaging with couples</td><td class="plan-col check">✓</td><td class="plan-col check">✓</td></tr>
+          <tr><td>Review collection &amp; display</td><td class="plan-col check">✓</td><td class="plan-col check">✓</td></tr>
+          <tr><td>Quotation maker</td><td class="plan-col dash">—</td><td class="plan-col check">✓</td></tr>
+          <tr><td>GST invoicing &amp; payment tracking</td><td class="plan-col dash">—</td><td class="plan-col check">✓</td></tr>
+          <tr><td>Branded online store + WhatsApp ordering</td><td class="plan-col dash">—</td><td class="plan-col check">✓</td></tr>
+          <tr><td>Item catalog — variants, pricing, photos, CSV import &amp; availability calendar</td><td class="plan-col dash">—</td><td class="plan-col check">✓</td></tr>
+          <tr><td>Rule book sharing with engaged couples</td><td class="plan-col dash">—</td><td class="plan-col check">✓</td></tr>
+
+          <tr class="group-row"><td colspan="3">Analytics</td></tr>
+          <tr><td>Profile views count</td><td class="plan-col check">✓</td><td class="plan-col check">✓</td></tr>
+          <tr><td>Analytics history window</td><td class="plan-col">30 days</td><td class="plan-col">90 days, daily</td></tr>
+          <tr><td>Lead conversion rate</td><td class="plan-col dash">—</td><td class="plan-col check">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="cta-band">
+    <h3>Ready to get more bookings?</h3>
+    <p>Free forever to list. Upgrade the moment you're ready — cancel any time.</p>
+    <a class="cta solid" href="#">Start free, upgrade later</a>
+  </footer>
+
+  <p class="legal">Prices in Indian Rupees, exclusive of applicable taxes. All limits and features reflect itsmyKalyanam's current plan configuration and may be updated — your active plan always governs what's included.</p>
+</div>
+
+</body>
+</html>

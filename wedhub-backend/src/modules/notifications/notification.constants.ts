@@ -46,6 +46,12 @@ export const DEFAULT_CHANNELS: Record<NotificationEventType, NotificationChannel
   // the new address (via Notification.data.overrideEmail), which by
   // definition has no existing in-app session to show an IN_APP row to yet.
   EMAIL_CHANGE_CONFIRMATION: ["EMAIL"],
+  // Item 9 — email so an incomplete-profile vendor sees the nudge even if
+  // they never open the app; IN_APP too, matching VENDOR_APPROVED/REJECTED's
+  // "your listing status" treatment rather than the muted NEW_LEAD-style
+  // in-app-only defaults (this is a recurring daily nudge, not noise from
+  // someone else's activity, so the stronger default is appropriate).
+  PROFILE_COMPLETION_REMINDER: ["EMAIL", "IN_APP"],
 };
 
 export const MAX_DELIVERY_ATTEMPTS = 3;

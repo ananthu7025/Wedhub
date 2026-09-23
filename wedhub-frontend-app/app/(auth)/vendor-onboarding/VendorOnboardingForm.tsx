@@ -15,7 +15,11 @@ import type { Category, Location } from "@/lib/api/vendors.types";
 import { formatApiError } from "@/lib/utils/error";
 
 const DRAFT_STORAGE_KEY = "wedhub:vendor-onboarding-draft";
-const STEPS = ["Business name", "Category & city", "Service areas", "Pricing & description", "Review"] as const;
+const ALL_STEPS = ["Business name", "Category & city", "Service areas", "Pricing & description", "Review"] as const;
+// Venues are a single fixed location, not a coverage area (item 13) — the
+// Service areas step (index 2) is skipped entirely for that category rather
+// than shown with nothing meaningful to fill in.
+const SERVICE_AREA_STEP_INDEX = 2;
 
 interface VendorOnboardingDraft {
   businessName: string;
@@ -76,6 +80,11 @@ export function VendorOnboardingForm() {
   }, []);
 
   const hasUnsavedChanges = state.businessName.trim().length > 0 || state.categoryId.length > 0;
+  const isVenueCategory = categories.find((c) => c.id === state.categoryId)?.slug === "venues";
+  const visibleStepIndices = isVenueCategory
+    ? ALL_STEPS.map((_, i) => i).filter((i) => i !== SERVICE_AREA_STEP_INDEX)
+    : ALL_STEPS.map((_, i) => i);
+  const visibleStepPosition = visibleStepIndices.indexOf(step);
 
   function updateField<K extends keyof VendorOnboardingDraft>(key: K, value: VendorOnboardingDraft[K]) {
     setState((prev) => ({ ...prev, [key]: value }));
@@ -116,12 +125,14 @@ export function VendorOnboardingForm() {
   function goNext() {
     if (!validateStep(step)) return;
     setFieldErrors({});
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    const pos = visibleStepIndices.indexOf(step);
+    setStep(visibleStepIndices[Math.min(pos + 1, visibleStepIndices.length - 1)]);
   }
 
   function goBack() {
     setFieldErrors({});
-    setStep((s) => Math.max(s - 1, 0));
+    const pos = visibleStepIndices.indexOf(step);
+    setStep(visibleStepIndices[Math.max(pos - 1, 0)]);
   }
 
   async function handleSubmit() {
@@ -168,7 +179,8 @@ export function VendorOnboardingForm() {
 
     // Optional — a vendor may leave every box unchecked and add areas later
     // from Settings, so an empty selection here is not treated as an error.
-    if (state.servesAllAreas || state.serviceAreaIds.length > 0) {
+    // Venues never have a service area to save (item 13).
+    if (!isVenueCategory && (state.servesAllAreas || state.serviceAreaIds.length > 0)) {
       const serviceAreaResult = await setMyServiceAreas({
         locationIds: state.servesAllAreas ? cities.map((c) => c.id) : state.serviceAreaIds,
       });
@@ -190,15 +202,15 @@ export function VendorOnboardingForm() {
       <div className="mb-5">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[13px] font-bold text-text-grey">
-            Step {step + 1} of {STEPS.length}: {STEPS[step]}
+            Step {visibleStepPosition + 1} of {visibleStepIndices.length}: {ALL_STEPS[step]}
           </p>
           <button type="button" onClick={saveDraft} className="text-[13px] font-bold text-brand-primary hover:underline">
             Save as draft
           </button>
         </div>
         <div className="flex gap-1.5">
-          {STEPS.map((label, i) => (
-            <div key={label} className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-brand-primary" : "bg-border"}`} />
+          {visibleStepIndices.map((i) => (
+            <div key={ALL_STEPS[i]} className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-brand-primary" : "bg-border"}`} />
           ))}
         </div>
       </div>
@@ -387,17 +399,19 @@ export function VendorOnboardingForm() {
           <p>
             <span className="font-bold">City:</span> {cities.find((c) => c.id === state.cityId)?.name ?? "—"}
           </p>
-          <p>
-            <span className="font-bold">Service areas:</span>{" "}
-            {state.servesAllAreas
-              ? "All areas"
-              : state.serviceAreaIds.length > 0
-                ? cities
-                    .filter((c) => state.serviceAreaIds.includes(c.id))
-                    .map((c) => c.name)
-                    .join(", ")
-                : "Not set (can add later)"}
-          </p>
+          {!isVenueCategory && (
+            <p>
+              <span className="font-bold">Service areas:</span>{" "}
+              {state.servesAllAreas
+                ? "All areas"
+                : state.serviceAreaIds.length > 0
+                  ? cities
+                      .filter((c) => state.serviceAreaIds.includes(c.id))
+                      .map((c) => c.name)
+                      .join(", ")
+                  : "Not set (can add later)"}
+            </p>
+          )}
           {state.startingPrice && (
             <p>
               <span className="font-bold">Starting price:</span> ₹{state.startingPrice}
@@ -423,7 +437,7 @@ export function VendorOnboardingForm() {
             Back
           </Button>
         )}
-        {step < STEPS.length - 1 ? (
+        {step < ALL_STEPS.length - 1 ? (
           <Button type="button" variant="primary" block onClick={goNext}>
             Continue
           </Button>

@@ -85,6 +85,11 @@ export const setHiddenSectionsSchema = z.object({
   hiddenSections: z.array(z.enum(HIDEABLE_PROFILE_SECTIONS)).max(HIDEABLE_PROFILE_SECTIONS.length),
 });
 
+// Item 6 — null clears the current rule book.
+export const setRuleBookSchema = z.object({
+  mediaId: z.string().uuid().nullable(),
+});
+
 // Item 3 (2026-09-22): lets a vendor add a new option to a shared
 // SELECT/MULTI_SELECT CategoryAttribute's options list from the profile
 // form itself — see vendor.service.ts's addCategoryAttributeOption for the
@@ -150,6 +155,7 @@ export type UpsertProfileBody = z.infer<typeof upsertProfileSchema>;
 export type SetCategoriesBody = z.infer<typeof setCategoriesSchema>;
 export type SetServiceAreasBody = z.infer<typeof setServiceAreasSchema>;
 export type SetHiddenSectionsBody = z.infer<typeof setHiddenSectionsSchema>;
+export type SetRuleBookBody = z.infer<typeof setRuleBookSchema>;
 export type AddAttributeOptionBody = z.infer<typeof addAttributeOptionSchema>;
 export type SetAttributesBody = z.infer<typeof setAttributesSchema>;
 export type CreatePackageBody = z.infer<typeof createPackageSchema>;

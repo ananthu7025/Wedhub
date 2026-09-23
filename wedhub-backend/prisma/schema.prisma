@@ -82,14 +82,14 @@ model User {
 }
 
 model UserProfile {
-  userId        String   @id @map("user_id") @db.Uuid
-  firstName     String?  @map("first_name")
-  lastName      String?  @map("last_name")
-  avatarUrl     String?  @map("avatar_url")
-  avatarMediaId String?  @map("avatar_media_id") @db.Uuid
-  cityId        String?  @map("city_id") @db.Uuid
-  bio           String?
-  preferences   Json?
+  userId            String   @id @map("user_id") @db.Uuid
+  firstName         String?  @map("first_name")
+  lastName          String?  @map("last_name")
+  avatarUrl         String?  @map("avatar_url")
+  avatarMediaId     String?  @map("avatar_media_id") @db.Uuid
+  cityId            String?  @map("city_id") @db.Uuid
+  bio               String?
+  preferences       Json?
   // Reddit-style anonymous handle shown everywhere in the community feature
   // instead of the user's real name/email (community-post.repository.ts /
   // community-comment.repository.ts never select firstName/lastName/email
@@ -97,9 +97,9 @@ model UserProfile {
   // post/comment/vote, generated lazily by
   // community-username.util.ts::getOrCreateCommunityUsername, not at
   // signup, since most users never touch community.
-  communityUsername String? @unique @map("community_username")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  communityUsername String?  @unique @map("community_username")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   avatarMedia Media? @relation("UserProfileAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
@@ -412,10 +412,16 @@ model Category {
   // introspecting the live database directly; see migration
   // 20260916_restore_studio_module_schema.
   hasStudioModuleEnabled Boolean @default(false) @map("has_studio_module_enabled")
+  // Gates the vendor catalog module (CatalogItem/CatalogItemVariant/etc.) —
+  // same on/off-per-category convention as hasStoreEnabled/
+  // hasStudioModuleEnabled above. Seeded true for Wedding Cars & Luxury
+  // Rentals, Bridal Wear, Groom Wear, Jewellery, Cakes & Desserts.
+  hasCatalogEnabled      Boolean @default(false) @map("has_catalog_enabled")
 
   parent                            Category?                          @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children                          Category[]                         @relation("CategoryHierarchy")
   attributes                        CategoryAttribute[]
+  catalogVariantFields              CategoryCatalogVariantField[]
   vendorCategories                  VendorCategory[]
   enquiries                         Enquiry[]
   featuredListings                  FeaturedListing[]
@@ -429,6 +435,7 @@ model Category {
   @@index([isFeaturedOnHomepage])
   @@index([hasStoreEnabled])
   @@index([hasStudioModuleEnabled])
+  @@index([hasCatalogEnabled])
   @@map("categories")
 }
 
@@ -465,6 +472,30 @@ model CategoryAttribute {
 
   @@unique([categoryId, key])
   @@map("category_attributes")
+}
+
+// Admin-configured shape of a catalog item's variant attributes, scoped per
+// category — same EAV/form-builder philosophy as CategoryAttribute above,
+// but describing CatalogItemVariant.attributes (a per-item Json bag) rather
+// than a per-vendor value. E.g. Wedding Cars gets withDriver (BOOLEAN),
+// kmIncluded (NUMBER); Bridal Wear gets size (SELECT), color (TEXT). Reuses
+// AttributeDataType rather than inventing a second type system.
+model CategoryCatalogVariantField {
+  id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId String            @map("category_id") @db.Uuid
+  key        String
+  label      String
+  dataType   AttributeDataType @map("data_type")
+  options    Json?
+  isRequired Boolean           @default(false) @map("is_required")
+  sortOrder  Int               @default(0) @map("sort_order")
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, key])
+  @@map("category_catalog_variant_fields")
 }
 
 enum LocationType {
@@ -521,21 +552,21 @@ enum VendorCreationSource {
 }
 
 model Vendor {
-  id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ownerUserId         String?              @unique @map("owner_user_id") @db.Uuid
-  businessName        String               @map("business_name")
-  slug                String               @unique
-  status              VendorStatus         @default(DRAFT)
-  creationSource      VendorCreationSource @map("creation_source")
-  verificationLevel   VerificationLevel    @default(UNVERIFIED) @map("verification_level")
-  cityId              String?              @map("city_id") @db.Uuid
-  rejectionReason     String?              @map("rejection_reason")
-  suspensionReason    String?              @map("suspension_reason")
-  approvedAt          DateTime?            @map("approved_at")
-  submittedAt         DateTime?            @map("submitted_at")
-  profileCompleteness Int                  @default(0) @map("profile_completeness")
-  averageRating       Decimal              @default(0) @map("average_rating") @db.Decimal(3, 2)
-  reviewCount         Int                  @default(0) @map("review_count")
+  id                    String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerUserId           String?              @unique @map("owner_user_id") @db.Uuid
+  businessName          String               @map("business_name")
+  slug                  String               @unique
+  status                VendorStatus         @default(DRAFT)
+  creationSource        VendorCreationSource @map("creation_source")
+  verificationLevel     VerificationLevel    @default(UNVERIFIED) @map("verification_level")
+  cityId                String?              @map("city_id") @db.Uuid
+  rejectionReason       String?              @map("rejection_reason")
+  suspensionReason      String?              @map("suspension_reason")
+  approvedAt            DateTime?            @map("approved_at")
+  submittedAt           DateTime?            @map("submitted_at")
+  profileCompleteness   Int                  @default(0) @map("profile_completeness")
+  averageRating         Decimal              @default(0) @map("average_rating") @db.Decimal(3, 2)
+  reviewCount           Int                  @default(0) @map("review_count")
   // Item 4: denormalized average reply time in milliseconds, recomputed
   // whenever a Lead is marked RESPONDED (lead.service.ts::updateStatus) —
   // same recompute-on-event pattern as averageRating/reviewCount above
@@ -544,7 +575,7 @@ model Vendor {
   // by reply speed without an unbounded per-row Lead scan at query time
   // (see lead.repository.ts::getVendorLeadAnalytics, which computes this
   // the expensive way for the vendor's own private analytics view).
-  avgResponseTimeMs   Int?                 @map("avg_response_time_ms")
+  avgResponseTimeMs     Int?                 @map("avg_response_time_ms")
   // Section-level public-profile visibility (item 12): ids matching
   // VendorPortfolioView.tsx's SECTIONS list ("portfolio", "about",
   // "packages", "reviews") plus "serviceAreas"/"instagram" for the two
@@ -556,18 +587,25 @@ model Vendor {
   // regions, not per-field granularity (see item 12's user decision on
   // scope), so a schema migration isn't needed every time a new section is
   // added to the portfolio page — just append its id here.
-  hiddenProfileSections String[]           @default([]) @map("hidden_profile_sections")
-  createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @updatedAt @map("updated_at")
-  deletedAt           DateTime?            @map("deleted_at")
+  hiddenProfileSections String[]             @default([]) @map("hidden_profile_sections")
+  // Item 6: one current rule book PDF per vendor (not a version history) —
+  // never exposed on the public profile (no public route/serializer reads
+  // this). Shared with a customer only from inside an existing Conversation,
+  // via Message.mediaId, once the vendor explicitly sends it.
+  ruleBookMediaId       String?              @map("rule_book_media_id") @db.Uuid
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+  deletedAt             DateTime?            @map("deleted_at")
 
   owner                   User?                   @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
   city                    Location?               @relation("VendorPrimaryCity", fields: [cityId], references: [id], onDelete: SetNull)
+  ruleBookMedia           Media?                  @relation("VendorRuleBook", fields: [ruleBookMediaId], references: [id], onDelete: SetNull)
   profile                 VendorProfile?
   categories              VendorCategory[]
   serviceAreas            VendorServiceArea[]
   attributeValues         VendorAttributeValue[]
   packages                Package[]
+  catalogItems            CatalogItem[]
   invitations             VendorInvitation[]
   statusHistory           VendorStatusHistory[]
   media                   Media[]
@@ -738,6 +776,133 @@ model Package {
   @@map("packages")
 }
 
+enum CatalogAvailabilityStatus {
+  BOOKED
+  // Vendor manually marks a date unavailable (maintenance, personal use,
+  // etc.) rather than an actual customer booking.
+  BLOCKED
+}
+
+// Lightweight, purpose-built vendor catalog (items 1/2/3/10/12) — deliberately
+// separate from VendorStore (the existing e-commerce/checkout module): this
+// has no order/payment/settlement machinery, just browsable items + variants
+// + availability. Gated per-category by Category.hasCatalogEnabled.
+model CatalogItem {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId       String   @map("vendor_id") @db.Uuid
+  title          String
+  slug           String
+  description    String?  @db.Text
+  // Null when the item has no single price and is priced entirely via its
+  // variants (e.g. a bridal outfit priced per size).
+  basePrice      Decimal? @map("base_price") @db.Decimal(10, 2)
+  // Decorator-style fully customizable package (item 12) — when true, the
+  // item's CatalogItemComponent rows are vendor-adjustable line items
+  // (quantities/prices a customer can increase or decrease) rather than a
+  // fixed inclusions list.
+  isCustomizable Boolean  @default(false) @map("is_customizable")
+  isActive       Boolean  @default(true) @map("is_active")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  vendor       Vendor                    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  variants     CatalogItemVariant[]
+  media        CatalogItemMedia[]
+  components   CatalogItemComponent[]
+  availability CatalogItemAvailability[]
+
+  @@unique([vendorId, slug])
+  @@index([vendorId, isActive])
+  @@map("catalog_items")
+}
+
+model CatalogItemVariant {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId        String   @map("item_id") @db.Uuid
+  // Free-form attribute bag, keyed by the owning category's
+  // CategoryCatalogVariantField.key — e.g. {"size":"M","color":"Red"} for
+  // bridal wear, {"withDriver":true,"kmIncluded":100} for cars. Mirrors the
+  // CategoryAttribute/VendorAttributeValue EAV philosophy rather than
+  // hardcoding per-category columns, since every catalog category has
+  // different variant dimensions.
+  attributes    Json
+  price         Decimal  @db.Decimal(10, 2)
+  sku           String?
+  // Null = unlimited/not tracked — same informational-only convention as
+  // VendorStoreItem.stockQuantity (no transactional stock decrement).
+  stockQuantity Int?     @map("stock_quantity")
+  isAvailable   Boolean  @default(true) @map("is_available")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  item         CatalogItem               @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  availability CatalogItemAvailability[]
+
+  @@index([itemId])
+  @@map("catalog_item_variants")
+}
+
+model CatalogItemMedia {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId    String   @map("item_id") @db.Uuid
+  mediaId   String   @map("media_id") @db.Uuid
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  item  CatalogItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  media Media       @relation("CatalogItemMedia", fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, mediaId])
+  @@index([itemId, sortOrder])
+  @@map("catalog_item_media")
+}
+
+// Decorator "whole package, customizable line items" (item 12) — e.g. a
+// stage package's "2 party poppers with rose petals" line, adjustable by
+// the vendor between minQty/maxQty.
+model CatalogItemComponent {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId     String   @map("item_id") @db.Uuid
+  name       String
+  defaultQty Int      @default(1) @map("default_qty")
+  minQty     Int      @default(0) @map("min_qty")
+  // Null = uncapped.
+  maxQty     Int?     @map("max_qty")
+  // Null = included at no per-unit upcharge.
+  unitPrice  Decimal? @map("unit_price") @db.Decimal(10, 2)
+  isRequired Boolean  @default(false) @map("is_required")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  item CatalogItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("catalog_item_components")
+}
+
+// Per-item/variant availability calendar (item 4/5) — absence of a row for a
+// date means available; the vendor (or a future booking flow) inserts rows
+// as items get booked/blocked.
+model CatalogItemAvailability {
+  id        String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId    String                    @map("item_id") @db.Uuid
+  // Null = applies to the whole item regardless of variant.
+  variantId String?                   @map("variant_id") @db.Uuid
+  date      DateTime                  @db.Date
+  status    CatalogAvailabilityStatus @default(BOOKED)
+  note      String?
+
+  item    CatalogItem         @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  variant CatalogItemVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, variantId, date])
+  @@index([itemId, date])
+  @@map("catalog_item_availability")
+}
+
 model VendorInvitation {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   vendorId         String    @map("vendor_id") @db.Uuid
@@ -831,6 +996,14 @@ enum MediaType {
   // exists (userId set, communityPostId null at upload time). Same
   // presigned-upload-then-attach shape as REVIEW_PHOTO/CHALLENGE_ENTRY_PHOTO.
   COMMUNITY_POST_PHOTO
+  // Vendor-owned catalog item photo (CatalogItemMedia), same
+  // multi-image-gallery shape as STORE_ITEM_PHOTO.
+  CATALOG_ITEM_PHOTO
+  // Item 6 — vendor-owned rule book document (Vendor.ruleBookMediaId), the
+  // first non-image/video MediaType. A PDF, not a photo/video, so
+  // media.service.ts's upload-family validation gets a third branch
+  // (isDocument) alongside isImage/isVideo for this type only.
+  RULE_BOOK
 }
 
 enum MediaStatus {
@@ -906,9 +1079,12 @@ model Media {
   weddingWebsiteCoverFor       WeddingWebsite?        @relation("WeddingWebsiteCover")
   weddingWebsiteCouplePhotoFor WeddingWebsite?        @relation("WeddingWebsiteCouplePhoto")
   storeItemMedia               VendorStoreItemMedia[]
+  catalogItemMedia             CatalogItemMedia[]     @relation("CatalogItemMedia")
   packageImageFor              Package[]              @relation("PackageImage")
   challengeEntryCoverFor       ChallengeEntry?        @relation("ChallengeEntryCoverImage")
   challengeEntryPhotoFor       ChallengeEntryPhoto?   @relation("ChallengeEntryAdditionalPhoto")
+  ruleBookFor                  Vendor[]               @relation("VendorRuleBook")
+  messageAttachmentFor         Message[]              @relation("MessageAttachment")
 
   @@index([vendorId])
   @@index([userId])
@@ -1487,14 +1663,14 @@ enum LeadStatus {
 // The vendor-facing unit of work. A Lead's own status lifecycle (product.md
 // §20) is independent of its parent Enquiry, which never changes state.
 model Lead {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  enquiryId   String     @map("enquiry_id") @db.Uuid
-  vendorId    String     @map("vendor_id") @db.Uuid
-  status      LeadStatus @default(NEW)
-  contactedAt DateTime?  @map("contacted_at")
-  respondedAt DateTime?  @map("responded_at")
-  isSpam      Boolean    @default(false) @map("is_spam")
-  dedupeKey   String     @map("dedupe_key")
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  enquiryId         String     @map("enquiry_id") @db.Uuid
+  vendorId          String     @map("vendor_id") @db.Uuid
+  status            LeadStatus @default(NEW)
+  contactedAt       DateTime?  @map("contacted_at")
+  respondedAt       DateTime?  @map("responded_at")
+  isSpam            Boolean    @default(false) @map("is_spam")
+  dedupeKey         String     @map("dedupe_key")
   // Null = the owning vendor's plan does not include full contact-detail
   // access for this lead yet (Free tier, capped by monthly_lead_limit).
   // Set automatically at creation time for a Premium-eligible vendor
@@ -1503,9 +1679,9 @@ model Lead {
   // Deliberately never unset once set — a vendor who downgrades keeps access
   // to leads they already paid for or already saw while Premium, matching
   // the never-destroy principle sweepMediaToLimits uses for portfolio media.
-  contactUnlockedAt DateTime? @map("contact_unlocked_at")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  contactUnlockedAt DateTime?  @map("contact_unlocked_at")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
 
   enquiry              Enquiry             @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
   vendor               Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
@@ -1963,6 +2139,11 @@ enum NotificationEventType {
   // notification-delivery.processor.ts's deliverEmail) since this is the one
   // event type that must NOT go to the account's current email.
   EMAIL_CHANGE_CONFIRMATION
+  // Item 9 — daily repeatable job (see src/jobs/schedules/profile-completion-
+  // reminder.schedule.ts) targeting DRAFT vendors with profileCompleteness <
+  // 100. Distinct from LEAD_REMINDER (about a specific lead, not the
+  // profile itself).
+  PROFILE_COMPLETION_REMINDER
 }
 
 // SMS/WhatsApp are explicitly "later" per product.md §22 — not modeled yet.
@@ -2067,6 +2248,11 @@ model Message {
   conversationId String    @map("conversation_id") @db.Uuid
   senderUserId   String    @map("sender_user_id") @db.Uuid
   body           String
+  // Item 6: one optional attachment per message — the rule book send flow's
+  // only consumer today (vendor -> Vendor.ruleBookMedia), but generic
+  // (any Media row) rather than a rule-book-specific column, since a
+  // message can only ever carry one attachment regardless of what it is.
+  mediaId        String?   @map("media_id") @db.Uuid
   // Single nullable timestamp, not a per-recipient join table — a
   // Conversation is always exactly 2 participants here (couple + vendor
   // owner), so "read by the other participant" is unambiguous without
@@ -2076,6 +2262,7 @@ model Message {
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User         @relation("MessagesSent", fields: [senderUserId], references: [id], onDelete: Cascade)
+  media        Media?       @relation("MessageAttachment", fields: [mediaId], references: [id], onDelete: SetNull)
 
   @@index([conversationId, createdAt])
   @@map("messages")
@@ -2449,15 +2636,15 @@ model VendorInvoice {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  vendor     Vendor                  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  lead       Lead?                   @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  items      VendorInvoiceItem[]
-  payments   VendorInvoicePayment[]
-  activities VendorInvoiceActivity[]
-  storeOrder VendorStoreOrder?
-  bookings   VendorBooking[]
-  quotationId String?              @map("quotation_id") @db.Uuid
-  quotation   VendorQuotation?     @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  vendor      Vendor                  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  lead        Lead?                   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  items       VendorInvoiceItem[]
+  payments    VendorInvoicePayment[]
+  activities  VendorInvoiceActivity[]
+  storeOrder  VendorStoreOrder?
+  bookings    VendorBooking[]
+  quotationId String?                 @map("quotation_id") @db.Uuid
+  quotation   VendorQuotation?        @relation(fields: [quotationId], references: [id], onDelete: SetNull)
 
   @@unique([vendorId, invoiceNumber])
   @@index([vendorId, status])
@@ -3020,11 +3207,11 @@ enum CommunityPostStatus {
 }
 
 model CommunityTag {
-  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  slug      String          @unique
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug      String   @unique
   name      String
-  sortOrder Int             @default(0) @map("sort_order")
-  createdAt DateTime        @default(now()) @map("created_at")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
 
   posts CommunityPost[]
 
@@ -3182,23 +3369,23 @@ enum VendorBookingShift {
 }
 
 model VendorBooking {
-  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId     String              @map("vendor_id") @db.Uuid
-  leadId       String?             @map("lead_id") @db.Uuid
-  invoiceId    String?             @map("invoice_id") @db.Uuid
-  coupleUserId String?             @map("couple_user_id") @db.Uuid
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId     String  @map("vendor_id") @db.Uuid
+  leadId       String? @map("lead_id") @db.Uuid
+  invoiceId    String? @map("invoice_id") @db.Uuid
+  coupleUserId String? @map("couple_user_id") @db.Uuid
 
-  title        String
-  clientName   String              @map("client_name")
-  clientPhone  String?             @map("client_phone")
-  clientEmail  String?             @map("client_email")
-  eventType    String              @default("Wedding") @map("event_type")
+  title       String
+  clientName  String  @map("client_name")
+  clientPhone String? @map("client_phone")
+  clientEmail String? @map("client_email")
+  eventType   String  @default("Wedding") @map("event_type")
 
-  startDate    DateTime            @map("start_date") @db.Date
-  endDate      DateTime            @map("end_date") @db.Date
-  shift        VendorBookingShift  @default(FULL_DAY)
-  startTime    String?             @map("start_time")
-  endTime      String?             @map("end_time")
+  startDate DateTime           @map("start_date") @db.Date
+  endDate   DateTime           @map("end_date") @db.Date
+  shift     VendorBookingShift @default(FULL_DAY)
+  startTime String?            @map("start_time")
+  endTime   String?            @map("end_time")
 
   venueName    String?             @map("venue_name")
   venueCity    String?             @map("venue_city")
@@ -3208,15 +3395,15 @@ model VendorBooking {
   status       VendorBookingStatus @default(CONFIRMED)
   notes        String?             @db.Text
 
-  createdAt    DateTime            @default(now()) @map("created_at")
-  updatedAt    DateTime            @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  vendor       Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  lead         Lead?               @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  invoice      VendorInvoice?      @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  coupleUser   User?               @relation("BookingsAsCouple", fields: [coupleUserId], references: [id], onDelete: SetNull)
-  quotationId  String?             @map("quotation_id") @db.Uuid
-  quotation    VendorQuotation?    @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  vendor      Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  lead        Lead?            @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  invoice     VendorInvoice?   @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  coupleUser  User?            @relation("BookingsAsCouple", fields: [coupleUserId], references: [id], onDelete: SetNull)
+  quotationId String?          @map("quotation_id") @db.Uuid
+  quotation   VendorQuotation? @relation(fields: [quotationId], references: [id], onDelete: SetNull)
 
   @@index([vendorId, startDate])
   @@index([vendorId, status])
@@ -3233,7 +3420,7 @@ model VendorBlackoutDate {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   @@index([vendorId, startDate])
   @@map("vendor_blackout_dates")
@@ -3244,11 +3431,11 @@ model VendorCalendarSetting {
   vendorId              String   @unique @map("vendor_id") @db.Uuid
   maxBookingsPerDay     Int      @default(1) @map("max_bookings_per_day")
   publicCalendarEnabled Boolean  @default(true) @map("public_calendar_enabled")
-  icalToken             String   @default(dbgenerated("gen_random_uuid()")) @unique @map("ical_token")
+  icalToken             String   @unique @default(dbgenerated("gen_random_uuid()")) @map("ical_token")
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 
-  vendor                Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   @@map("vendor_calendar_settings")
 }

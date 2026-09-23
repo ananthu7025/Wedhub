@@ -3,6 +3,7 @@ import { prisma } from "../../config/database";
 import { ConflictError, NotFoundError, ValidationError } from "../../common/errors";
 import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
 import { logger } from "../../config/logger";
+import { assertVendorFeatureAccess } from "../entitlements/entitlement.service";
 import * as vendorRepository from "./vendor.repository";
 import { calculateCompleteness, missingRequiredForSubmission } from "./vendor.completeness";
 import type {
@@ -118,6 +119,27 @@ export async function upsertProfile(vendorId: string, input: UpsertVendorProfile
 
   await recalculateCompleteness(vendorId);
   return profile;
+}
+
+// Item 6 — deliberately separate from upsertProfile: the rule book is never
+// part of the public profile payload, so it doesn't belong on
+// UpsertVendorProfileInput / VendorProfile, which several public serializers
+// already read wholesale.
+export async function setRuleBook(vendorId: string, mediaId: string | null) {
+  // Only gate SETTING a rule book — clearing (mediaId: null) stays ungated,
+  // same "removing value must still work even if the plan lapses" precedent
+  // as catalog.service.ts's deletion paths.
+  if (mediaId !== null) {
+    await assertVendorFeatureAccess(vendorId, "rule_book_access", "Rule Book Sharing");
+  }
+  await assertOwnReadyMediaOrNull(vendorId, mediaId, "ruleBookMediaId");
+  await vendorRepository.setRuleBookMediaId(vendorId, mediaId);
+  return getRuleBook(vendorId);
+}
+
+export async function getRuleBook(vendorId: string) {
+  const result = await vendorRepository.findRuleBookMedia(vendorId);
+  return result?.ruleBookMedia ?? null;
 }
 
 export async function setCategories(vendorId: string, input: SetCategoriesInput) {

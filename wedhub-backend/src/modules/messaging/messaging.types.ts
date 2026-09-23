@@ -12,4 +12,5 @@ export interface SendMessageInput {
   conversationId: string;
   senderUserId: string;
   body: string;
+  mediaId?: string | undefined;
 }

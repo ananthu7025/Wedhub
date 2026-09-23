@@ -5,7 +5,9 @@ export type MediaType =
   | "VIDEO"
   | "STORE_ITEM_PHOTO"
   | "PACKAGE_PHOTO"
-  | "CATEGORY_ATTRIBUTE_PHOTO";
+  | "CATEGORY_ATTRIBUTE_PHOTO"
+  | "CATALOG_ITEM_PHOTO"
+  | "RULE_BOOK";
 
 export interface CreateUploadRequestInput {
   mediaType: MediaType;

@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "NotificationEventType" ADD VALUE 'PROFILE_COMPLETION_REMINDER';

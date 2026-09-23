@@ -13,6 +13,7 @@ export const updateCategorySchema = z.object({
   sortOrder: z.coerce.number().int().optional(),
   isActive: z.boolean().optional(),
   hasStoreEnabled: z.boolean().optional(),
+  hasCatalogEnabled: z.boolean().optional(),
   // Homepage presentation fields — admin-controlled, presentation-only.
   // imageUrl/startingPriceLabel are nullable (not just optional) so an
   // admin can explicitly clear a previously-set value, not just leave it

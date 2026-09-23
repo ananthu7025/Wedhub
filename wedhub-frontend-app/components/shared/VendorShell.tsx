@@ -55,6 +55,20 @@ const navLinks = [
     ),
   },
   {
+    href: "/vendor/catalog",
+    label: "Catalog",
+    // Only shown when hasCatalogEligibleCategory is true (see VendorShell's
+    // filter below) — same category-gated pattern as Store above, but
+    // unmetered by plan (no catalog_access feature flag exists).
+    icon: (
+      <>
+        <path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z" />
+        <circle cx="6.5" cy="6.5" r="1.5" />
+        <path d="M12 12l7 7" />
+      </>
+    ),
+  },
+  {
     href: "/vendor/calendar",
     label: "Calendar",
     icon: (
@@ -164,6 +178,9 @@ export async function VendorShell({
   const hasStoreEligibleCategory = Boolean(
     vendorResult?.data.categories.some((vc) => vc.category.hasStoreEnabled),
   );
+  const hasCatalogEligibleCategory = Boolean(
+    vendorResult?.data.categories.some((vc) => vc.category.hasCatalogEnabled),
+  );
   // Store and Quotes & Invoices are hidden entirely for a plan without their
   // feature, rather than shown-and-gated-on-click — there is nothing usable
   // behind either on a plan that lacks the feature (confirmed 2026-09-22
@@ -174,8 +191,16 @@ export async function VendorShell({
   // visible with only their Premium-specific parts gated inline.
   const hasStoreAccess = Boolean(planResult?.data.features.store_access);
   const hasInvoicingAccess = Boolean(planResult?.data.features.invoicing_access);
+  const hasCatalogAccess = Boolean(planResult?.data.features.catalog_access);
+  // Item 9: surfaced sitewide (not just on the dashboard body) so vendors
+  // are reminded on every page, not only when they happen to visit
+  // /vendor/dashboard. Hidden once complete — same threshold the dashboard's
+  // own checklist card already uses.
+  const profileCompleteness = vendorResult?.data.profileCompleteness;
+  const showCompletenessWidget = typeof profileCompleteness === "number" && profileCompleteness < 100;
   const visibleNavLinks = navLinks.filter((link) => {
     if (link.href === "/vendor/store") return hasStoreEligibleCategory && hasStoreAccess;
+    if (link.href === "/vendor/catalog") return hasCatalogEligibleCategory && hasCatalogAccess;
     if (link.href === "/vendor/finances") return hasInvoicingAccess;
     return true;
   });
@@ -220,6 +245,31 @@ export async function VendorShell({
         {/* Desktop Header (hidden on screens < 1024px) — sticky so it stays
             pinned to the top of this column while <main> below scrolls. */}
         <header className="sticky top-0 z-20 hidden lg:flex h-16 flex-shrink-0 items-center justify-end gap-3 border-b border-border bg-white px-6">
+          {showCompletenessWidget && (
+            <Link
+              href="/vendor/dashboard"
+              className="flex items-center gap-2 rounded-full border border-border bg-surface-page px-3 py-1.5 text-xs font-semibold text-text-dark no-underline hover:border-brand-primary"
+            >
+              <span className="relative h-6 w-6 flex-shrink-0">
+                <svg viewBox="0 0 24 24" className="h-6 w-6 -rotate-90">
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="3" className="text-surface-input" />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeDasharray={`${(profileCompleteness! / 100) * 62.8} 62.8`}
+                    strokeLinecap="round"
+                    className="text-brand-primary"
+                  />
+                </svg>
+              </span>
+              Complete your profile ({profileCompleteness}%)
+            </Link>
+          )}
+
           {resolvedSlug && canSharePortfolio && (
             <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
           )}
@@ -265,6 +315,15 @@ export async function VendorShell({
             <BrandLogo variant="dark" href="/vendor/dashboard" />
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {showCompletenessWidget && (
+              <Link
+                href="/vendor/dashboard"
+                aria-label={`Complete your profile (${profileCompleteness}% done)`}
+                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-brand-primary text-[10px] font-bold text-brand-primary shrink-0"
+              >
+                {profileCompleteness}%
+              </Link>
+            )}
             {resolvedSlug && canSharePortfolio && (
               <SharePortfolioButton slug={resolvedSlug} businessName={vendorName} variant="header" />
             )}
@@ -303,6 +362,8 @@ export async function VendorShell({
         unreadMessageCount={unreadMessageCount}
         hasStoreEligibleCategory={hasStoreEligibleCategory}
         hasStoreAccess={hasStoreAccess}
+        hasCatalogEligibleCategory={hasCatalogEligibleCategory}
+        hasCatalogAccess={hasCatalogAccess}
         hasInvoicingAccess={hasInvoicingAccess}
       />
     </div>

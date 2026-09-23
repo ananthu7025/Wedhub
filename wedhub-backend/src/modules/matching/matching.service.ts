@@ -62,6 +62,8 @@ async function matchOneCategory(
       serviceAreaId: undefined,
       priceMin: undefined,
       priceMax: undefined,
+      catalogPriceMin: undefined,
+      catalogPriceMax: undefined,
       verified: undefined,
       attributes: undefined,
       maxAvgResponseTimeMs: undefined,

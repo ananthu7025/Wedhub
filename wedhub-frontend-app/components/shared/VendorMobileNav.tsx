@@ -15,6 +15,11 @@ interface VendorMobileNavProps {
   // both must be true for Store to appear anywhere in this nav. See
   // VendorShell.tsx's identical gate on the desktop sidebar.
   hasStoreAccess?: boolean;
+  hasCatalogEligibleCategory?: boolean;
+  // Plan-gated (catalog_access), separate from category eligibility above —
+  // both must be true for Catalog to appear anywhere in this nav. See
+  // VendorShell.tsx's identical gate on the desktop sidebar.
+  hasCatalogAccess?: boolean;
   // Plan-gated (invoicing_access) — gates the whole "Quotes & Invoices" nav
   // item (both Quotations and Invoicing), same as VendorShell.tsx.
   hasInvoicingAccess?: boolean;
@@ -95,6 +100,16 @@ const SECONDARY_SECTIONS = [
             <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
             <line x1="3" y1="6" x2="21" y2="6" />
             <path d="M16 10a4 4 0 01-8 0" />
+          </svg>
+        ),
+      },
+      {
+        href: "/vendor/catalog",
+        label: "Catalog",
+        icon: (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z" />
+            <circle cx="6.5" cy="6.5" r="1.5" />
           </svg>
         ),
       },
@@ -213,20 +228,24 @@ export function VendorMobileNav({
   unreadMessageCount = 0,
   hasStoreEligibleCategory = false,
   hasStoreAccess = false,
+  hasCatalogEligibleCategory = false,
+  hasCatalogAccess = false,
   hasInvoicingAccess = false,
 }: VendorMobileNavProps) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const canShowStore = hasStoreEligibleCategory && hasStoreAccess;
+  const canShowCatalog = hasCatalogEligibleCategory && hasCatalogAccess;
 
-  // Mirrors VendorShell's desktop nav filter — same Store/Finances links,
-  // same gates, just applied to this drawer's separate SECONDARY_SECTIONS
-  // copies of the links.
+  // Mirrors VendorShell's desktop nav filter — same Store/Catalog/Finances
+  // links, same gates, just applied to this drawer's separate
+  // SECONDARY_SECTIONS copies of the links.
   const visibleSections = SECONDARY_SECTIONS.map((section) => ({
     ...section,
     links: section.links.filter((link) => {
       if (link.href === "/vendor/store") return canShowStore;
+      if (link.href === "/vendor/catalog") return canShowCatalog;
       if (link.href === "/vendor/finances") return hasInvoicingAccess;
       return true;
     }),

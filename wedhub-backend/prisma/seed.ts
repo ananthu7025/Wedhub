@@ -78,6 +78,17 @@ const WEDDING_CATEGORIES: string[] = [
   "Content Creators",
 ];
 
+// Categories with the vendor catalog module enabled (items 1/2/3/5/10/12) —
+// same on/off-per-category convention as the (currently empty) store/studio
+// enablement lists.
+const CATALOG_ENABLED_CATEGORIES = new Set([
+  "Wedding Cars & Luxury Rentals",
+  "Bridal Wear",
+  "Groom Wear",
+  "Jewellery",
+  "Cakes & Desserts",
+]);
+
 interface AttributeSeed {
   key: string;
   label: string;
@@ -1223,10 +1234,11 @@ const INDIA_STATES: LocationSeed[] = [
 
 export async function seedCategories(): Promise<void> {
   for (const [index, name] of WEDDING_CATEGORIES.entries()) {
+    const hasCatalogEnabled = CATALOG_ENABLED_CATEGORIES.has(name);
     const category = await prisma.category.upsert({
       where: { slug: slugify(name) },
-      update: { name, sortOrder: index },
-      create: { name, slug: slugify(name), sortOrder: index },
+      update: { name, sortOrder: index, hasCatalogEnabled },
+      create: { name, slug: slugify(name), sortOrder: index, hasCatalogEnabled },
     });
 
     const attributes = CATEGORY_ATTRIBUTES[name] ?? [];
@@ -1430,6 +1442,8 @@ const SUBSCRIPTION_PLANS: PlanSeed[] = [
       store_access: false,
       invoicing_access: false,
       portfolio_page_access: false,
+      catalog_access: false,
+      rule_book_access: false,
     },
   },
   {
@@ -1447,6 +1461,8 @@ const SUBSCRIPTION_PLANS: PlanSeed[] = [
       store_access: true,
       invoicing_access: true,
       portfolio_page_access: true,
+      catalog_access: true,
+      rule_book_access: true,
     },
   },
 ];

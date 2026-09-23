@@ -58,6 +58,7 @@ export async function updateCategory(id: string, input: UpdateCategoryInput) {
     sortOrder: input.sortOrder,
     isActive: input.isActive,
     hasStoreEnabled: input.hasStoreEnabled,
+    hasCatalogEnabled: input.hasCatalogEnabled,
     imageUrl: input.imageUrl,
     isFeaturedOnHomepage: input.isFeaturedOnHomepage,
     homepageSortOrder: input.homepageSortOrder,

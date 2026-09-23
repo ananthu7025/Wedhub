@@ -11,12 +11,15 @@ import {
 import { enqueueMediaProcessing } from "../../jobs/queues/media-processing.queue";
 import * as entitlementService from "../entitlements/entitlement.service";
 import * as mediaRepository from "./media.repository";
-import { IMAGE_MIME_TYPES, VIDEO_MIME_TYPES } from "./media.schema";
+import { DOCUMENT_MIME_TYPES, IMAGE_MIME_TYPES, VIDEO_MIME_TYPES } from "./media.schema";
 import type { CreateUploadRequestInput, UpdateMediaInput } from "./media.types";
 
 function maxSizeBytesFor(mimeType: string): number {
   if (VIDEO_MIME_TYPES.includes(mimeType)) {
     return env.MEDIA_MAX_VIDEO_SIZE_MB * 1024 * 1024;
+  }
+  if (DOCUMENT_MIME_TYPES.includes(mimeType)) {
+    return env.MEDIA_MAX_DOCUMENT_SIZE_MB * 1024 * 1024;
   }
   return env.MEDIA_MAX_IMAGE_SIZE_MB * 1024 * 1024;
 }
@@ -29,15 +32,19 @@ function extensionFor(filename: string): string {
 export async function createUploadRequest(vendorId: string, input: CreateUploadRequestInput) {
   const isImage = IMAGE_MIME_TYPES.includes(input.mimeType);
   const isVideo = VIDEO_MIME_TYPES.includes(input.mimeType);
+  const isDocument = DOCUMENT_MIME_TYPES.includes(input.mimeType);
 
-  if (!isImage && !isVideo) {
+  if (!isImage && !isVideo && !isDocument) {
     throw new ValidationError(`Unsupported file type: ${input.mimeType}`);
   }
 
   if (input.mediaType === "VIDEO" && !isVideo) {
     throw new ValidationError("mediaType VIDEO requires a video mimeType");
   }
-  if (input.mediaType !== "VIDEO" && !isImage) {
+  if (input.mediaType === "RULE_BOOK" && !isDocument) {
+    throw new ValidationError("mediaType RULE_BOOK requires a document mimeType (PDF)");
+  }
+  if (input.mediaType !== "VIDEO" && input.mediaType !== "RULE_BOOK" && !isImage) {
     throw new ValidationError(`mediaType ${input.mediaType} requires an image mimeType`);
   }
 
@@ -95,11 +102,21 @@ export async function confirmUpload(vendorId: string, mediaId: string) {
   // (image vs video) here catches that class of MIME-declaration spoofing
   // before the object is queued for processing / made publicly reachable.
   const storedContentType = await getStoredContentType(media.originalObjectKey);
-  const declaredIsVideo = VIDEO_MIME_TYPES.includes(media.mimeType);
-  const storedIsVideo = storedContentType ? VIDEO_MIME_TYPES.includes(storedContentType) : false;
-  const storedIsImage = storedContentType ? IMAGE_MIME_TYPES.includes(storedContentType) : false;
-  const storedFamilyMatches = declaredIsVideo ? storedIsVideo : storedIsImage;
-  if (!storedContentType || !storedFamilyMatches) {
+  const declaredFamily = VIDEO_MIME_TYPES.includes(media.mimeType)
+    ? "video"
+    : DOCUMENT_MIME_TYPES.includes(media.mimeType)
+      ? "document"
+      : "image";
+  const storedFamily = storedContentType
+    ? VIDEO_MIME_TYPES.includes(storedContentType)
+      ? "video"
+      : DOCUMENT_MIME_TYPES.includes(storedContentType)
+        ? "document"
+        : IMAGE_MIME_TYPES.includes(storedContentType)
+          ? "image"
+          : null
+    : null;
+  if (!storedContentType || storedFamily !== declaredFamily) {
     throw new ValidationError("Uploaded file does not match the declared file type");
   }
 

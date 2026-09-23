@@ -8,6 +8,7 @@ export function findActiveCategories() {
     orderBy: { sortOrder: "asc" },
     include: {
       attributes: { orderBy: { sortOrder: "asc" } },
+      catalogVariantFields: { orderBy: { sortOrder: "asc" } },
     },
   });
 }
@@ -17,6 +18,7 @@ export function findAllCategories() {
     orderBy: { sortOrder: "asc" },
     include: {
       attributes: { orderBy: { sortOrder: "asc" } },
+      catalogVariantFields: { orderBy: { sortOrder: "asc" } },
     },
   });
 }
@@ -33,6 +35,7 @@ export function findCategoryBySlug(slug: string) {
     where: { slug },
     include: {
       attributes: { orderBy: { sortOrder: "asc" } },
+      catalogVariantFields: { orderBy: { sortOrder: "asc" } },
       children: true,
     },
   });
@@ -94,6 +97,7 @@ export interface CategoryUpdateFields {
   sortOrder: number | undefined;
   isActive: boolean | undefined;
   hasStoreEnabled: boolean | undefined;
+  hasCatalogEnabled: boolean | undefined;
   imageUrl: string | null | undefined;
   isFeaturedOnHomepage: boolean | undefined;
   homepageSortOrder: number | undefined;

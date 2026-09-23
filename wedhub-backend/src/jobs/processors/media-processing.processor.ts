@@ -37,6 +37,17 @@ async function processImage(mediaId: string): Promise<void> {
     return;
   }
 
+  // Item 6 — RULE_BOOK is a PDF, not an image; Sharp cannot decode it any
+  // more than it can decode video. Same early-return treatment as VIDEO
+  // above: mark READY directly using the original upload, no
+  // thumbnail/blurDataUrl/optimized variant generated.
+  if (media.mediaType === "RULE_BOOK") {
+    await prisma.media.update({ where: { id: mediaId }, data: { status: "READY" } });
+    const durationMs = Math.round(performance.now() - start);
+    logger.info({ mediaId, durationMs }, "Rule book document marked READY (no resize pipeline — see comment)");
+    return;
+  }
+
   const variants = await generateMediaVariants(media.originalObjectKey);
 
   // omitUndefined: Sharp's metadata.width/height can come back undefined

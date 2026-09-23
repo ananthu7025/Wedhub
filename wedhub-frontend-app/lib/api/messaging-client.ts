@@ -23,8 +23,8 @@ export function startConversation(body: StartConversationBody) {
   return call<Conversation>("/messaging/conversations", "POST", body);
 }
 
-export function sendMessage(conversationId: string, body: string) {
-  return call<Message>(`/messaging/conversations/${conversationId}/messages`, "POST", { body });
+export function sendMessage(conversationId: string, body: string, mediaId?: string) {
+  return call<Message>(`/messaging/conversations/${conversationId}/messages`, "POST", { body, mediaId });
 }
 
 export function markConversationRead(conversationId: string) {

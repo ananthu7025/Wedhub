@@ -341,6 +341,8 @@ export async function createMultiVendorEnquiry(
       // vendors) treats budget as a signal, not an exclusion criterion; the
       // enquiry still records the user's real budget for vendors to see.
       priceMax: undefined,
+      catalogPriceMin: undefined,
+      catalogPriceMax: undefined,
       verified: undefined,
       attributes: undefined,
       maxAvgResponseTimeMs: undefined,

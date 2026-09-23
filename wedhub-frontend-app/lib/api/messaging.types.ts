@@ -41,11 +41,23 @@ export interface ConversationListItem extends Conversation {
   unreadCount: number;
 }
 
+// Item 6 — an attachment message's resolved Media, when present. Only
+// fields needed to render a download link (no thumbnail/preview — a rule
+// book is a PDF).
+export interface MessageAttachment {
+  id: string;
+  mimeType: string;
+  fileSize: number;
+  originalObjectKey: string;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
   senderUserId: string;
   body: string;
+  mediaId: string | null;
+  media: MessageAttachment | null;
   readAt: string | null;
   createdAt: string;
 }

@@ -8,6 +8,7 @@ import { formatApiError } from "@/lib/utils/error";
 import { LocationTree } from "./LocationTree";
 import { CategoryImagePicker } from "./CategoryImagePicker";
 import { CategoryAttributesPanel } from "./CategoryAttributesPanel";
+import { CategoryCatalogVariantFieldsPanel } from "./CategoryCatalogVariantFieldsPanel";
 
 /**
  * Categories & Locations admin page (Frontend Arch Phase 9, extended
@@ -162,6 +163,18 @@ export function CatalogBoard({
     setCategories((prev) => prev.map((c) => (c.id === category.id ? { ...c, hasStoreEnabled: result.data.hasStoreEnabled } : c)));
   }
 
+  async function handleToggleCatalog(category: Category) {
+    setPendingId(category.id);
+    setError(null);
+    const result = await updateAdminCategory(category.id, { hasCatalogEnabled: !category.hasCatalogEnabled });
+    setPendingId(null);
+    if (!result.success) {
+      setError(formatApiError(result.error));
+      return;
+    }
+    setCategories((prev) => prev.map((c) => (c.id === category.id ? { ...c, hasCatalogEnabled: result.data.hasCatalogEnabled } : c)));
+  }
+
   async function handleSaveHomepageFields(category: Category, imageUrl: string | null, startingPriceLabel: string) {
     setPendingId(category.id);
     setError(null);
@@ -181,6 +194,10 @@ export function CatalogBoard({
 
   function handleAttributesChange(categoryId: string, attributes: Category["attributes"]) {
     setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, attributes } : c)));
+  }
+
+  function handleVariantFieldsChange(categoryId: string, catalogVariantFields: Category["catalogVariantFields"]) {
+    setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, catalogVariantFields } : c)));
   }
 
   return (
@@ -392,8 +409,10 @@ export function CatalogBoard({
                   onToggle={() => handleToggleCategory(selected)}
                   onToggleFeatured={() => handleToggleFeatured(selected)}
                   onToggleStore={() => handleToggleStore(selected)}
+                  onToggleCatalog={() => handleToggleCatalog(selected)}
                   onSaveHomepageFields={(imageUrl, priceLabel) => handleSaveHomepageFields(selected, imageUrl, priceLabel)}
                   onAttributesChange={(attributes) => handleAttributesChange(selected.id, attributes)}
+                  onVariantFieldsChange={(fields) => handleVariantFieldsChange(selected.id, fields)}
                 />
               ) : (
                 <div className="hidden h-full min-h-[300px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white p-6 text-center lg:flex">
@@ -411,7 +430,7 @@ export function CatalogBoard({
   );
 }
 
-type DetailTab = "overview" | "attributes" | "homepage" | "settings";
+type DetailTab = "overview" | "attributes" | "catalogFields" | "homepage" | "settings";
 
 function ToggleSwitch({
   checked,
@@ -441,8 +460,10 @@ function CategoryDetailPanel({
   onToggle,
   onToggleFeatured,
   onToggleStore,
+  onToggleCatalog,
   onSaveHomepageFields,
   onAttributesChange,
+  onVariantFieldsChange,
 }: {
   category: Category;
   pending: boolean;
@@ -451,8 +472,10 @@ function CategoryDetailPanel({
   onToggle: () => void;
   onToggleFeatured: () => void;
   onToggleStore: () => void;
+  onToggleCatalog: () => void;
   onSaveHomepageFields: (imageUrl: string | null, startingPriceLabel: string) => void;
   onAttributesChange: (attributes: Category["attributes"]) => void;
+  onVariantFieldsChange: (fields: Category["catalogVariantFields"]) => void;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [name, setName] = useState(category.name);
@@ -470,6 +493,7 @@ function CategoryDetailPanel({
   const TABS: Array<{ id: DetailTab; label: string }> = [
     { id: "overview", label: "Overview" },
     { id: "attributes", label: `Attributes (${category.attributes.length})` },
+    { id: "catalogFields", label: `Catalog fields (${category.catalogVariantFields?.length ?? 0})` },
     { id: "homepage", label: "Homepage" },
     { id: "settings", label: "Settings" },
   ];
@@ -638,6 +662,14 @@ function CategoryDetailPanel({
         <CategoryAttributesPanel categoryId={category.id} attributes={category.attributes} onAttributesChange={onAttributesChange} />
       )}
 
+      {activeTab === "catalogFields" && (
+        <CategoryCatalogVariantFieldsPanel
+          categoryId={category.id}
+          fields={category.catalogVariantFields ?? []}
+          onFieldsChange={onVariantFieldsChange}
+        />
+      )}
+
       {activeTab === "homepage" && (
         <div className="rounded-xl border border-border bg-white p-5">
           <h3 className="text-sm font-bold">Homepage settings</h3>
@@ -695,6 +727,19 @@ function CategoryDetailPanel({
               checked={Boolean(category.hasStoreEnabled)}
               disabled={pending}
               onChange={onToggleStore}
+              activeColorClassName="peer-checked:bg-emerald-600"
+            />
+          </label>
+
+          <label
+            className="mt-3 flex items-center gap-2 text-xs text-text-grey cursor-pointer"
+            title="Enable/Disable the vendor catalog (items, variants, availability calendar) for vendors in this category"
+          >
+            Catalog enabled
+            <ToggleSwitch
+              checked={Boolean(category.hasCatalogEnabled)}
+              disabled={pending}
+              onChange={onToggleCatalog}
               activeColorClassName="peer-checked:bg-emerald-600"
             />
           </label>

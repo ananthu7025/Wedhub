@@ -59,7 +59,7 @@ export async function listMessages(req: Request, res: Response): Promise<void> {
 export async function sendMessage(req: Request, res: Response): Promise<void> {
   const user = requireUser(req);
   const body = req.body as SendMessageBody;
-  const message = await messagingService.sendMessage(req.params.id as string, user.id, body.body);
+  const message = await messagingService.sendMessage(req.params.id as string, user.id, body.body, body.mediaId);
   res.status(201).json(successResponse(message));
 }
 

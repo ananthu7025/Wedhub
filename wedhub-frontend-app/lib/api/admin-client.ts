@@ -1,6 +1,7 @@
 "use client";
 
 import type { ApiResponse } from "./types";
+import type { AdminUpsertCatalogVariantFieldBody, CatalogVariantField } from "./vendor-catalog.types";
 import type {
   AdminAlbumScalarOnly,
   AdminBlogCoverImageConfirmResult,
@@ -395,4 +396,33 @@ export function updateAdminSeoOverride(id: string, body: AdminUpdateSeoOverrideB
 
 export function deleteAdminSeoOverride(id: string) {
   return call<{ deleted: true }>(`/admin/seo-overrides/${id}`, "DELETE");
+}
+
+// Per-category vendor catalog variant field configuration (item 1/2/3/5/10/
+// 12) — same admin-configured-per-category pattern as
+// createAdminAttribute/updateAdminAttribute/reorderAdminAttributes above,
+// backing a category's CatalogItemVariant.attributes shape instead of
+// CategoryAttribute.
+export function listAdminCatalogVariantFields(categoryId: string) {
+  return call<CatalogVariantField[]>(`/admin/categories/${categoryId}/catalog-variant-fields`, "GET");
+}
+
+export function createAdminCatalogVariantField(categoryId: string, body: AdminUpsertCatalogVariantFieldBody) {
+  return call<CatalogVariantField>(`/admin/categories/${categoryId}/catalog-variant-fields`, "POST", body);
+}
+
+export function updateAdminCatalogVariantField(
+  categoryId: string,
+  fieldId: string,
+  body: Partial<AdminUpsertCatalogVariantFieldBody>,
+) {
+  return call<CatalogVariantField>(`/admin/categories/${categoryId}/catalog-variant-fields/${fieldId}`, "PATCH", body);
+}
+
+export function deleteAdminCatalogVariantField(categoryId: string, fieldId: string) {
+  return call<{ success: boolean }>(`/admin/categories/${categoryId}/catalog-variant-fields/${fieldId}`, "DELETE");
+}
+
+export function reorderAdminCatalogVariantFields(categoryId: string, orderedIds: string[]) {
+  return call<CatalogVariantField[]>(`/admin/categories/${categoryId}/catalog-variant-fields/reorder`, "PUT", { orderedIds });
 }

@@ -23,7 +23,7 @@ export const VENDOR_ADMIN_INCLUDE = {
 
 export const VENDOR_COMPLETENESS_INCLUDE = {
   profile: true,
-  categories: true,
+  categories: { include: { category: true } },
   serviceAreas: true,
   packages: true,
   attributeValues: true,
@@ -123,8 +123,41 @@ export function updateProfileCompleteness(id: string, score: number) {
   return prisma.vendor.update({ where: { id }, data: { profileCompleteness: score } });
 }
 
+// Item 9 — the daily profile-completion reminder job's target audience:
+// vendors who haven't submitted at all yet (DRAFT — see
+// vendor.service.ts::submitForReview, the only place status leaves DRAFT)
+// and still have an incomplete profile. Deliberately excludes
+// REJECTED/PENDING_*/APPROVED/SUSPENDED — those have a different, more
+// specific status-driven narrative than a generic "finish your profile"
+// nudge.
+export function findIncompleteDraftVendors() {
+  return prisma.vendor.findMany({
+    where: { status: "DRAFT", profileCompleteness: { lt: 100 }, deletedAt: null, ownerUserId: { not: null } },
+    select: { id: true, businessName: true, profileCompleteness: true, ownerUserId: true },
+  });
+}
+
 export function updateHiddenSections(id: string, hiddenSections: string[]) {
   return prisma.vendor.update({ where: { id }, data: { hiddenProfileSections: hiddenSections } });
+}
+
+// Item 6 — one current rule book Media id per vendor, never exposed via
+// VENDOR_FULL_INCLUDE/public serializers (see vendor.service.ts's
+// getMyRuleBook, the only reader). null clears it.
+export function setRuleBookMediaId(id: string, ruleBookMediaId: string | null) {
+  return prisma.vendor.update({ where: { id }, data: { ruleBookMediaId } });
+}
+
+export function findRuleBookMedia(vendorId: string) {
+  return prisma.vendor.findUnique({
+    where: { id: vendorId },
+    select: {
+      ruleBookMediaId: true,
+      ruleBookMedia: {
+        select: { id: true, status: true, mimeType: true, fileSize: true, originalObjectKey: true, createdAt: true },
+      },
+    },
+  });
 }
 
 export function upsertVendorProfile(vendorId: string, data: Record<string, unknown>) {

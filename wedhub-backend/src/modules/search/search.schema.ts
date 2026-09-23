@@ -9,6 +9,15 @@ export const searchVendorsQuerySchema = z.object({
   serviceAreaId: z.string().uuid().optional(),
   priceMin: z.coerce.number().min(0).optional(),
   priceMax: z.coerce.number().min(0).optional(),
+  // Item 11: scoped to catalog item/variant pricing (CatalogItem.basePrice /
+  // CatalogItemVariant.price), distinct from priceMin/priceMax above which
+  // only ever filter the fixed VendorProfile.startingPrice field. Lets a
+  // customer type "cake between 500 and 1000" and match against a Cakes &
+  // Desserts vendor's actual catalog items, not their unrelated starting
+  // price. Only meaningful for catalog-enabled categories; harmless no-op
+  // (matches nothing) for a vendor with no catalog items.
+  catalogPriceMin: z.coerce.number().min(0).optional(),
+  catalogPriceMax: z.coerce.number().min(0).optional(),
   verified: z.coerce.boolean().optional(),
   // Category-attribute filters as attr[<attributeId>]=<value>, e.g.
   // ?attr[a1b2...]=outdoor. Express's default "extended" query parser (qs)

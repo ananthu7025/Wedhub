@@ -4,7 +4,7 @@ import type { CompletenessResult } from "./vendor.types";
 type VendorWithRelations = Prisma.VendorGetPayload<{
   include: {
     profile: true;
-    categories: true;
+    categories: { include: { category: true } };
     serviceAreas: true;
     packages: true;
     attributeValues: true;
@@ -15,6 +15,15 @@ interface WeightedCheck {
   label: string;
   weight: number;
   isMet: (vendor: VendorWithRelations) => boolean;
+  // When present, the check is skipped entirely (neither scored nor listed
+  // as missing) for vendors whose primary category fails this predicate.
+  appliesTo?: (vendor: VendorWithRelations) => boolean;
+}
+
+// Venues are a single fixed location, not a coverage area (item 13) — the
+// service-area check doesn't apply to them.
+function isVenueVendor(vendor: VendorWithRelations): boolean {
+  return vendor.categories.some((c) => c.isPrimary && c.category.slug === "venues");
 }
 
 const CHECKS: WeightedCheck[] = [
@@ -23,7 +32,12 @@ const CHECKS: WeightedCheck[] = [
   { label: "Full description", weight: 10, isMet: (v) => !!v.profile?.description },
   { label: "Primary category", weight: 15, isMet: (v) => v.categories.some((c) => c.isPrimary) },
   { label: "Primary city", weight: 10, isMet: (v) => !!v.cityId },
-  { label: "At least one service area", weight: 5, isMet: (v) => v.serviceAreas.length > 0 },
+  {
+    label: "At least one service area",
+    weight: 5,
+    isMet: (v) => v.serviceAreas.length > 0,
+    appliesTo: (v) => !isVenueVendor(v),
+  },
   {
     label: "Pricing information",
     weight: 10,
@@ -57,16 +71,24 @@ export const REQUIRED_FOR_SUBMISSION_LABELS = [
 ];
 
 export function calculateCompleteness(vendor: VendorWithRelations): CompletenessResult {
-  let score = 0;
+  const applicableChecks = CHECKS.filter((check) => check.appliesTo?.(vendor) ?? true);
+  const applicableWeight = applicableChecks.reduce((sum, check) => sum + check.weight, 0);
+
+  let earned = 0;
   const missing: string[] = [];
 
-  for (const check of CHECKS) {
+  for (const check of applicableChecks) {
     if (check.isMet(vendor)) {
-      score += check.weight;
+      earned += check.weight;
     } else {
       missing.push(check.label);
     }
   }
+
+  // Re-normalize against only the checks that apply to this vendor, so a
+  // category with an inapplicable check (e.g. Venues skipping "service
+  // area") can still reach 100% rather than being capped below it.
+  const score = applicableWeight > 0 ? Math.round((earned / applicableWeight) * 100) : 100;
 
   return { score, missing };
 }

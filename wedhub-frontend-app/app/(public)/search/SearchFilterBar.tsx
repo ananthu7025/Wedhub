@@ -13,6 +13,10 @@ interface SearchFilterBarProps {
   currentCity?: Location;
   priceMin?: number;
   priceMax?: number;
+  // Item 11: catalog item/variant price range, only meaningful for
+  // catalog-enabled categories (see the conditional render below).
+  catalogPriceMin?: number;
+  catalogPriceMax?: number;
   verified?: boolean;
   /** Item 4: "replies within N hours" cutoff, whole hours. */
   maxReplyHours?: number;
@@ -26,6 +30,8 @@ export function SearchFilterBar({
   currentCity,
   priceMin,
   priceMax,
+  catalogPriceMin,
+  catalogPriceMax,
   verified,
   maxReplyHours,
   sort = "relevance",
@@ -38,13 +44,19 @@ export function SearchFilterBar({
   const [tempMin, setTempMin] = useState<string>(priceMin ? String(priceMin) : "");
   const [tempMax, setTempMax] = useState<string>(priceMax ? String(priceMax) : "");
 
+  // Item price local state for the catalog-price popover
+  const [tempCatalogMin, setTempCatalogMin] = useState<string>(catalogPriceMin ? String(catalogPriceMin) : "");
+  const [tempCatalogMax, setTempCatalogMax] = useState<string>(catalogPriceMax ? String(catalogPriceMax) : "");
+
   const barRef = useRef<HTMLDivElement>(null);
 
-  // Sync temp budget state with incoming props
+  // Sync temp budget/item-price state with incoming props
   useEffect(() => {
     setTempMin(priceMin ? String(priceMin) : "");
     setTempMax(priceMax ? String(priceMax) : "");
-  }, [priceMin, priceMax]);
+    setTempCatalogMin(catalogPriceMin ? String(catalogPriceMin) : "");
+    setTempCatalogMax(catalogPriceMax ? String(catalogPriceMax) : "");
+  }, [priceMin, priceMax, catalogPriceMin, catalogPriceMax]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -114,6 +126,8 @@ export function SearchFilterBar({
   }
 
   const hasBudgetFilter = priceMin !== undefined || priceMax !== undefined;
+  const hasCatalogPriceFilter = catalogPriceMin !== undefined || catalogPriceMax !== undefined;
+  const showCatalogPriceFilter = Boolean(currentCategory?.hasCatalogEnabled);
 
   return (
     <div
@@ -324,6 +338,93 @@ export function SearchFilterBar({
               </div>
             )}
           </div>
+
+          {/* Item Price Popover — only for catalog-enabled categories (Wedding
+              Cars, Bridal/Groom Wear, Jewellery, Cakes & Desserts), since the
+              Budget filter above already covers everyone else's starting
+              price. Item 11: "cake between 500 and 1000" maps to this. */}
+          {showCatalogPriceFilter && (
+            <div className="relative inline-block text-left">
+              <button
+                type="button"
+                onClick={() => toggleDropdown("catalogPrice")}
+                className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 transition-all whitespace-nowrap cursor-pointer ${
+                  hasCatalogPriceFilter
+                    ? "border-[#e00b41] bg-[#fff1f2] font-semibold text-[#e00b41]"
+                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <span>
+                  {hasCatalogPriceFilter
+                    ? `₹${catalogPriceMin ? catalogPriceMin.toLocaleString("en-IN") : "0"} - ₹${
+                        catalogPriceMax ? catalogPriceMax.toLocaleString("en-IN") : "Any"
+                      }`
+                    : "Item Price"}
+                </span>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  className={`transition-transform duration-200 ${openDropdown === "catalogPrice" ? "rotate-180" : ""}`}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              {openDropdown === "catalogPrice" && (
+                <div className="absolute left-0 top-full mt-2 w-72 rounded-xl border border-gray-200 bg-white p-4 shadow-2xl z-50">
+                  <div className="mb-2 text-xs font-bold text-gray-700">Item Price Range</div>
+
+                  <div className="flex items-center gap-2 mb-4">
+                    <input
+                      type="number"
+                      placeholder="Min (₹)"
+                      value={tempCatalogMin}
+                      onChange={(e) => setTempCatalogMin(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs outline-none focus:border-[#e00b41]"
+                    />
+                    <span className="text-gray-400">–</span>
+                    <input
+                      type="number"
+                      placeholder="Max (₹)"
+                      value={tempCatalogMax}
+                      onChange={(e) => setTempCatalogMax(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs outline-none focus:border-[#e00b41]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempCatalogMin("");
+                        setTempCatalogMax("");
+                        updateQuery({ catalogPriceMin: undefined, catalogPriceMax: undefined });
+                      }}
+                      className="text-xs font-medium text-gray-500 hover:underline cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateQuery({
+                          catalogPriceMin: tempCatalogMin.trim() || undefined,
+                          catalogPriceMax: tempCatalogMax.trim() || undefined,
+                        })
+                      }
+                      className="rounded-full bg-[#e00b41] px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#c2185b] cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Verified Toggle Pill */}
           <button

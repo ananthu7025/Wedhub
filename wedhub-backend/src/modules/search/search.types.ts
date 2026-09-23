@@ -5,6 +5,8 @@ export interface VendorSearchFilters {
   serviceAreaId: string | undefined;
   priceMin: number | undefined;
   priceMax: number | undefined;
+  catalogPriceMin: number | undefined;
+  catalogPriceMax: number | undefined;
   verified: boolean | undefined;
   attributes: Record<string, string> | undefined;
   // Item 4: coarse reply-speed filter — "replies within 24h" rather than an

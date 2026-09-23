@@ -8,6 +8,7 @@ import type {
   CreateUploadRequestBody,
   MediaItem,
   PackageSelf,
+  RuleBookSelf,
   SetAttributesBody,
   SetCategoriesBody,
   SetHiddenSectionsBody,
@@ -59,6 +60,16 @@ export function setMyServiceAreas(body: SetServiceAreasBody) {
 
 export function setMyHiddenSections(body: SetHiddenSectionsBody) {
   return call<VendorSelf>("/vendors/me/hidden-sections", "PUT", body);
+}
+
+// Item 6 — never exposed on the public profile; only reachable by the
+// vendor themselves and shared with a customer via a Message attachment.
+export function getMyRuleBook() {
+  return call<RuleBookSelf | null>("/vendors/me/rule-book", "GET");
+}
+
+export function setMyRuleBook(mediaId: string | null) {
+  return call<RuleBookSelf | null>("/vendors/me/rule-book", "PUT", { mediaId });
 }
 
 // Item 3 (2026-09-22): adds a new option to a shared SELECT/MULTI_SELECT

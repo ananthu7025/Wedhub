@@ -20,6 +20,19 @@ const CONVERSATION_COUPLE_SELECT = {
   profile: { select: { firstName: true, lastName: true } },
 } satisfies Prisma.UserSelect;
 
+const MESSAGE_MEDIA_SELECT = {
+  id: true,
+  mimeType: true,
+  fileSize: true,
+  originalObjectKey: true,
+} satisfies Prisma.MediaSelect;
+
+// Item 6 — ownership check for sendMessage's optional mediaId: the vendor
+// on this conversation's side must own the media being attached.
+export function findOwnVendorMedia(vendorId: string, mediaId: string) {
+  return prisma.media.findFirst({ where: { id: mediaId, vendorId }, select: { id: true, status: true } });
+}
+
 export function findConversationById(id: string) {
   return prisma.conversation.findUnique({
     where: { id },
@@ -126,6 +139,7 @@ export function listMessages(conversationId: string, page: number, limit: number
     prisma.message.findMany({
       where: { conversationId },
       orderBy: { createdAt: "desc" },
+      include: { media: { select: MESSAGE_MEDIA_SELECT } },
       ...toPageParams(page, limit),
     }),
     prisma.message.count({ where: { conversationId } }),
@@ -138,7 +152,13 @@ export function listMessages(conversationId: string, page: number, limit: number
 export function createMessage(input: SendMessageInput) {
   return prisma.$transaction(async (tx) => {
     const message = await tx.message.create({
-      data: { conversationId: input.conversationId, senderUserId: input.senderUserId, body: input.body },
+      data: {
+        conversationId: input.conversationId,
+        senderUserId: input.senderUserId,
+        body: input.body,
+        mediaId: input.mediaId ?? null,
+      },
+      include: { media: { select: MESSAGE_MEDIA_SELECT } },
     });
     await tx.conversation.update({
       where: { id: input.conversationId },
