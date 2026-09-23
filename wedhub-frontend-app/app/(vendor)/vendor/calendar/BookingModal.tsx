@@ -81,10 +81,10 @@ export function BookingModal({
   // (WhatsApp number, email) so the vendor doesn't have to re-type them —
   // still just a starting point, every field stays editable afterward.
   function handleLeadPick(lead: VendorLead) {
-    handleClientNameChange(lead.enquiry.contactName);
-    setClientPhone(lead.enquiry.contactPhone ?? "");
-    setClientEmail(lead.enquiry.contactEmail);
-    if (lead.enquiry.weddingLocation) setVenueCity(lead.enquiry.weddingLocation);
+    handleClientNameChange(lead.enquiry?.contactName || "Client");
+    setClientPhone(lead.enquiry?.contactPhone ?? "");
+    setClientEmail(lead.enquiry?.contactEmail ?? "");
+    if (lead.enquiry?.weddingLocation) setVenueCity(lead.enquiry.weddingLocation);
   }
 
   async function handleSubmit(e: React.FormEvent) {

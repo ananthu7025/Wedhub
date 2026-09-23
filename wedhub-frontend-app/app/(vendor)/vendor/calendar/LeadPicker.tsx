@@ -59,7 +59,7 @@ export function LeadPicker({ onPick }: { onPick: (lead: VendorLead) => void }) {
 
   function pick(lead: VendorLead) {
     onPick(lead);
-    setQuery(lead.enquiry.contactName);
+    setQuery(lead.enquiry?.contactName || "Client");
     setOpen(false);
   }
 
@@ -95,10 +95,10 @@ export function LeadPicker({ onPick }: { onPick: (lead: VendorLead) => void }) {
                 onClick={() => pick(lead)}
                 className="flex w-full flex-col items-start gap-0.5 border-b border-neutral-grey-20 px-3.5 py-2.5 text-left last:border-b-0 hover:bg-surface-input"
               >
-                <span className="text-[13px] font-bold text-text-dark">{lead.enquiry.contactName}</span>
+                <span className="text-[13px] font-bold text-text-dark">{lead.enquiry?.contactName || "Client"}</span>
                 <span className="text-xs text-text-grey">
-                  {lead.enquiry.contactPhone ?? lead.enquiry.contactEmail}
-                  {lead.enquiry.weddingDate ? ` · ${new Date(lead.enquiry.weddingDate).toLocaleDateString("en-IN")}` : ""}
+                  {lead.enquiry?.contactPhone ?? lead.enquiry?.contactEmail}
+                  {lead.enquiry?.weddingDate ? ` · ${new Date(lead.enquiry.weddingDate).toLocaleDateString("en-IN")}` : ""}
                 </span>
               </button>
             ))}

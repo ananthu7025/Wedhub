@@ -28,6 +28,8 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
   // Modals state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copiedSummary, setCopiedSummary] = useState(false);
 
   // Payment form state
   const [paymentAmount, setPaymentAmount] = useState(invoice.balanceDue.toString());
@@ -44,6 +46,33 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
   // General loading & feedback
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  function getInvoiceShareText() {
+    const due = invoice.dueDate ? formatDate(invoice.dueDate) : "On receipt";
+    const lines = [
+      `*TAX INVOICE #${invoice.invoiceNumber}*`,
+      `From: ${invoice.sellerBusinessName}`,
+      `To: ${invoice.clientName}`,
+      `----------------------------------------`,
+      `Total Amount: ${formatINR(invoice.grandTotal)}`,
+      invoice.paidAmount > 0 ? `Paid to date: ${formatINR(invoice.paidAmount)}` : null,
+      `*Balance Due: ${formatINR(invoice.balanceDue)}*`,
+      `Due Date: ${due}`,
+      `----------------------------------------`,
+      invoice.upiId ? `Pay via UPI: ${invoice.upiId}` : null,
+      invoice.accountNumber ? `Bank: ${invoice.bankName || "Bank Transfer"} (A/C: ${invoice.accountNumber}, IFSC: ${invoice.ifscCode || "—"})` : null,
+      `----------------------------------------`,
+      `Thank you! — ${invoice.sellerBusinessName}`,
+    ].filter(Boolean);
+    return lines.join("\n");
+  }
+
+  function handleCopyShareText() {
+    const text = getInvoiceShareText();
+    navigator.clipboard.writeText(text);
+    setCopiedSummary(true);
+    setTimeout(() => setCopiedSummary(false), 2500);
+  }
 
   function formatINR(amount: number) {
     return new Intl.NumberFormat("en-IN", {
@@ -307,16 +336,30 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
           )}
 
           {invoice.status !== "DRAFT" && (
-            <Link
-              href={`/vendor/invoices/${invoice.id}/print`}
-              target="_blank"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-text-dark shadow-sm hover:bg-gray-50"
-            >
-              <svg className="h-4 w-4 text-text-grey" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-              Print / PDF
-            </Link>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowShareModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 shadow-sm hover:bg-emerald-100 transition-colors"
+                title="Share invoice with client via WhatsApp, Email, or Copy"
+              >
+                <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                Share Invoice
+              </button>
+
+              <Link
+                href={`/vendor/invoices/${invoice.id}/print`}
+                target="_blank"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-text-dark shadow-sm hover:bg-gray-50"
+              >
+                <svg className="h-4 w-4 text-text-grey" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print / PDF
+              </Link>
+            </>
           )}
 
           <button
@@ -916,6 +959,148 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Share Invoice Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-bold text-text-dark">
+                  Share Invoice #{invoice.invoiceNumber}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowShareModal(false)}
+                className="text-text-grey hover:text-text-dark text-sm p-1 rounded-md hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-4 text-xs">
+              <p className="text-text-grey">
+                Send invoice summary and payment instructions directly to <strong className="text-text-dark">{invoice.clientName}</strong>.
+              </p>
+
+              {/* Quick Actions Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* WhatsApp Share */}
+                {(() => {
+                  const cleanPhone = invoice.clientPhone?.replace(/[^0-9]/g, "") || "";
+                  const shareText = getInvoiceShareText();
+                  const waHref = cleanPhone
+                    ? `https://wa.me/${cleanPhone.length === 10 ? "91" + cleanPhone : cleanPhone}?text=${encodeURIComponent(shareText)}`
+                    : `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+
+                  return (
+                    <a
+                      href={waHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-left transition hover:bg-emerald-100 hover:border-emerald-300 group"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs group-hover:scale-105 transition-transform">
+                        <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
+                          <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.698.073-2.112-.513-1.636-.68-2.69-2.339-2.772-2.449-.082-.11-1.391-1.85-1.391-3.529 0-1.678.877-2.503 1.189-2.846.312-.343.681-.43 1.093-.43.136 0 .257.007.366.015.318.016.478.038.687.542.261.626.892 2.176.97 2.335.078.16.13.348.026.557-.104.209-.156.339-.312.521-.156.183-.328.409-.469.549-.156.157-.319.327-.137.64.182.313.809 1.334 1.735 2.16 1.191 1.061 2.195 1.389 2.508 1.545.313.156.496.13.679-.079.183-.209.782-.913.991-1.226.209-.313.418-.261.698-.157.28.104 1.776.837 2.081.989.305.153.508.228.583.355.074.128.074.743-.07 1.148z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-text-dark">Send on WhatsApp</div>
+                        <div className="text-[11px] text-text-grey truncate">
+                          {invoice.clientPhone ? invoice.clientPhone : "Open WhatsApp chat"}
+                        </div>
+                      </div>
+                    </a>
+                  );
+                })()}
+
+                {/* Email Share */}
+                {invoice.clientEmail ? (
+                  <a
+                    href={`mailto:${invoice.clientEmail}?subject=${encodeURIComponent(
+                      `Tax Invoice #${invoice.invoiceNumber} from ${invoice.sellerBusinessName}`
+                    )}&body=${encodeURIComponent(getInvoiceShareText())}`}
+                    className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 text-left transition hover:bg-blue-100 hover:border-blue-300 group"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-xs group-hover:scale-105 transition-transform">
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-text-dark">Send via Email</div>
+                      <div className="text-[11px] text-text-grey truncate">{invoice.clientEmail}</div>
+                    </div>
+                  </a>
+                ) : (
+                  <Link
+                    href={`/vendor/invoices/${invoice.id}/print`}
+                    target="_blank"
+                    className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50/70 p-3.5 text-left transition hover:bg-gray-100 group"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-700 text-white shadow-xs group-hover:scale-105 transition-transform">
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-text-dark">Save PDF / Print</div>
+                      <div className="text-[11px] text-text-grey truncate">Download official copy</div>
+                    </div>
+                  </Link>
+                )}
+              </div>
+
+              {/* Copy Summary Text Box */}
+              <div>
+                <div className="flex items-center justify-between pb-1">
+                  <label className="font-semibold text-text-dark">Invoice Message Preview</label>
+                  <button
+                    type="button"
+                    onClick={handleCopyShareText}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-primary hover:underline"
+                  >
+                    {copiedSummary ? "✓ Copied!" : "📋 Copy to Clipboard"}
+                  </button>
+                </div>
+                <textarea
+                  readOnly
+                  rows={7}
+                  value={getInvoiceShareText()}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50/60 p-3 font-mono text-[11px] text-neutral-800 outline-none select-all"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                <Link
+                  href={`/vendor/invoices/${invoice.id}/print`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:underline"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Open Printable PDF
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowShareModal(false)}
+                  className="rounded-xl border border-gray-200 px-4 py-2 font-semibold text-text-dark hover:bg-gray-50"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

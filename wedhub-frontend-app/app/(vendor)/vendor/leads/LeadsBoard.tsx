@@ -238,15 +238,15 @@ export function LeadsBoard({ initialLeads, profileViewers }: { initialLeads: Ven
                 }`}
               >
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold truncate">{lead.enquiry.contactName}</span>
+                  <span className="text-sm font-bold truncate">{lead.enquiry?.contactName || "Prospective Couple"}</span>
                   <Badge variant={statusBadgeVariant(lead.status)}>{formatStatusLabel(lead.status)}</Badge>
                 </div>
                 <p className="my-0.5 text-xs text-text-grey truncate">
-                  Wedding: {formatDate(lead.enquiry.weddingDate)}
-                  {lead.enquiry.budget && ` · Budget ₹${Number(lead.enquiry.budget).toLocaleString("en-IN")}`}
+                  Wedding: {formatDate(lead.enquiry?.weddingDate ?? null)}
+                  {lead.enquiry?.budget && ` · Budget ₹${Number(lead.enquiry.budget).toLocaleString("en-IN")}`}
                 </p>
                 <div className="mt-1.5 flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-text-grey">{lead.enquiry.source}</span>
+                  <span className="text-[11px] font-semibold text-text-grey">{lead.enquiry?.source || "Direct"}</span>
                   <span className="text-[11px] text-paynes-grey-40">{formatRelativeTime(lead.createdAt)}</span>
                 </div>
               </button>
@@ -278,16 +278,32 @@ export function LeadsBoard({ initialLeads, profileViewers }: { initialLeads: Ven
                   <div className="mb-4.5 flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2.5">
-                        <h2 className="text-xl font-bold">{detail.enquiry.contactName}</h2>
+                        <h2 className="text-xl font-bold">{detail.enquiry?.contactName || "Prospective Couple"}</h2>
                         <Badge variant={statusBadgeVariant(detail.status)}>{formatStatusLabel(detail.status)}</Badge>
-                        <Badge variant="blue">{detail.enquiry.source}</Badge>
+                        <Badge variant="blue">{detail.enquiry?.source || "Direct"}</Badge>
                       </div>
                       <p className="mt-1 text-xs text-text-grey">
                         Received {formatRelativeTime(detail.createdAt)} · {new Date(detail.createdAt).toLocaleString("en-IN")}
                       </p>
                     </div>
 
-                    <div className="flex flex-shrink-0 gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {detail.hasFullContactInfo && detail.enquiry?.contactPhone && (
+                        <a
+                          href={`https://wa.me/${detail.enquiry.contactPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                            `Hi ${detail.enquiry.contactName || "there"}, thank you for reaching out to us on WedHub regarding your wedding!`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 shadow-xs"
+                          title="Chat directly on WhatsApp"
+                        >
+                          <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
+                            <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.698.073-2.112-.513-1.636-.68-2.69-2.339-2.772-2.449-.082-.11-1.391-1.85-1.391-3.529 0-1.678.877-2.503 1.189-2.846.312-.343.681-.43 1.093-.43.136 0 .257.007.366.015.318.016.478.038.687.542.261.626.892 2.176.97 2.335.078.16.13.348.026.557-.104.209-.156.339-.312.521-.156.183-.328.409-.469.549-.156.157-.319.327-.137.64.182.313.809 1.334 1.735 2.16 1.191 1.061 2.195 1.389 2.508 1.545.313.156.496.13.679-.079.183-.209.782-.913.991-1.226.209-.313.418-.261.698-.157.28.104 1.776.837 2.081.989.305.153.508.228.583.355.074.128.074.743-.07 1.148z" />
+                          </svg>
+                          WhatsApp
+                        </a>
+                      )}
                       {detail.conversations[0] && (
                         <Link
                           href={`/vendor/inbox?conversation=${detail.conversations[0].id}`}
@@ -327,25 +343,31 @@ export function LeadsBoard({ initialLeads, profileViewers }: { initialLeads: Ven
                     <div className="mb-4.5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-[13px]">
                       <div className="min-w-0">
                         <span className="mb-0.5 block text-text-grey">Phone</span>
-                        {detail.enquiry.contactPhone ? (
-                          <a
-                            href={`tel:${detail.enquiry.contactPhone}`}
-                            className="font-semibold text-text-dark hover:text-brand-primary transition-colors"
-                          >
-                            {detail.enquiry.contactPhone}
-                          </a>
+                        {detail.enquiry?.contactPhone ? (
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={`tel:${detail.enquiry.contactPhone}`}
+                              className="font-semibold text-text-dark hover:text-brand-primary transition-colors"
+                            >
+                              {detail.enquiry.contactPhone}
+                            </a>
+                          </div>
                         ) : (
                           <span className="font-semibold text-text-grey">—</span>
                         )}
                       </div>
                       <div className="min-w-0">
                         <span className="mb-0.5 block text-text-grey">Email</span>
-                        <a
-                          href={`mailto:${detail.enquiry.contactEmail}`}
-                          className="font-semibold text-text-dark hover:text-brand-primary break-all transition-colors block"
-                        >
-                          {detail.enquiry.contactEmail}
-                        </a>
+                        {detail.enquiry?.contactEmail ? (
+                          <a
+                            href={`mailto:${detail.enquiry.contactEmail}`}
+                            className="font-semibold text-text-dark hover:text-brand-primary break-all transition-colors block"
+                          >
+                            {detail.enquiry.contactEmail}
+                          </a>
+                        ) : (
+                          <span className="font-semibold text-text-grey">—</span>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -384,25 +406,25 @@ export function LeadsBoard({ initialLeads, profileViewers }: { initialLeads: Ven
                   <div className="mb-4.5 grid grid-cols-2 gap-3.5 text-[13px]">
                     <div className="min-w-0">
                       <span className="mb-0.5 block text-text-grey">Wedding date</span>
-                      <span className="font-semibold">{formatDate(detail.enquiry.weddingDate)}</span>
+                      <span className="font-semibold">{formatDate(detail.enquiry?.weddingDate ?? null)}</span>
                     </div>
                     <div className="min-w-0">
                       <span className="mb-0.5 block text-text-grey">Budget</span>
                       <span className="font-semibold">
-                        {detail.enquiry.budget ? `₹${Number(detail.enquiry.budget).toLocaleString("en-IN")}` : "Not specified"}
+                        {detail.enquiry?.budget ? `₹${Number(detail.enquiry.budget).toLocaleString("en-IN")}` : "Not specified"}
                       </span>
                     </div>
                     <div className="min-w-0">
                       <span className="mb-0.5 block text-text-grey">Guest count</span>
-                      <span className="font-semibold">{detail.enquiry.guestCount ?? "—"}</span>
+                      <span className="font-semibold">{detail.enquiry?.guestCount ?? "—"}</span>
                     </div>
                     <div className="min-w-0">
                       <span className="mb-0.5 block text-text-grey">Location</span>
-                      <span className="font-semibold break-words">{detail.enquiry.weddingLocation ?? "—"}</span>
+                      <span className="font-semibold break-words">{detail.enquiry?.weddingLocation ?? "—"}</span>
                     </div>
                   </div>
 
-                  {detail.enquiry.message && (
+                  {detail.enquiry?.message && (
                     <div>
                       <span className="mb-1 block text-[13px] text-text-grey">Original enquiry message</span>
                       <div className="rounded-md bg-surface-input p-3.5 text-[13px] italic leading-relaxed text-text-body break-words">
