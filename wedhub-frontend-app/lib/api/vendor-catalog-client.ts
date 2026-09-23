@@ -55,6 +55,21 @@ export function clearMyCatalogItemAvailability(itemId: string, body: { variantId
   return call<CatalogAvailabilityEntry[]>(`/catalog/me/items/${itemId}/availability/clear`, "POST", body);
 }
 
+// Public, unauthenticated read — used by VendorPortfolioCatalog.tsx (a
+// "use client" component on the public portfolio page), which cannot import
+// lib/api/vendor-catalog.ts (that module is "server-only" — next/headers via
+// client.ts — and can never be pulled into a client component's module
+// graph, even for one function; this broke the Next.js production build).
+// Routed through the same generic proxy (/api/[...path]/route.ts) every
+// other client-side call uses.
+export function getPublicCatalogItemAvailability(itemId: string, from?: string, to?: string) {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return call<CatalogAvailabilityEntry[]>(`/public-catalog/items/${itemId}/availability${query}`, "GET");
+}
+
 export function importMyCatalogItems(csvContent: string) {
   return call<CatalogImportResult>("/catalog/me/items/import", "POST", { csvContent });
 }

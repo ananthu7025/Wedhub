@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type { CatalogAvailabilityEntry, CatalogItem } from "@/lib/api/vendor-catalog.types";
-import { fetchPublicCatalogItemAvailability } from "@/lib/api/vendor-catalog";
+import { getPublicCatalogItemAvailability } from "@/lib/api/vendor-catalog-client";
 import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { trackEvent } from "@/lib/analytics/track";
 
@@ -49,10 +49,10 @@ function AvailabilityBadge({ itemId }: { itemId: string }) {
     const today = new Date().toISOString().slice(0, 10);
     const horizon = new Date();
     horizon.setDate(horizon.getDate() + 30);
-    fetchPublicCatalogItemAvailability(itemId, today, horizon.toISOString().slice(0, 10))
-      .then(({ data }) => {
+    getPublicCatalogItemAvailability(itemId, today, horizon.toISOString().slice(0, 10))
+      .then((res) => {
         if (cancelled) return;
-        setLabel(summarizeAvailability(data));
+        setLabel(res.success ? summarizeAvailability(res.data) : null);
       })
       .catch(() => {
         if (!cancelled) setLabel(null);
