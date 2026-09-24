@@ -826,16 +826,21 @@ model CatalogItem {
 // number of them (including zero). Public "Shop by Category" grid, nav, and
 // tab filters all read from this instead of guessing from item titles.
 model CatalogCollection {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId  String   @map("vendor_id") @db.Uuid
-  name      String
-  slug      String
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId     String   @map("vendor_id") @db.Uuid
+  name         String
+  slug         String
+  // Vendor-uploaded tile image for this collection — falls back to the
+  // first assigned item's first photo (see catalog.service.ts) when unset,
+  // rather than requiring one before a collection can be created.
+  coverMediaId String?  @map("cover_media_id") @db.Uuid
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  vendor Vendor                  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  items  CatalogItemCollection[]
+  vendor     Vendor                  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  coverMedia Media?                  @relation("CatalogCollectionCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  items      CatalogItemCollection[]
 
   @@unique([vendorId, slug])
   @@index([vendorId, sortOrder])
@@ -949,7 +954,6 @@ model CatalogItemAvailability {
 model CatalogStoreSettings {
   id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   vendorId         String           @unique @map("vendor_id") @db.Uuid
-  bannerMediaId    String?          @map("banner_media_id") @db.Uuid
   heroHeadline     String?          @map("hero_headline")
   heroTagline      String?          @map("hero_tagline")
   heroSubtitle     String?          @map("hero_subtitle") @db.Text
@@ -995,10 +999,47 @@ model CatalogStoreSettings {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  vendor      Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  bannerMedia Media? @relation("CatalogStoreBanner", fields: [bannerMediaId], references: [id], onDelete: SetNull)
+  vendor       Vendor                     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  heroMedia    CatalogStoreHeroMedia[]
+  galleryMedia CatalogStoreGalleryMedia[]
 
   @@map("catalog_store_settings")
+}
+
+// Vendor-uploaded hero carousel images, ordered — replaces the old single
+// bannerMediaId. Carousel arrows/dots only render when 2+ rows exist (see
+// ShopifyCatalogView.tsx); a single image just shows statically.
+model CatalogStoreHeroMedia {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  settingsId String   @map("settings_id") @db.Uuid
+  mediaId    String   @map("media_id") @db.Uuid
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  settings CatalogStoreSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+  media    Media                @relation("CatalogStoreHeroMedia", fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([settingsId, mediaId])
+  @@index([settingsId, sortOrder])
+  @@map("catalog_store_hero_media")
+}
+
+// Vendor-uploaded "Real Brides, Real Moments" gallery photos, ordered —
+// replaces auto-pulling leftover catalog item photos. Section still hides
+// unless galleryHeading is set AND at least one row exists here.
+model CatalogStoreGalleryMedia {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  settingsId String   @map("settings_id") @db.Uuid
+  mediaId    String   @map("media_id") @db.Uuid
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  settings CatalogStoreSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+  media    Media                @relation("CatalogStoreGalleryMedia", fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([settingsId, mediaId])
+  @@index([settingsId, sortOrder])
+  @@map("catalog_store_gallery_media")
 }
 
 model VendorInvitation {
@@ -1163,27 +1204,29 @@ model Media {
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
 
-  vendor                       Vendor?                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  uploader                     User?                  @relation("MediaUploader", fields: [userId], references: [id], onDelete: Cascade)
-  review                       Review?                @relation("ReviewPhotos", fields: [reviewId], references: [id], onDelete: Cascade)
-  album                        Album?                 @relation("AlbumMedia", fields: [albumId], references: [id], onDelete: SetNull)
-  weddingWebsite               WeddingWebsite?        @relation("WeddingWebsiteGallery", fields: [weddingWebsiteId], references: [id], onDelete: Cascade)
-  communityPost                CommunityPost?         @relation("CommunityPostPhoto", fields: [communityPostId], references: [id], onDelete: Cascade)
-  userProfiles                 UserProfile[]          @relation("UserProfileAvatar")
-  vendorProfileLogos           VendorProfile[]        @relation("VendorProfileLogo")
-  vendorProfileCovers          VendorProfile[]        @relation("VendorProfileCover")
-  albumCoverFor                Album[]                @relation("AlbumCover")
+  vendor                       Vendor?                    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  uploader                     User?                      @relation("MediaUploader", fields: [userId], references: [id], onDelete: Cascade)
+  review                       Review?                    @relation("ReviewPhotos", fields: [reviewId], references: [id], onDelete: Cascade)
+  album                        Album?                     @relation("AlbumMedia", fields: [albumId], references: [id], onDelete: SetNull)
+  weddingWebsite               WeddingWebsite?            @relation("WeddingWebsiteGallery", fields: [weddingWebsiteId], references: [id], onDelete: Cascade)
+  communityPost                CommunityPost?             @relation("CommunityPostPhoto", fields: [communityPostId], references: [id], onDelete: Cascade)
+  userProfiles                 UserProfile[]              @relation("UserProfileAvatar")
+  vendorProfileLogos           VendorProfile[]            @relation("VendorProfileLogo")
+  vendorProfileCovers          VendorProfile[]            @relation("VendorProfileCover")
+  albumCoverFor                Album[]                    @relation("AlbumCover")
   featuredMedia                FeaturedMedia?
-  weddingWebsiteCoverFor       WeddingWebsite?        @relation("WeddingWebsiteCover")
-  weddingWebsiteCouplePhotoFor WeddingWebsite?        @relation("WeddingWebsiteCouplePhoto")
+  weddingWebsiteCoverFor       WeddingWebsite?            @relation("WeddingWebsiteCover")
+  weddingWebsiteCouplePhotoFor WeddingWebsite?            @relation("WeddingWebsiteCouplePhoto")
   storeItemMedia               VendorStoreItemMedia[]
-  catalogItemMedia             CatalogItemMedia[]     @relation("CatalogItemMedia")
-  packageImageFor              Package[]              @relation("PackageImage")
-  challengeEntryCoverFor       ChallengeEntry?        @relation("ChallengeEntryCoverImage")
-  challengeEntryPhotoFor       ChallengeEntryPhoto?   @relation("ChallengeEntryAdditionalPhoto")
-  ruleBookFor                  Vendor[]               @relation("VendorRuleBook")
-  messageAttachmentFor         Message[]              @relation("MessageAttachment")
-  catalogStoreBannerFor        CatalogStoreSettings[] @relation("CatalogStoreBanner")
+  catalogItemMedia             CatalogItemMedia[]         @relation("CatalogItemMedia")
+  packageImageFor              Package[]                  @relation("PackageImage")
+  challengeEntryCoverFor       ChallengeEntry?            @relation("ChallengeEntryCoverImage")
+  challengeEntryPhotoFor       ChallengeEntryPhoto?       @relation("ChallengeEntryAdditionalPhoto")
+  ruleBookFor                  Vendor[]                   @relation("VendorRuleBook")
+  messageAttachmentFor         Message[]                  @relation("MessageAttachment")
+  catalogStoreHeroFor          CatalogStoreHeroMedia[]    @relation("CatalogStoreHeroMedia")
+  catalogStoreGalleryFor       CatalogStoreGalleryMedia[] @relation("CatalogStoreGalleryMedia")
+  catalogCollectionCoverFor    CatalogCollection[]        @relation("CatalogCollectionCover")
 
   @@index([vendorId])
   @@index([userId])

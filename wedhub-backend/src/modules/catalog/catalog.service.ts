@@ -22,12 +22,16 @@ import type {
 
 type StoreSettingsWithRelations = Awaited<ReturnType<typeof catalogRepository.findStoreSettingsByVendorId>>;
 
+function mediaUrl(media: { optimizedObjectKey: string | null; originalObjectKey: string } | null | undefined) {
+  if (!media) return null;
+  return getPublicUrl(media.optimizedObjectKey ?? media.originalObjectKey);
+}
+
 function formatStoreSettings(settings: StoreSettingsWithRelations | null, vendorId: string) {
   return {
     vendorId,
-    bannerUrl: settings?.bannerMedia
-      ? getPublicUrl(settings.bannerMedia.optimizedObjectKey ?? settings.bannerMedia.originalObjectKey)
-      : null,
+    heroImages: (settings?.heroMedia ?? []).map((hm) => ({ mediaId: hm.mediaId, url: mediaUrl(hm.media) })),
+    galleryImages: (settings?.galleryMedia ?? []).map((gm) => ({ mediaId: gm.mediaId, url: mediaUrl(gm.media) })),
     heroHeadline: settings?.heroHeadline ?? null,
     heroTagline: settings?.heroTagline ?? null,
     heroSubtitle: settings?.heroSubtitle ?? null,
@@ -100,13 +104,23 @@ function formatItem(item: CatalogItemWithRelations) {
   };
 }
 
-function formatCollection(collection: { id: string; vendorId: string; name: string; slug: string; sortOrder: number }) {
+interface CollectionWithCover {
+  id: string;
+  vendorId: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  coverMedia?: { optimizedObjectKey: string | null; originalObjectKey: string } | null;
+}
+
+function formatCollection(collection: CollectionWithCover) {
   return {
     id: collection.id,
     vendorId: collection.vendorId,
     name: collection.name,
     slug: collection.slug,
     sortOrder: collection.sortOrder,
+    coverImageUrl: mediaUrl(collection.coverMedia),
   };
 }
 
@@ -476,7 +490,8 @@ export async function updateVendorStoreSettings(userId: string, input: UpsertCat
   await assertVendorFeatureAccess(vendor.id, "catalog_access", "Catalog");
 
   const settings = await catalogRepository.upsertStoreSettings(vendor.id, {
-    bannerMediaId: input.bannerMediaId,
+    heroMediaIds: input.heroMediaIds,
+    galleryMediaIds: input.galleryMediaIds,
     heroHeadline: input.heroHeadline,
     heroTagline: input.heroTagline,
     heroSubtitle: input.heroSubtitle,
@@ -532,7 +547,7 @@ export async function createCollection(userId: string, input: CreateCatalogColle
     return existing.some((c) => c.slug === candidate);
   });
 
-  const created = await catalogRepository.createCollection(vendor.id, input.name, slug);
+  const created = await catalogRepository.createCollection(vendor.id, input.name, slug, input.coverMediaId);
   return formatCollection(created);
 }
 
@@ -545,6 +560,7 @@ export async function updateCollection(userId: string, collectionId: string, inp
   const updated = await catalogRepository.updateCollection(collectionId, {
     name: input.name,
     sortOrder: input.sortOrder,
+    coverMediaId: input.coverMediaId,
   });
   return formatCollection(updated);
 }
@@ -579,6 +595,7 @@ export async function listPublicCollections(vendorSlug: string) {
     name: collection.name,
     slug: collection.slug,
     sortOrder: collection.sortOrder,
+    coverImageUrl: mediaUrl(collection.coverMedia) ?? mediaUrl(collection.items[0]?.item.media[0]?.media),
     items: collection.items.map((ci) => formatItem(ci.item)),
   }));
 }

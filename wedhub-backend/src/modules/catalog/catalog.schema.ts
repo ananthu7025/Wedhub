@@ -68,11 +68,13 @@ export const updateCatalogItemSchema = z.object({
 
 export const createCatalogCollectionSchema = z.object({
   name: z.string().min(1).max(100),
+  coverMediaId: z.string().uuid().nullable().optional(),
 });
 
 export const updateCatalogCollectionSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   sortOrder: z.coerce.number().int().optional(),
+  coverMediaId: z.string().uuid().nullable().optional(),
 });
 
 export const reorderCatalogCollectionsSchema = z.object({
@@ -134,7 +136,8 @@ export const catalogFooterLinkSchema = z.object({
 });
 
 export const upsertCatalogStoreSettingsSchema = z.object({
-  bannerMediaId: z.string().uuid().nullable().optional(),
+  heroMediaIds: z.array(z.string().uuid()).max(5).optional(),
+  galleryMediaIds: z.array(z.string().uuid()).max(12).optional(),
   heroHeadline: z.string().max(200).nullable().optional(),
   heroTagline: z.string().max(150).nullable().optional(),
   heroSubtitle: z.string().max(500).nullable().optional(),

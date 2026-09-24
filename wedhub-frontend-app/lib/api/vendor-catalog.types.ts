@@ -114,6 +114,7 @@ export interface CatalogCollection {
   name: string;
   slug: string;
   sortOrder: number;
+  coverImageUrl: string | null;
 }
 
 export interface CatalogCollectionWithItems {
@@ -121,16 +122,19 @@ export interface CatalogCollectionWithItems {
   name: string;
   slug: string;
   sortOrder: number;
+  coverImageUrl: string | null;
   items: CatalogItem[];
 }
 
 export interface CreateCatalogCollectionInput {
   name: string;
+  coverMediaId?: string | null;
 }
 
 export interface UpdateCatalogCollectionInput {
   name?: string;
   sortOrder?: number;
+  coverMediaId?: string | null;
 }
 
 export interface CatalogAvailabilityEntry {
@@ -181,9 +185,15 @@ export interface CatalogFooterLink {
   url: string;
 }
 
+export interface CatalogStoreImage {
+  mediaId: string;
+  url: string | null;
+}
+
 export interface CatalogStoreSettings {
   vendorId: string;
-  bannerUrl: string | null;
+  heroImages: CatalogStoreImage[];
+  galleryImages: CatalogStoreImage[];
   heroHeadline: string | null;
   heroTagline: string | null;
   heroSubtitle: string | null;
@@ -211,7 +221,8 @@ export interface CatalogStoreSettings {
 }
 
 export interface UpdateCatalogStoreSettingsInput {
-  bannerMediaId?: string | null;
+  heroMediaIds?: string[];
+  galleryMediaIds?: string[];
   heroHeadline?: string | null;
   heroTagline?: string | null;
   heroSubtitle?: string | null;

@@ -389,41 +389,14 @@ export function ShopifyCatalogView({
     window.open(whatsappUrl, "_blank");
   }
 
-  // Custom banner (vendor-uploaded via "Customize Storefront") takes priority,
-  // then vendor's cover photo, then the first catalog item's photo (NO EXTERNAL STATIC IMAGES)
-  const heroImage =
-    customConfig?.bannerUrl ||
-    (vendor.profile?.coverMedia
-      ? getPublicMediaUrl(
-          vendor.profile.coverMedia.optimizedObjectKey ?? vendor.profile.coverMedia.originalObjectKey
-        )
-      : null) ||
-    items[0]?.media[0]?.url ||
-    null;
-
-  // Hero carousel: the custom/cover banner first (if set), then a few more
-  // catalog item photos so there's something to page through even without
-  // a dedicated multi-image hero upload flow.
-  const heroImages = useMemo(() => {
-    const seen = new Set<string>();
-    const images: string[] = [];
-    if (heroImage) {
-      images.push(heroImage);
-      seen.add(heroImage);
-    }
-    for (const item of items) {
-      for (const m of item.media) {
-        const url = m.url ?? m.thumbnailUrl;
-        if (url && !seen.has(url)) {
-          images.push(url);
-          seen.add(url);
-        }
-        if (images.length >= 5) break;
-      }
-      if (images.length >= 5) break;
-    }
-    return images;
-  }, [heroImage, items]);
+  // Hero carousel — entirely vendor-uploaded (see "Customize Storefront" →
+  // Banner & Theme). No auto-pulling from vendor cover photo or catalog item
+  // photos: if the vendor hasn't uploaded a hero image, the hero section
+  // just shows its gradient background with text, no image.
+  const heroImages = useMemo(
+    () => (customConfig?.heroImages ?? []).map((img) => img.url).filter((url): url is string => url !== null),
+    [customConfig?.heroImages],
+  );
 
   const [heroSlide, setHeroSlide] = useState(0);
   const activeHeroImage = heroImages[heroSlide] ?? null;
@@ -433,25 +406,13 @@ export function ShopifyCatalogView({
     setHeroSlide(((index % heroImages.length) + heroImages.length) % heroImages.length);
   }
 
-  // "Real Brides, Real Moments" — real catalog photos only, no fabricated
-  // customer names/quotes (there's no testimonial data model). Excludes
-  // whatever's already shown in the hero carousel so it reads as more photos,
-  // not repeats.
-  const galleryPhotos = useMemo(() => {
-    const excluded = new Set(heroImages);
-    const photos: string[] = [];
-    for (const item of items) {
-      for (const m of item.media) {
-        const url = m.url ?? m.thumbnailUrl;
-        if (url && !excluded.has(url) && !photos.includes(url)) {
-          photos.push(url);
-        }
-        if (photos.length >= 6) break;
-      }
-      if (photos.length >= 6) break;
-    }
-    return photos;
-  }, [items, heroImages]);
+  // "Real Brides, Real Moments" — entirely vendor-uploaded gallery photos
+  // (see "Customize Storefront" → Gallery). No auto-pulling from catalog
+  // item photos and no fabricated customer names/quotes.
+  const galleryPhotos = useMemo(
+    () => (customConfig?.galleryImages ?? []).map((img) => img.url).filter((url): url is string => url !== null),
+    [customConfig?.galleryImages],
+  );
 
   return (
     <div className="min-h-screen bg-[#FCFBF7] text-[#1E1E1E] font-sans antialiased selection:bg-[#8F6B38] selection:text-white">
@@ -935,10 +896,10 @@ export function ShopifyCatalogView({
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="bg-[#EFE9DF] rounded-3xl overflow-hidden border border-[#E0D7C8] flex flex-col md:flex-row items-center justify-between shadow-sm">
             <div className="w-full md:w-1/2 aspect-[16/9] md:aspect-auto h-56 md:h-72 overflow-hidden bg-[#E2DBD0]">
-              {items[1]?.media[0]?.url || heroImage ? (
+              {items[1]?.media[0]?.url || heroImages[0] ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={items[1]?.media[0]?.url || heroImage || ""}
+                  src={items[1]?.media[0]?.url || heroImages[0] || ""}
                   alt={customConfig.promoHeading}
                   className="w-full h-full object-cover"
                 />

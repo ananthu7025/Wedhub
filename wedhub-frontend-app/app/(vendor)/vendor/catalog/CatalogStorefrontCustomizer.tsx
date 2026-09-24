@@ -62,6 +62,154 @@ function TextField({
   );
 }
 
+interface UploadedImage {
+  mediaId: string;
+  previewUrl: string;
+}
+
+async function uploadCatalogImage(file: File): Promise<UploadedImage> {
+  const compressed = await compressImageIfPossible(file);
+  const reqRes = await createMediaUploadRequest({
+    mediaType: "CATALOG_ITEM_PHOTO",
+    filename: compressed.name,
+    mimeType: compressed.type || "image/jpeg",
+    fileSize: compressed.size,
+  });
+
+  if (!reqRes.success) {
+    throw new Error(typeof reqRes.error === "string" ? reqRes.error : reqRes.error?.message || "Failed to initialize upload");
+  }
+
+  const { mediaId, uploadUrl } = reqRes.data;
+  const uploadRes = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": compressed.type || "image/jpeg", "Cache-Control": UPLOAD_CACHE_CONTROL },
+    body: compressed,
+  });
+  if (!uploadRes.ok) throw new Error("Failed to upload image to storage");
+
+  await confirmMediaUpload(mediaId);
+  return { mediaId, previewUrl: URL.createObjectURL(compressed) };
+}
+
+function MultiImageUploader({
+  label,
+  helpText,
+  images,
+  onChange,
+  maxImages,
+}: {
+  label: string;
+  helpText?: string;
+  images: UploadedImage[];
+  onChange: (images: UploadedImage[]) => void;
+  maxImages: number;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      const remaining = maxImages - images.length;
+      const toUpload = Array.from(files).slice(0, Math.max(remaining, 0));
+      const uploaded: UploadedImage[] = [];
+      for (const file of toUpload) {
+        uploaded.push(await uploadCatalogImage(file));
+      }
+      onChange([...images, ...uploaded]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  function removeAt(index: number) {
+    onChange(images.filter((_, i) => i !== index));
+  }
+
+  function moveTo(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= images.length) return;
+    const next = [...images];
+    const [moved] = next.splice(index, 1);
+    next.splice(target, 0, moved!);
+    onChange(next);
+  }
+
+  return (
+    <div>
+      <label className="block font-bold text-neutral-800 mb-1.5">{label}</label>
+      <div className="flex flex-wrap gap-2.5">
+        {images.map((img, idx) => (
+          <div key={img.mediaId} className="relative h-20 w-20 rounded-lg border border-neutral-200 overflow-hidden bg-neutral-50 group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={img.previewUrl} alt={`Image ${idx + 1}`} className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1">
+              {idx > 0 && (
+                <button
+                  type="button"
+                  onClick={() => moveTo(idx, -1)}
+                  className="h-5 w-5 rounded-full bg-white/90 text-neutral-800 text-[10px] font-bold flex items-center justify-center"
+                  title="Move earlier"
+                >
+                  ‹
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => removeAt(idx)}
+                className="h-5 w-5 rounded-full bg-white/90 text-red-600 text-[10px] font-bold flex items-center justify-center"
+                title="Remove"
+              >
+                ✕
+              </button>
+              {idx < images.length - 1 && (
+                <button
+                  type="button"
+                  onClick={() => moveTo(idx, 1)}
+                  className="h-5 w-5 rounded-full bg-white/90 text-neutral-800 text-[10px] font-bold flex items-center justify-center"
+                  title="Move later"
+                >
+                  ›
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+        {images.length < maxImages && (
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+            className="h-20 w-20 rounded-lg border border-dashed border-neutral-300 flex items-center justify-center text-neutral-500 text-[11px] font-bold hover:bg-neutral-50 disabled:opacity-60"
+          >
+            {uploading ? "…" : "+ Add"}
+          </button>
+        )}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          onChange={handleFiles}
+          className="sr-only"
+        />
+      </div>
+      {helpText && <p className="mt-1.5 text-[11px] text-neutral-500">{helpText}</p>}
+      {error && <p className="mt-1.5 text-[11px] text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 export function CatalogStorefrontCustomizer({
   initialSettings,
   onClose,
@@ -71,9 +219,16 @@ export function CatalogStorefrontCustomizer({
 }) {
   const [activeTab, setActiveTab] = useState<Tab>("Banner & Theme");
 
-  const [bannerMediaId, setBannerMediaId] = useState<string | null | undefined>(undefined);
-  const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(initialSettings?.bannerUrl ?? null);
-  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [heroImages, setHeroImages] = useState<UploadedImage[]>(
+    (initialSettings?.heroImages ?? [])
+      .filter((img) => img.url)
+      .map((img) => ({ mediaId: img.mediaId, previewUrl: img.url! })),
+  );
+  const [galleryImages, setGalleryImages] = useState<UploadedImage[]>(
+    (initialSettings?.galleryImages ?? [])
+      .filter((img) => img.url)
+      .map((img) => ({ mediaId: img.mediaId, previewUrl: img.url! })),
+  );
   const [accentColor, setAccentColor] = useState<StoreAccentColor>(initialSettings?.accentColor ?? "CRIMSON");
 
   const [heroHeadline, setHeroHeadline] = useState(initialSettings?.heroHeadline ?? "");
@@ -114,47 +269,6 @@ export function CatalogStorefrontCustomizer({
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [savedSettingsNotice, setSavedSettingsNotice] = useState(false);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
-
-  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingBanner(true);
-    setSettingsError(null);
-
-    try {
-      const compressed = await compressImageIfPossible(file);
-      const reqRes = await createMediaUploadRequest({
-        mediaType: "CATALOG_ITEM_PHOTO",
-        filename: compressed.name,
-        mimeType: compressed.type || "image/jpeg",
-        fileSize: compressed.size,
-      });
-
-      if (!reqRes.success) {
-        throw new Error(typeof reqRes.error === "string" ? reqRes.error : reqRes.error?.message || "Failed to initialize upload");
-      }
-
-      const { mediaId, uploadUrl } = reqRes.data;
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": compressed.type || "image/jpeg", "Cache-Control": UPLOAD_CACHE_CONTROL },
-        body: compressed,
-      });
-      if (!uploadRes.ok) throw new Error("Failed to upload banner image to storage");
-
-      await confirmMediaUpload(mediaId);
-
-      setBannerMediaId(mediaId);
-      setBannerPreviewUrl(URL.createObjectURL(compressed));
-    } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : "Banner upload failed");
-    } finally {
-      setUploadingBanner(false);
-      e.target.value = "";
-    }
-  }
 
   function addTrustBadge() {
     if (trustBadges.length >= 4) return;
@@ -190,7 +304,8 @@ export function CatalogStorefrontCustomizer({
     const cleanLinks = footerLinks.filter((l) => l.label.trim() && l.url.trim());
 
     const body: UpdateCatalogStoreSettingsInput = {
-      bannerMediaId,
+      heroMediaIds: heroImages.map((img) => img.mediaId),
+      galleryMediaIds: galleryImages.map((img) => img.mediaId),
       accentColor,
       heroHeadline: heroHeadline.trim() || null,
       heroTagline: heroTagline.trim() || null,
@@ -271,53 +386,13 @@ export function CatalogStorefrontCustomizer({
         <div className="flex-1 overflow-y-auto px-6 sm:px-7 py-5 space-y-4 text-xs">
           {activeTab === "Banner & Theme" && (
             <>
-              <div>
-                <label className="block font-bold text-neutral-800 mb-1">Banner Image</label>
-                <div className="flex items-center gap-3">
-                  <div className="h-16 w-28 flex-shrink-0 rounded-lg border border-neutral-200 overflow-hidden bg-neutral-50">
-                    {bannerPreviewUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={bannerPreviewUrl} alt="Storefront banner" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-[10px] text-neutral-400">
-                        No banner
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <button
-                      type="button"
-                      disabled={uploadingBanner}
-                      onClick={() => bannerInputRef.current?.click()}
-                      className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-bold text-neutral-800 hover:bg-neutral-50 disabled:opacity-60"
-                    >
-                      {uploadingBanner ? "Uploading…" : bannerPreviewUrl ? "Replace" : "Upload banner"}
-                    </button>
-                    {bannerPreviewUrl && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBannerMediaId(null);
-                          setBannerPreviewUrl(null);
-                        }}
-                        className="text-[11px] font-semibold text-red-600 hover:underline text-left"
-                      >
-                        Remove banner
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    ref={bannerInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={handleBannerUpload}
-                    className="sr-only"
-                  />
-                </div>
-                <p className="mt-1.5 text-[11px] text-neutral-500">
-                  Falls back to your vendor cover photo or your first catalog item&apos;s photo when not set.
-                </p>
-              </div>
+              <MultiImageUploader
+                label="Hero Banner Images"
+                helpText="Upload 1-5 photos for the hero banner. With 2 or more, it becomes a carousel with arrows and dots; with just one, it shows statically — no carousel controls."
+                images={heroImages}
+                onChange={setHeroImages}
+                maxImages={5}
+              />
 
               <div>
                 <label className="block font-bold text-neutral-800 mb-1.5">Accent Color</label>
@@ -450,7 +525,7 @@ export function CatalogStorefrontCustomizer({
           {activeTab === "Gallery" && (
             <>
               <p className="text-[11px] text-neutral-500">
-                A photo strip pulled from your catalog item photos — no fabricated testimonials. Hidden until you set a heading.
+                A photo strip you upload directly — not pulled from your product photos. Hidden until you set both a heading and at least one photo.
               </p>
               <TextField
                 label="Gallery Heading"
@@ -463,6 +538,13 @@ export function CatalogStorefrontCustomizer({
                 placeholder="e.g. A closer look at our pieces, styled for the big day"
                 value={gallerySubheading}
                 onChange={setGallerySubheading}
+              />
+              <MultiImageUploader
+                label="Gallery Photos"
+                helpText="Upload up to 12 photos for this section."
+                images={galleryImages}
+                onChange={setGalleryImages}
+                maxImages={12}
               />
               <TextField
                 label="Instagram URL (optional)"
@@ -612,7 +694,7 @@ export function CatalogStorefrontCustomizer({
             </button>
             <button
               type="button"
-              disabled={savingSettings || uploadingBanner}
+              disabled={savingSettings}
               onClick={handleSave}
               className="px-5 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover shadow-sm disabled:opacity-60"
             >

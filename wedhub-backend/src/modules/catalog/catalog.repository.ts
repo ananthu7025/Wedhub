@@ -386,10 +386,15 @@ export function reorderVariantFields(categoryId: string, fieldIds: string[]) {
 
 // ---- Public catalog page settings ----
 
+const MEDIA_SELECT = {
+  id: true,
+  originalObjectKey: true,
+  optimizedObjectKey: true,
+} satisfies Prisma.MediaSelect;
+
 const STORE_SETTINGS_INCLUDE = {
-  bannerMedia: {
-    select: { id: true, originalObjectKey: true, optimizedObjectKey: true },
-  },
+  heroMedia: { include: { media: { select: MEDIA_SELECT } }, orderBy: { sortOrder: "asc" as const } },
+  galleryMedia: { include: { media: { select: MEDIA_SELECT } }, orderBy: { sortOrder: "asc" as const } },
 } satisfies Prisma.CatalogStoreSettingsInclude;
 
 export function findStoreSettingsByVendorId(vendorId: string) {
@@ -400,7 +405,8 @@ export function findStoreSettingsByVendorId(vendorId: string) {
 }
 
 export interface UpsertStoreSettingsData {
-  bannerMediaId?: string | null | undefined;
+  heroMediaIds?: string[] | undefined;
+  galleryMediaIds?: string[] | undefined;
   heroHeadline?: string | null | undefined;
   heroTagline?: string | null | undefined;
   heroSubtitle?: string | null | undefined;
@@ -427,26 +433,57 @@ export interface UpsertStoreSettingsData {
   footerLinks?: { label: string; url: string }[] | null | undefined;
 }
 
-export function upsertStoreSettings(vendorId: string, data: UpsertStoreSettingsData) {
+export async function upsertStoreSettings(vendorId: string, data: UpsertStoreSettingsData) {
+  const { heroMediaIds, galleryMediaIds, ...rest } = data;
   const fields = omitUndefined({
-    ...data,
-    trustBadges: data.trustBadges as Prisma.InputJsonValue | undefined,
-    footerLinks: data.footerLinks as Prisma.InputJsonValue | undefined,
+    ...rest,
+    trustBadges: rest.trustBadges as Prisma.InputJsonValue | undefined,
+    footerLinks: rest.footerLinks as Prisma.InputJsonValue | undefined,
   });
-  return prisma.catalogStoreSettings.upsert({
-    where: { vendorId },
-    create: { vendorId, ...fields },
-    update: fields,
-    include: STORE_SETTINGS_INCLUDE,
+
+  return prisma.$transaction(async (tx) => {
+    const settings = await tx.catalogStoreSettings.upsert({
+      where: { vendorId },
+      create: { vendorId, ...fields },
+      update: fields,
+    });
+
+    if (heroMediaIds !== undefined) {
+      await tx.catalogStoreHeroMedia.deleteMany({ where: { settingsId: settings.id } });
+      if (heroMediaIds.length > 0) {
+        await tx.catalogStoreHeroMedia.createMany({
+          data: heroMediaIds.map((mediaId, index) => ({ settingsId: settings.id, mediaId, sortOrder: index })),
+        });
+      }
+    }
+
+    if (galleryMediaIds !== undefined) {
+      await tx.catalogStoreGalleryMedia.deleteMany({ where: { settingsId: settings.id } });
+      if (galleryMediaIds.length > 0) {
+        await tx.catalogStoreGalleryMedia.createMany({
+          data: galleryMediaIds.map((mediaId, index) => ({ settingsId: settings.id, mediaId, sortOrder: index })),
+        });
+      }
+    }
+
+    return tx.catalogStoreSettings.findUniqueOrThrow({
+      where: { id: settings.id },
+      include: STORE_SETTINGS_INCLUDE,
+    });
   });
 }
 
 // ---- Vendor-defined merchandising collections ----
 
+const COLLECTION_INCLUDE = {
+  coverMedia: { select: MEDIA_SELECT },
+} satisfies Prisma.CatalogCollectionInclude;
+
 export function findCollectionsByVendorId(vendorId: string) {
   return prisma.catalogCollection.findMany({
     where: { vendorId },
     orderBy: { sortOrder: "asc" },
+    include: COLLECTION_INCLUDE,
   });
 }
 
@@ -454,7 +491,7 @@ export function findCollectionById(id: string) {
   return prisma.catalogCollection.findUnique({ where: { id } });
 }
 
-export async function createCollection(vendorId: string, name: string, slug: string) {
+export async function createCollection(vendorId: string, name: string, slug: string, coverMediaId?: string | null) {
   const maxSortOrder = await prisma.catalogCollection.aggregate({
     where: { vendorId },
     _max: { sortOrder: true },
@@ -464,13 +501,18 @@ export async function createCollection(vendorId: string, name: string, slug: str
       vendorId,
       name,
       slug,
+      coverMediaId: coverMediaId ?? null,
       sortOrder: (maxSortOrder._max.sortOrder ?? -1) + 1,
     },
+    include: COLLECTION_INCLUDE,
   });
 }
 
-export function updateCollection(id: string, data: { name?: string | undefined; sortOrder?: number | undefined }) {
-  return prisma.catalogCollection.update({ where: { id }, data: omitUndefined(data) });
+export function updateCollection(
+  id: string,
+  data: { name?: string | undefined; sortOrder?: number | undefined; coverMediaId?: string | null | undefined },
+) {
+  return prisma.catalogCollection.update({ where: { id }, data: omitUndefined(data), include: COLLECTION_INCLUDE });
 }
 
 export function deleteCollection(id: string) {
@@ -495,6 +537,7 @@ export function findPublicCollectionsWithItems(vendorId: string) {
     where: { vendorId, items: { some: { item: { isActive: true } } } },
     orderBy: { sortOrder: "asc" },
     include: {
+      coverMedia: { select: MEDIA_SELECT },
       items: {
         where: { item: { isActive: true } },
         include: {
