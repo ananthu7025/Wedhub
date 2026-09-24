@@ -48,6 +48,7 @@ export const createCatalogItemSchema = z.object({
   mediaIds: z.array(z.string().uuid()).max(10).optional(),
   variants: z.array(createCatalogItemVariantSchema).max(100).optional(),
   components: z.array(createCatalogItemComponentSchema).max(50).optional(),
+  collectionIds: z.array(z.string().uuid()).max(20).optional(),
 });
 
 export const updateCatalogItemSchema = z.object({
@@ -60,6 +61,22 @@ export const updateCatalogItemSchema = z.object({
   mediaIds: z.array(z.string().uuid()).max(10).optional(),
   variants: z.array(createCatalogItemVariantSchema).max(100).optional(),
   components: z.array(createCatalogItemComponentSchema).max(50).optional(),
+  collectionIds: z.array(z.string().uuid()).max(20).optional(),
+});
+
+// ---- Vendor: collections (merchandising groups) ----
+
+export const createCatalogCollectionSchema = z.object({
+  name: z.string().min(1).max(100),
+});
+
+export const updateCatalogCollectionSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  sortOrder: z.coerce.number().int().optional(),
+});
+
+export const reorderCatalogCollectionsSchema = z.object({
+  orderedIds: z.array(z.string().uuid()).min(1),
 });
 
 export const setAvailabilitySchema = z.object({
@@ -160,3 +177,6 @@ export type ImportCatalogItemsInput = z.infer<typeof importCatalogItemsSchema>;
 export type UpsertCatalogStoreSettingsInput = z.infer<typeof upsertCatalogStoreSettingsSchema>;
 export type CatalogTrustBadgeInput = z.infer<typeof catalogTrustBadgeSchema>;
 export type CatalogFooterLinkInput = z.infer<typeof catalogFooterLinkSchema>;
+export type CreateCatalogCollectionInput = z.infer<typeof createCatalogCollectionSchema>;
+export type UpdateCatalogCollectionInput = z.infer<typeof updateCatalogCollectionSchema>;
+export type ReorderCatalogCollectionsInput = z.infer<typeof reorderCatalogCollectionsSchema>;

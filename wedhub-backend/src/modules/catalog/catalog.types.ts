@@ -9,4 +9,7 @@ export type {
   UpsertCatalogStoreSettingsInput,
   CatalogTrustBadgeInput,
   CatalogFooterLinkInput,
+  CreateCatalogCollectionInput,
+  UpdateCatalogCollectionInput,
+  ReorderCatalogCollectionsInput,
 } from "./catalog.schema";

@@ -6,6 +6,7 @@ import { createMediaUploadRequest, confirmMediaUpload } from "@/lib/api/vendor-s
 import { compressImageIfPossible } from "@/lib/media/compress-image";
 import { UPLOAD_CACHE_CONTROL } from "@/lib/media/upload";
 import type {
+  CatalogCollection,
   CatalogItem,
   CatalogItemComponentInput,
   CatalogItemVariantInput,
@@ -15,11 +16,13 @@ import type {
 export function CatalogItemModal({
   item,
   variantFields,
+  collections,
   onClose,
   onSaved,
 }: {
   item?: CatalogItem | null;
   variantFields: CatalogVariantField[];
+  collections: CatalogCollection[];
   onClose: () => void;
   onSaved: (item: CatalogItem) => void;
 }) {
@@ -30,6 +33,11 @@ export function CatalogItemModal({
   const [basePrice, setBasePrice] = useState<number | string>(item?.basePrice ?? "");
   const [isCustomizable, setIsCustomizable] = useState(item?.isCustomizable ?? false);
   const [isActive, setIsActive] = useState(item?.isActive ?? true);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>(item?.collectionIds ?? []);
+
+  function toggleCollection(id: string) {
+    setSelectedCollectionIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+  }
 
   const [mediaList, setMediaList] = useState<Array<{ id: string; url?: string | null }>>(
     item?.media?.map((m) => ({ id: m.mediaId, url: m.url ?? m.thumbnailUrl })) ?? [],
@@ -192,6 +200,7 @@ export function CatalogItemModal({
       mediaIds: mediaList.map((m) => m.id),
       variants: variantInputs,
       components: componentInputs,
+      collectionIds: selectedCollectionIds,
     };
 
     const res = isEditing && item ? await updateMyCatalogItem(item.id, payload) : await createMyCatalogItem(payload);
@@ -276,6 +285,34 @@ export function CatalogItemModal({
               className="w-full rounded-lg border border-border px-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
             />
           </div>
+
+          {collections.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold text-text-grey mb-2">
+                Collections <span className="font-normal text-text-grey/70">(shown on your public catalog page)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {collections.map((collection) => (
+                  <label
+                    key={collection.id}
+                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold cursor-pointer transition ${
+                      selectedCollectionIds.includes(collection.id)
+                        ? "border-brand-primary bg-brand-primary-soft text-brand-primary"
+                        : "border-border text-text-dark hover:bg-surface-input"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedCollectionIds.includes(collection.id)}
+                      onChange={() => toggleCollection(collection.id)}
+                      className="sr-only"
+                    />
+                    {collection.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Photos */}
           <div>

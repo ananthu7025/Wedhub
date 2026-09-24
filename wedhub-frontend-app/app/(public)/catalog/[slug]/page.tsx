@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getVendorBySlug } from "@/lib/api/catalog";
-import { fetchPublicCatalogItems, fetchPublicCatalogStoreSettings } from "@/lib/api/vendor-catalog";
+import {
+  fetchPublicCatalogCollections,
+  fetchPublicCatalogItems,
+  fetchPublicCatalogStoreSettings,
+} from "@/lib/api/vendor-catalog";
 import { ApiRequestError } from "@/lib/api/types";
 import { getPublicMediaUrl } from "@/lib/media/url";
-import type { CatalogStoreSettings } from "@/lib/api/vendor-catalog.types";
+import type { CatalogCollectionWithItems, CatalogStoreSettings } from "@/lib/api/vendor-catalog.types";
 import { ShopifyCatalogView } from "./ShopifyCatalogView";
 
 interface CatalogPageProps {
@@ -48,16 +52,19 @@ export default async function PublicCatalogStorePage({ params }: CatalogPageProp
   let vendor;
   let items = [];
   let storeSettings: CatalogStoreSettings | null = null;
+  let collections: CatalogCollectionWithItems[] = [];
 
   try {
-    const [vendorRes, itemsRes, settingsRes] = await Promise.all([
+    const [vendorRes, itemsRes, settingsRes, collectionsRes] = await Promise.all([
       getVendorBySlug(slug),
       fetchPublicCatalogItems(slug).catch(() => ({ data: [] })),
       fetchPublicCatalogStoreSettings(slug).catch(() => ({ data: undefined })),
+      fetchPublicCatalogCollections(slug).catch(() => ({ data: [] })),
     ]);
     vendor = vendorRes.data;
     items = itemsRes.data || [];
     storeSettings = settingsRes.data ?? null;
+    collections = collectionsRes.data ?? [];
   } catch (err) {
     if (err instanceof ApiRequestError && err.status === 404) {
       notFound();
@@ -69,5 +76,5 @@ export default async function PublicCatalogStorePage({ params }: CatalogPageProp
     notFound();
   }
 
-  return <ShopifyCatalogView vendor={vendor} initialItems={items} storeSettings={storeSettings} />;
+  return <ShopifyCatalogView vendor={vendor} initialItems={items} storeSettings={storeSettings} collections={collections} />;
 }

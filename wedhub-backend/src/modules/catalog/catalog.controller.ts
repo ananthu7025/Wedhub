@@ -10,6 +10,9 @@ import type {
   ReorderCatalogVariantFieldsInput,
   ImportCatalogItemsInput,
   UpsertCatalogStoreSettingsInput,
+  CreateCatalogCollectionInput,
+  UpdateCatalogCollectionInput,
+  ReorderCatalogCollectionsInput,
 } from "./catalog.types";
 
 export async function listItems(req: Request, res: Response): Promise<void> {
@@ -82,6 +85,38 @@ export async function updateMyStoreSettings(req: Request, res: Response): Promis
 }
 
 // ---------------------------------------------------------------------------
+// Vendor: merchandising collections
+// ---------------------------------------------------------------------------
+
+export async function listCollections(req: Request, res: Response): Promise<void> {
+  const collections = await catalogService.listVendorCollections(req.user!.id);
+  res.json(successResponse(collections));
+}
+
+export async function createCollection(req: Request, res: Response): Promise<void> {
+  const input = req.body as CreateCatalogCollectionInput;
+  const collection = await catalogService.createCollection(req.user!.id, input);
+  res.status(201).json(successResponse(collection));
+}
+
+export async function updateCollection(req: Request, res: Response): Promise<void> {
+  const input = req.body as UpdateCatalogCollectionInput;
+  const collection = await catalogService.updateCollection(req.user!.id, req.params.id as string, input);
+  res.json(successResponse(collection));
+}
+
+export async function deleteCollection(req: Request, res: Response): Promise<void> {
+  const result = await catalogService.deleteCollection(req.user!.id, req.params.id as string);
+  res.json(successResponse(result));
+}
+
+export async function reorderCollections(req: Request, res: Response): Promise<void> {
+  const input = req.body as ReorderCatalogCollectionsInput;
+  const collections = await catalogService.reorderCollections(req.user!.id, input);
+  res.json(successResponse(collections));
+}
+
+// ---------------------------------------------------------------------------
 // Public
 // ---------------------------------------------------------------------------
 
@@ -99,6 +134,11 @@ export async function getPublicAvailability(req: Request, res: Response): Promis
 export async function getPublicStoreSettings(req: Request, res: Response): Promise<void> {
   const settings = await catalogService.getPublicStoreSettings(req.params.slug as string);
   res.json(successResponse(settings));
+}
+
+export async function listPublicCollections(req: Request, res: Response): Promise<void> {
+  const collections = await catalogService.listPublicCollections(req.params.slug as string);
+  res.json(successResponse(collections));
 }
 
 // ---------------------------------------------------------------------------

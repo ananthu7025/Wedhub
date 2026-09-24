@@ -72,6 +72,7 @@ export interface CatalogItem {
   media: CatalogItemMedia[];
   variants: CatalogItemVariant[];
   components: CatalogItemComponent[];
+  collectionIds: string[];
 }
 
 export interface CatalogItemVariantInput {
@@ -100,9 +101,37 @@ export interface CreateCatalogItemInput {
   mediaIds?: string[];
   variants?: CatalogItemVariantInput[];
   components?: CatalogItemComponentInput[];
+  collectionIds?: string[];
 }
 
 export type UpdateCatalogItemInput = Partial<CreateCatalogItemInput> & { sortOrder?: number };
+
+// ---- Vendor-defined merchandising collections ----
+
+export interface CatalogCollection {
+  id: string;
+  vendorId: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+}
+
+export interface CatalogCollectionWithItems {
+  id: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  items: CatalogItem[];
+}
+
+export interface CreateCatalogCollectionInput {
+  name: string;
+}
+
+export interface UpdateCatalogCollectionInput {
+  name?: string;
+  sortOrder?: number;
+}
 
 export interface CatalogAvailabilityEntry {
   id: string;

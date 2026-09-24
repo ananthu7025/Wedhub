@@ -1,14 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   deleteMyCatalogItem,
   downloadMyCatalogImportTemplate,
   getMyCatalogItems,
   importMyCatalogItems,
 } from "@/lib/api/vendor-catalog-client";
-import type { CatalogImportResult, CatalogItem, CatalogStoreSettings, CatalogVariantField } from "@/lib/api/vendor-catalog.types";
+import type {
+  CatalogCollection,
+  CatalogImportResult,
+  CatalogItem,
+  CatalogStoreSettings,
+  CatalogVariantField,
+} from "@/lib/api/vendor-catalog.types";
+import { CatalogCollectionsManager } from "./CatalogCollectionsManager";
 import { CatalogItemModal } from "./CatalogItemModal";
 import { CatalogStorefrontCustomizer } from "./CatalogStorefrontCustomizer";
 
@@ -18,14 +25,17 @@ export function CatalogItemsManager({
   vendorSlug,
   vendorName,
   initialStoreSettings,
+  initialCollections,
 }: {
   initialItems: CatalogItem[];
   variantFields: CatalogVariantField[];
   vendorSlug?: string;
   vendorName?: string;
   initialStoreSettings?: CatalogStoreSettings | null;
+  initialCollections: CatalogCollection[];
 }) {
   const [items, setItems] = useState<CatalogItem[]>(initialItems);
+  const [collections, setCollections] = useState<CatalogCollection[]>(initialCollections);
   const [search, setSearch] = useState("");
   const [filterActive, setFilterActive] = useState<string>("ALL");
   const [modalOpen, setModalOpen] = useState(false);
@@ -112,10 +122,14 @@ export function CatalogItemsManager({
     return "—";
   }
 
-  const publicCatalogUrl =
-    typeof window !== "undefined" && vendorSlug
-      ? `${window.location.origin}/catalog/${vendorSlug}`
-      : `/catalog/${vendorSlug || ""}`;
+  // Server and first client render both use the relative path, so hydration
+  // matches; the full origin-qualified URL is filled in after mount, once
+  // window.location is safe to read on the client only.
+  const [origin, setOrigin] = useState("");
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+  const publicCatalogUrl = `${origin}/catalog/${vendorSlug || ""}`;
 
   function handleCopyStorefrontLink() {
     if (typeof window !== "undefined" && vendorSlug) {
@@ -228,6 +242,8 @@ export function CatalogItemsManager({
           <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={handleImportFile} className="sr-only" />
         </div>
       </div>
+
+      <CatalogCollectionsManager collections={collections} onChange={setCollections} />
 
       {importError && <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-800">{importError}</div>}
 
@@ -434,6 +450,7 @@ export function CatalogItemsManager({
         <CatalogItemModal
           item={editingItem}
           variantFields={variantFields}
+          collections={collections}
           onClose={() => {
             setModalOpen(false);
             setEditingItem(null);

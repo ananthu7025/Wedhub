@@ -39,6 +39,7 @@ const ITEM_INCLUDE = {
   },
   variants: { orderBy: { sortOrder: "asc" as const } },
   components: { orderBy: { sortOrder: "asc" as const } },
+  collections: { include: { collection: true } },
 } satisfies Prisma.CatalogItemInclude;
 
 export function findCatalogItems(vendorId: string, includeInactive = false) {
@@ -88,6 +89,7 @@ export async function createCatalogItem(
     mediaIds?: string[] | undefined;
     variants?: VariantInput[] | undefined;
     components?: ComponentInput[] | undefined;
+    collectionIds?: string[] | undefined;
   },
 ) {
   return prisma.$transaction(async (tx) => {
@@ -138,6 +140,12 @@ export async function createCatalogItem(
       });
     }
 
+    if (data.collectionIds && data.collectionIds.length > 0) {
+      await tx.catalogItemCollection.createMany({
+        data: data.collectionIds.map((collectionId) => ({ itemId: item.id, collectionId })),
+      });
+    }
+
     return item;
   });
 }
@@ -154,6 +162,7 @@ export async function updateCatalogItem(
     mediaIds?: string[] | undefined;
     variants?: VariantInput[] | undefined;
     components?: ComponentInput[] | undefined;
+    collectionIds?: string[] | undefined;
   },
 ) {
   return prisma.$transaction(async (tx) => {
@@ -208,6 +217,15 @@ export async function updateCatalogItem(
             isRequired: c.isRequired,
             sortOrder: index,
           })),
+        });
+      }
+    }
+
+    if (data.collectionIds !== undefined) {
+      await tx.catalogItemCollection.deleteMany({ where: { itemId: id } });
+      if (data.collectionIds.length > 0) {
+        await tx.catalogItemCollection.createMany({
+          data: data.collectionIds.map((collectionId) => ({ itemId: id, collectionId })),
         });
       }
     }
@@ -420,5 +438,71 @@ export function upsertStoreSettings(vendorId: string, data: UpsertStoreSettingsD
     create: { vendorId, ...fields },
     update: fields,
     include: STORE_SETTINGS_INCLUDE,
+  });
+}
+
+// ---- Vendor-defined merchandising collections ----
+
+export function findCollectionsByVendorId(vendorId: string) {
+  return prisma.catalogCollection.findMany({
+    where: { vendorId },
+    orderBy: { sortOrder: "asc" },
+  });
+}
+
+export function findCollectionById(id: string) {
+  return prisma.catalogCollection.findUnique({ where: { id } });
+}
+
+export async function createCollection(vendorId: string, name: string, slug: string) {
+  const maxSortOrder = await prisma.catalogCollection.aggregate({
+    where: { vendorId },
+    _max: { sortOrder: true },
+  });
+  return prisma.catalogCollection.create({
+    data: {
+      vendorId,
+      name,
+      slug,
+      sortOrder: (maxSortOrder._max.sortOrder ?? -1) + 1,
+    },
+  });
+}
+
+export function updateCollection(id: string, data: { name?: string | undefined; sortOrder?: number | undefined }) {
+  return prisma.catalogCollection.update({ where: { id }, data: omitUndefined(data) });
+}
+
+export function deleteCollection(id: string) {
+  return prisma.catalogCollection.delete({ where: { id } });
+}
+
+export function reorderCollections(vendorId: string, orderedIds: string[]) {
+  return prisma.$transaction(
+    orderedIds.map((id, index) =>
+      prisma.catalogCollection.update({
+        where: { id, vendorId },
+        data: { sortOrder: index },
+      }),
+    ),
+  );
+}
+
+// Public: items grouped by collection for the "Shop by Category" grid + tab
+// filters — only active items, only collections that have at least one.
+export function findPublicCollectionsWithItems(vendorId: string) {
+  return prisma.catalogCollection.findMany({
+    where: { vendorId, items: { some: { item: { isActive: true } } } },
+    orderBy: { sortOrder: "asc" },
+    include: {
+      items: {
+        where: { item: { isActive: true } },
+        include: {
+          item: {
+            include: ITEM_INCLUDE,
+          },
+        },
+      },
+    },
   });
 }

@@ -15,6 +15,9 @@ import type {
   ReorderCatalogVariantFieldsInput,
   ImportCatalogItemsInput,
   UpsertCatalogStoreSettingsInput,
+  CreateCatalogCollectionInput,
+  UpdateCatalogCollectionInput,
+  ReorderCatalogCollectionsInput,
 } from "./catalog.types";
 
 type StoreSettingsWithRelations = Awaited<ReturnType<typeof catalogRepository.findStoreSettingsByVendorId>>;
@@ -93,6 +96,17 @@ function formatItem(item: CatalogItemWithRelations) {
       isRequired: c.isRequired,
       sortOrder: c.sortOrder,
     })),
+    collectionIds: item.collections.map((c) => c.collectionId),
+  };
+}
+
+function formatCollection(collection: { id: string; vendorId: string; name: string; slug: string; sortOrder: number }) {
+  return {
+    id: collection.id,
+    vendorId: collection.vendorId,
+    name: collection.name,
+    slug: collection.slug,
+    sortOrder: collection.sortOrder,
   };
 }
 
@@ -145,6 +159,7 @@ export async function createCatalogItem(userId: string, input: CreateCatalogItem
     mediaIds: input.mediaIds,
     variants: input.variants,
     components: input.components,
+    collectionIds: input.collectionIds,
   });
 
   const reloaded = await catalogRepository.findCatalogItemById(created.id);
@@ -173,6 +188,7 @@ export async function updateCatalogItem(userId: string, itemId: string, input: U
     mediaIds: input.mediaIds,
     variants: input.variants,
     components: input.components,
+    collectionIds: input.collectionIds,
   });
 
   const reloaded = await catalogRepository.findCatalogItemById(itemId);
@@ -496,4 +512,73 @@ export async function getPublicStoreSettings(vendorSlug: string) {
   }
   const settings = await catalogRepository.findStoreSettingsByVendorId(vendor.id);
   return formatStoreSettings(settings, vendor.id);
+}
+
+// ---- Vendor: merchandising collections ----
+
+export async function listVendorCollections(userId: string) {
+  const vendor = await getOwnedVendorOrThrow(userId);
+  const collections = await catalogRepository.findCollectionsByVendorId(vendor.id);
+  return collections.map(formatCollection);
+}
+
+export async function createCollection(userId: string, input: CreateCatalogCollectionInput) {
+  const vendor = await getOwnedVendorOrThrow(userId);
+  await assertVendorFeatureAccess(vendor.id, "catalog_access", "Catalog");
+
+  const baseSlug = slugify(input.name);
+  const slug = await generateUniqueSlug(baseSlug, async (candidate) => {
+    const existing = await catalogRepository.findCollectionsByVendorId(vendor.id);
+    return existing.some((c) => c.slug === candidate);
+  });
+
+  const created = await catalogRepository.createCollection(vendor.id, input.name, slug);
+  return formatCollection(created);
+}
+
+export async function updateCollection(userId: string, collectionId: string, input: UpdateCatalogCollectionInput) {
+  const vendor = await getOwnedVendorOrThrow(userId);
+  const existing = await catalogRepository.findCollectionById(collectionId);
+  if (!existing || existing.vendorId !== vendor.id) {
+    throw new NotFoundError("Collection not found");
+  }
+  const updated = await catalogRepository.updateCollection(collectionId, {
+    name: input.name,
+    sortOrder: input.sortOrder,
+  });
+  return formatCollection(updated);
+}
+
+export async function deleteCollection(userId: string, collectionId: string) {
+  const vendor = await getOwnedVendorOrThrow(userId);
+  const existing = await catalogRepository.findCollectionById(collectionId);
+  if (!existing || existing.vendorId !== vendor.id) {
+    throw new NotFoundError("Collection not found");
+  }
+  await catalogRepository.deleteCollection(collectionId);
+  return { success: true };
+}
+
+export async function reorderCollections(userId: string, input: ReorderCatalogCollectionsInput) {
+  const vendor = await getOwnedVendorOrThrow(userId);
+  await catalogRepository.reorderCollections(vendor.id, input.orderedIds);
+  const collections = await catalogRepository.findCollectionsByVendorId(vendor.id);
+  return collections.map(formatCollection);
+}
+
+// ---- Public: collections with their active items, for "Shop by Category" ----
+
+export async function listPublicCollections(vendorSlug: string) {
+  const vendor = await findApprovedVendorBySlug(vendorSlug);
+  if (!vendor) {
+    throw new NotFoundError("Vendor not found");
+  }
+  const collections = await catalogRepository.findPublicCollectionsWithItems(vendor.id);
+  return collections.map((collection) => ({
+    id: collection.id,
+    name: collection.name,
+    slug: collection.slug,
+    sortOrder: collection.sortOrder,
+    items: collection.items.map((ci) => formatItem(ci.item)),
+  }));
 }

@@ -606,6 +606,7 @@ model Vendor {
   attributeValues         VendorAttributeValue[]
   packages                Package[]
   catalogItems            CatalogItem[]
+  catalogCollections      CatalogCollection[]
   catalogStoreSettings    CatalogStoreSettings?
   invitations             VendorInvitation[]
   statusHistory           VendorStatusHistory[]
@@ -812,10 +813,46 @@ model CatalogItem {
   media        CatalogItemMedia[]
   components   CatalogItemComponent[]
   availability CatalogItemAvailability[]
+  collections  CatalogItemCollection[]
 
   @@unique([vendorId, slug])
   @@index([vendorId, isActive])
   @@map("catalog_items")
+}
+
+// Vendor-defined merchandising group (e.g. "Best Sellers", "Festive Edit") —
+// replaces auto-derived keyword categories on the public catalog page.
+// Vendor explicitly assigns items to collections; an item can belong to any
+// number of them (including zero). Public "Shop by Category" grid, nav, and
+// tab filters all read from this instead of guessing from item titles.
+model CatalogCollection {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId  String   @map("vendor_id") @db.Uuid
+  name      String
+  slug      String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  vendor Vendor                  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  items  CatalogItemCollection[]
+
+  @@unique([vendorId, slug])
+  @@index([vendorId, sortOrder])
+  @@map("catalog_collections")
+}
+
+model CatalogItemCollection {
+  itemId       String   @map("item_id") @db.Uuid
+  collectionId String   @map("collection_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  item       CatalogItem       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  collection CatalogCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, collectionId])
+  @@index([collectionId])
+  @@map("catalog_item_collections")
 }
 
 model CatalogItemVariant {

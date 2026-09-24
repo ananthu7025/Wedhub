@@ -7,10 +7,13 @@ import { Role } from "../../common/enums/roles.enum";
 import * as controller from "./catalog.controller";
 import {
   clearAvailabilitySchema,
+  createCatalogCollectionSchema,
   createCatalogItemSchema,
   importCatalogItemsSchema,
+  reorderCatalogCollectionsSchema,
   reorderCatalogVariantFieldsSchema,
   setAvailabilitySchema,
+  updateCatalogCollectionSchema,
   updateCatalogItemSchema,
   upsertCatalogStoreSettingsSchema,
   upsertCatalogVariantFieldSchema,
@@ -53,12 +56,31 @@ catalogRouter.put(
   asyncHandler(controller.updateMyStoreSettings),
 );
 
+catalogRouter.get("/me/collections", asyncHandler(controller.listCollections));
+catalogRouter.post(
+  "/me/collections",
+  validateBody(createCatalogCollectionSchema),
+  asyncHandler(controller.createCollection),
+);
+catalogRouter.patch(
+  "/me/collections/:id",
+  validateBody(updateCatalogCollectionSchema),
+  asyncHandler(controller.updateCollection),
+);
+catalogRouter.delete("/me/collections/:id", asyncHandler(controller.deleteCollection));
+catalogRouter.put(
+  "/me/collections/reorder",
+  validateBody(reorderCatalogCollectionsSchema),
+  asyncHandler(controller.reorderCollections),
+);
+
 // ---------------------------------------------------------------------------
 // Public Endpoints: /api/v1/catalog/*
 // ---------------------------------------------------------------------------
 publicCatalogRouter.get("/vendors/:slug/items", asyncHandler(controller.listPublicItems));
 publicCatalogRouter.get("/items/:id/availability", asyncHandler(controller.getPublicAvailability));
 publicCatalogRouter.get("/vendors/:slug/settings", asyncHandler(controller.getPublicStoreSettings));
+publicCatalogRouter.get("/vendors/:slug/collections", asyncHandler(controller.listPublicCollections));
 
 // ---------------------------------------------------------------------------
 // Admin: /api/v1/admin/categories/:categoryId/catalog-variant-fields

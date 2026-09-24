@@ -2,11 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { VendorShell } from "@/components/shared/VendorShell";
 import { requireVendorOwnership } from "@/lib/auth/require-vendor";
-import { fetchVendorCatalogItems, fetchVendorCatalogStoreSettings } from "@/lib/api/vendor-catalog";
+import {
+  fetchVendorCatalogCollections,
+  fetchVendorCatalogItems,
+  fetchVendorCatalogStoreSettings,
+} from "@/lib/api/vendor-catalog";
 import { getCategoryBySlug } from "@/lib/api/catalog";
 import { getMyEffectivePlan } from "@/lib/api/vendor-self";
 import { CatalogItemsManager } from "./CatalogItemsManager";
-import type { CatalogItem, CatalogStoreSettings, CatalogVariantField } from "@/lib/api/vendor-catalog.types";
+import type { CatalogCollection, CatalogItem, CatalogStoreSettings, CatalogVariantField } from "@/lib/api/vendor-catalog.types";
 
 export const metadata: Metadata = {
   title: "Catalog | WedHub Vendor Hub",
@@ -26,17 +30,20 @@ export default async function VendorCatalogPage() {
   let items: CatalogItem[] = [];
   let variantFields: CatalogVariantField[] = [];
   let storeSettings: CatalogStoreSettings | null = null;
+  let collections: CatalogCollection[] = [];
 
   if (isEligible && primaryCategory) {
     try {
-      const [itemsRes, categoryRes, settingsRes] = await Promise.all([
+      const [itemsRes, categoryRes, settingsRes, collectionsRes] = await Promise.all([
         fetchVendorCatalogItems(),
         getCategoryBySlug(primaryCategory.slug),
         fetchVendorCatalogStoreSettings().catch(() => ({ data: undefined })),
+        fetchVendorCatalogCollections().catch(() => ({ data: undefined })),
       ]);
       items = itemsRes.data ?? [];
       variantFields = categoryRes.data?.catalogVariantFields ?? [];
       storeSettings = settingsRes.data ?? null;
+      collections = collectionsRes.data ?? [];
     } catch {
       items = [];
       variantFields = [];
@@ -82,6 +89,7 @@ export default async function VendorCatalogPage() {
             vendorSlug={vendor.slug}
             vendorName={vendor.businessName}
             initialStoreSettings={storeSettings}
+            initialCollections={collections}
           />
         )}
       </div>

@@ -4,10 +4,13 @@ import type { ApiResponse } from "./types";
 import type {
   CatalogAvailabilityEntry,
   CatalogAvailabilityStatus,
+  CatalogCollection,
   CatalogImportResult,
   CatalogItem,
   CatalogStoreSettings,
+  CreateCatalogCollectionInput,
   CreateCatalogItemInput,
+  UpdateCatalogCollectionInput,
   UpdateCatalogItemInput,
   UpdateCatalogStoreSettingsInput,
 } from "./vendor-catalog.types";
@@ -82,6 +85,26 @@ export function getMyCatalogStoreSettings() {
 
 export function updateMyCatalogStoreSettings(body: UpdateCatalogStoreSettingsInput) {
   return call<CatalogStoreSettings>("/catalog/me/settings", "PUT", body);
+}
+
+export function getMyCatalogCollections() {
+  return call<CatalogCollection[]>("/catalog/me/collections", "GET");
+}
+
+export function createMyCatalogCollection(body: CreateCatalogCollectionInput) {
+  return call<CatalogCollection>("/catalog/me/collections", "POST", body);
+}
+
+export function updateMyCatalogCollection(id: string, body: UpdateCatalogCollectionInput) {
+  return call<CatalogCollection>(`/catalog/me/collections/${id}`, "PATCH", body);
+}
+
+export function deleteMyCatalogCollection(id: string) {
+  return call<{ success: boolean }>(`/catalog/me/collections/${id}`, "DELETE");
+}
+
+export function reorderMyCatalogCollections(orderedIds: string[]) {
+  return call<CatalogCollection[]>("/catalog/me/collections/reorder", "PUT", { orderedIds });
 }
 
 // Not routed through call() — the backend returns a raw text/csv response

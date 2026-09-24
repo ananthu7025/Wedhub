@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { VendorDetail } from "@/lib/api/vendors.types";
-import type { CatalogItem, CatalogItemVariant, CatalogStoreSettings } from "@/lib/api/vendor-catalog.types";
+import type {
+  CatalogCollectionWithItems,
+  CatalogItem,
+  CatalogItemVariant,
+  CatalogStoreSettings,
+} from "@/lib/api/vendor-catalog.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { themeForCatalog } from "./catalog-theme";
 
@@ -106,14 +111,6 @@ function SupportSvg({ className = "w-5 h-5" }: { className?: string }) {
   );
 }
 
-function ChevronDownSvg({ className = "w-3 h-3" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-    </svg>
-  );
-}
-
 function ChevronLeftSvg({ className = "w-4 h-4" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -171,15 +168,16 @@ export function ShopifyCatalogView({
   vendor,
   initialItems,
   storeSettings,
+  collections,
 }: {
   vendor: VendorDetail;
   initialItems: CatalogItem[];
   storeSettings?: CatalogStoreSettings | null;
+  collections: CatalogCollectionWithItems[];
 }) {
   const [items] = useState<CatalogItem[]>(initialItems);
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-  const [activeTab, setActiveTab] = useState<"new-arrivals" | "best-sellers" | "featured">("new-arrivals");
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | "ALL">("ALL");
 
   // Vendor-saved storefront settings, persisted server-side via /catalog/me/settings
   const customConfig = storeSettings ?? null;
@@ -229,67 +227,20 @@ export function ShopifyCatalogView({
   const shopBtnLabel = customConfig?.shopButtonText || null;
   const topAnnouncement = customConfig?.announcementText || null;
 
-  // Dynamically derive categories strictly from the vendor's actual catalog items & categories
-  const dynamicCategories = useMemo(() => {
-    interface CategoryEntry {
-      name: string;
-      count: number;
-      subtitle: string;
-      sampleImage?: string;
-    }
-
-    const categoryMap = new Map<string, CategoryEntry>();
-
-    // 1. Group from components / attributes of vendor items
-    items.forEach((item) => {
-      item.components.forEach((comp) => {
-        const key = comp.name.trim();
-        if (key) {
-          const existing = categoryMap.get(key);
-          const sample = (item.media[0]?.url || item.media[0]?.thumbnailUrl) ?? undefined;
-          if (existing) {
-            existing.count += 1;
-            if (!existing.sampleImage && sample) existing.sampleImage = sample;
-          } else {
-            categoryMap.set(key, {
-              name: key,
-              count: 1,
-              subtitle: "Explore Collection →",
-              sampleImage: sample,
-            });
-          }
-        }
-      });
-
-      // 2. From item title keywords
-      const titleMain = item.title.split(/[-–—/]/)[0].trim();
-      if (titleMain && !categoryMap.has(titleMain)) {
-        const sample = (item.media[0]?.url || item.media[0]?.thumbnailUrl) ?? undefined;
-        categoryMap.set(titleMain, {
-          name: titleMain,
-          count: 1,
-          subtitle: "Explore Collection →",
-          sampleImage: sample,
-        });
-      }
-    });
-
-    // 3. Include vendor's registered platform categories if available
-    vendor.categories.forEach((vc) => {
-      const name = vc.category?.name;
-      if (name && !categoryMap.has(name)) {
-        categoryMap.set(name, {
-          name,
-          count: 0,
-          subtitle: "View Category →",
-          sampleImage: items[0]?.media[0]?.url || undefined,
-        });
-      }
-    });
-
-    const list = Array.from(categoryMap.values());
-    return list.slice(0, 6);
-  }, [items, vendor.categories]);
+// Vendor-curated collections (see CatalogCollectionsManager) — a vendor
+  // explicitly assigns items to each one, so this is real merchandising
+  // intent, not a keyword guess. A collection's sample image is its first
+  // assigned item's first photo.
+  const collectionSummaries = useMemo(
+    () =>
+      collections.map((c) => ({
+        id: c.id,
+        name: c.name,
+        count: c.items.length,
+        sampleImage: (c.items[0]?.media[0]?.url || c.items[0]?.media[0]?.thumbnailUrl) ?? undefined,
+      })),
+    [collections],
+  );
 
   function formatPrice(amount: number) {
     return new Intl.NumberFormat("en-IN", {
@@ -313,7 +264,7 @@ export function ShopifyCatalogView({
     return basePrice;
   }
 
-  // Filtered items based on search and category
+  // Filtered items based on search and vendor-assigned collection
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       if (!item.isActive) return false;
@@ -326,14 +277,13 @@ export function ShopifyCatalogView({
         if (!matchTitle && !matchDesc) return false;
       }
 
-      if (selectedCategory !== "ALL") {
-        const fullText = `${item.title} ${item.description || ""} ${item.components.map((c) => c.name).join(" ")}`.toLowerCase();
-        if (!fullText.includes(selectedCategory.toLowerCase().slice(0, 4))) return false;
+      if (selectedCollectionId !== "ALL" && !item.collectionIds.includes(selectedCollectionId)) {
+        return false;
       }
 
       return true;
     });
-  }, [items, search, selectedCategory, showWishlistOnly, wishlist]);
+  }, [items, search, selectedCollectionId, showWishlistOnly, wishlist]);
 
   function toggleWishlist(id: string) {
     setWishlist((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
@@ -568,31 +518,25 @@ export function ShopifyCatalogView({
             </div>
           </Link>
 
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-7 text-[13px] font-medium text-[#4A453F]">
-            <a href="#catalog-grid" className="hover:text-[#916B33] transition flex items-center gap-1">
-              <span>Shop</span>
-              <ChevronDownSvg className="w-2.5 h-2.5" />
-            </a>
-            {dynamicCategories.slice(0, 4).map((cat) => (
-              <button
-                key={cat.name}
-                type="button"
-                onClick={() => {
-                  setSelectedCategory(cat.name);
-                  const el = document.getElementById("catalog-grid");
-                  el?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="hover:text-[#916B33] transition"
-              >
-                {cat.name}
-              </button>
-            ))}
-            <a href="#featured-collections" className="hover:text-[#916B33] transition flex items-center gap-1">
-              <span>Collections</span>
-              <ChevronDownSvg className="w-2.5 h-2.5" />
-            </a>
-          </nav>
+          {/* Navigation Links — real vendor-created collections only, no fixed labels */}
+          {collectionSummaries.length > 0 && (
+            <nav className="hidden md:flex items-center gap-7 text-[13px] font-medium text-[#4A453F]">
+              {collectionSummaries.slice(0, 5).map((collection) => (
+                <button
+                  key={collection.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCollectionId(collection.id);
+                    const el = document.getElementById("catalog-grid");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="hover:text-[#916B33] transition"
+                >
+                  {collection.name}
+                </button>
+              ))}
+            </nav>
+          )}
 
           {/* Header Action Icons (Search, Wishlist, Bag) */}
           <div className="flex items-center gap-4 text-[#2E2A25]">
@@ -638,21 +582,32 @@ export function ShopifyCatalogView({
         </div>
       </header>
 
-      {/* 3. Hero Section (Derived dynamically from vendor data) */}
-      <section className="relative bg-[#F5F2EB] overflow-hidden border-b border-[#E8E2D7]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20 flex flex-col lg:flex-row items-center justify-between gap-12">
-          {/* Left Hero Content */}
-          <div className="max-w-xl z-10">
+      {/* 3. Hero Section — full-bleed banner with text/buttons overlaid */}
+      <section className="relative h-[70vh] min-h-[420px] max-h-[720px] overflow-hidden bg-[#1C1A17]">
+        {activeHeroImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={activeHeroImage}
+            alt={vendor.businessName}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-[#2A2620] to-[#1C1A17]" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+
+        <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12 sm:pb-16">
+          <div className="max-w-xl">
             {heroPreheading && (
-              <span className="text-[11px] uppercase tracking-widest text-[#9A743D] font-bold">
+              <span className="text-[11px] uppercase tracking-widest text-[#E5C88A] font-bold">
                 {heroPreheading}
               </span>
             )}
-            <h1 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-serif text-[#1C1A17] font-normal leading-[1.15]">
+            <h1 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-serif text-white font-normal leading-[1.15] drop-shadow-sm">
               {heroTitle}
             </h1>
             {heroSubtitle && (
-              <p className="mt-4 text-sm sm:text-base text-[#615A52] leading-relaxed font-light">
+              <p className="mt-4 text-sm sm:text-base text-white/85 leading-relaxed font-light max-w-lg">
                 {heroSubtitle}
               </p>
             )}
@@ -673,7 +628,7 @@ export function ShopifyCatalogView({
                     href={`https://wa.me/${vendorPhone}?text=${encodeURIComponent(`Hi ${vendor.businessName}, I would like to book a trial appointment.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-6 py-3.5 rounded-lg border border-[#8C7A65] text-[#2F2922] hover:bg-white text-xs sm:text-sm font-semibold tracking-wide transition flex items-center gap-2"
+                    className="px-6 py-3.5 rounded-lg border border-white/70 text-white hover:bg-white/10 text-xs sm:text-sm font-semibold tracking-wide transition flex items-center gap-2"
                   >
                     <span>{trialBtnLabel}</span>
                     <CalendarSvg className="w-4 h-4" />
@@ -681,98 +636,46 @@ export function ShopifyCatalogView({
                 )}
               </div>
             )}
-
-            {/* Micro Trust Indicators */}
-            <div className="mt-10 pt-6 border-t border-[#E2DBD0] flex items-center gap-6 sm:gap-8 text-xs text-[#524B43]">
-              <div className="flex items-center gap-2.5">
-                <ShieldCheckSvg className="w-5 h-5 text-[#9A743D]" />
-                <div>
-                  <div className="font-bold text-[#1F1C18]">100%</div>
-                  <div className="text-[11px] text-[#7A7165]">Sanitized</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <CalendarSvg className="w-5 h-5 text-[#9A743D]" />
-                <div>
-                  <div className="font-bold text-[#1F1C18]">Flexible</div>
-                  <div className="text-[11px] text-[#7A7165]">Rental Dates</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <HomeSvg className="w-5 h-5 text-[#9A743D]" />
-                <div>
-                  <div className="font-bold text-[#1F1C18]">Studio Trials</div>
-                  <div className="text-[11px] text-[#7A7165]">Available</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Hero Image Carousel (Vendor's real photos or luxury SVG badge) */}
-          <div className="relative w-full max-w-lg aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-[#EFE9DF]">
-            {activeHeroImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={activeHeroImage}
-                alt={vendor.businessName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-[#FAF7F0] to-[#E9E1D2]">
-                <div className="h-20 w-20 rounded-full border-2 border-[#D8B478] flex items-center justify-center font-serif text-3xl font-bold text-[#8F6B38]">
-                  {vendor.businessName.slice(0, 2).toUpperCase()}
-                </div>
-                <h3 className="font-serif text-2xl font-bold text-[#1F1C18] mt-4">{vendor.businessName}</h3>
-                <p className="text-xs text-[#7A7165] mt-1">{primaryCategory} · {cityName}</p>
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-            <div className="absolute bottom-6 right-6 text-right text-white">
-              <span className="font-serif italic text-xl sm:text-2xl drop-shadow-md">
-                &ldquo;Because every occasion deserves perfection&rdquo;
-              </span>
-              <div className="w-16 h-0.5 bg-[#D4AF37] ml-auto mt-2" />
-            </div>
-
-            {heroImages.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => goToHeroSlide(heroSlide - 1)}
-                  aria-label="Previous photo"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/85 backdrop-blur-xs flex items-center justify-center text-[#2E2A25] hover:bg-white transition shadow-sm"
-                >
-                  <ChevronLeftSvg className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goToHeroSlide(heroSlide + 1)}
-                  aria-label="Next photo"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/85 backdrop-blur-xs flex items-center justify-center text-[#2E2A25] hover:bg-white transition shadow-sm"
-                >
-                  <ChevronRightSvg className="w-4 h-4" />
-                </button>
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
-                  {heroImages.map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => goToHeroSlide(idx)}
-                      aria-label={`Go to photo ${idx + 1}`}
-                      className={`h-1.5 rounded-full transition-all ${
-                        idx === heroSlide ? "w-5 bg-white" : "w-1.5 bg-white/50 hover:bg-white/75"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
           </div>
         </div>
+
+        {heroImages.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => goToHeroSlide(heroSlide - 1)}
+              aria-label="Previous photo"
+              className="absolute left-4 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/85 backdrop-blur-xs flex items-center justify-center text-[#2E2A25] hover:bg-white transition shadow-sm"
+            >
+              <ChevronLeftSvg className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => goToHeroSlide(heroSlide + 1)}
+              aria-label="Next photo"
+              className="absolute right-4 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/85 backdrop-blur-xs flex items-center justify-center text-[#2E2A25] hover:bg-white transition shadow-sm"
+            >
+              <ChevronRightSvg className="w-4 h-4" />
+            </button>
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+              {heroImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => goToHeroSlide(idx)}
+                  aria-label={`Go to photo ${idx + 1}`}
+                  className={`h-1.5 rounded-full transition-all ${
+                    idx === heroSlide ? "w-5 bg-white" : "w-1.5 bg-white/50 hover:bg-white/75"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
-      {/* 4. "Shop by Category" Section (Derived strictly from vendor's items) */}
-      {dynamicCategories.length > 0 && (
+      {/* 4. "Shop by Category" Section — vendor-curated collections only */}
+      {collectionSummaries.length > 0 && (
         <section id="catalog-grid" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="flex items-end justify-between mb-8">
             <div>
@@ -789,7 +692,7 @@ export function ShopifyCatalogView({
             </div>
             <button
               type="button"
-              onClick={() => setSelectedCategory("ALL")}
+              onClick={() => setSelectedCollectionId("ALL")}
               className="text-xs font-semibold text-[#8C6732] hover:underline flex items-center gap-1"
             >
               <span>View All</span>
@@ -798,21 +701,21 @@ export function ShopifyCatalogView({
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
-            {dynamicCategories.map((cat) => {
-              const isSelected = selectedCategory === cat.name;
+            {collectionSummaries.map((collection) => {
+              const isSelected = selectedCollectionId === collection.id;
               return (
                 <div
-                  key={cat.name}
-                  onClick={() => setSelectedCategory(isSelected ? "ALL" : cat.name)}
+                  key={collection.id}
+                  onClick={() => setSelectedCollectionId(isSelected ? "ALL" : collection.id)}
                   className={`group relative aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer shadow-sm transition-all duration-300 hover:shadow-lg bg-[#EFE9DF] ${
                     isSelected ? `ring-2 ${theme.accentRingClass} scale-[1.02]` : ""
                   }`}
                 >
-                  {cat.sampleImage ? (
+                  {collection.sampleImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={cat.sampleImage}
-                      alt={cat.name}
+                      src={collection.sampleImage}
+                      alt={collection.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   ) : (
@@ -822,9 +725,9 @@ export function ShopifyCatalogView({
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
                   <div className="absolute inset-x-3 bottom-3 text-white">
-                    <h3 className="font-serif text-sm font-bold leading-tight">{cat.name}</h3>
+                    <h3 className="font-serif text-sm font-bold leading-tight">{collection.name}</h3>
                     <p className="text-[10px] text-[#E0D7C8] opacity-90 mt-0.5">
-                      {cat.subtitle}
+                      {collection.count} {collection.count === 1 ? "piece" : "pieces"}
                     </p>
                   </div>
                 </div>
@@ -850,51 +753,36 @@ export function ShopifyCatalogView({
             )}
           </div>
 
-          {/* Collection Tab Filters */}
-          <div className="flex items-center gap-6 text-xs font-semibold text-[#665D52] overflow-x-auto no-scrollbar pb-1">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("new-arrivals");
-                setSelectedCategory("ALL");
-              }}
-              className={`pb-1 transition ${
-                activeTab === "new-arrivals" && selectedCategory === "ALL"
-                  ? "text-[#1F1C18] border-b-2 border-[#1F1C18] font-bold"
-                  : "hover:text-[#1F1C18]"
-              }`}
-            >
-              New Arrivals
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("best-sellers");
-                setSelectedCategory("ALL");
-              }}
-              className={`pb-1 transition ${
-                activeTab === "best-sellers" && selectedCategory === "ALL"
-                  ? "text-[#1F1C18] border-b-2 border-[#1F1C18] font-bold"
-                  : "hover:text-[#1F1C18]"
-              }`}
-            >
-              Best Sellers
-            </button>
-            {dynamicCategories.slice(0, 2).map((c) => (
+          {/* Collection Tab Filters — real vendor-curated collections only */}
+          {collectionSummaries.length > 0 && (
+            <div className="flex items-center gap-6 text-xs font-semibold text-[#665D52] overflow-x-auto no-scrollbar pb-1">
               <button
-                key={c.name}
                 type="button"
-                onClick={() => setSelectedCategory(c.name)}
+                onClick={() => setSelectedCollectionId("ALL")}
                 className={`pb-1 transition ${
-                  selectedCategory === c.name
+                  selectedCollectionId === "ALL"
                     ? "text-[#1F1C18] border-b-2 border-[#1F1C18] font-bold"
                     : "hover:text-[#1F1C18]"
                 }`}
               >
-                {c.name}
+                All
               </button>
-            ))}
-          </div>
+              {collectionSummaries.map((collection) => (
+                <button
+                  key={collection.id}
+                  type="button"
+                  onClick={() => setSelectedCollectionId(collection.id)}
+                  className={`pb-1 transition ${
+                    selectedCollectionId === collection.id
+                      ? "text-[#1F1C18] border-b-2 border-[#1F1C18] font-bold"
+                      : "hover:text-[#1F1C18]"
+                  }`}
+                >
+                  {collection.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Product Cards Grid */}
@@ -908,7 +796,7 @@ export function ShopifyCatalogView({
             <button
               type="button"
               onClick={() => {
-                setSelectedCategory("ALL");
+                setSelectedCollectionId("ALL");
                 setShowWishlistOnly(false);
                 setSearch("");
               }}
