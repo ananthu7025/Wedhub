@@ -45,7 +45,6 @@ export const metadata: Metadata = {
   },
 };
 
-const TELEGRAM_BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "VendorMatefinderBot";
 
 // Normalized shape WeddingStoryCard renders — both a real WeddingStory and
 // a static sample map into this, so the card itself never has to branch on
@@ -312,36 +311,6 @@ export default async function HomePage() {
       <Suspense fallback={null}>
         <FeaturedVendorsSection isAuthenticated={session !== null} />
       </Suspense>
-
-      {/* Telegram Wedding Assistant Matchmaker Banner (Preserved from existing code) */}
-      <section className="px-6 pb-12 max-[900px]:px-4">
-        <div className="flex flex-wrap items-center justify-between gap-6 rounded-3xl bg-gradient-to-r from-[#ffe4eb] via-[#ffccd7] to-[#ffdce4] p-8 border border-[#f5b8c6] shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#0088cc] shadow-md flex-shrink-0">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-lg font-extrabold text-jet-black">Not sure where to start?</h3>
-              <p className="max-w-[440px] text-xs text-text-grey mt-0.5">
-                Chat with our AI-powered Telegram wedding matchmaker and get paired with the best vendors in minutes.
-              </p>
-            </div>
-          </div>
-          <a
-            href={`https://t.me/${TELEGRAM_BOT_USERNAME}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 rounded-xl bg-brand-primary px-6 py-3.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(224,11,65,0.25)] transition-all hover:bg-brand-primary-hover hover:shadow-lg active:scale-95"
-          >
-            Chat on Telegram
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </a>
-        </div>
-      </section>
 
       {/* Comprehensive itsmyKalyanam Footer */}
       <PublicFooter />
