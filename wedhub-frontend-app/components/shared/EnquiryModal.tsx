@@ -209,11 +209,11 @@ function EnquiryModalContent({
 
   return (
     <div
-      className="fixed inset-0 z-200 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-200 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full max-w-[440px] overflow-y-auto rounded-2xl bg-white p-7"
+        className="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:max-h-[90vh] sm:max-w-[440px] sm:rounded-2xl sm:p-7"
         onClick={(e) => e.stopPropagation()}
       >
         <button
