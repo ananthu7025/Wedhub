@@ -129,6 +129,18 @@ export function SearchFilterBar({
   const hasCatalogPriceFilter = catalogPriceMin !== undefined || catalogPriceMax !== undefined;
   const showCatalogPriceFilter = Boolean(currentCategory?.hasCatalogEnabled);
 
+  // Item: mobile dropdown visibility fix. The filter pills live in a
+  // horizontally-scrolling row (overflow-x-auto below `sm:`), and a CSS
+  // `overflow` on that ancestor clips any `absolute` popover child that
+  // extends past it — no descendant `overflow-visible` undoes that. So
+  // below `sm:` each panel is a `fixed` bottom sheet (own backdrop) instead
+  // of `absolute`, escaping the scroll clip; at `sm:`+ the row itself is
+  // overflow-visible, so it reverts to the original absolute popover.
+  const panelClass =
+    "fixed inset-x-0 bottom-0 z-50 max-h-[70vh] overflow-y-auto rounded-t-2xl border-t border-gray-200 bg-white p-4 shadow-2xl " +
+    "sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mt-2 sm:max-h-80 sm:rounded-xl sm:border sm:p-2";
+  const backdropClass = "sm:hidden fixed inset-0 z-[45] bg-black/40";
+
   return (
     <div
       ref={barRef}
@@ -163,34 +175,37 @@ export function SearchFilterBar({
             </button>
 
             {openDropdown === "category" && (
-              <div className="absolute left-0 top-full mt-2 w-64 max-h-80 overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-2xl z-50">
-                <div className="px-2 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                  Select Category
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigateToSeoOrSearch(undefined, currentCity)}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
-                    !currentCategory ? "bg-gray-100 font-bold text-gray-900" : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  All Categories
-                </button>
-                {categories.map((cat) => (
+              <>
+                <div className={backdropClass} onClick={() => setOpenDropdown(null)} />
+                <div className={`${panelClass} sm:w-64`}>
+                  <div className="px-2 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                    Select Category
+                  </div>
                   <button
-                    key={cat.id}
                     type="button"
-                    onClick={() => navigateToSeoOrSearch(cat, currentCity)}
+                    onClick={() => navigateToSeoOrSearch(undefined, currentCity)}
                     className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
-                      currentCategory?.id === cat.id
-                        ? "bg-[#fff1f2] font-bold text-[#e00b41]"
-                        : "text-gray-700 hover:bg-gray-50"
+                      !currentCategory ? "bg-gray-100 font-bold text-gray-900" : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
-                    {cat.name}
+                    All Categories
                   </button>
-                ))}
-              </div>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => navigateToSeoOrSearch(cat, currentCity)}
+                      className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
+                        currentCategory?.id === cat.id
+                          ? "bg-[#fff1f2] font-bold text-[#e00b41]"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
@@ -220,34 +235,37 @@ export function SearchFilterBar({
             </button>
 
             {openDropdown === "city" && (
-              <div className="absolute left-0 top-full mt-2 w-56 max-h-80 overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-2xl z-50">
-                <div className="px-2 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                  Select City
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigateToSeoOrSearch(currentCategory, undefined)}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
-                    !currentCity ? "bg-gray-100 font-bold text-gray-900" : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  All Cities
-                </button>
-                {cities.map((city) => (
+              <>
+                <div className={backdropClass} onClick={() => setOpenDropdown(null)} />
+                <div className={`${panelClass} sm:w-56`}>
+                  <div className="px-2 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                    Select City
+                  </div>
                   <button
-                    key={city.id}
                     type="button"
-                    onClick={() => navigateToSeoOrSearch(currentCategory, city)}
+                    onClick={() => navigateToSeoOrSearch(currentCategory, undefined)}
                     className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
-                      currentCity?.id === city.id
-                        ? "bg-[#fff1f2] font-bold text-[#e00b41]"
-                        : "text-gray-700 hover:bg-gray-50"
+                      !currentCity ? "bg-gray-100 font-bold text-gray-900" : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
-                    {city.name}
+                    All Cities
                   </button>
-                ))}
-              </div>
+                  {cities.map((city) => (
+                    <button
+                      key={city.id}
+                      type="button"
+                      onClick={() => navigateToSeoOrSearch(currentCategory, city)}
+                      className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
+                        currentCity?.id === city.id
+                          ? "bg-[#fff1f2] font-bold text-[#e00b41]"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {city.name}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
@@ -289,53 +307,56 @@ export function SearchFilterBar({
             </button>
 
             {openDropdown === "budget" && (
-              <div className="absolute left-0 top-full mt-2 w-72 rounded-xl border border-gray-200 bg-white p-4 shadow-2xl z-50">
-                <div className="mb-2 text-xs font-bold text-gray-700">Budget Range (Starting Price)</div>
+              <>
+                <div className={backdropClass} onClick={() => setOpenDropdown(null)} />
+                <div className={`${panelClass} sm:w-72`}>
+                  <div className="mb-2 text-xs font-bold text-gray-700">Budget Range (Starting Price)</div>
 
-                <div className="flex items-center gap-2 mb-4">
-                  <input
-                    type="number"
-                    placeholder="Min (₹)"
-                    value={tempMin}
-                    onChange={(e) => setTempMin(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs outline-none focus:border-[#e00b41]"
-                  />
-                  <span className="text-gray-400">–</span>
-                  <input
-                    type="number"
-                    placeholder="Max (₹)"
-                    value={tempMax}
-                    onChange={(e) => setTempMax(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs outline-none focus:border-[#e00b41]"
-                  />
-                </div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <input
+                      type="number"
+                      placeholder="Min (₹)"
+                      value={tempMin}
+                      onChange={(e) => setTempMin(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs outline-none focus:border-[#e00b41]"
+                    />
+                    <span className="text-gray-400">–</span>
+                    <input
+                      type="number"
+                      placeholder="Max (₹)"
+                      value={tempMax}
+                      onChange={(e) => setTempMax(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs outline-none focus:border-[#e00b41]"
+                    />
+                  </div>
 
-                <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTempMin("");
-                      setTempMax("");
-                      updateQuery({ priceMin: undefined, priceMax: undefined });
-                    }}
-                    className="text-xs font-medium text-gray-500 hover:underline cursor-pointer"
-                  >
-                    Reset
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateQuery({
-                        priceMin: tempMin.trim() || undefined,
-                        priceMax: tempMax.trim() || undefined,
-                      })
-                    }
-                    className="rounded-full bg-[#e00b41] px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#c2185b] cursor-pointer"
-                  >
-                    Apply
-                  </button>
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempMin("");
+                        setTempMax("");
+                        updateQuery({ priceMin: undefined, priceMax: undefined });
+                      }}
+                      className="text-xs font-medium text-gray-500 hover:underline cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateQuery({
+                          priceMin: tempMin.trim() || undefined,
+                          priceMax: tempMax.trim() || undefined,
+                        })
+                      }
+                      className="rounded-full bg-[#e00b41] px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#c2185b] cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
@@ -375,53 +396,56 @@ export function SearchFilterBar({
               </button>
 
               {openDropdown === "catalogPrice" && (
-                <div className="absolute left-0 top-full mt-2 w-72 rounded-xl border border-gray-200 bg-white p-4 shadow-2xl z-50">
-                  <div className="mb-2 text-xs font-bold text-gray-700">Item Price Range</div>
+                <>
+                  <div className={backdropClass} onClick={() => setOpenDropdown(null)} />
+                  <div className={`${panelClass} sm:w-72`}>
+                    <div className="mb-2 text-xs font-bold text-gray-700">Item Price Range</div>
 
-                  <div className="flex items-center gap-2 mb-4">
-                    <input
-                      type="number"
-                      placeholder="Min (₹)"
-                      value={tempCatalogMin}
-                      onChange={(e) => setTempCatalogMin(e.target.value)}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs outline-none focus:border-[#e00b41]"
-                    />
-                    <span className="text-gray-400">–</span>
-                    <input
-                      type="number"
-                      placeholder="Max (₹)"
-                      value={tempCatalogMax}
-                      onChange={(e) => setTempCatalogMax(e.target.value)}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs outline-none focus:border-[#e00b41]"
-                    />
-                  </div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <input
+                        type="number"
+                        placeholder="Min (₹)"
+                        value={tempCatalogMin}
+                        onChange={(e) => setTempCatalogMin(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs outline-none focus:border-[#e00b41]"
+                      />
+                      <span className="text-gray-400">–</span>
+                      <input
+                        type="number"
+                        placeholder="Max (₹)"
+                        value={tempCatalogMax}
+                        onChange={(e) => setTempCatalogMax(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs outline-none focus:border-[#e00b41]"
+                      />
+                    </div>
 
-                  <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTempCatalogMin("");
-                        setTempCatalogMax("");
-                        updateQuery({ catalogPriceMin: undefined, catalogPriceMax: undefined });
-                      }}
-                      className="text-xs font-medium text-gray-500 hover:underline cursor-pointer"
-                    >
-                      Reset
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        updateQuery({
-                          catalogPriceMin: tempCatalogMin.trim() || undefined,
-                          catalogPriceMax: tempCatalogMax.trim() || undefined,
-                        })
-                      }
-                      className="rounded-full bg-[#e00b41] px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#c2185b] cursor-pointer"
-                    >
-                      Apply
-                    </button>
+                    <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTempCatalogMin("");
+                          setTempCatalogMax("");
+                          updateQuery({ catalogPriceMin: undefined, catalogPriceMax: undefined });
+                        }}
+                        className="text-xs font-medium text-gray-500 hover:underline cursor-pointer"
+                      >
+                        Reset
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateQuery({
+                            catalogPriceMin: tempCatalogMin.trim() || undefined,
+                            catalogPriceMax: tempCatalogMax.trim() || undefined,
+                          })
+                        }
+                        className="rounded-full bg-[#e00b41] px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#c2185b] cursor-pointer"
+                      >
+                        Apply
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           )}
@@ -509,28 +533,31 @@ export function SearchFilterBar({
           </button>
 
           {openDropdown === "sort" && (
-            <div className="absolute right-0 top-full mt-2 w-48 rounded-xl border border-gray-200 bg-white p-2 shadow-2xl z-50">
-              {[
-                { id: "relevance", label: "Recommended" },
-                { id: "price_low", label: "Price: Low to High" },
-                { id: "price_high", label: "Price: High to Low" },
-                { id: "newest", label: "Newest" },
-                { id: "fastest_reply", label: "Fastest to Reply" },
-              ].map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => updateQuery({ sort: opt.id })}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
-                    sort === opt.id
-                      ? "bg-[#fff1f2] font-bold text-[#e00b41]"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            <>
+              <div className={backdropClass} onClick={() => setOpenDropdown(null)} />
+              <div className={`${panelClass} sm:left-auto sm:right-0 sm:w-48`}>
+                {[
+                  { id: "relevance", label: "Recommended" },
+                  { id: "price_low", label: "Price: Low to High" },
+                  { id: "price_high", label: "Price: High to Low" },
+                  { id: "newest", label: "Newest" },
+                  { id: "fastest_reply", label: "Fastest to Reply" },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => updateQuery({ sort: opt.id })}
+                    className={`w-full rounded-lg px-3 py-2 text-left text-xs sm:text-sm transition-colors cursor-pointer ${
+                      sort === opt.id
+                        ? "bg-[#fff1f2] font-bold text-[#e00b41]"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
