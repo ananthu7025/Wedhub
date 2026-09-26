@@ -11,7 +11,8 @@ import { MessageVendorButton } from "@/components/shared/MessageVendorButton";
 import { VendorContactLinks } from "@/components/shared/VendorContactLinks";
 import { VendorPortfolioTabs } from "@/components/portfolio/VendorPortfolioTabs";
 import { VendorRatingDistribution } from "@/components/portfolio/VendorRatingDistribution";
-import { MapPinIcon } from "@/components/portfolio/icons";
+import { MapPinIcon, StarIcon, CheckIcon, SparkleIcon } from "@/components/portfolio/icons";
+import { StarRating } from "@/components/ui/StarRating";
 import { pickPortfolioQuote } from "@/lib/utils/portfolio-quotes";
 import { CuratedVendorShelf } from "../CuratedVendorShelf";
 import { getVendorAlbums, getVendorBySlug, getVendorReviews, searchVendors } from "@/lib/api/catalog";
@@ -83,9 +84,9 @@ export async function generateMetadata({ params }: VendorPageProps): Promise<Met
 
 const VERIFICATION_LABEL: Record<string, string> = {
   UNVERIFIED: "",
-  IDENTITY_VERIFIED: "✓ Identity Verified",
-  BUSINESS_VERIFIED: "✓ Business Verified",
-  PLATFORM_VERIFIED: "✓ Platform Verified",
+  IDENTITY_VERIFIED: "Identity Verified",
+  BUSINESS_VERIFIED: "Business Verified",
+  PLATFORM_VERIFIED: "Platform Verified",
 };
 
 export default async function VendorProfilePage({ params }: VendorPageProps) {
@@ -274,11 +275,19 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2.5">
                         <h1 className="text-2xl font-bold text-white drop-shadow-sm sm:text-[32px]">{vendor.businessName}</h1>
-                        {verificationLabel && <Badge variant="green">{verificationLabel}</Badge>}
-                        {vendor.isPremiumEligible && <Badge variant="crimson">⭐ Premium Vendor</Badge>}
+                        {verificationLabel && (
+                          <Badge variant="green">
+                            <CheckIcon className="inline h-3 w-3" /> {verificationLabel}
+                          </Badge>
+                        )}
+                        {vendor.isPremiumEligible && (
+                          <Badge variant="crimson">
+                            <SparkleIcon className="inline h-3 w-3" /> Premium Vendor
+                          </Badge>
+                        )}
                         {hasRating && (
                           <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-xs">
-                            ★ {Number(vendor.averageRating).toFixed(1)}
+                            <StarIcon filled className="inline h-3.5 w-3.5" /> {Number(vendor.averageRating).toFixed(1)}
                             <span className="font-medium text-white/80">({vendor.reviewCount})</span>
                           </span>
                         )}
@@ -325,11 +334,19 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <h1 className="text-2xl font-bold">{vendor.businessName}</h1>
-                      {verificationLabel && <Badge variant="green">{verificationLabel}</Badge>}
-                      {vendor.isPremiumEligible && <Badge variant="crimson">⭐ Premium Vendor</Badge>}
+                      {verificationLabel && (
+                          <Badge variant="green">
+                            <CheckIcon className="inline h-3 w-3" /> {verificationLabel}
+                          </Badge>
+                        )}
+                      {vendor.isPremiumEligible && (
+                        <Badge variant="crimson">
+                          <SparkleIcon className="inline h-3 w-3" /> Premium Vendor
+                        </Badge>
+                      )}
                       {hasRating && (
                         <span className="flex items-center gap-1 text-xs font-bold text-text-dark">
-                          ★ {Number(vendor.averageRating).toFixed(1)}
+                          <StarIcon filled className="inline h-3.5 w-3.5" /> {Number(vendor.averageRating).toFixed(1)}
                           <span className="font-medium text-text-grey">({vendor.reviewCount})</span>
                         </span>
                       )}
@@ -501,12 +518,15 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                   {reviews.map((review) => (
                     <div key={review.id} className="border-b border-neutral-grey-20 py-4.5 last:border-b-0">
                       <div className="mb-1 text-[#f0a202]">
-                        {"★".repeat(review.rating)}
-                        {"☆".repeat(5 - review.rating)}
+                        <StarRating rating={review.rating} />
                       </div>
                       {review.title && <div className="mb-1 text-sm font-bold">{review.title}</div>}
                       {review.content && <p className="mb-2 text-[13px] leading-relaxed">{review.content}</p>}
-                      {review.verifiedInteraction && <Badge variant="green">✓ Verified booking</Badge>}
+                      {review.verifiedInteraction && (
+                        <Badge variant="green">
+                          <CheckIcon className="inline h-3 w-3" /> Verified booking
+                        </Badge>
+                      )}
                       {review.photos.length > 0 && (
                         <div className="mt-2.5 flex gap-2">
                           {review.photos.map((photo) => {

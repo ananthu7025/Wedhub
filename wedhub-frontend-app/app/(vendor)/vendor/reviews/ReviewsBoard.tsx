@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
+import { StarIcon, CheckIcon } from "@/components/portfolio/icons";
+import { StarRating } from "@/components/ui/StarRating";
 import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { respondToMyReview } from "@/lib/api/reviews-client";
 import type { VendorReview } from "@/lib/api/vendors.types";
@@ -105,7 +107,9 @@ export function ReviewsBoard({
           <div className="flex-1 w-full sm:w-auto">
             {histogram.map(({ star, count }) => (
               <div key={star} className="mb-1 flex items-center gap-2 text-xs">
-                <span className="w-6 shrink-0">{star}★</span>
+                <span className="w-6 shrink-0 inline-flex items-center gap-0.5">
+                  {star} <StarIcon filled className="h-3 w-3 inline" />
+                </span>
                 <div className="h-1.5 flex-1 overflow-hidden rounded bg-surface-input">
                   <div className="h-full bg-[#f0a202]" style={{ width: `${(count / maxCount) * 100}%` }} />
                 </div>
@@ -154,11 +158,15 @@ export function ReviewsBoard({
             <div key={review.id} className="border-b border-neutral-grey-20 py-4.5 first:pt-0 last:border-b-0 last:pb-0">
               <div className="mb-2 flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-ink-soft text-xs font-bold text-white">
-                  {review.verifiedInteraction ? "✓" : "?"}
+                  {review.verifiedInteraction ? <CheckIcon className="h-3.5 w-3.5" /> : "?"}
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2 text-[13px] font-bold">
-                    {review.verifiedInteraction && <Badge variant="green">✓ Verified booking</Badge>}
+                    {review.verifiedInteraction && (
+                      <Badge variant="green">
+                        <CheckIcon className="inline h-3 w-3" /> Verified booking
+                      </Badge>
+                    )}
                   </div>
                   <div className="text-xs text-text-grey">
                     {formatDate(review.eventDate)} · Reviewed {formatRelativeTime(review.createdAt)}
@@ -166,7 +174,7 @@ export function ReviewsBoard({
                 </div>
               </div>
 
-              <div className="text-[#f0a202]">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</div>
+              <div className="text-[#f0a202]"><StarRating rating={review.rating} /></div>
               {review.title && <div className="mt-1 text-sm font-bold">{review.title}</div>}
               {review.content && <p className="mt-2 text-[13px] leading-relaxed">{review.content}</p>}
 

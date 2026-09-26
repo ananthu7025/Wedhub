@@ -7,6 +7,7 @@ import { setMyAttributes } from "@/lib/api/vendor-self-client";
 import type { CategorySelf, VendorSelf } from "@/lib/api/vendor-self.types";
 import { formatApiError } from "@/lib/utils/error";
 import { useToast } from "@/components/ui/Toast";
+import { CheckIcon } from "@/components/portfolio/icons";
 import { AttributesSection, type AttributeValue, type AttributeValueMap } from "./AttributesSection";
 
 /**
@@ -125,7 +126,7 @@ export function ProfileEditor({ vendor, categories }: { vendor: VendorSelf; cate
           disabled={status === "saving" || !primaryCategoryEntry}
           className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
         >
-          {status === "saving" ? "Saving…" : status === "saved" ? "Saved ✓" : "Save changes"}
+          {status === "saving" ? "Saving…" : status === "saved" ? <>Saved <CheckIcon className="inline h-3.5 w-3.5" /></> : "Save changes"}
         </button>
       </div>
     </div>

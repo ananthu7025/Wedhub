@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { CloseIcon } from "@/components/portfolio/icons";
 import { createSingleVendorEnquiry } from "@/lib/api/shortlists-client";
 import { trackEvent } from "@/lib/analytics/track";
 import { formatApiError } from "@/lib/utils/error";
@@ -222,7 +223,7 @@ function EnquiryModalContent({
           className="float-right border-none bg-transparent text-lg text-text-grey"
           aria-label="Close"
         >
-          ✕
+          <CloseIcon className="h-4 w-4" />
         </button>
 
         {status === "success" ? (

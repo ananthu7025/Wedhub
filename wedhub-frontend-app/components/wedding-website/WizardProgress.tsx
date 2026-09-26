@@ -1,5 +1,7 @@
 "use client";
 
+import { CheckIcon } from "@/components/portfolio/icons";
+
 // 8 steps — the feature spec's own summary progress indicator lists 7,
 // but its detailed walkthrough treats "Couple Story" as a distinct
 // section from Photos (its own numbered "Step 5"). Given its own
@@ -25,7 +27,7 @@ export function WizardProgress({ current }: { current: WizardStepName }) {
                     : "bg-surface-input text-text-grey"
               }`}
             >
-              {index < currentIndex ? "✓" : index + 1}
+              {index < currentIndex ? <CheckIcon className="h-3.5 w-3.5" /> : index + 1}
             </div>
             <span
               className={`hidden text-[10px] font-semibold whitespace-nowrap sm:block ${

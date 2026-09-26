@@ -15,6 +15,7 @@ import type {
   CatalogStoreSettings,
   CatalogVariantField,
 } from "@/lib/api/vendor-catalog.types";
+import { CheckIcon } from "@/components/portfolio/icons";
 import { CatalogCollectionsManager } from "./CatalogCollectionsManager";
 import { CatalogItemModal } from "./CatalogItemModal";
 import { CatalogStorefrontCustomizer } from "./CatalogStorefrontCustomizer";
@@ -202,7 +203,7 @@ export function CatalogItemsManager({
                 onClick={handleCopyStorefrontLink}
                 className="px-3.5 py-2 rounded-xl border border-neutral-300 bg-white text-neutral-800 text-xs font-bold hover:bg-neutral-50 transition flex items-center gap-1.5"
               >
-                <span>{copiedLink ? "✓ Copied!" : "Copy Link"}</span>
+                <span>{copiedLink ? <><CheckIcon className="inline h-3 w-3" /> Copied!</> : "Copy Link"}</span>
               </button>
               <Link
                 href={`/catalog/${vendorSlug}`}

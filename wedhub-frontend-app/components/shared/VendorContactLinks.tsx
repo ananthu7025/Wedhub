@@ -4,19 +4,8 @@ import { useState } from "react";
 import { trackEvent } from "@/lib/analytics/track";
 import { revealVendorContactClient } from "@/lib/api/catalog-client";
 import { formatApiError } from "@/lib/utils/error";
+import { LockIcon, PhoneIcon, MailIcon, GlobeIcon } from "@/components/portfolio/icons";
 import { SignInModal } from "./SignInModal";
-
-// Custom padlock icon for "Reveal contact details" — matches the app's
-// inline-SVG icon convention (see VendorHeartButton.tsx) instead of the 🔒
-// system emoji, which renders inconsistently across platforms/fonts.
-function LockIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="4.5" y="11" width="15" height="10" rx="2" />
-      <path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" />
-    </svg>
-  );
-}
 
 /**
  * Clickable tel:/mailto:/website links for a vendor's contact block on
@@ -88,7 +77,7 @@ export function VendorContactLinks({
           onClick={() => setShowSignIn(true)}
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-input px-4 py-2.5 text-[13px] font-semibold text-text-dark hover:bg-neutral-grey-20"
         >
-          <LockIcon /> Reveal contact details
+          <LockIcon className="h-3.5 w-3.5" /> Reveal contact details
         </button>
         {showSignIn && (
           <SignInModal
@@ -113,7 +102,7 @@ export function VendorContactLinks({
           onClick={reveal}
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-input px-4 py-2.5 text-[13px] font-semibold text-text-dark hover:bg-neutral-grey-20 disabled:opacity-60"
         >
-          <LockIcon /> {loading ? "Loading…" : "Reveal contact details"}
+          <LockIcon className="h-3.5 w-3.5" /> {loading ? "Loading…" : "Reveal contact details"}
         </button>
         {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
       </div>
@@ -128,7 +117,7 @@ export function VendorContactLinks({
           onClick={() => trackEvent({ eventType: "portfolio_call_click", vendorId, metadata: { source: "profile_sidebar", businessName } })}
           className="flex items-center gap-2.5 py-1.5 text-[13px] text-inherit no-underline hover:underline"
         >
-          📞 {revealed.phone}
+          <PhoneIcon className="h-3.5 w-3.5" /> {revealed.phone}
         </a>
       )}
       {revealed.email && (
@@ -137,7 +126,7 @@ export function VendorContactLinks({
           onClick={() => trackEvent({ eventType: "email_click", vendorId, metadata: { source: "profile_sidebar", businessName } })}
           className="flex items-center gap-2.5 py-1.5 text-[13px] text-inherit no-underline hover:underline"
         >
-          ✉️ {revealed.email}
+          <MailIcon className="h-3.5 w-3.5" /> {revealed.email}
         </a>
       )}
       {revealed.website && (
@@ -147,7 +136,7 @@ export function VendorContactLinks({
           rel="noopener noreferrer nofollow"
           className="flex items-center gap-2.5 py-1.5 text-[13px] text-inherit no-underline hover:underline"
         >
-          🌐 {revealed.website}
+          <GlobeIcon className="h-3.5 w-3.5" /> {revealed.website}
         </a>
       )}
     </>

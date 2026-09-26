@@ -7,6 +7,7 @@ import { PublicFooter } from "@/components/shared/PublicFooter";
 import { JsonLd } from "@/components/shared/JsonLd";
 import { ChallengeEntryCard } from "@/components/shared/ChallengeEntryCard";
 import { getChallengeBySlug, getChallengeEntries } from "@/lib/api/challenges";
+import { TrophyIcon } from "@/components/portfolio/icons";
 import { ApiRequestError } from "@/lib/api/types";
 import { getOptionalSession } from "@/lib/auth/dal";
 import { breadcrumbListJsonLd } from "@/lib/seo/json-ld";
@@ -170,7 +171,9 @@ export default async function ChallengePage({ params }: ChallengePageProps) {
 
         {challenge.status === "COMPLETED" && challenge.winnerEntry && (
           <div className="mb-8 rounded-xl border-2 border-amber-70 bg-amber-10 p-5 text-center">
-            <p className="mb-2 text-sm font-bold uppercase tracking-wide text-amber-70">🏆 Challenge Completed — Winner</p>
+            <p className="mb-2 flex items-center justify-center gap-1.5 text-sm font-bold uppercase tracking-wide text-amber-70">
+              <TrophyIcon className="h-4 w-4" /> Challenge Completed — Winner
+            </p>
             <p className="text-lg font-bold text-text-dark">{challenge.winnerEntry.vendor.businessName}</p>
             <p className="text-sm text-text-body">{challenge.winnerEntry.title}</p>
             <Link

@@ -11,6 +11,7 @@ import { PublicItemCard } from "./PublicItemCard";
 import { CartDrawer, type CartItem } from "@/components/vendor-store/CartDrawer";
 import { StorefrontFooter } from "./StorefrontFooter";
 import { themeForStore } from "@/components/vendor-store/store-theme";
+import { SearchIcon, MapPinIcon } from "@/components/portfolio/icons";
 
 export function PublicStorefrontView({
   store,
@@ -122,7 +123,11 @@ export function PublicStorefrontView({
 
                 <div className="mt-2 flex items-center gap-3 text-xs text-text-grey flex-wrap">
                   <span>By <strong>{store.vendor.businessName}</strong></span>
-                  {store.vendor.address && <span>📍 {store.vendor.address}</span>}
+                  {store.vendor.address && (
+                    <span className="inline-flex items-center gap-1">
+                      <MapPinIcon className="h-3.5 w-3.5" /> {store.vendor.address}
+                    </span>
+                  )}
                   <Link
                     href={`/vendors/${store.vendor.slug}`}
                     className={`font-bold hover:underline ${theme.accentTextClass}`}
@@ -245,8 +250,8 @@ export function PublicStorefrontView({
         {/* Product Grid */}
         {filteredItems.length === 0 ? (
           <div className="rounded-2xl border border-border bg-white p-16 text-center shadow-xs">
-            <div className="mx-auto w-14 h-14 rounded-full bg-surface-input flex items-center justify-center text-2xl mb-3">
-              🔍
+            <div className="mx-auto w-14 h-14 rounded-full bg-surface-input flex items-center justify-center text-text-grey mb-3">
+              <SearchIcon className="h-8 w-8" />
             </div>
             <h3 className="text-base font-bold text-text-dark">No products found</h3>
             <p className="mt-1 text-xs text-text-grey max-w-sm mx-auto">

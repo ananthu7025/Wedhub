@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CloseIcon } from "@/components/portfolio/icons";
 import { VendorLogoutButton } from "./VendorLogoutButton";
 
 interface VendorMobileNavProps {
@@ -405,7 +406,7 @@ export function VendorMobileNav({
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-input text-text-grey hover:text-text-dark transition-colors"
                 aria-label="Close menu"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 

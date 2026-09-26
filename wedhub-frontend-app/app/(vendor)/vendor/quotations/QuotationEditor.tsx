@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { CloseIcon, CheckIcon } from "@/components/portfolio/icons";
 import type { PackageSelf } from "@/lib/api/vendor-self.types";
 import type {
   CreateVendorQuotationBody,
@@ -539,9 +540,10 @@ export function QuotationEditor({
                       type="button"
                       onClick={() => handleRemoveItem(it.key)}
                       title="Remove this item"
+                      aria-label="Remove this item"
                       className="text-neutral-400 hover:text-red-600 p-1"
                     >
-                      ✕
+                      <CloseIcon className="h-4 w-4" />
                     </button>
                   </div>
 
@@ -556,13 +558,14 @@ export function QuotationEditor({
                           key={incIdx}
                           className="inline-flex items-center gap-1.5 rounded-full bg-brand-primary/10 pl-2.5 pr-1.5 py-0.5 text-xs font-semibold text-brand-primary"
                         >
-                          <span>✓ {inc}</span>
+                          <span><CheckIcon className="inline h-3 w-3" /> {inc}</span>
                           <button
                             type="button"
                             onClick={() => handleRemoveInclusion(it.key, incIdx)}
                             className="rounded-full hover:bg-brand-primary/20 text-[10px] w-3.5 h-3.5 flex items-center justify-center"
+                            aria-label="Remove inclusion"
                           >
-                            ✕
+                            <CloseIcon className="h-3.5 w-3.5" />
                           </button>
                         </span>
                       ))}
@@ -866,8 +869,9 @@ export function QuotationEditor({
                 type="button"
                 onClick={() => setIsPackageModalOpen(false)}
                 className="text-neutral-400 hover:text-neutral-700 text-lg"
+                aria-label="Close"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 
@@ -895,7 +899,7 @@ export function QuotationEditor({
                         <div className="flex flex-wrap gap-1 pt-1">
                           {pkg.inclusions.slice(0, 4).map((inc, i) => (
                             <span key={i} className="rounded bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600">
-                              ✓ {inc}
+                              <CheckIcon className="inline h-2.5 w-2.5" /> {inc}
                             </span>
                           ))}
                           {pkg.inclusions.length > 4 && (

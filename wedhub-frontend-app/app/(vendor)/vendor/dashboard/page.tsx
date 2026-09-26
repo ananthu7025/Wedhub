@@ -9,6 +9,7 @@ import { getVendorReviews } from "@/lib/api/catalog";
 import { getActiveChallenge } from "@/lib/api/challenges";
 import { COMPLETENESS_CHECKS } from "@/lib/api/vendor-self.types";
 import { getMyUpcomingWeddings } from "@/lib/api/vendor-calendar";
+import { CheckIcon } from "@/components/portfolio/icons";
 import { DashboardSparkline } from "./DashboardSparkline";
 import { DashboardInteractiveSections } from "./DashboardInteractiveSections";
 import { ChallengeEntryWidget } from "./ChallengeEntryWidget";
@@ -416,7 +417,7 @@ export default async function VendorDashboardPage() {
                         met ? "bg-emerald-10 text-emerald-70" : "bg-neutral-grey-20 text-text-grey"
                       }`}
                     >
-                      {met ? "✓" : "○"}
+                      {met ? <CheckIcon className="h-3 w-3" /> : "○"}
                     </span>
                     <span className={met ? "font-medium text-text-dark" : "text-text-grey"}>
                       {check.label}

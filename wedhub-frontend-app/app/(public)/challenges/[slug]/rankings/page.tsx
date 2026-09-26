@@ -6,6 +6,7 @@ import { PublicTopbar } from "@/components/shared/PublicTopbar";
 import { PublicFooter } from "@/components/shared/PublicFooter";
 import { getChallengeBySlug, getChallengeRankings } from "@/lib/api/challenges";
 import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
+import { MedalIcon } from "@/components/portfolio/icons";
 import { ApiRequestError } from "@/lib/api/types";
 import type { Challenge } from "@/lib/api/challenges.types";
 
@@ -82,8 +83,8 @@ export default async function ChallengeRankingsPage({ params, searchParams }: Ra
                     isTop3 ? "border-amber-70 bg-amber-10" : "border-border bg-white"
                   }`}
                 >
-                  <span className="w-8 shrink-0 text-center text-sm font-bold text-text-grey">
-                    {rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`}
+                  <span className="flex w-8 shrink-0 items-center justify-center text-center text-sm font-bold text-text-grey">
+                    {isTop3 ? <MedalIcon place={rank === 1 ? 1 : rank === 2 ? 2 : 3} className="h-6 w-6" /> : `#${rank}`}
                   </span>
                   <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-input">
                     <Image

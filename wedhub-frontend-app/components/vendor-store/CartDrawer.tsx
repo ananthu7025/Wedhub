@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { createPublicStoreOrder } from "@/lib/api/vendor-store-client";
 import { verifyStoreOrderPayment } from "@/lib/api/vendor-payments-client";
+import { LockIcon } from "@/components/portfolio/icons";
 import type { StoreAccentColor, VendorStoreItem } from "@/lib/api/vendor-store.types";
+import { ShoppingBagIcon } from "@/components/portfolio/icons";
 import { themeForStore } from "./store-theme";
 
 export interface CartItem {
@@ -367,8 +369,8 @@ export function CartDrawer({
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="h-full w-full flex items-center justify-center text-text-grey text-xs">
-                            🛍️
+                          <div className="h-full w-full flex items-center justify-center text-text-grey">
+                            <ShoppingBagIcon className="h-5 w-5" />
                           </div>
                         )}
                       </div>
@@ -660,9 +662,13 @@ export function CartDrawer({
                     </button>
                   )}
                   <p className="mt-1.5 text-center text-[10px] text-text-grey">
-                    {paymentMethod === "ONLINE"
-                      ? "🔒 256-bit encrypted Razorpay Route payment. Settles directly to vendor."
-                      : "Instant order number generated. Chat directly with vendor to finalize and pay."}
+                    {paymentMethod === "ONLINE" ? (
+                      <>
+                        <LockIcon className="inline h-3.5 w-3.5" /> 256-bit encrypted Razorpay Route payment. Settles directly to vendor.
+                      </>
+                    ) : (
+                      "Instant order number generated. Chat directly with vendor to finalize and pay."
+                    )}
                   </p>
                 </div>
               </form>

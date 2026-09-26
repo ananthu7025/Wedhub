@@ -2,12 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { CloseIcon } from "@/components/portfolio/icons";
 import { createReview } from "@/lib/api/account-client";
 import { uploadReviewPhoto } from "@/lib/media/upload";
 import { runWithConcurrencyLimit } from "@/lib/utils/concurrency";
 import { formatApiError } from "@/lib/utils/error";
 import { useToast } from "@/components/ui/Toast";
 import { FieldError } from "@/components/ui/FieldError";
+import { StarIcon } from "@/components/portfolio/icons";
 
 const MAX_PHOTOS = 6;
 const MAX_CONCURRENT_UPLOADS = 3;
@@ -149,7 +151,7 @@ export function ReviewForm({
             className="cursor-pointer border-none bg-transparent p-0 leading-none"
             style={{ color: star <= (hoverRating || rating) ? "#f0a202" : "var(--color-border)" }}
           >
-            ★
+            <StarIcon filled={star <= (hoverRating || rating)} className="h-5 w-5" />
           </button>
         ))}
       </div>
@@ -196,7 +198,7 @@ export function ReviewForm({
                 aria-label="Remove photo"
                 className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-[9px] text-white"
               >
-                ✕
+                <CloseIcon className="h-3 w-3" />
               </button>
             </div>
           ))}

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { HeartIcon } from "@/components/portfolio/icons";
 import { castChallengeVote } from "@/lib/api/challenges-client";
 import { trackEvent } from "@/lib/analytics/track";
 import { formatApiError } from "@/lib/utils/error";
@@ -88,7 +89,9 @@ export function ChallengeVoteButton({
           className,
         )}
       >
-        <span aria-hidden>{hasVoted ? "❤️" : "🤍"}</span>
+        <span aria-hidden="true">
+          <HeartIcon filled={hasVoted} className="h-4 w-4 inline" />
+        </span>
         {hasVoted ? "Voted" : "Vote"} · {voteCount.toLocaleString("en-IN")}
       </button>
       {error && <p className="mt-1 text-[11px] text-red-70">{error}</p>}

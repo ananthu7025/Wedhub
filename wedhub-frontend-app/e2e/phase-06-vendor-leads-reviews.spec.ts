@@ -189,8 +189,8 @@ test.describe("Vendor reviews page", () => {
     await expect(page.getByRole("heading", { name: "Reviews" })).toBeVisible();
     await expect(page.getByText("5.0")).toBeVisible();
     await expect(page.getByText("Absolutely wonderful!")).toBeVisible();
-    await expect(page.getByText(/★★★★★/)).toBeVisible();
-    await expect(page.getByText("✓ Verified booking")).toBeVisible();
+    await expect(page.getByLabel(/5 out of 5 stars/)).toBeVisible();
+    await expect(page.getByText("Verified booking")).toBeVisible();
 
     // Real respond flow (POST /reviews/:id/respond).
     await page.getByRole("button", { name: "Respond" }).click();

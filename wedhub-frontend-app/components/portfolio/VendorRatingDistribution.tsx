@@ -1,3 +1,4 @@
+import { StarIcon } from "@/components/portfolio/icons";
 import type { VendorReview } from "@/lib/api/vendors.types";
 
 /**
@@ -25,7 +26,9 @@ export function VendorRatingDistribution({ reviews }: { reviews: VendorReview[] 
         const pct = total > 0 ? Math.round((count / total) * 100) : 0;
         return (
           <div key={star} className="flex items-center gap-2 text-xs">
-            <span className="w-8 shrink-0 font-semibold text-text-grey">{star} ★</span>
+            <span className="w-8 shrink-0 font-semibold text-text-grey">
+              {star} <StarIcon filled className="inline h-3 w-3" />
+            </span>
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-grey-20">
               <div className="h-full rounded-full bg-amber" style={{ width: `${pct}%` }} />
             </div>

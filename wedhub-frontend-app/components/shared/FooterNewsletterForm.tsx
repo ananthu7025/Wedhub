@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { FieldError } from "@/components/ui/FieldError";
+import { CheckIcon } from "@/components/portfolio/icons";
 import { emailSchema, validateField } from "@/lib/validation/auth-schemas";
 
 export function FooterNewsletterForm() {
@@ -15,7 +16,7 @@ export function FooterNewsletterForm() {
   if (subscribed) {
     return (
       <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-800">
-        ✓ Thank you for subscribing to itsmyKalyanam updates!
+        <CheckIcon className="inline h-3 w-3" /> Thank you for subscribing to itsmyKalyanam updates!
       </div>
     );
   }

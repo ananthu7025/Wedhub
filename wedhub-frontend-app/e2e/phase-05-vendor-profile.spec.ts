@@ -91,17 +91,17 @@ test.describe("Vendor dashboard and profile editor", () => {
       "A full description written by the Phase 5 headed Playwright run, long enough to satisfy the real backend's submission requirements.",
     );
     await page.getByRole("button", { name: "Save changes" }).first().click();
-    await expect(page.getByText("Saved ✓").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Saved").first()).toBeVisible({ timeout: 10000 });
 
     await page.getByText("Category & location").click(); // open the <details> section
     await page.getByLabel("City").selectOption({ label: "Bengaluru" });
     await page.getByRole("button", { name: "Save changes" }).nth(1).click();
-    await expect(page.getByText("Saved ✓").nth(1)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Saved").nth(1)).toBeVisible({ timeout: 10000 });
 
     await page.getByText("Contact & social").click();
     await page.getByLabel("Phone").fill("+919900011122");
     await page.getByRole("button", { name: "Save changes" }).nth(3).click();
-    await expect(page.getByText("Saved ✓").nth(3)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Saved").nth(3)).toBeVisible({ timeout: 10000 });
 
     await page.reload();
     await expect(page.getByLabel("Tagline / short description")).toHaveValue(/candid wedding photography/);

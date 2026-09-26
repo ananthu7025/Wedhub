@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CloseIcon, SparkleIcon, CheckIcon, ClockIcon } from "@/components/portfolio/icons";
 import type {
   VendorPaymentAccountSummary,
   VendorPaymentMetrics,
@@ -201,7 +202,7 @@ export function PaymentsBoard({
       <div className="rounded-2xl bg-linear-to-r from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-lg relative overflow-hidden">
         <div className="relative z-10 max-w-3xl">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-3">
-            <span>✨</span> 0% WedHub Commission
+            <SparkleIcon className="h-3.5 w-3.5" /> 0% WedHub Commission
           </div>
           <h2 className="text-xl md:text-2xl font-black tracking-tight">
             Direct Bank Settlements via Razorpay Route
@@ -215,15 +216,16 @@ export function PaymentsBoard({
       {accountSuccess && (
         <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-medium text-emerald-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-base">✅</span>
+            <CheckIcon className="h-4 w-4 text-emerald-600" />
             <span>{accountSuccess}</span>
           </div>
           <button
             type="button"
             onClick={() => setAccountSuccess(null)}
             className="text-emerald-700 hover:text-emerald-900 font-bold"
+            aria-label="Dismiss"
           >
-            ✕
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -409,15 +411,15 @@ export function PaymentsBoard({
                 <div className="mt-1">
                   {account.bankVerificationStatus === "VERIFIED" ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
-                      ✓ Penny Drop Verified
+                      <CheckIcon className="inline h-3 w-3" /> Penny Drop Verified
                     </span>
                   ) : account.bankVerificationStatus === "FAILED" ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-800">
-                      ✕ Penny Drop Failed
+                      <CloseIcon className="inline h-3 w-3" /> Penny Drop Failed
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
-                      ⏳ Pending Validation
+                      <ClockIcon className="inline h-3 w-3" /> Pending Validation
                     </span>
                   )}
                 </div>
@@ -477,7 +479,7 @@ export function PaymentsBoard({
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <p className="font-bold flex items-center gap-1.5">
-                    <span>⏳</span> Bank Verification & KYC in Progress
+                    <ClockIcon className="h-4 w-4" /> Bank Verification & KYC in Progress
                   </p>
                   <p className="mt-0.5 text-amber-700 leading-relaxed">
                     Razorpay is verifying your bank account credentials (penny testing / KYC review). While verification is pending, online checkout on your storefront is temporarily held to protect payouts. WhatsApp orders remain active.
@@ -770,8 +772,9 @@ export function PaymentsBoard({
                 type="button"
                 onClick={() => setRefundModalOrder(null)}
                 className="text-text-grey hover:text-text-dark p-1"
+                aria-label="Close"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 

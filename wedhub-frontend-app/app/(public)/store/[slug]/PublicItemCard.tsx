@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { StoreAccentColor, VendorStoreItem } from "@/lib/api/vendor-store.types";
+import { GiftIcon } from "@/components/portfolio/icons";
 import { themeForStore } from "@/components/vendor-store/store-theme";
 
 export function PublicItemCard({
@@ -43,8 +44,8 @@ export function PublicItemCard({
             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="h-full w-full flex items-center justify-center text-4xl bg-surface-input/80">
-            🎁
+          <div className="h-full w-full flex items-center justify-center text-text-grey bg-surface-input/80">
+            <GiftIcon className="h-10 w-10" />
           </div>
         )}
 

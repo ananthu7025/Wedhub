@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
+import { StarRating } from "@/components/ui/StarRating";
 import { cn } from "@/lib/utils/cn";
 import type { LeadStatus } from "@/lib/api/account.types";
 import type { VendorLead } from "@/lib/api/leads.types";
@@ -549,8 +550,7 @@ export function DashboardInteractiveSections({
                   <div key={rev.id} className="rounded-xl border border-border bg-surface-page p-3">
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1 text-xs font-bold text-amber">
-                        {"★".repeat(rev.rating)}
-                        {"☆".repeat(5 - rev.rating)}
+                        <StarRating rating={rev.rating} />
                       </span>
                       <span className="text-[10px] text-text-muted">{formatRelativeTime(rev.createdAt)}</span>
                     </div>

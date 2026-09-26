@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CalendarIcon, MapPinIcon, SunriseIcon, MoonIcon, RingIcon } from "@/components/portfolio/icons";
 import type {
   CalendarDaySummary,
   UpcomingWeddingItem,
@@ -127,15 +128,19 @@ export function CalendarBoard({
               </div>
               <h2 className="text-xl font-bold text-white tracking-tight">{nextUpcoming.title}</h2>
               <p className="text-xs text-white/80 flex items-center gap-2">
-                <span>
-                  📅{" "}
+                <span className="inline-flex items-center gap-1">
+                  <CalendarIcon className="h-3.5 w-3.5" />{" "}
                   {new Date(nextUpcoming.startDate + "T00:00:00Z").toLocaleDateString("en-IN", {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
                   })}
                 </span>
-                {nextUpcoming.venueName && <span>• 📍 {nextUpcoming.venueName}</span>}
+                {nextUpcoming.venueName && (
+                  <span className="inline-flex items-center gap-1">
+                    • <MapPinIcon className="h-3.5 w-3.5" /> {nextUpcoming.venueName}
+                  </span>
+                )}
               </p>
             </div>
 
@@ -521,7 +526,13 @@ export function CalendarBoard({
                           }`}
                           title={`${bk.eventType}: ${bk.clientName}`}
                         >
-                          {bk.shift === "MORNING" ? "🌅 " : bk.shift === "EVENING" ? "🌙 " : "💍 "}
+                          {bk.shift === "MORNING" ? (
+                            <SunriseIcon className="inline h-2.5 w-2.5" />
+                          ) : bk.shift === "EVENING" ? (
+                            <MoonIcon className="inline h-2.5 w-2.5" />
+                          ) : (
+                            <RingIcon className="inline h-2.5 w-2.5" />
+                          )}{" "}
                           {bk.clientName}
                         </div>
                       ))}
@@ -624,7 +635,12 @@ export function CalendarBoard({
                         <h4 className="text-base font-bold text-text-dark">{item.title}</h4>
                         <p className="text-xs text-text-grey">
                           Couple: <span className="font-semibold text-text-dark">{item.clientName}</span>
-                          {item.venueName && ` • 📍 ${item.venueName}`}
+                          {item.venueName && (
+                            <>
+                              {" "}
+                              • <MapPinIcon className="inline h-3 w-3 align-text-bottom" /> {item.venueName}
+                            </>
+                          )}
                           {item.venueCity && `, ${item.venueCity}`}
                         </p>
                       </div>

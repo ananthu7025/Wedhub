@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CloseIcon, CheckIcon } from "@/components/portfolio/icons";
 import { Badge } from "@/components/ui/Badge";
 import type { VendorQuotation, VendorQuotationStatus } from "@/lib/api/vendor-quotations.types";
 import {
@@ -256,7 +257,7 @@ export function QuotationDetailView({ quotation: initialQuotation }: QuotationDe
       {quotation.status === "ACCEPTED" && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-xs text-emerald-900 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-bold">✓ Proposal Accepted!</span>
+            <span className="font-bold"><CheckIcon className="inline h-3.5 w-3.5" /> Proposal Accepted!</span>
             <span>Accepted by the couple on {formatDate(quotation.acceptedAt)}. Ready for invoice or booking.</span>
           </div>
           <button
@@ -359,7 +360,7 @@ export function QuotationDetailView({ quotation: initialQuotation }: QuotationDe
                               key={i}
                               className="rounded-full bg-brand-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-brand-primary"
                             >
-                              ✓ {inc}
+                              <CheckIcon className="inline h-3 w-3" /> {inc}
                             </span>
                           ))}
                         </div>
@@ -450,8 +451,9 @@ export function QuotationDetailView({ quotation: initialQuotation }: QuotationDe
               <button
                 onClick={() => setIsWhatsAppModalOpen(false)}
                 className="text-neutral-400 hover:text-neutral-600 text-lg"
+                aria-label="Close"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CheckIcon } from "@/components/portfolio/icons";
 import {
   createAdminAttribute,
   deleteAdminAttribute,
@@ -258,9 +259,9 @@ export function CategoryAttributesPanel({
                         {attribute.uiVariant === "RADIO" && " (Radio)"}
                         {attribute.dataType === "IMAGE" && attribute.aspectRatio && ` (${attribute.aspectRatio})`}
                       </td>
-                      <td className="px-3 py-2.5 text-center">{attribute.isRequired ? "✓" : "—"}</td>
-                      <td className="px-3 py-2.5 text-center">{attribute.isFilterable ? "✓" : "—"}</td>
-                      <td className="px-3 py-2.5 text-center">{attribute.isComparable ? "✓" : "—"}</td>
+                      <td className="px-3 py-2.5 text-center">{attribute.isRequired ? <CheckIcon className="inline h-3.5 w-3.5" /> : "—"}</td>
+                      <td className="px-3 py-2.5 text-center">{attribute.isFilterable ? <CheckIcon className="inline h-3.5 w-3.5" /> : "—"}</td>
+                      <td className="px-3 py-2.5 text-center">{attribute.isComparable ? <CheckIcon className="inline h-3.5 w-3.5" /> : "—"}</td>
                       <td className="px-3 py-2.5">
                         <div className="flex gap-3">
                           <button

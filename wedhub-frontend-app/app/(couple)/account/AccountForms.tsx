@@ -12,6 +12,7 @@ import { formatApiError } from "@/lib/utils/error";
 import { useToast } from "@/components/ui/Toast";
 import { Input } from "@/components/ui/Input";
 import { FieldError } from "@/components/ui/FieldError";
+import { CheckIcon } from "@/components/portfolio/icons";
 
 function toDateInputValue(iso: string | null): string {
   if (!iso) return "";
@@ -121,7 +122,7 @@ export function WeddingDetailsForm({ me }: { me: MeResponse }) {
         disabled={saving}
         className="mt-4 rounded-md bg-brand-primary px-4 py-2 text-[13px] font-bold text-white disabled:opacity-60"
       >
-        {saving ? "Saving…" : saved ? "Saved ✓" : "Save changes"}
+        {saving ? "Saving…" : saved ? <>Saved <CheckIcon className="inline h-3.5 w-3.5" /></> : "Save changes"}
       </button>
     </form>
   );
@@ -215,7 +216,7 @@ export function AccountDetailsForm({ me }: { me: MeResponse }) {
         disabled={saving}
         className="rounded-md bg-brand-primary px-4 py-2 text-[13px] font-bold text-white disabled:opacity-60"
       >
-        {saving ? "Saving…" : saved ? "Saved ✓" : "Save changes"}
+        {saving ? "Saving…" : saved ? <>Saved <CheckIcon className="inline h-3.5 w-3.5" /></> : "Save changes"}
       </button>
     </form>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { PhoneIcon, MailIcon, MapPinIcon, PackageIcon } from "@/components/portfolio/icons";
 import {
   createMyStoreOrderInvoice,
   updateMyStoreOrderStatus,
@@ -176,7 +177,7 @@ export function StoreOrdersTable({
       {filteredOrders.length === 0 ? (
         <div className="rounded-xl border border-border bg-white p-12 text-center shadow-sm">
           <div className="mx-auto w-12 h-12 rounded-full bg-surface-input flex items-center justify-center text-text-grey mb-3">
-            📦
+            <PackageIcon className="h-6 w-6" />
           </div>
           <h3 className="text-sm font-bold text-text-dark">No orders yet</h3>
           <p className="mt-1 text-xs text-text-grey max-w-sm mx-auto">
@@ -262,13 +263,17 @@ export function StoreOrdersTable({
                       Customer & Delivery
                     </h4>
                     <div className="font-bold text-sm text-text-dark">{order.customerName}</div>
-                    <div className="text-xs text-text-grey mt-0.5">📞 {order.customerPhone}</div>
+                    <div className="flex items-center gap-1 text-xs text-text-grey mt-0.5">
+                      <PhoneIcon className="h-3.5 w-3.5" /> {order.customerPhone}
+                    </div>
                     {order.customerEmail && (
-                      <div className="text-xs text-text-grey">✉️ {order.customerEmail}</div>
+                      <div className="flex items-center gap-1 text-xs text-text-grey">
+                        <MailIcon className="h-3.5 w-3.5" /> {order.customerEmail}
+                      </div>
                     )}
                     {order.shippingAddress && (
-                      <div className="text-xs text-text-grey mt-1">
-                        📍 {order.shippingAddress}, {order.city}, {order.customerState} {order.pincode}
+                      <div className="flex items-center gap-1 text-xs text-text-grey mt-1">
+                        <MapPinIcon className="h-3.5 w-3.5" /> {order.shippingAddress}, {order.city}, {order.customerState} {order.pincode}
                       </div>
                     )}
                     {order.eventDate && (

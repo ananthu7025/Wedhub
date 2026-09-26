@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TrophyIcon } from "@/components/portfolio/icons";
 import {
   createAdminChallenge,
   promoteChallengeEntriesToGallery,
@@ -158,7 +159,9 @@ export function ChallengesBoard({
                       ))}
                     </select>
                     {challenge.winnerEntry && (
-                      <span className="text-[11px] font-bold text-emerald-70">🏆 {challenge.winnerEntry.vendor.businessName}</span>
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-70">
+                        <TrophyIcon className="h-3.5 w-3.5" /> {challenge.winnerEntry.vendor.businessName}
+                      </span>
                     )}
                     <button
                       type="button"

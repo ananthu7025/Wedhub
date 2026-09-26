@@ -16,6 +16,7 @@ import { UPLOAD_CACHE_CONTROL } from "@/lib/media/upload";
 import { runWithConcurrencyLimit } from "@/lib/utils/concurrency";
 import type { MediaItem } from "@/lib/api/vendor-self.types";
 import { formatApiError } from "@/lib/utils/error";
+import { ChevronLeftIcon, ChevronRightIcon } from "@/components/portfolio/icons";
 
 const POLL_INTERVAL_MS = 3000;
 const SETTLED_STATUSES = new Set(["READY", "FAILED", "INACTIVE", "DELETED"]);
@@ -381,11 +382,12 @@ export function PortfolioManager({
                 <button
                   type="button"
                   title="Move left/up"
+                  aria-label="Previous photo"
                   disabled={index === 0}
                   onClick={() => handleMove(item.id, "up")}
                   className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 text-text-dark disabled:opacity-40"
                 >
-                  ←
+                  <ChevronLeftIcon className="h-5 w-5" />
                 </button>
                 {!isVideo && item.status === "READY" && (
                   <button
@@ -436,11 +438,12 @@ export function PortfolioManager({
                 <button
                   type="button"
                   title="Move right/down"
+                  aria-label="Next photo"
                   disabled={index === media.length - 1}
                   onClick={() => handleMove(item.id, "down")}
                   className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 text-text-dark disabled:opacity-40"
                 >
-                  →
+                  <ChevronRightIcon className="h-5 w-5" />
                 </button>
               </div>
             </div>

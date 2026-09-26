@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { CloseIcon, CheckIcon } from "@/components/portfolio/icons";
 import type {
   InvoiceItemInput,
   LeadPrefillData,
@@ -483,7 +484,9 @@ export function InvoiceEditor({
           </p>
           {quotePrefill && (
             <div className="mt-2.5 inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/90 px-3 py-1.5 text-xs font-medium text-blue-900">
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white">✓</span>
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-white">
+                <CheckIcon className="h-2.5 w-2.5" />
+              </span>
               <span>
                 Pre-filled from <strong>Quotation #{quotePrefill.quotationNumber}</strong>. Review items and issue invoice.
               </span>
@@ -909,8 +912,9 @@ export function InvoiceEditor({
                         disabled={items.length <= 1}
                         className="rounded p-1 text-text-grey transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-30"
                         title="Remove row"
+                        aria-label="Remove row"
                       >
-                        ✕
+                        <CloseIcon className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>

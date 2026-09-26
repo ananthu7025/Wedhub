@@ -5,6 +5,7 @@ import { PublicFooter } from "@/components/shared/PublicFooter";
 import { compareVendors } from "@/lib/api/shortlists";
 import { ApiRequestError } from "@/lib/api/types";
 import { Badge } from "@/components/ui/Badge";
+import { CheckIcon } from "@/components/portfolio/icons";
 
 // Item: /compare moved out of app/(couple) so a signed-out visitor can
 // select and view a comparison without being redirected to login (the
@@ -94,7 +95,11 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
                   {result.vendors.map((vendor) => (
                     <td key={vendor.id} className="w-60 border-b border-border p-4 align-top">
                       <div className="mb-1 text-[15px] font-bold">{vendor.businessName}</div>
-                      {vendor.verificationLevel !== "UNVERIFIED" && <Badge variant="green">✓ Verified</Badge>}
+                      {vendor.verificationLevel !== "UNVERIFIED" && (
+                        <Badge variant="green">
+                          <CheckIcon className="inline h-3 w-3" /> Verified
+                        </Badge>
+                      )}
                       <div className="mt-2">
                         <Link href={`/vendors/${vendor.slug}`} className="text-[13px] font-bold text-brand-primary no-underline">
                           View profile →

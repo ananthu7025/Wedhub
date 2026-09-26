@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { FieldError } from "@/components/ui/FieldError";
 import { Button } from "@/components/ui/Button";
+import { CheckIcon } from "@/components/portfolio/icons";
 import { GoogleSignInButton } from "@/components/shared/GoogleSignInButton";
 import { useToast } from "@/components/ui/Toast";
 import { login } from "@/lib/api/auth-client";
@@ -79,7 +80,7 @@ export function LoginForm() {
     <form onSubmit={handleSubmit} className="w-full" noValidate>
       {justVerifiedEmail && (
         <div className="mb-4.5 flex items-start gap-2 rounded-md bg-emerald-10 p-3 text-[13px] text-emerald-70">
-          <span className="mt-0.5">✓</span>
+          <span className="mt-0.5"><CheckIcon className="h-3.5 w-3.5" /></span>
           <span>Email verified — log in to continue.</span>
         </div>
       )}

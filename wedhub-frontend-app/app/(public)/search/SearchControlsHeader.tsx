@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { CloseIcon } from "@/components/portfolio/icons";
 import type { Category, Location } from "@/lib/api/vendors.types";
 
 interface SearchControlsHeaderProps {
@@ -158,8 +159,9 @@ export function SearchControlsHeader({
                 onClick={handleClearSearch}
                 className="absolute right-3 flex h-4 w-4 items-center justify-center rounded-full text-xs text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                 title="Clear search"
+                aria-label="Clear search"
               >
-                ✕
+                <CloseIcon className="h-3 w-3" />
               </button>
             )}
             <button type="submit" className="sr-only">Search</button>

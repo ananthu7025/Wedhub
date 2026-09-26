@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CloseIcon } from "@/components/portfolio/icons";
 import { Badge } from "@/components/ui/Badge";
 import type {
   QuotationSummaryMetrics,
@@ -467,8 +468,9 @@ export function QuotationsBoard({ initialQuotations, metrics, hideHeader = false
               <button
                 onClick={() => setActiveWhatsAppModalQuote(null)}
                 className="text-neutral-400 hover:text-neutral-600 text-lg"
+                aria-label="Close"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 

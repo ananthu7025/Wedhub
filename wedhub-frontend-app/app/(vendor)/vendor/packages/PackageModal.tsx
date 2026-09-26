@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CloseIcon } from "@/components/portfolio/icons";
 import { Input } from "@/components/ui/Input";
 import { FieldError } from "@/components/ui/FieldError";
 import { useToast } from "@/components/ui/Toast";
@@ -97,7 +98,7 @@ export function PackageModal({
     <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3.5 sm:p-4" onClick={onClose}>
       <div className="max-h-[90vh] w-full max-w-[480px] overflow-y-auto rounded-2xl bg-white p-5 sm:p-7 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <button type="button" onClick={onClose} aria-label="Close" className="float-right border-none bg-transparent text-lg text-text-grey">
-          ✕
+          <CloseIcon className="h-4 w-4" />
         </button>
         <h2 className="mb-1.5 text-lg font-bold">{initialPackage ? "Edit package" : "Add package"}</h2>
         <p className="mb-5.5 text-[13px] text-text-grey">This package will be shown to couples on your public profile.</p>

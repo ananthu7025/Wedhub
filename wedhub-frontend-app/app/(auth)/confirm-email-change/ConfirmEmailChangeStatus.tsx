@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { confirmEmailChange } from "@/lib/api/auth-client";
 import { formatApiError } from "@/lib/utils/error";
+import { CheckIcon } from "@/components/portfolio/icons";
 
 type Status = "confirming" | "success" | "error";
 
@@ -46,7 +47,7 @@ export function ConfirmEmailChangeStatus({ token }: { token: string }) {
     return (
       <div className="text-center">
         <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-10 text-emerald-70">
-          ✓
+          <CheckIcon className="h-6 w-6" />
         </div>
         <p className="mb-6 text-sm text-text-grey">
           Your account email is now <span className="font-semibold text-text-dark">{newEmail}</span>. Log in with

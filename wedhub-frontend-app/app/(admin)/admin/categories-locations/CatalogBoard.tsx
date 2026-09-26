@@ -9,6 +9,7 @@ import { LocationTree } from "./LocationTree";
 import { CategoryImagePicker } from "./CategoryImagePicker";
 import { CategoryAttributesPanel } from "./CategoryAttributesPanel";
 import { CategoryCatalogVariantFieldsPanel } from "./CategoryCatalogVariantFieldsPanel";
+import { ChevronLeftIcon, StarIcon } from "@/components/portfolio/icons";
 
 /**
  * Categories & Locations admin page (Frontend Arch Phase 9, extended
@@ -512,7 +513,7 @@ function CategoryDetailPanel({
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-white text-text-grey hover:bg-surface-input lg:hidden"
               aria-label="Back to category list"
             >
-              ←
+              <ChevronLeftIcon className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -537,7 +538,13 @@ function CategoryDetailPanel({
                 : "bg-brand-primary text-white hover:bg-brand-primary-hover"
             }`}
           >
-            {category.isFeaturedOnHomepage ? "Remove from homepage" : "★ Feature on homepage"}
+            {category.isFeaturedOnHomepage ? (
+              "Remove from homepage"
+            ) : (
+              <>
+                <StarIcon filled className="inline h-3.5 w-3.5" /> Feature on homepage
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -686,7 +693,13 @@ function CategoryDetailPanel({
                   : "bg-brand-primary text-white hover:bg-brand-primary-hover"
               }`}
             >
-              {category.isFeaturedOnHomepage ? "Remove from homepage" : "★ Feature on homepage"}
+              {category.isFeaturedOnHomepage ? (
+              "Remove from homepage"
+            ) : (
+              <>
+                <StarIcon filled className="inline h-3.5 w-3.5" /> Feature on homepage
+              </>
+            )}
             </button>
           </div>
 

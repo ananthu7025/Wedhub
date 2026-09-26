@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PhoneIcon } from "@/components/portfolio/icons";
 import { Input } from "@/components/ui/Input";
 import { FieldError } from "@/components/ui/FieldError";
 import { useToast } from "@/components/ui/Toast";
@@ -263,7 +264,9 @@ export function StoreProfileForm({
               WhatsApp Order Phone Number
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-2 text-sm text-text-grey">📱</span>
+              <span className="absolute left-3 top-2.5 text-text-grey">
+                <PhoneIcon className="h-4 w-4" />
+              </span>
               <Input
                 type="tel"
                 value={whatsappOrderPhone}

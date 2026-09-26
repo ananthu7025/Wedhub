@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CloseIcon } from "@/components/portfolio/icons";
 import { Input } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { FieldError } from "@/components/ui/FieldError";
@@ -107,7 +108,7 @@ export function SignInModal({
           className="float-right border-none bg-transparent text-lg text-text-grey"
           aria-label="Close"
         >
-          ✕
+          <CloseIcon className="h-4 w-4" />
         </button>
 
         <h2 className="mb-1 text-xl font-bold">Almost there!</h2>

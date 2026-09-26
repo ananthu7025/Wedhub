@@ -209,12 +209,12 @@ test.describe("Account page", () => {
     await weddingSection.locator('input[type="date"]').fill("2027-06-15");
     await weddingSection.getByLabel(/Partner's name/i).fill("Rohan");
     await weddingSection.getByRole("button", { name: "Save changes" }).click();
-    await expect(weddingSection.getByRole("button", { name: "Saved ✓" })).toBeVisible({ timeout: 10000 });
+    await expect(weddingSection.getByRole("button", { name: "Saved" })).toBeVisible({ timeout: 10000 });
 
     await accountSection.getByLabel("First name").fill("Priya");
     await accountSection.getByLabel("Last name").fill("Kapoor");
     await accountSection.getByRole("button", { name: "Save changes" }).click();
-    await expect(accountSection.getByRole("button", { name: "Saved ✓" })).toBeVisible({ timeout: 10000 });
+    await expect(accountSection.getByRole("button", { name: "Saved" })).toBeVisible({ timeout: 10000 });
 
     await page.reload();
     await expect(page.locator('input[type="date"]')).toHaveValue("2027-06-15");

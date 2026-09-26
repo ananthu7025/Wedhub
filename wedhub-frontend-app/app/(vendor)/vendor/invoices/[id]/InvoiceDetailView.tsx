@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CloseIcon, CheckIcon } from "@/components/portfolio/icons";
 import type {
   VendorInvoice,
   VendorPaymentMethod,
@@ -806,8 +807,9 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
                 type="button"
                 onClick={() => setShowPaymentModal(false)}
                 className="text-text-grey hover:text-text-dark"
+                aria-label="Close"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 
@@ -919,8 +921,9 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
                 type="button"
                 onClick={() => setShowCancelModal(false)}
                 className="text-text-grey hover:text-text-dark"
+                aria-label="Close"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 
@@ -982,8 +985,9 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
                 type="button"
                 onClick={() => setShowShareModal(false)}
                 className="text-text-grey hover:text-text-dark text-sm p-1 rounded-md hover:bg-gray-100"
+                aria-label="Close"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 
@@ -1070,7 +1074,7 @@ export function InvoiceDetailView({ initialInvoice }: InvoiceDetailViewProps) {
                     onClick={handleCopyShareText}
                     className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-primary hover:underline"
                   >
-                    {copiedSummary ? "✓ Copied!" : "📋 Copy to Clipboard"}
+                    {copiedSummary ? <><CheckIcon className="inline h-3 w-3" /> Copied!</> : "📋 Copy to Clipboard"}
                   </button>
                 </div>
                 <textarea

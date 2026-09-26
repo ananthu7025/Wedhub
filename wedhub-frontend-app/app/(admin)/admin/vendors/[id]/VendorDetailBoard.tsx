@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
+import { CheckIcon } from "@/components/portfolio/icons";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import {
   approveAdminVendor,
@@ -292,7 +293,7 @@ export function VendorDetailBoard({
                           isCurrent ? "bg-brand-primary text-white" : isDone ? "bg-emerald text-white" : "bg-surface-input text-text-grey"
                         }`}
                       >
-                        {isDone && !isCurrent ? "✓" : index + 1}
+                        {isDone && !isCurrent ? <CheckIcon className="h-3.5 w-3.5" /> : index + 1}
                       </span>
                       <span className="whitespace-nowrap text-[11px] font-semibold text-text-grey">{verificationLabel(level)}</span>
                     </div>

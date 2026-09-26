@@ -163,7 +163,7 @@ test.describe("Vendor settings page", () => {
     const businessNameInput = page.getByLabel("Business name");
     await businessNameInput.fill("Phase7 Settings Studio (Updated)");
     await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByRole("button", { name: "Saved ✓" })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: "Saved" })).toBeVisible({ timeout: 10000 });
 
     await page.reload();
     await expect(page.getByLabel("Business name")).toHaveValue("Phase7 Settings Studio (Updated)");

@@ -6,6 +6,7 @@ import { listConversationMessagesClient, markConversationRead, sendMessage } fro
 import type { ConversationListItem, Message } from "@/lib/api/messaging.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { formatApiError } from "@/lib/utils/error";
+import { ChevronLeftIcon, DocumentIcon } from "@/components/portfolio/icons";
 
 /**
  * Shared inbox UI, parameterized by role — mirrors NotificationsList.tsx's
@@ -209,7 +210,7 @@ export function InboxView({
                 className="text-text-grey hover:text-text-dark sm:hidden"
                 aria-label="Back to conversation list"
               >
-                ←
+                <ChevronLeftIcon className="h-5 w-5" />
               </button>
               <span className="text-[14px] font-bold">{otherPartyName(selected, viewerRole)}</span>
             </div>
@@ -237,7 +238,7 @@ export function InboxView({
                               isOwn ? "border-white/30 bg-white/10 text-white hover:bg-white/20" : "border-border bg-white text-text-dark hover:bg-surface-page"
                             }`}
                           >
-                            📄 Download document
+                            <DocumentIcon className="h-3.5 w-3.5" /> Download document
                           </a>
                         )}
                         <div className={`mt-1 text-[10px] ${isOwn ? "text-white/70" : "text-text-grey"}`}>
@@ -260,7 +261,7 @@ export function InboxView({
                   disabled={sending}
                   className="rounded-md border border-border bg-white px-3 py-1.5 text-[12px] font-bold text-text-dark hover:bg-surface-input disabled:opacity-60"
                 >
-                  📄 Send rule book
+                  <DocumentIcon className="inline h-3.5 w-3.5" /> Send rule book
                 </button>
               </div>
             )}

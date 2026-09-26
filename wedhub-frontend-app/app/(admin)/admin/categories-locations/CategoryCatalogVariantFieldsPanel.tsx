@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CheckIcon } from "@/components/portfolio/icons";
 import {
   createAdminCatalogVariantField,
   deleteAdminCatalogVariantField,
@@ -218,7 +219,7 @@ export function CategoryCatalogVariantFieldsPanel({
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-text-grey">{field.dataType}</td>
-                      <td className="px-3 py-2.5 text-center">{field.isRequired ? "✓" : "—"}</td>
+                      <td className="px-3 py-2.5 text-center">{field.isRequired ? <CheckIcon className="inline h-3.5 w-3.5" /> : "—"}</td>
                       <td className="px-3 py-2.5">
                         <div className="flex gap-3">
                           <button

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { deleteMyStoreItem } from "@/lib/api/vendor-store-client";
 import type { VendorStoreItem } from "@/lib/api/vendor-store.types";
+import { GiftIcon, ShoppingBagIcon } from "@/components/portfolio/icons";
 import { StoreItemModal } from "./StoreItemModal";
 
 export function StoreItemsManager({
@@ -117,7 +118,7 @@ export function StoreItemsManager({
         {filteredItems.length === 0 ? (
           <div className="p-12 text-center">
             <div className="mx-auto w-12 h-12 rounded-full bg-surface-input flex items-center justify-center text-text-grey mb-3">
-              🛍️
+              <ShoppingBagIcon className="h-6 w-6" />
             </div>
             <h3 className="text-sm font-bold text-text-dark">No products found</h3>
             <p className="mt-1 text-xs text-text-grey max-w-sm mx-auto">
@@ -164,8 +165,8 @@ export function StoreItemsManager({
                             {imgUrl ? (
                               <img src={imgUrl} alt={item.title} className="h-full w-full object-cover" />
                             ) : (
-                              <div className="h-full w-full flex items-center justify-center text-base">
-                                🎁
+                              <div className="h-full w-full flex items-center justify-center text-text-grey">
+                                <GiftIcon className="h-5 w-5" />
                               </div>
                             )}
                           </div>

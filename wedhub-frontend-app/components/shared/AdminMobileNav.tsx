@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CloseIcon } from "@/components/portfolio/icons";
 import { AdminLogoutButton } from "./AdminLogoutButton";
 import type { NavSection } from "./AdminShell";
 
@@ -71,7 +72,7 @@ export function AdminMobileNav({ sections }: { sections: NavSection[] }) {
                 aria-label="Close menu"
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-input text-text-grey hover:text-text-dark"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 

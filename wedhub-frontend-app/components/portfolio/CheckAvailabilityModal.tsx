@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchPublicAvailability } from "@/lib/api/vendor-calendar-client";
 import type { PublicDateAvailabilityResponse } from "@/lib/api/vendor-calendar.types";
+import { CheckIcon, WarningIcon } from "@/components/portfolio/icons";
 
 interface CheckAvailabilityModalProps {
   open: boolean;
@@ -295,10 +296,18 @@ export function CheckAvailabilityModal({
                   </p>
                   <p className="text-[11px] mt-0.5">
                     {selectedDayInfo?.status === "BOOKED"
-                      ? "⚠️ Vendor has another wedding scheduled. You can still reach out to discuss flexibility."
+                      ? (
+                        <>
+                          <WarningIcon className="inline h-3 w-3" /> Vendor has another wedding scheduled. You can still reach out to discuss flexibility.
+                        </>
+                      )
                       : selectedDayInfo?.status === "BLOCKED"
                       ? "Vendor has marked this date unavailable."
-                      : "✓ Vendor is currently free and open for bookings on this date!"}
+                      : (
+                        <>
+                          <CheckIcon className="inline h-3 w-3" /> Vendor is currently free and open for bookings on this date!
+                        </>
+                      )}
                   </p>
                 </div>
 

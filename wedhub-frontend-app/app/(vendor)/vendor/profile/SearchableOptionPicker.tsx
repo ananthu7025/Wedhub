@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { addMyAttributeOption } from "@/lib/api/vendor-self-client";
 import { formatApiError } from "@/lib/utils/error";
 import { useToast } from "@/components/ui/Toast";
+import { CheckIcon } from "@/components/portfolio/icons";
 
 /**
  * Item 3 (2026-09-22 request): replaces the plain <select>/checkbox-list
@@ -143,7 +144,11 @@ export function SearchableOptionPicker({
               className="flex w-full items-center justify-between gap-2 border-b border-neutral-grey-20 px-3.5 py-2.5 text-left text-[13px] last:border-b-0 hover:bg-surface-input"
             >
               <span>{option}</span>
-              {selected.includes(option) && <span className="text-brand-primary">✓</span>}
+              {selected.includes(option) && (
+                <span className="text-brand-primary">
+                  <CheckIcon className="h-3.5 w-3.5" />
+                </span>
+              )}
             </button>
           ))}
           {canAddNew && (

@@ -83,7 +83,7 @@ test.describe("Vendor onboarding — full journey through real UI", () => {
       "A complete description written by the phase-12 onboarding spec, long enough to satisfy the backend's submission requirements.",
     );
     await page.getByRole("button", { name: "Save changes" }).first().click();
-    await expect(page.getByText("Saved ✓").first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Saved").first()).toBeVisible({ timeout: 10_000 });
 
     // Category & location — pick a category with a real, known
     // required-attribute set (see prisma/seed.ts's CATEGORY_ATTRIBUTES) so
@@ -92,17 +92,17 @@ test.describe("Vendor onboarding — full journey through real UI", () => {
     await page.getByLabel("Category").selectOption({ label: "Photography & Videography" });
     await page.getByLabel("City").selectOption({ label: "Thiruvananthapuram" });
     await page.getByRole("button", { name: "Save changes" }).nth(1).click();
-    await expect(page.getByText("Saved ✓").nth(1)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Saved").nth(1)).toBeVisible({ timeout: 10_000 });
 
     await page.getByText("Pricing & policies").click();
     await page.getByLabel("Starting price").fill("50000");
     await page.getByRole("button", { name: "Save changes" }).nth(2).click();
-    await expect(page.getByText("Saved ✓").nth(2)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Saved").nth(2)).toBeVisible({ timeout: 10_000 });
 
     await page.getByText("Contact & social").click();
     await page.getByLabel("Phone").fill("+919876543210");
     await page.getByRole("button", { name: "Save changes" }).nth(3).click();
-    await expect(page.getByText("Saved ✓").nth(3)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Saved").nth(3)).toBeVisible({ timeout: 10_000 });
 
     // Now fill the category-specific questions on Profile.
     await page.goto("/vendor/profile");
@@ -130,7 +130,7 @@ test.describe("Vendor onboarding — full journey through real UI", () => {
     // yet, so the backend's completeness gate blocks the submit even
     // though the attributes above already saved successfully.
     await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText("Saved ✓")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Saved")).toBeVisible({ timeout: 10_000 });
 
     await page.goto("/vendor/settings");
     await page.getByRole("button", { name: "Submit for review" }).click();

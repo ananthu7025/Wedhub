@@ -23,6 +23,7 @@ import type {
 } from "@/lib/api/wedding-website.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { formatApiError } from "@/lib/utils/error";
+import { CelebrationIcon, HeartIcon, SparkleIcon } from "@/components/portfolio/icons";
 import { PhotoUploader } from "./PhotoUploader";
 import { GalleryUploader } from "./GalleryUploader";
 import { PublishCheckoutButton } from "./PublishCheckoutButton";
@@ -186,7 +187,9 @@ function TemplateStep({
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-2xl" noValidate>
-      <h1 className="mb-1.5 text-xl font-bold">❤️ Create Your Wedding Website</h1>
+      <h1 className="mb-1.5 text-xl font-bold">
+        <HeartIcon filled className="inline h-5 w-5" /> Create Your Wedding Website
+      </h1>
       <p className="mb-6 text-[13px] text-text-grey">Choose a beautiful template to get started.</p>
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -670,7 +673,9 @@ function PreviewStep({
 
   return (
     <div className="mx-auto max-w-2xl text-center">
-      <h2 className="mb-1.5 text-lg font-bold">✨ Preview your website</h2>
+      <h2 className="mb-1.5 text-lg font-bold">
+        <SparkleIcon className="inline h-5 w-5" /> Preview your website
+      </h2>
       <p className="mb-6 text-[13px] text-text-grey">
         You get one free public preview before publishing. Once used, editing your draft never regenerates a new one.
       </p>
@@ -792,7 +797,9 @@ function PublishedStep({ draft, dashboardHref }: { draft: WeddingWebsiteDraft; d
 
   return (
     <div className="mx-auto max-w-md text-center">
-      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-10 text-2xl text-emerald-70">🎉</div>
+      <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-10 text-emerald-70">
+        <CelebrationIcon className="h-9 w-9" />
+      </div>
       <h2 className="mb-2.5 text-2xl font-bold">Your wedding website is live ❤️</h2>
       {publicUrl && (
         <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="mb-6 block text-sm font-bold text-brand-primary hover:underline">

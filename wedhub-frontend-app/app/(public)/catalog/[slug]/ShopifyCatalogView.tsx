@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { CloseIcon } from "@/components/portfolio/icons";
 import type { VendorDetail } from "@/lib/api/vendors.types";
 import type {
   CatalogCollectionWithItems,
@@ -1110,8 +1111,9 @@ export function ShopifyCatalogView({
                   type="button"
                   onClick={() => setQuickViewItem(null)}
                   className="absolute top-3 left-3 md:hidden h-8 w-8 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-neutral-800 font-bold"
+                  aria-label="Close"
                 >
-                  ✕
+                  <CloseIcon className="h-4 w-4" />
                 </button>
               </div>
 
@@ -1151,8 +1153,9 @@ export function ShopifyCatalogView({
                     type="button"
                     onClick={() => setQuickViewItem(null)}
                     className="hidden md:flex h-8 w-8 rounded-full hover:bg-neutral-100 items-center justify-center text-neutral-500 font-bold"
+                    aria-label="Close"
                   >
-                    ✕
+                    <CloseIcon className="h-4 w-4" />
                   </button>
                 </div>
 
@@ -1268,8 +1271,9 @@ export function ShopifyCatalogView({
                 type="button"
                 onClick={() => setIsCartOpen(false)}
                 className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-500 font-bold"
+                aria-label="Close cart"
               >
-                ✕
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 

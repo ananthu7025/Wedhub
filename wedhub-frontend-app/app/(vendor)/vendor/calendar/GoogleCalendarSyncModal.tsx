@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { VendorCalendarSetting } from "@/lib/api/vendor-calendar.types";
 import { updateMyCalendarSettings } from "@/lib/api/vendor-calendar-client";
+import { CheckIcon } from "@/components/portfolio/icons";
 import { formatApiError } from "@/lib/utils/error";
 
 interface GoogleCalendarSyncModalProps {
@@ -120,7 +121,7 @@ export function GoogleCalendarSyncModal({
                     : "bg-brand-primary text-white hover:bg-brand-primary-hover"
                 }`}
               >
-                {copied ? "✓ Copied" : "Copy Link"}
+                {copied ? <><CheckIcon className="inline h-3 w-3" /> Copied</> : "Copy Link"}
               </button>
             </div>
             <p className="text-[11px] text-text-grey">

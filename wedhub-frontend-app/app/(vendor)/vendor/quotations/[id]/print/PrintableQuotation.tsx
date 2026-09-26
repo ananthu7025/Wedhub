@@ -1,5 +1,6 @@
 "use client";
 
+import { CheckIcon } from "@/components/portfolio/icons";
 import type { VendorQuotation } from "@/lib/api/vendor-quotations.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 
@@ -187,7 +188,7 @@ export function PrintableQuotation({ quotation }: PrintableQuotationProps) {
                         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-neutral-600">
                           {it.inclusions.map((inc, i) => (
                             <li key={i} className="flex items-center gap-1 font-medium">
-                              <span className="text-brand-primary">✓</span> {inc}
+                              <span className="text-brand-primary"><CheckIcon className="inline h-2.5 w-2.5" /></span> {inc}
                             </li>
                           ))}
                         </ul>

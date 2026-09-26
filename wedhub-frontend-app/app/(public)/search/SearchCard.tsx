@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { VendorHeartButton } from "@/components/shared/VendorHeartButton";
+import { PremiumBadge } from "@/components/shared/PremiumBadge";
 import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { trackEvent } from "@/lib/analytics/track";
 import { formatResponseTimeBucket } from "@/lib/utils/response-time";
@@ -149,11 +150,7 @@ export function SearchCard({
               <div>
                 <h3 className="flex items-center gap-1.5 text-lg font-bold text-gray-900 group-hover:text-[#e00b41] transition-colors">
                   {businessName}
-                  {isPremiumEligible && (
-                    <span className="flex-shrink-0 rounded-full bg-crimson-10 px-1.5 py-0.5 text-[10px] font-bold text-crimson-70" title="Premium Vendor">
-                      ⭐
-                    </span>
-                  )}
+                  {isPremiumEligible && <PremiumBadge />}
                 </h3>
                 <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
                   {cityName && (
@@ -271,11 +268,7 @@ export function SearchCard({
           <div className="flex items-center justify-between gap-1">
             <h3 className="flex min-w-0 items-center gap-1 truncate text-sm sm:text-base font-bold text-gray-900 group-hover:text-[#e00b41] transition-colors">
               <span className="truncate">{businessName}</span>
-              {isPremiumEligible && (
-                <span className="flex-shrink-0 rounded-full bg-crimson-10 px-1.5 py-0.5 text-[10px] font-bold text-crimson-70" title="Premium Vendor">
-                  ⭐
-                </span>
-              )}
+              {isPremiumEligible && <PremiumBadge />}
             </h3>
             {cityName && (
               <span className="text-[11px] text-gray-500 truncate max-w-[100px]">

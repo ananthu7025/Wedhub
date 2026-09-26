@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MapPinIcon } from "@/components/portfolio/icons";
 import type { UpcomingWeddingItem } from "@/lib/api/vendor-calendar.types";
 
 interface UpcomingWeddingsWidgetProps {
@@ -74,7 +75,12 @@ export function UpcomingWeddingsWidget({ weddings }: UpcomingWeddingsWidgetProps
                       : w.daysUntil === 1
                       ? "Tomorrow"
                       : `In ${w.daysUntil} days`}
-                    {w.venueName && ` • 📍 ${w.venueName}`}
+                    {w.venueName && (
+                      <>
+                        {" "}
+                        • <MapPinIcon className="inline h-3 w-3 align-text-bottom" /> {w.venueName}
+                      </>
+                    )}
                   </p>
                 </div>
               </div>

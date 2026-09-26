@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { CloseIcon, CheckIcon } from "@/components/portfolio/icons";
 import { updateMyCatalogStoreSettings } from "@/lib/api/vendor-catalog-client";
 import { createMediaUploadRequest, confirmMediaUpload } from "@/lib/api/vendor-self-client";
 import { compressImageIfPossible } from "@/lib/media/compress-image";
@@ -12,6 +13,7 @@ import type {
   StoreAccentColor,
   UpdateCatalogStoreSettingsInput,
 } from "@/lib/api/vendor-catalog.types";
+import { ChevronLeftIcon } from "@/components/portfolio/icons";
 
 const ACCENT_COLOR_OPTIONS: { value: StoreAccentColor; label: string; swatchClass: string }[] = [
   { value: "CRIMSON", label: "Crimson", swatchClass: "bg-brand-primary" },
@@ -160,8 +162,9 @@ function MultiImageUploader({
                   onClick={() => moveTo(idx, -1)}
                   className="h-5 w-5 rounded-full bg-white/90 text-neutral-800 text-[10px] font-bold flex items-center justify-center"
                   title="Move earlier"
+                  aria-label="Move earlier"
                 >
-                  ‹
+                  <ChevronLeftIcon className="h-3 w-3" />
                 </button>
               )}
               <button
@@ -169,8 +172,9 @@ function MultiImageUploader({
                 onClick={() => removeAt(idx)}
                 className="h-5 w-5 rounded-full bg-white/90 text-red-600 text-[10px] font-bold flex items-center justify-center"
                 title="Remove"
+                aria-label="Remove image"
               >
-                ✕
+                <CloseIcon className="h-3.5 w-3.5" />
               </button>
               {idx < images.length - 1 && (
                 <button
@@ -361,8 +365,9 @@ export function CatalogStorefrontCustomizer({
             type="button"
             onClick={onClose}
             className="p-1 rounded-full hover:bg-neutral-100 text-neutral-400 font-bold"
+            aria-label="Close"
           >
-            ✕
+            <CloseIcon className="h-4 w-4" />
           </button>
         </div>
 
@@ -682,7 +687,7 @@ export function CatalogStorefrontCustomizer({
 
         <div className="px-6 sm:px-7 py-4 border-t border-neutral-100 flex items-center justify-between">
           <span className="text-xs font-semibold text-emerald-600">
-            {savedSettingsNotice ? "✓ Saved successfully! Refreshing storefront." : ""}
+            {savedSettingsNotice ? <><CheckIcon className="inline h-3 w-3" /> Saved successfully! Refreshing storefront.</> : ""}
           </span>
           <div className="flex gap-2">
             <button

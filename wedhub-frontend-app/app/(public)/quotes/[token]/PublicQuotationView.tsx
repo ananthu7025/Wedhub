@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { CloseIcon, CheckIcon } from "@/components/portfolio/icons";
 import type { PublicQuotation } from "@/lib/api/vendor-quotations.types";
 import { publicAcceptQuotationClient, publicDeclineQuotationClient } from "@/lib/api/vendor-quotations-client";
 import { getPublicMediaUrl } from "@/lib/media/url";
@@ -154,8 +155,8 @@ export function PublicQuotationView({ quotation: initialQuotation }: PublicQuota
         {quotation.status === "ACCEPTED" ? (
           <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-900 shadow-sm">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-lg">
-                ✓
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white">
+                <CheckIcon className="h-6 w-6" />
               </span>
               <div>
                 <h2 className="text-base font-bold">Proposal Accepted!</h2>
@@ -199,7 +200,7 @@ export function PublicQuotationView({ quotation: initialQuotation }: PublicQuota
                 onClick={() => setIsAcceptModalOpen(true)}
                 className="rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition active:scale-[0.98]"
               >
-                ✓ Accept Proposal
+                <CheckIcon className="inline h-3.5 w-3.5" /> Accept Proposal
               </button>
             </div>
           </div>
@@ -288,7 +289,7 @@ export function PublicQuotationView({ quotation: initialQuotation }: PublicQuota
                       <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-neutral-700">
                         {it.inclusions.map((inc, i) => (
                           <li key={i} className="flex items-center gap-2">
-                            <span className="text-brand-primary font-bold">✓</span>
+                            <span className="text-brand-primary font-bold"><CheckIcon className="h-3.5 w-3.5" /></span>
                             <span>{inc}</span>
                           </li>
                         ))}
@@ -378,7 +379,7 @@ export function PublicQuotationView({ quotation: initialQuotation }: PublicQuota
                   onClick={() => setIsAcceptModalOpen(true)}
                   className="w-full sm:w-auto rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-700 transition active:scale-[0.98]"
                 >
-                  ✓ Accept Proposal
+                  <CheckIcon className="inline h-3.5 w-3.5" /> Accept Proposal
                 </button>
               </div>
             </div>
@@ -392,8 +393,8 @@ export function PublicQuotationView({ quotation: initialQuotation }: PublicQuota
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-neutral-900 text-base">Accept Proposal</h3>
-              <button onClick={() => setIsAcceptModalOpen(false)} className="text-neutral-400 hover:text-neutral-600">
-                ✕
+              <button onClick={() => setIsAcceptModalOpen(false)} className="text-neutral-400 hover:text-neutral-600" aria-label="Close">
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 
@@ -440,8 +441,8 @@ export function PublicQuotationView({ quotation: initialQuotation }: PublicQuota
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-neutral-900 text-base">Decline Proposal</h3>
-              <button onClick={() => setIsDeclineModalOpen(false)} className="text-neutral-400 hover:text-neutral-600">
-                ✕
+              <button onClick={() => setIsDeclineModalOpen(false)} className="text-neutral-400 hover:text-neutral-600" aria-label="Close">
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 

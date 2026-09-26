@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
+import { MedalIcon } from "@/components/portfolio/icons";
 import { ChallengeVoteButton } from "./ChallengeVoteButton";
 import type { ChallengeEntry } from "@/lib/api/challenges.types";
 
@@ -43,7 +44,7 @@ export function ChallengeEntryCard({
         />
         {rank !== undefined && rank <= 3 && (
           <span className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-bold shadow-md">
-            {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"}
+            <MedalIcon place={rank === 1 ? 1 : rank === 2 ? 2 : 3} className="h-6 w-6" />
           </span>
         )}
       </Link>

@@ -33,6 +33,7 @@ import { formatApiError } from "@/lib/utils/error";
 import { Input } from "@/components/ui/Input";
 import { FieldError } from "@/components/ui/FieldError";
 import { useToast } from "@/components/ui/Toast";
+import { CheckIcon } from "@/components/portfolio/icons";
 import { emailSchema, optionalPhoneSchema, validateField } from "@/lib/validation/auth-schemas";
 
 /**
@@ -105,7 +106,7 @@ function SectionStatus({ saving, saved, error }: { saving: boolean; saved: boole
         disabled={saving}
         className="rounded-md bg-brand-primary px-5 py-2 text-[13px] font-bold text-white disabled:opacity-60"
       >
-        {saving ? "Saving…" : saved ? "Saved ✓" : "Save changes"}
+        {saving ? "Saving…" : saved ? <>Saved <CheckIcon className="inline h-3.5 w-3.5" /></> : "Save changes"}
       </button>
     </>
   );

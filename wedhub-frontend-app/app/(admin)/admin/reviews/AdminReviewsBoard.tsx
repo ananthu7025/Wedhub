@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
+import { CheckIcon } from "@/components/portfolio/icons";
+import { StarRating } from "@/components/ui/StarRating";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { moderateAdminReview } from "@/lib/api/admin-client";
 import type { AdminReviewListItem, ReviewModerationStatus } from "@/lib/api/admin.types";
@@ -126,7 +128,11 @@ export function AdminReviewsBoard({
                   <div>
                     <div className="flex flex-wrap items-center gap-2 text-[13px] font-bold">
                       {reviewerName(review.user)}
-                      {review.verifiedInteraction && <Badge variant="green">✓ Verified interaction</Badge>}
+                      {review.verifiedInteraction && (
+                        <Badge variant="green">
+                          <CheckIcon className="inline h-3 w-3" /> Verified interaction
+                        </Badge>
+                      )}
                     </div>
                     <div className="text-xs text-text-grey">
                       on {review.vendor.businessName} · submitted {formatRelativeTime(review.createdAt)}
@@ -137,8 +143,7 @@ export function AdminReviewsBoard({
               </div>
 
               <div className="mb-1.5 text-[#f0a202]">
-                {"★".repeat(review.rating)}
-                {"☆".repeat(5 - review.rating)}
+                <StarRating rating={review.rating} />
               </div>
               {review.title && <div className="mb-1 text-sm font-bold">{review.title}</div>}
               {review.content && <p className="mb-2 text-[13px] leading-relaxed">{review.content}</p>}
