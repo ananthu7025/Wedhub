@@ -144,6 +144,24 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
   const logoImageKey = logoMedia?.thumbnailObjectKey ?? logoMedia?.optimizedObjectKey ?? logoMedia?.originalObjectKey;
   const logoImageUrl = logoImageKey ? getPublicMediaUrl(logoImageKey) : null;
 
+  // Snapshot for a signed-out visitor's guest shortlist (localStorage) —
+  // this page uses VendorHeartButton directly rather than VendorCard (which
+  // builds this same shape internally), so it's built once here instead.
+  const vendorSummary = {
+    id: vendor.id,
+    businessName: vendor.businessName,
+    slug: vendor.slug,
+    status: vendor.status,
+    verificationLevel: vendor.verificationLevel,
+    profile: {
+      shortDescription: vendor.profile?.shortDescription ?? null,
+      startingPrice: vendor.profile?.startingPrice ?? null,
+      currency: vendor.profile?.currency ?? null,
+      logoUrl: logoImageUrl,
+      logoBlurDataUrl: logoMedia?.blurDataUrl ?? null,
+    },
+  };
+
   const verificationLabel = VERIFICATION_LABEL[vendor.verificationLevel];
   const responseTimeLabel = formatResponseTimeBucket(vendor.avgResponseTimeMs);
   const hasRating = Number(vendor.averageRating) > 0;
@@ -283,6 +301,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
 
                   <VendorHeartButton
                     vendorId={vendor.id}
+                    vendorSummary={vendorSummary}
                     isAuthenticated={session !== null}
                     initialFavorited={isFavorited}
                     className="absolute bottom-5 right-5 h-11 w-11 border-none bg-white shadow-md sm:bottom-7 sm:right-7"
@@ -328,6 +347,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                   </div>
                   <VendorHeartButton
                     vendorId={vendor.id}
+                    vendorSummary={vendorSummary}
                     isAuthenticated={session !== null}
                     initialFavorited={isFavorited}
                     className="static h-10 w-10 flex-shrink-0 border border-border bg-white shadow-none"

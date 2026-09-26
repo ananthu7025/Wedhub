@@ -6,8 +6,18 @@ import { compareVendors } from "@/lib/api/shortlists";
 import { ApiRequestError } from "@/lib/api/types";
 import { Badge } from "@/components/ui/Badge";
 
+// Item: /compare moved out of app/(couple) so a signed-out visitor can
+// select and view a comparison without being redirected to login (the
+// backend's GET /comparison/vendors this reads from already skips auth —
+// see lib/api/shortlists.ts's compareVendors, skipAuth: true). It lost the
+// (couple) layout's blanket `robots: {index:false}` metadata by moving, so
+// it's set explicitly here instead — this is a utility/session-driven page
+// (its content is just whatever vendorIds happen to be in the URL), not an
+// evergreen landing page worth indexing. app/robots.ts's crawl-directive
+// disallow for "/compare" still applies too (defense in depth).
 export const metadata: Metadata = {
   title: "Compare Vendors",
+  robots: { index: false, follow: false },
 };
 
 interface ComparePageProps {

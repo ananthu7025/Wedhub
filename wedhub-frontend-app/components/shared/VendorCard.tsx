@@ -45,6 +45,8 @@ export function VendorCard({
   isAuthenticated = false,
   listContext,
   onFavoriteToggle,
+  verificationLevel = "UNVERIFIED",
+  status = "APPROVED",
 }: {
   vendorId?: string;
   slug: string;
@@ -62,6 +64,9 @@ export function VendorCard({
   listContext?: string;
   /** Forwarded to VendorHeartButton — lets a shortlist-style list drop the card immediately on unfavorite. */
   onFavoriteToggle?: (favorited: boolean) => void;
+  /** Only needed for the ShortlistVendorSummary snapshot a guest's heart-tap saves locally — every real caller renders an already-approved, listed vendor, so the defaults are correct almost everywhere this is omitted. */
+  verificationLevel?: string;
+  status?: string;
 }) {
   const impressionFired = useRef(false);
 
@@ -105,6 +110,14 @@ export function VendorCard({
         {vendorId && (
           <VendorHeartButton
             vendorId={vendorId}
+            vendorSummary={{
+              id: vendorId,
+              businessName,
+              slug,
+              status,
+              verificationLevel,
+              profile: { shortDescription, startingPrice, currency, logoUrl, logoBlurDataUrl: logoBlurDataUrl ?? null },
+            }}
             isAuthenticated={isAuthenticated}
             initialFavorited={onFavoriteToggle ? true : undefined}
             onToggle={onFavoriteToggle}

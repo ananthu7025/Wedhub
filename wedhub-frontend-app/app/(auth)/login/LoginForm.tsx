@@ -12,6 +12,7 @@ import { login } from "@/lib/api/auth-client";
 import type { UserRole } from "@/lib/auth/types";
 import { formatApiError } from "@/lib/utils/error";
 import { identifierSchema, loginPasswordSchema, validateField } from "@/lib/validation/auth-schemas";
+import { mergeGuestShortlistIntoAccount } from "@/lib/utils/merge-guest-shortlist";
 
 const roleHomeRoute: Record<UserRole, string> = {
   END_USER: "/shortlist",
@@ -56,6 +57,9 @@ export function LoginForm() {
       return;
     }
 
+    // Best-effort, doesn't block navigation — see mergeGuestShortlistIntoAccount's
+    // doc comment (a failed add is silently skipped, never surfaced here).
+    void mergeGuestShortlistIntoAccount();
     goToDestination(result.data.user.role);
   }
 
@@ -124,7 +128,12 @@ export function LoginForm() {
       </div>
 
       <div className="mb-4">
-        <GoogleSignInButton onSuccess={(user) => goToDestination(user.role)} />
+        <GoogleSignInButton
+          onSuccess={(user) => {
+            void mergeGuestShortlistIntoAccount();
+            goToDestination(user.role);
+          }}
+        />
       </div>
     </form>
   );

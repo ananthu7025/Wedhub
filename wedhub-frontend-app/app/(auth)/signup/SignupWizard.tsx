@@ -13,6 +13,7 @@ import { GoogleSignInButton } from "@/components/shared/GoogleSignInButton";
 import { formatApiError } from "@/lib/utils/error";
 import { trackEvent } from "@/lib/analytics/track";
 import { emailSchema, passwordSchema, validateField } from "@/lib/validation/auth-schemas";
+import { mergeGuestShortlistIntoAccount } from "@/lib/utils/merge-guest-shortlist";
 
 type AccountType = "END_USER" | "VENDOR";
 type Step = "credentials" | "verify" | "profile";
@@ -77,6 +78,11 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
     if (accountType === "VENDOR") {
       trackEvent({ eventType: "vendor_registration_started" });
     }
+
+    // Best-effort, doesn't block the wizard — see mergeGuestShortlistIntoAccount's
+    // doc comment. A valid session exists now (login() just succeeded above),
+    // which is all the merge needs — it doesn't require email verification.
+    void mergeGuestShortlistIntoAccount();
 
     setPending(false);
     // A brand-new password-based account is always unverified at this point
@@ -173,6 +179,11 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
         <GoogleSignInButton
           role={accountType}
           onSuccess={() => {
+            // Best-effort, doesn't block routing — see
+            // mergeGuestShortlistIntoAccount's doc comment. Run before the
+            // branch below so it applies regardless of which role signed up.
+            void mergeGuestShortlistIntoAccount();
+
             // Google-authenticated accounts are pre-verified (see
             // auth.service.ts's createUserWithLinkedIdentity), so they skip
             // the "verify" step entirely — same vendor-onboarding routing

@@ -1,9 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { useRouter } from "next/navigation";
 import { addFavorite, removeFavorite } from "@/lib/api/shortlists-client";
+import { useGuestShortlist } from "@/lib/hooks/useGuestShortlist";
+import { useToast } from "@/components/ui/Toast";
+import type { ShortlistVendorSummary } from "@/lib/api/shortlists.types";
 
 /**
  * Shortlist heart-toggle — POST/DELETE /shortlists/favorites/items/:vendorId
@@ -23,15 +26,26 @@ import { addFavorite, removeFavorite } from "@/lib/api/shortlists-client";
  * fixed by a hard reload only. refresh() re-runs every Server Component on
  * the current route tree AND invalidates the client Router Cache entry the
  * next navigation to /shortlist would otherwise reuse.
+ *
+ * High-priority fix: signed-out visitors previously got hard-redirected to
+ * /login just for tapping the heart ("I only wanted to remember this
+ * photographer"). A guest now saves locally instead (useGuestShortlist,
+ * localStorage) with a "Saved" toast for instant feedback, and account
+ * creation/login is offered later to sync — see mergeGuestShortlistIntoAccount,
+ * wired into LoginForm/SignupWizard, which folds these local saves into the
+ * real account shortlist and clears local storage.
  */
 export function VendorHeartButton({
   vendorId,
+  vendorSummary,
   initialFavorited = false,
   isAuthenticated,
   className,
   onToggle,
 }: {
   vendorId: string;
+  /** Full card data to snapshot into localStorage when saving as a guest — omit only for authenticated-only contexts (e.g. the couple's own /shortlist, where every card is already a real saved item). */
+  vendorSummary?: ShortlistVendorSummary;
   initialFavorited?: boolean;
   isAuthenticated: boolean;
   className?: string;
@@ -39,15 +53,32 @@ export function VendorHeartButton({
   onToggle?: (favorited: boolean) => void;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
+  const guestShortlist = useGuestShortlist();
   const [favorited, setFavorited] = useState(initialFavorited);
   const [pending, setPending] = useState(false);
+
+  const effectiveFavorited = isAuthenticated ? favorited : guestShortlist.isSaved(vendorId);
 
   async function handleClick(event: React.MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
 
     if (!isAuthenticated) {
-      router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      if (effectiveFavorited) {
+        guestShortlist.remove(vendorId);
+        onToggle?.(false);
+        return;
+      }
+      if (!vendorSummary) {
+        // No card data to snapshot (shouldn't happen for a real guest-facing
+        // card) — fall back to the login prompt rather than saving nothing.
+        router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        return;
+      }
+      guestShortlist.save(vendorId, vendorSummary);
+      onToggle?.(true);
+      showToast("Saved — log in anytime to keep it in your account.", "success");
       return;
     }
 
@@ -76,14 +107,14 @@ export function VendorHeartButton({
       type="button"
       onClick={handleClick}
       disabled={pending}
-      aria-pressed={favorited}
-      aria-label={favorited ? "Remove from shortlist" : "Save to shortlist"}
+      aria-pressed={effectiveFavorited}
+      aria-label={effectiveFavorited ? "Remove from shortlist" : "Save to shortlist"}
       className={cn(
         "flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-brand-primary shadow-sm transition-transform active:scale-90 disabled:opacity-60",
         className,
       )}
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill={favorited ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill={effectiveFavorited ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
         <path d="M12 21s-6.7-4.35-9.3-8.1C.8 10.1 1.4 6.6 4.2 5a5 5 0 017.8 1.3A5 5 0 0119.8 5c2.8 1.6 3.4 5.1 1.5 7.9C18.7 16.65 12 21 12 21z" />
       </svg>
     </button>
