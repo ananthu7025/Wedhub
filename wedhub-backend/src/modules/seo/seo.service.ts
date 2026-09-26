@@ -1,6 +1,7 @@
 import { NotFoundError, ValidationError } from "../../common/errors";
 import * as seoRepository from "./seo.repository";
 import { toSeoCategorySlug } from "./category-seo-slugs";
+import { cityDisplayName } from "./city-display-names";
 import type { CreateSeoOverrideBody, UpdateSeoOverrideBody } from "./seo.schema";
 
 // product.md §44: "Avoid creating thin pages automatically. Only index
@@ -36,20 +37,30 @@ export interface SeoPageData {
 // 2026-09-06). The category+city case already names the real city, so
 // appending "Kerala" there too would be redundant keyword-stuffing
 // (product.md §44 / architecture explicitly warns against this).
+//
+// City names run through cityDisplayName() so a search like "photographers
+// in kochi" is matched by the page's own title/H1/description text, not
+// just the URL-alias redirect (/category/wedding-photographers/kochi ->
+// .../ernakulam) — the formal district name alone ("Ernakulam") never
+// contains the colloquial term most people actually type.
 function templateTitle(categoryName: string | null, cityName: string | null): string {
-  if (categoryName && cityName) return `Best ${categoryName} in ${cityName}`;
+  if (categoryName && cityName) return `Best ${categoryName} in ${cityDisplayName(cityName)}`;
   if (categoryName) return `Best ${categoryName} in Kerala`;
-  return `Wedding Vendors in ${cityName}`;
+  return `Wedding Vendors in ${cityDisplayName(cityName!)}`;
 }
 
 function templateH1(categoryName: string | null, cityName: string | null): string {
-  if (categoryName && cityName) return `${categoryName} in ${cityName}`;
+  if (categoryName && cityName) return `${categoryName} in ${cityDisplayName(cityName)}`;
   if (categoryName) return `${categoryName} in Kerala`;
-  return `Wedding Vendors in ${cityName}`;
+  return `Wedding Vendors in ${cityDisplayName(cityName!)}`;
 }
 
 function templateDescription(categoryName: string | null, cityName: string | null, vendorCount: number): string {
-  const subject = categoryName && cityName ? `${categoryName.toLowerCase()} in ${cityName}` : categoryName ? `${categoryName.toLowerCase()} in Kerala` : `wedding vendors in ${cityName}`;
+  const subject = categoryName && cityName
+    ? `${categoryName.toLowerCase()} in ${cityDisplayName(cityName)}`
+    : categoryName
+    ? `${categoryName.toLowerCase()} in Kerala`
+    : `wedding vendors in ${cityDisplayName(cityName!)}`;
   return `Browse ${vendorCount} verified ${subject} on itsmyKalyanam. Compare portfolios, pricing, and reviews to find the right fit for your wedding.`;
 }
 
