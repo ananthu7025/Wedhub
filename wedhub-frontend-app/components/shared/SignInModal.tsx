@@ -52,14 +52,27 @@ export function SignInModal({
   const isFormValid = !identifierError && !passwordError;
 
   // Shared by both sign-in paths (password form below, and
-  // GoogleSignInButton's onSuccess) — router.refresh() re-runs the vendor
-  // page's server-side getOptionalSession() so isAuthenticated flips before
-  // the caller's onSuccess continues the original action (reveal contact /
-  // open the enquiry form). GoogleSignInButton has no refresh of its own,
-  // so this must happen here rather than in the password-only handleSubmit.
+  // GoogleSignInButton's onSuccess). onSuccess runs FIRST: both callers
+  // (EnquiryCta, VendorContactLinks) continue the original action purely
+  // with client state/API calls (setOpen(true), void reveal()) — neither
+  // needs a fresh server render to do that. router.refresh() only keeps the
+  // page's server-derived isAuthenticated flag in sync for LATER (e.g. if
+  // the visitor closes and reopens, or for other server-rendered bits on the
+  // page) — it was never a prerequisite for continuing here.
+  //
+  // Order used to be reversed (refresh() then onSuccess()), which raced
+  // Next's async RSC refresh against the modal opening: router.refresh()
+  // re-renders the whole server tree this client tree is mounted under,
+  // including EnquiryCta/VendorContactLinks themselves — if that swap landed
+  // while React was mid-render of the just-opened modal, the new subtree
+  // could get spliced in before the modal's own state update had settled,
+  // producing a stray unstyled fragment of prefilled form fields with no
+  // backdrop/card wrapper (seen on a real mobile device, right after login).
+  // Firing onSuccess first lets that state settle before the refresh's own
+  // re-render can land on top of it.
   function handleSignedIn(user: AuthenticatedUser) {
-    router.refresh();
     onSuccess(user);
+    router.refresh();
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
