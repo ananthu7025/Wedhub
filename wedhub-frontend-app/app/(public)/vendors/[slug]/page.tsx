@@ -580,7 +580,6 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
       <div className="h-16 max-[900px]:h-24" />
       <VendorMobileStickyBar
         vendorId={vendor.id}
-        vendorSlug={vendor.slug}
         businessName={vendor.businessName}
         isAuthenticated={session !== null}
       />

@@ -29,13 +29,19 @@ export function EnquiryCta({
   vendorId,
   vendorName,
   isAuthenticated,
+  className,
 }: {
   vendorId: string;
   vendorName: string;
   isAuthenticated: boolean;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+
+  const buttonClass =
+    className ??
+    "mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-brand-primary py-3 text-center text-sm font-bold text-white shadow-[0_4px_12px_rgba(224,11,65,0.18)] hover:bg-brand-primary-hover";
 
   if (!isAuthenticated) {
     return (
@@ -43,7 +49,7 @@ export function EnquiryCta({
         <button
           type="button"
           onClick={() => setShowSignIn(true)}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-brand-primary py-3 text-center text-sm font-bold text-white shadow-[0_4px_12px_rgba(224,11,65,0.18)] hover:bg-brand-primary-hover"
+          className={buttonClass}
         >
           <SendIcon /> Send Enquiry
         </button>
@@ -67,7 +73,7 @@ export function EnquiryCta({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-brand-primary py-3 text-center text-sm font-bold text-white shadow-[0_4px_12px_rgba(224,11,65,0.18)] hover:bg-brand-primary-hover"
+        className={buttonClass}
       >
         <SendIcon /> Send Enquiry
       </button>

@@ -44,10 +44,16 @@ export function MessageVendorButton({
   vendorId,
   vendorName,
   isAuthenticated,
+  className,
+  children,
+  ariaLabel,
 }: {
   vendorId: string;
   vendorName: string;
   isAuthenticated: boolean;
+  className?: string;
+  children?: React.ReactNode;
+  ariaLabel?: string;
 }) {
   const router = useRouter();
   const { showToast } = useToast();
@@ -66,15 +72,28 @@ export function MessageVendorButton({
     router.push(`/inbox?conversation=${result.data.id}`);
   }
 
+  const buttonClass =
+    className ??
+    "mt-2.5 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-white py-3 text-center text-sm font-bold text-text-dark hover:bg-surface-input disabled:opacity-60";
+
+  const defaultContent = (
+    <>
+      <ChatIcon /> Message vendor
+    </>
+  );
+
+  const content = pending ? "Starting…" : (children ?? defaultContent);
+
   if (!isAuthenticated) {
     return (
       <>
         <button
           type="button"
           onClick={() => setShowSignIn(true)}
-          className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-white py-3 text-center text-sm font-bold text-text-dark hover:bg-surface-input"
+          className={buttonClass}
+          aria-label={ariaLabel}
         >
-          <ChatIcon /> Message vendor
+          {children ?? defaultContent}
         </button>
         {showSignIn && (
           <SignInModal
@@ -95,13 +114,10 @@ export function MessageVendorButton({
       type="button"
       disabled={pending}
       onClick={messageVendor}
-      className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-white py-3 text-center text-sm font-bold text-text-dark hover:bg-surface-input disabled:opacity-60"
+      className={buttonClass}
+      aria-label={ariaLabel}
     >
-      {pending ? "Starting…" : (
-        <>
-          <ChatIcon /> Message vendor
-        </>
-      )}
+      {content}
     </button>
   );
 }
