@@ -27,27 +27,69 @@ export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCa
   if (categories.length === 0) return null;
 
   return (
-    <section className="relative px-6 py-8 max-[900px]:px-4">
+    <section className="relative px-4 sm:px-6 py-6 sm:py-8">
       {/* Section Header */}
-      <div className="mb-6 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-end">
+      <div className="mb-4 sm:mb-6 flex items-center md:items-end justify-between gap-2">
         <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-jet-black">
+          <h2 className="text-base sm:text-2xl font-extrabold tracking-tight text-jet-black">
             Wedding Categories
           </h2>
-          <p className="text-xs text-text-grey mt-0.5">
+          <p className="hidden md:block text-xs text-text-grey mt-0.5">
             Explore curated vendor collections for every ceremony
           </p>
         </div>
         <Link
           href="/vendors"
-          className="text-xs font-bold text-brand-primary hover:underline"
+          className="text-xs font-bold text-crimson hover:underline flex items-center gap-1 shrink-0"
         >
-          View all categories →
+          <span>View all categories</span>
+          <span aria-hidden="true">→</span>
         </Link>
       </div>
 
-      {/* Capsule Carousel Container */}
-      <div className="relative">
+      {/* Mobile 4-Column Circular Category Grid (Mobile screens only: < md) */}
+      <div className="grid grid-cols-4 gap-x-2 gap-y-4 md:hidden">
+        {categories.map((category) => (
+          <Link
+            key={category.id}
+            href={`/category/${resolveCategorySeoSlug(category.slug)}`}
+            className="group flex flex-col items-center text-center no-underline"
+          >
+            {/* Circular Image Container */}
+            <div className="relative aspect-square w-14 sm:w-16 min-[380px]:w-16 rounded-full overflow-hidden shadow-xs border border-neutral-grey-20/80 bg-surface-input transition-transform duration-200 group-hover:scale-105 active:scale-95">
+              {category.imageUrl ? (
+                <Image
+                  src={category.imageUrl}
+                  alt={category.name}
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                  unoptimized={isPreOptimizedMediaUrl(category.imageUrl)}
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-anti-flash-white text-xs font-bold text-paynes-grey">
+                  {category.name.slice(0, 2).toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            {/* Category Name */}
+            <span className="mt-1.5 w-full line-clamp-1 text-[11px] sm:text-xs font-bold text-jet-black group-hover:text-brand-primary">
+              {category.name}
+            </span>
+
+            {/* Starting Price / Label if available */}
+            {category.startingPriceLabel && (
+              <span className="mt-0.5 w-full line-clamp-1 text-[10px] text-text-grey font-medium">
+                {category.startingPriceLabel}
+              </span>
+            )}
+          </Link>
+        ))}
+      </div>
+
+      {/* Capsule Carousel Container (Desktop / Tablet screens only: >= md) */}
+      <div className="relative hidden md:block">
         {/* Left Scroll Arrow */}
         <button
           type="button"
@@ -146,8 +188,8 @@ export function CategoryCapsuleCarousel({ categories }: { categories: FeaturedCa
         </div>
       </div>
 
-      {/* Bottom Center "Explore Now ↗" Button */}
-      <div className="mt-6 flex justify-center">
+      {/* Bottom Center "Explore Now ↗" Button (Desktop only) */}
+      <div className="mt-6 hidden md:flex justify-center">
         <Link
           href="/vendors"
           className="inline-flex items-center gap-1.5 rounded-full bg-crimson px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md transition-all duration-200 hover:bg-crimson-60 hover:shadow-lg hover:scale-105 active:scale-95 no-underline"

@@ -321,25 +321,91 @@ export default async function HomePage() {
 /** Streamed independently in its own <Suspense> boundary — see the HomePage's Suspense wiring above. */
 async function WeddingStoriesSection() {
   const { data: weddingStories } = await listFeaturedWeddingStories();
+  const stories = fillWeddingStorySlots(weddingStories);
 
   return (
-    <section id="wedding-stories" className="px-6 py-14 sm:py-16 max-[900px]:px-4">
-      <div className="mb-6 flex items-center justify-between">
+    <section id="wedding-stories" className="px-4 py-8 sm:px-6 sm:py-16">
+      <div className="mb-4 sm:mb-6 flex items-start sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-extrabold tracking-tight text-jet-black sm:text-2xl">
+          <h2 className="text-lg font-extrabold tracking-tight text-jet-black sm:text-2xl">
             Real Wedding Stories
           </h2>
-          <p className="mt-0.5 text-xs text-text-grey">
-            Get inspired by real couples, stunning celebrations, and dream wedding vendors
+          <p className="mt-0.5 text-[11px] sm:text-xs text-text-grey">
+            Get inspired by real weddings, stunning details and creative ideas from Kerala couples.
           </p>
         </div>
-        <Link href="/real-weddings" className="text-xs font-bold text-brand-primary hover:underline">
-          View All Weddings →
+        <Link href="/real-weddings" className="text-xs font-bold text-crimson hover:underline flex items-center gap-1 shrink-0 mt-0.5 sm:mt-0">
+          <span>View all stories</span>
+          <span aria-hidden="true">→</span>
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
-        {fillWeddingStorySlots(weddingStories).map((story) => (
+      {/* Mobile Bento Layout (Mobile screens only: < sm) */}
+      <div className="grid grid-cols-[1.25fr_1fr] gap-2.5 sm:hidden">
+        {/* Left Featured Large Card */}
+        {stories[0] && (
+          <Link
+            key={stories[0].key}
+            href={stories[0].href}
+            className="group relative flex flex-col justify-end overflow-hidden rounded-2xl shadow-sm text-white no-underline transition-all duration-300 active:scale-[0.98] min-h-[250px] p-3.5"
+          >
+            <Image
+              src={stories[0].imageUrl}
+              alt={stories[0].coupleName}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              sizes="(max-width: 640px) 60vw, 33vw"
+              unoptimized={isPreOptimizedMediaUrl(stories[0].imageUrl)}
+              {...(stories[0].imageBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: stories[0].imageBlurDataUrl } : {})}
+            />
+            {/* Dark gradient overlay at bottom for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col items-start gap-2">
+              <h3 className="text-sm font-bold text-white leading-snug drop-shadow line-clamp-2">
+                {stories[0].snippet || `${stories[0].coupleName} — ${stories[0].location}`}
+              </h3>
+              <span className="inline-flex items-center gap-1 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-crimson shadow-md transition-transform active:scale-95">
+                <span>View Story</span>
+                <span aria-hidden="true">→</span>
+              </span>
+            </div>
+          </Link>
+        )}
+
+        {/* Right Stacked Cards */}
+        <div className="flex flex-col gap-2.5">
+          {stories.slice(1, 3).map((story) => (
+            <Link
+              key={story.key}
+              href={story.href}
+              className="group relative flex-1 flex flex-col justify-end overflow-hidden rounded-2xl shadow-sm text-white no-underline transition-all duration-300 active:scale-[0.98] min-h-[118px] p-2.5"
+            >
+              <Image
+                src={story.imageUrl}
+                alt={story.coupleName}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 640px) 40vw, 33vw"
+                unoptimized={isPreOptimizedMediaUrl(story.imageUrl)}
+                {...(story.imageBlurDataUrl ? { placeholder: "blur" as const, blurDataURL: story.imageBlurDataUrl } : {})}
+              />
+              {/* Dark gradient overlay at bottom */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
+
+              <div className="relative z-10">
+                <h3 className="text-xs font-bold text-white leading-snug drop-shadow line-clamp-2">
+                  {story.snippet || `${story.coupleName} — ${story.location}`}
+                </h3>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop 3-column Grid (sm:grid) — completely unchanged */}
+      <div className="hidden sm:grid sm:grid-cols-3 sm:gap-5">
+        {stories.map((story) => (
           <WeddingStoryCard key={story.key} story={story} className="h-[195px] sm:h-[210px]" />
         ))}
       </div>
@@ -349,9 +415,18 @@ async function WeddingStoriesSection() {
 
 function WeddingStoriesSkeleton() {
   return (
-    <section className="px-6 py-14 sm:py-16 max-[900px]:px-4">
-      <div className="mb-6 h-6 w-56 animate-pulse rounded bg-surface-input" />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+    <section className="px-4 py-8 sm:px-6 sm:py-16">
+      <div className="mb-4 sm:mb-6 h-6 w-56 animate-pulse rounded bg-surface-input" />
+      {/* Mobile Skeleton (< sm) */}
+      <div className="grid grid-cols-[1.25fr_1fr] gap-2.5 sm:hidden">
+        <div className="h-[250px] animate-pulse rounded-2xl bg-surface-input" />
+        <div className="flex flex-col gap-2.5">
+          <div className="h-[118px] animate-pulse rounded-2xl bg-surface-input" />
+          <div className="h-[118px] animate-pulse rounded-2xl bg-surface-input" />
+        </div>
+      </div>
+      {/* Desktop Skeleton (>= sm) */}
+      <div className="hidden sm:grid sm:grid-cols-3 sm:gap-5">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="h-[195px] animate-pulse rounded-[18px] bg-surface-input sm:h-[210px]" />
         ))}
@@ -371,20 +446,64 @@ async function BlogSection() {
   if (blogPosts.length === 0) return null;
 
   return (
-    <section id="wedding-blogs" className="px-6 py-8 max-[900px]:px-4 bg-white/70 border-y border-border/60">
-      <div className="mb-6 flex items-center justify-between">
+    <section id="wedding-blogs" className="px-4 py-8 sm:px-6 sm:py-8 bg-white/70 border-y border-border/60">
+      <div className="mb-4 sm:mb-6 flex items-start sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-jet-black">
+          <h2 className="text-lg font-bold tracking-tight text-jet-black sm:text-2xl">
             Latest Blogs &amp; Advice
           </h2>
-          <p className="text-xs text-text-grey mt-0.5">Expert tips, styling advice, and practical planning guides</p>
+          <p className="mt-0.5 text-[11px] sm:text-xs text-text-grey">
+            Expert tips, planning guides and wedding inspiration.
+          </p>
         </div>
-        <Link href="/blog" className="text-xs font-bold text-brand-primary hover:underline">
-          Read More Articles →
+        <Link href="/blog" className="text-xs font-bold text-crimson hover:underline flex items-center gap-1 shrink-0 mt-0.5 sm:mt-0">
+          <span>View all articles</span>
+          <span aria-hidden="true">→</span>
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Mobile Horizontal Carousel (Mobile screens only: < sm) */}
+      <div className="flex gap-3.5 overflow-x-auto pb-2 sm:hidden no-scrollbar scroll-smooth">
+        {blogPosts.map((blog) => (
+          <div
+            key={blog.id}
+            className="flex-shrink-0 w-[210px] xs:w-[225px] flex flex-col overflow-hidden rounded-2xl border border-border/80 bg-white shadow-xs"
+          >
+            <div className="relative aspect-[16/11] overflow-hidden bg-surface-input">
+              {blog.coverImageUrl && (
+                <Image
+                  src={blog.coverImageUrl}
+                  alt={blog.title}
+                  fill
+                  className="object-cover"
+                  sizes="230px"
+                  unoptimized={isPreOptimizedMediaUrl(blog.coverImageUrl)}
+                />
+              )}
+              {blog.category && (
+                <span className="absolute bottom-2 left-2 rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-bold text-jet-black shadow-xs">
+                  {blog.category}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-1 flex-col justify-between p-3">
+              <h3 className="text-xs font-bold text-jet-black leading-snug line-clamp-2">
+                {blog.title}
+              </h3>
+              <Link
+                href={`/blog/${blog.slug}`}
+                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-crimson hover:underline"
+              >
+                <span>Read Article</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Grid (sm:grid) — completely unchanged */}
+      <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {blogPosts.map((blog) => (
           <div
             key={blog.id}
