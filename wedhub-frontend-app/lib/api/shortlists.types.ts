@@ -16,6 +16,7 @@ export interface ShortlistVendorSummary {
   slug: string;
   status: string;
   verificationLevel: string;
+  categoryId?: string | null;
   profile: {
     shortDescription: string | null;
     startingPrice: string | null;

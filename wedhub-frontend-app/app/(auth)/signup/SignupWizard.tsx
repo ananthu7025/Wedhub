@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { FieldError } from "@/components/ui/FieldError";
@@ -33,6 +33,7 @@ type Step = "credentials" | "verify" | "profile";
 // task) — so there is no reachable "done" step left in this component.
 export function SignupWizard({ accountType }: { accountType: AccountType }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
@@ -71,7 +72,8 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
     if (!loginResult.success) {
       showToast("Account created — please log in.", "info");
       setPending(false);
-      router.push("/login");
+      const next = searchParams.get("next") || searchParams.get("redirect");
+      router.push(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
       return;
     }
 
@@ -143,6 +145,7 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
             onChange={(e) => setEmail(e.target.value)}
             onBlur={() => setCredentialsTouched((t) => ({ ...t, email: true }))}
             invalid={credentialsTouched.email && !!emailError}
+            autoComplete="email"
           />
           {credentialsTouched.email && <FieldError message={emailError} />}
         </div>
@@ -154,14 +157,12 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
             onChange={(e) => setPassword(e.target.value)}
             onBlur={() => setCredentialsTouched((t) => ({ ...t, password: true }))}
             invalid={credentialsTouched.password && !!passwordError}
+            autoComplete="new-password"
           />
-          {credentialsTouched.password ? (
-            <FieldError message={passwordError} />
-          ) : (
-            <p className="mt-1.5 text-xs text-text-grey">
-              8+ characters, with uppercase, lowercase, a number, and a special character.
-            </p>
-          )}
+          {credentialsTouched.password && <FieldError message={passwordError} />}
+          <p className="mt-1.5 text-xs text-text-grey">
+            8+ characters, with uppercase, lowercase, a number, and a special character.
+          </p>
         </div>
         <p className="mb-4.5 text-xs leading-relaxed text-text-grey">
           By continuing, you agree to itsmyKalyanam&apos;s Terms of Service and Privacy Policy.
@@ -222,6 +223,7 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
             invalid={firstNameTouched && !!firstNameError}
             placeholder="e.g. Aditi"
             maxLength={100}
+            autoComplete="given-name"
           />
           {firstNameTouched && <FieldError message={firstNameError} />}
         </div>
@@ -234,6 +236,7 @@ export function SignupWizard({ accountType }: { accountType: AccountType }) {
             onChange={(e) => setLastName(e.target.value)}
             placeholder="e.g. Sharma"
             maxLength={100}
+            autoComplete="family-name"
           />
         </div>
         <Button type="submit" variant="primary" block disabled={pending}>

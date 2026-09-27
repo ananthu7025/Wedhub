@@ -83,42 +83,23 @@ export function SearchFilterBar({
     setOpenDropdown(null);
   }
 
-  // Category/city selection navigates to the canonical SEO landing page
-  // (/category/<seoSlug>, /category/<seoSlug>/<citySlug>, or /city/<citySlug>)
-  // instead of staying on /search?categoryId=...&cityId=... (task item #4:
-  // "prefer /wedding-photographers/kochi over an ugly query-only URL").
-  // Secondary filters already in the URL (budget/verified/sort/etc.) are
-  // preserved as query params on the new path so the visitor's other
-  // choices aren't lost mid-navigation.
+  // Category/city selection updates the search parameters on /search so all
+  // active filters (budget, verified, sort, catalog price, etc.) remain combined.
   function navigateToSeoOrSearch(nextCategory: Category | undefined, nextCity: Location | undefined) {
     setOpenDropdown(null);
-
-    if (!nextCategory && !nextCity) {
-      const next = new URLSearchParams(searchParams.toString());
-      next.delete("categoryId");
-      next.delete("cityId");
-      next.delete("page");
-      router.push(`/search?${next.toString()}`);
-      return;
-    }
-
-    const secondaryParams = new URLSearchParams(searchParams.toString());
-    secondaryParams.delete("categoryId");
-    secondaryParams.delete("cityId");
-    secondaryParams.delete("page");
-    const secondaryQuery = secondaryParams.toString();
-    const suffix = secondaryQuery ? `?${secondaryQuery}` : "";
-
-    let path: string;
-    if (nextCategory && nextCity) {
-      path = `/category/${resolveCategorySeoSlug(nextCategory.slug)}/${nextCity.slug}`;
-    } else if (nextCategory) {
-      path = `/category/${resolveCategorySeoSlug(nextCategory.slug)}`;
+    const next = new URLSearchParams(searchParams.toString());
+    if (nextCategory) {
+      next.set("categoryId", nextCategory.id);
     } else {
-      path = `/city/${nextCity!.slug}`;
+      next.delete("categoryId");
     }
-
-    router.push(`${path}${suffix}`);
+    if (nextCity) {
+      next.set("cityId", nextCity.id);
+    } else {
+      next.delete("cityId");
+    }
+    next.delete("page");
+    router.push(`/search?${next.toString()}`);
   }
 
   function toggleDropdown(name: string) {
@@ -517,6 +498,8 @@ export function SearchFilterBar({
                 ? "Newest"
                 : sort === "fastest_reply"
                 ? "Fastest to Reply"
+                : sort === "rating" || sort === "rating_high"
+                ? "Highest Rated"
                 : "Recommended"}
             </span>
             <svg
@@ -538,6 +521,7 @@ export function SearchFilterBar({
               <div className={`${panelClass} sm:left-auto sm:right-0 sm:w-48`}>
                 {[
                   { id: "relevance", label: "Recommended" },
+                  { id: "rating", label: "Highest Rated" },
                   { id: "price_low", label: "Price: Low to High" },
                   { id: "price_high", label: "Price: High to Low" },
                   { id: "newest", label: "Newest" },

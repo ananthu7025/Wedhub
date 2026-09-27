@@ -48,9 +48,21 @@ export interface VendorSearchResult {
   // See VendorDetail's identical field — reused as the "Premium vendor"
   // badge/ranking signal here too.
   isPremiumEligible: boolean;
+  avgRating?: number | null;
+  reviewCount?: number;
+  categoryId?: string | null;
 }
 
-export const SEARCH_SORT_OPTIONS = ["relevance", "price_low", "price_high", "newest", "recommended", "fastest_reply"] as const;
+export const SEARCH_SORT_OPTIONS = [
+  "relevance",
+  "price_low",
+  "price_high",
+  "newest",
+  "recommended",
+  "fastest_reply",
+  "rating",
+  "rating_high",
+] as const;
 export type SearchSort = (typeof SEARCH_SORT_OPTIONS)[number];
 
 export interface SearchVendorsParams {

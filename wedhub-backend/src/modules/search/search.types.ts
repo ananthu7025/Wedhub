@@ -34,5 +34,8 @@ export interface VendorSearchRow {
   similarity: number;
   categoryMatch: boolean;
   cityMatch: boolean;
+  categoryId: string | null;
   avgResponseTimeMs: number | null;
+  avgRating: number | null;
+  reviewCount: number;
 }

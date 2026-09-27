@@ -16,6 +16,15 @@ export const DEFAULT_DESCRIPTION =
 // vendor/category/post image of its own (never a fabricated vendor photo).
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/images/hero-wedding-bg.jpg`;
 
+export const CONTACT_EMAIL = "contact@itsmykalyanam.com";
+export const CONTACT_PHONE = "+91 8921399415";
+export const CONTACT_PHONE_RAW = "8921399415";
+
+export const SOCIAL_LINKS = {
+  instagram: "https://www.instagram.com/itsmykalyanam",
+  facebook: "https://www.facebook.com/share/1BeH8v5Z8s/?mibextid=wwXIfr",
+} as const;
+
 export function absoluteUrl(path: string): string {
   return path.startsWith("http") ? path : `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }

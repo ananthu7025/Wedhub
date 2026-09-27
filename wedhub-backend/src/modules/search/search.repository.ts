@@ -485,6 +485,8 @@ const SORT_CLAUSES: Record<string, Prisma.Sql> = {
   // Item 4 — vendors with no responded leads yet (NULL) sort last, same
   // NULLS LAST convention as price_low/price_high above.
   fastest_reply: Prisma.sql`"avgResponseTimeMs" ASC NULLS LAST, "profileCompleteness" DESC`,
+  rating: Prisma.sql`"avgRating" DESC NULLS LAST, "reviewCount" DESC, "profileCompleteness" DESC`,
+  rating_high: Prisma.sql`"avgRating" DESC NULLS LAST, "reviewCount" DESC, "profileCompleteness" DESC`,
 };
 
 export async function searchVendors(
@@ -537,7 +539,24 @@ export async function searchVendors(
           v.avg_response_time_ms AS "avgResponseTimeMs",
           (${similarity})::float AS similarity,
           ${categoryMatch} AS "categoryMatch",
-          ${cityMatch} AS "cityMatch"
+          ${cityMatch} AS "cityMatch",
+          (
+            SELECT vc.category_id::text
+            FROM vendor_categories vc
+            WHERE vc.vendor_id = v.id
+            ORDER BY vc.created_at ASC
+            LIMIT 1
+          ) AS "categoryId",
+          (
+            SELECT AVG(r.rating)::float
+            FROM reviews r
+            WHERE r.vendor_id = v.id AND r.status = 'APPROVED'
+          ) AS "avgRating",
+          (
+            SELECT COUNT(r.id)::int
+            FROM reviews r
+            WHERE r.vendor_id = v.id AND r.status = 'APPROVED'
+          ) AS "reviewCount"
         FROM vendors v
         LEFT JOIN vendor_profiles vp ON vp.vendor_id = v.id
         LEFT JOIN media logo ON logo.id = vp.logo_media_id AND logo.status = 'READY'

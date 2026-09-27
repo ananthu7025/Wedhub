@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { SearchControlsHeader } from "./SearchControlsHeader";
 import { SearchCard } from "./SearchCard";
 import { trackEvent } from "@/lib/analytics/track";
+import { useToast } from "@/components/ui/Toast";
 import type { Category, Location, VendorSearchResult } from "@/lib/api/vendors.types";
 
 const MAX_COMPARE = 5;
@@ -48,29 +49,53 @@ export function SearchResultsView({
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { showToast } = useToast();
 
-  // Item 16: compare-from-search-results — not restricted to the
-  // shortlist. Category matching isn't checked here (VendorSearchResult
-  // carries no categoryId — see vendors.types.ts) since the backend already
-  // enforces "same primary category" and returns a clear error; selecting
-  // across categories surfaces that error as a popup instead of a page
-  // navigation, same principle ShortlistGrid.tsx already follows (trust the
-  // backend's rejection message rather than re-implementing the check).
   const [compareSelected, setCompareSelected] = useState<Set<string>>(new Set());
 
-  function toggleCompare(vendorId: string) {
+  const activeCategoryId =
+    compareSelected.size > 0
+      ? vendors.find((v) => compareSelected.has(v.id))?.categoryId ?? selectedCategory?.id
+      : null;
+
+  function toggleCompare(vendor: VendorSearchResult) {
+    if (compareSelected.has(vendor.id)) {
+      setCompareSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(vendor.id);
+        return next;
+      });
+      return;
+    }
+
+    if (activeCategoryId && vendor.categoryId && vendor.categoryId !== activeCategoryId) {
+      showToast("You can only compare vendors from the same category", "error");
+      return;
+    }
+
+    if (compareSelected.size >= MAX_COMPARE) {
+      showToast(`You can compare up to ${MAX_COMPARE} vendors at a time`, "error");
+      return;
+    }
+
     setCompareSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(vendorId)) {
-        next.delete(vendorId);
-      } else if (next.size < MAX_COMPARE) {
-        next.add(vendorId);
-      }
+      next.add(vendor.id);
       return next;
     });
   }
 
   function goToCompare() {
+    if (compareSelected.size < 2) {
+      showToast("Select at least 2 vendors to compare", "error");
+      return;
+    }
+    const selectedVendors = vendors.filter((v) => compareSelected.has(v.id));
+    const catIds = new Set(selectedVendors.map((v) => v.categoryId).filter(Boolean));
+    if (catIds.size > 1) {
+      showToast("All vendors being compared must share the same primary category", "error");
+      return;
+    }
     router.push(`/compare?vendorIds=${Array.from(compareSelected).join(",")}&from=search`);
   }
 
@@ -173,53 +198,89 @@ export function SearchResultsView({
         />
       ) : viewMode === "list" ? (
         <div className="flex flex-col gap-5">
-          {vendors.map((vendor) => (
-            <SearchCard
-              key={vendor.id}
-              vendorId={vendor.id}
-              slug={vendor.slug}
-              businessName={vendor.businessName}
-              logoUrl={vendor.logoUrl}
-              logoBlurDataUrl={vendor.logoBlurDataUrl}
-              shortDescription={vendor.shortDescription}
-              startingPrice={vendor.startingPrice}
-              currency={vendor.currency}
-              verificationLevel={vendor.verificationLevel}
-              isPremiumEligible={vendor.isPremiumEligible}
-              isAuthenticated={isAuthenticated}
-              viewMode="list"
-              cityName={selectedCity?.name}
-              initialFavorited={favoritedSet.has(vendor.id)}
-              compareSelected={compareSelected.has(vendor.id)}
-              onToggleCompare={() => toggleCompare(vendor.id)}
-              avgResponseTimeMs={vendor.avgResponseTimeMs}
-            />
-          ))}
+          {vendors.map((vendor) => {
+            const isSelected = compareSelected.has(vendor.id);
+            const isMismatched = Boolean(
+              activeCategoryId &&
+              vendor.categoryId &&
+              vendor.categoryId !== activeCategoryId
+            );
+            const isMaxReached = compareSelected.size >= MAX_COMPARE && !isSelected;
+            const compareDisabled = isMismatched || isMaxReached;
+            const compareDisabledReason = isMismatched
+              ? "Can only compare vendors in the same category"
+              : isMaxReached
+              ? `You can compare up to ${MAX_COMPARE} vendors at a time`
+              : undefined;
+
+            return (
+              <SearchCard
+                key={vendor.id}
+                vendorId={vendor.id}
+                slug={vendor.slug}
+                businessName={vendor.businessName}
+                logoUrl={vendor.logoUrl}
+                logoBlurDataUrl={vendor.logoBlurDataUrl}
+                shortDescription={vendor.shortDescription}
+                startingPrice={vendor.startingPrice}
+                currency={vendor.currency}
+                verificationLevel={vendor.verificationLevel}
+                isPremiumEligible={vendor.isPremiumEligible}
+                isAuthenticated={isAuthenticated}
+                viewMode="list"
+                cityName={selectedCity?.name}
+                initialFavorited={favoritedSet.has(vendor.id)}
+                compareSelected={isSelected}
+                compareDisabled={compareDisabled}
+                compareDisabledReason={compareDisabledReason}
+                onToggleCompare={() => toggleCompare(vendor)}
+                avgResponseTimeMs={vendor.avgResponseTimeMs}
+              />
+            );
+          })}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {vendors.map((vendor) => (
-            <SearchCard
-              key={vendor.id}
-              vendorId={vendor.id}
-              slug={vendor.slug}
-              businessName={vendor.businessName}
-              logoUrl={vendor.logoUrl}
-              logoBlurDataUrl={vendor.logoBlurDataUrl}
-              shortDescription={vendor.shortDescription}
-              startingPrice={vendor.startingPrice}
-              currency={vendor.currency}
-              verificationLevel={vendor.verificationLevel}
-              isPremiumEligible={vendor.isPremiumEligible}
-              isAuthenticated={isAuthenticated}
-              viewMode="grid"
-              cityName={selectedCity?.name}
-              initialFavorited={favoritedSet.has(vendor.id)}
-              compareSelected={compareSelected.has(vendor.id)}
-              onToggleCompare={() => toggleCompare(vendor.id)}
-              avgResponseTimeMs={vendor.avgResponseTimeMs}
-            />
-          ))}
+          {vendors.map((vendor) => {
+            const isSelected = compareSelected.has(vendor.id);
+            const isMismatched = Boolean(
+              activeCategoryId &&
+              vendor.categoryId &&
+              vendor.categoryId !== activeCategoryId
+            );
+            const isMaxReached = compareSelected.size >= MAX_COMPARE && !isSelected;
+            const compareDisabled = isMismatched || isMaxReached;
+            const compareDisabledReason = isMismatched
+              ? "Can only compare vendors in the same category"
+              : isMaxReached
+              ? `You can compare up to ${MAX_COMPARE} vendors at a time`
+              : undefined;
+
+            return (
+              <SearchCard
+                key={vendor.id}
+                vendorId={vendor.id}
+                slug={vendor.slug}
+                businessName={vendor.businessName}
+                logoUrl={vendor.logoUrl}
+                logoBlurDataUrl={vendor.logoBlurDataUrl}
+                shortDescription={vendor.shortDescription}
+                startingPrice={vendor.startingPrice}
+                currency={vendor.currency}
+                verificationLevel={vendor.verificationLevel}
+                isPremiumEligible={vendor.isPremiumEligible}
+                isAuthenticated={isAuthenticated}
+                viewMode="grid"
+                cityName={selectedCity?.name}
+                initialFavorited={favoritedSet.has(vendor.id)}
+                compareSelected={isSelected}
+                compareDisabled={compareDisabled}
+                compareDisabledReason={compareDisabledReason}
+                onToggleCompare={() => toggleCompare(vendor)}
+                avgResponseTimeMs={vendor.avgResponseTimeMs}
+              />
+            );
+          })}
         </div>
       )}
 

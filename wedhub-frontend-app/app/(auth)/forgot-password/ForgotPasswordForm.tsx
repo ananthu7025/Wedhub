@@ -62,6 +62,7 @@ export function ForgotPasswordForm() {
           onChange={(e) => setEmail(e.target.value)}
           onBlur={() => setTouched(true)}
           invalid={touched && !!emailError}
+          autoComplete="email"
         />
         {touched && <FieldError message={emailError} />}
       </div>

@@ -52,14 +52,12 @@ export function ResetPasswordForm({ token }: { token: string }) {
           onChange={(e) => setPassword(e.target.value)}
           onBlur={() => setTouched(true)}
           invalid={touched && !!passwordError}
+          autoComplete="new-password"
         />
-        {touched ? (
-          <FieldError message={passwordError} />
-        ) : (
-          <p className="mt-1.5 text-xs text-text-grey">
-            8+ characters, with uppercase, lowercase, a number, and a special character.
-          </p>
-        )}
+        {touched && <FieldError message={passwordError} />}
+        <p className="mt-1.5 text-xs text-text-grey">
+          8+ characters, with uppercase, lowercase, a number, and a special character.
+        </p>
       </div>
       <Button type="submit" variant="primary" block disabled={pending}>
         {pending ? "Resetting…" : "Reset password"}

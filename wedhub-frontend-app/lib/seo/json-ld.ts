@@ -1,4 +1,4 @@
-import { BRAND_NAME, SITE_URL, absoluteUrl } from "./site";
+import { BRAND_NAME, SITE_URL, CONTACT_EMAIL, CONTACT_PHONE, SOCIAL_LINKS, absoluteUrl } from "./site";
 
 /**
  * schema.org JSON-LD generators — every function returns a plain object
@@ -43,6 +43,17 @@ export function organizationJsonLd() {
     name: BRAND_NAME,
     url: SITE_URL,
     logo: absoluteUrl("/icon.png"),
+    email: CONTACT_EMAIL,
+    telephone: CONTACT_PHONE,
+    sameAs: [SOCIAL_LINKS.instagram, SOCIAL_LINKS.facebook],
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: CONTACT_PHONE,
+      contactType: "customer service",
+      email: CONTACT_EMAIL,
+      areaServed: "IN",
+      availableLanguage: ["en", "ml"],
+    },
     areaServed: {
       "@type": "State",
       name: "Kerala",

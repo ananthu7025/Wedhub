@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { VendorCard } from "@/components/shared/VendorCard";
 import { useGuestShortlist } from "@/lib/hooks/useGuestShortlist";
+import { useToast } from "@/components/ui/Toast";
+import { cn } from "@/lib/utils/cn";
 
 const MAX_COMPARE = 5;
 
@@ -21,22 +23,53 @@ export function GuestShortlistView() {
   const searchParams = useSearchParams();
   const preselect = searchParams.get("compareVendorId");
   const guestShortlist = useGuestShortlist();
+  const { showToast } = useToast();
 
   const [selected, setSelected] = useState<Set<string>>(new Set(preselect ? [preselect] : []));
 
-  function toggleSelected(vendorId: string) {
+  const activeCategoryId =
+    selected.size > 0
+      ? guestShortlist.items.find((i) => selected.has(i.vendorId))?.vendor.categoryId ?? null
+      : null;
+
+  function toggleSelected(vendorId: string, vendorCategoryId?: string | null) {
+    if (selected.has(vendorId)) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(vendorId);
+        return next;
+      });
+      return;
+    }
+
+    if (activeCategoryId && vendorCategoryId && vendorCategoryId !== activeCategoryId) {
+      showToast("You can only compare vendors from the same category", "error");
+      return;
+    }
+
+    if (selected.size >= MAX_COMPARE) {
+      showToast(`You can compare up to ${MAX_COMPARE} vendors at a time`, "error");
+      return;
+    }
+
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(vendorId)) {
-        next.delete(vendorId);
-      } else if (next.size < MAX_COMPARE) {
-        next.add(vendorId);
-      }
+      next.add(vendorId);
       return next;
     });
   }
 
   function goToCompare() {
+    if (selected.size < 2) {
+      showToast("Select at least 2 vendors to compare", "error");
+      return;
+    }
+    const selectedItems = guestShortlist.items.filter((i) => selected.has(i.vendorId));
+    const catIds = new Set(selectedItems.map((i) => i.vendor.categoryId).filter(Boolean));
+    if (catIds.size > 1) {
+      showToast("All vendors being compared must share the same primary category", "error");
+      return;
+    }
     router.push(`/compare?vendorIds=${Array.from(selected).join(",")}&from=shortlist`);
   }
 
@@ -88,48 +121,81 @@ export function GuestShortlistView() {
       </div>
 
       <div className="grid grid-cols-4 gap-5 max-[900px]:grid-cols-2">
-        {guestShortlist.items.map((item) => (
-          <div key={item.vendorId} className="relative">
-            <VendorCard
-              vendorId={item.vendorId}
-              slug={item.vendor.slug}
-              businessName={item.vendor.businessName}
-              logoUrl={item.vendor.profile?.logoUrl ?? null}
-              logoBlurDataUrl={item.vendor.profile?.logoBlurDataUrl ?? null}
-              shortDescription={item.vendor.profile?.shortDescription ?? null}
-              startingPrice={item.vendor.profile?.startingPrice ?? null}
-              currency={item.vendor.profile?.currency ?? null}
-              isAuthenticated={false}
-              listContext="guest_shortlist"
-              onFavoriteToggle={(favorited) => {
-                // The card's own VendorHeartButton already wrote the removal
-                // to localStorage via its own useGuestShortlist() instance —
-                // this hook instance (this component's) hasn't re-read
-                // storage, so its `items` won't drop the card on its own.
-                // Mirror the removal into this instance's state directly
-                // rather than re-reading storage, so the grid updates in
-                // the same tick as the heart-button's own optimistic UI.
-                if (!favorited) {
-                  guestShortlist.remove(item.vendorId);
-                  setSelected((prev) => {
-                    const next = new Set(prev);
-                    next.delete(item.vendorId);
-                    return next;
-                  });
-                }
-              }}
-            />
-            <label className="absolute bottom-3 left-3.5 z-10 flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-1 text-[13px] shadow-sm">
-              <input
-                type="checkbox"
-                checked={selected.has(item.vendorId)}
-                onChange={() => toggleSelected(item.vendorId)}
-                className="accent-brand-primary"
+        {guestShortlist.items.map((item) => {
+          const isSelected = selected.has(item.vendorId);
+          const isMismatched = Boolean(
+            activeCategoryId &&
+            item.vendor.categoryId &&
+            item.vendor.categoryId !== activeCategoryId
+          );
+          const isMaxReached = selected.size >= MAX_COMPARE && !isSelected;
+          const isDisabled = isMismatched || isMaxReached;
+          const disabledReason = isMismatched
+            ? "Can only compare vendors in the same category"
+            : isMaxReached
+            ? `You can compare up to ${MAX_COMPARE} vendors at a time`
+            : undefined;
+
+          return (
+            <div key={item.vendorId} className="relative">
+              <VendorCard
+                vendorId={item.vendorId}
+                slug={item.vendor.slug}
+                businessName={item.vendor.businessName}
+                logoUrl={item.vendor.profile?.logoUrl ?? null}
+                logoBlurDataUrl={item.vendor.profile?.logoBlurDataUrl ?? null}
+                shortDescription={item.vendor.profile?.shortDescription ?? null}
+                startingPrice={item.vendor.profile?.startingPrice ?? null}
+                currency={item.vendor.profile?.currency ?? null}
+                categoryId={item.vendor.categoryId}
+                isAuthenticated={false}
+                listContext="guest_shortlist"
+                onFavoriteToggle={(favorited) => {
+                  if (!favorited) {
+                    guestShortlist.remove(item.vendorId);
+                    setSelected((prev) => {
+                      const next = new Set(prev);
+                      next.delete(item.vendorId);
+                      return next;
+                    });
+                  }
+                }}
               />
-              Compare
-            </label>
-          </div>
-        ))}
+              <label
+                className={cn(
+                  "absolute bottom-3 left-3.5 z-10 flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] shadow-sm transition-opacity",
+                  isDisabled
+                    ? "bg-gray-100/90 text-gray-400 cursor-not-allowed opacity-60"
+                    : "bg-white/90 text-text-dark cursor-pointer hover:bg-white"
+                )}
+                title={isDisabled ? disabledReason : undefined}
+                onClick={(e) => {
+                  if (isDisabled) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    toggleSelected(item.vendorId, item.vendor.categoryId);
+                  }
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  disabled={isDisabled}
+                  onChange={() => toggleSelected(item.vendorId, item.vendor.categoryId)}
+                  onClick={(e) => {
+                    if (isDisabled) {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      toggleSelected(item.vendorId, item.vendor.categoryId);
+                    }
+                  }}
+                  className={cn("accent-brand-primary", isDisabled && "cursor-not-allowed")}
+                />
+                Compare
+              </label>
+            </div>
+          );
+        })}
       </div>
     </>
   );

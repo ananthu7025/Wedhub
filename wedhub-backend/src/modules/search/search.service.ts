@@ -24,6 +24,9 @@ function toPublicVendorSummary(row: VendorSearchRow & { isPremiumEligible?: bool
     logoBlurDataUrl: row.logoBlurDataUrl,
     avgResponseTimeMs: row.avgResponseTimeMs,
     isPremiumEligible: row.isPremiumEligible ?? false,
+    avgRating: row.avgRating ?? null,
+    reviewCount: row.reviewCount ?? 0,
+    categoryId: row.categoryId ?? null,
   };
 }
 

@@ -50,7 +50,7 @@ const envSchema = z.object({
   // sending will actually work — this default is a display placeholder, not
   // a guarantee the domain is set up. Update EMAIL_FROM_ADDRESS in the real
   // environment once itsmykalyanam.com (or a subdomain) is verified there.
-  EMAIL_FROM_ADDRESS: z.string().default("itsmyKalyanam <notifications@wedhub.dev>"),
+  EMAIL_FROM_ADDRESS: z.string().default("itsmyKalyanam <contact@itsmykalyanam.com>"),
 
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
   ADMIN_URL: z.string().url().default("http://localhost:3001"),

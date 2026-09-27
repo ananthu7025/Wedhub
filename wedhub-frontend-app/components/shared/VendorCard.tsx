@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { trackEvent } from "@/lib/analytics/track";
 import { VendorHeartButton } from "./VendorHeartButton";
-import { PremiumBadge } from "./PremiumBadge";
+import { PremiumBadge, CrownRibbonBadge, VerifiedBadge } from "./PremiumBadge";
 
 /**
  * Shared vendor card — reused across search results, homepage featured
@@ -48,6 +48,7 @@ export function VendorCard({
   onFavoriteToggle,
   verificationLevel = "UNVERIFIED",
   status = "APPROVED",
+  categoryId,
 }: {
   vendorId?: string;
   slug: string;
@@ -68,6 +69,7 @@ export function VendorCard({
   /** Only needed for the ShortlistVendorSummary snapshot a guest's heart-tap saves locally — every real caller renders an already-approved, listed vendor, so the defaults are correct almost everywhere this is omitted. */
   verificationLevel?: string;
   status?: string;
+  categoryId?: string | null;
 }) {
   const impressionFired = useRef(false);
 
@@ -103,11 +105,7 @@ export function VendorCard({
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm text-text-grey">No photo yet</div>
         )}
-        {featured && (
-          <span className="absolute top-2.5 left-2.5">
-            <Badge variant="crimson">Featured</Badge>
-          </span>
-        )}
+        {(isPremiumEligible || featured) && <CrownRibbonBadge />}
         {vendorId && (
           <VendorHeartButton
             vendorId={vendorId}
@@ -117,6 +115,7 @@ export function VendorCard({
               slug,
               status,
               verificationLevel,
+              categoryId,
               profile: { shortDescription, startingPrice, currency, logoUrl, logoBlurDataUrl: logoBlurDataUrl ?? null },
             }}
             isAuthenticated={isAuthenticated}
@@ -127,8 +126,9 @@ export function VendorCard({
         )}
       </div>
       <div className="p-3.5">
-        <div className="mb-0.5 flex items-center gap-1.5">
-          <span className="truncate text-sm font-bold">{businessName}</span>
+        <div className="mb-0.5 flex items-center gap-1.5 flex-wrap">
+          <span className="truncate text-sm font-bold text-gray-900">{businessName}</span>
+          {verificationLevel && verificationLevel !== "UNVERIFIED" && <VerifiedBadge />}
           {isPremiumEligible && <PremiumBadge />}
         </div>
         {shortDescription && <p className="mb-2 line-clamp-2 text-xs text-text-grey">{shortDescription}</p>}

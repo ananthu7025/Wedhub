@@ -24,6 +24,7 @@ function toPublicShortlists<
   T extends {
     items: Array<{
       vendor: {
+        categories?: Array<{ categoryId: string }>;
         profile: {
           shortDescription: string | null;
           startingPrice: unknown;
@@ -39,13 +40,15 @@ function toPublicShortlists<
     items: shortlist.items.map((item) => {
       const profile = item.vendor.profile;
       const logoMedia = profile?.logoMedia ?? null;
+      const categoryId = item.vendor.categories?.[0]?.categoryId ?? null;
       if (!profile) {
-        return { ...item, vendor: { ...item.vendor, profile: null } };
+        return { ...item, vendor: { ...item.vendor, categoryId, profile: null } };
       }
       return {
         ...item,
         vendor: {
           ...item.vendor,
+          categoryId,
           profile: {
             shortDescription: profile.shortDescription,
             startingPrice: profile.startingPrice,

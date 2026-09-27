@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/shared/BrandLogo";
 import { FooterNewsletterForm } from "@/components/shared/FooterNewsletterForm";
 import { listCategories } from "@/lib/api/catalog";
+import { CONTACT_EMAIL, CONTACT_PHONE, SOCIAL_LINKS } from "@/lib/seo/site";
 
 // Resolves a real Category.id for a footer link's ?categoryId= param — a
 // hardcoded slug-shaped string like "venue" never matches search's UUID
@@ -36,28 +37,58 @@ export async function PublicFooter() {
               From finding venues and photographers to bridal makeup, decor, and e-invites, itsmyKalyanam connects you with wedding vendors, transparent pricing, and wedding inspiration.
             </p>
 
-            <div className="mt-6">
-              <div className="text-xs font-semibold text-jet-black mb-3">FOLLOW US</div>
-              <div className="flex items-center gap-2.5">
-                {[
-                  { name: "Facebook", href: "https://facebook.com", icon: "M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" },
-                  { name: "Twitter", href: "https://twitter.com", icon: "M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" },
-                  { name: "Instagram", href: "https://instagram.com", icon: "M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37zm1.5-4.87h.01M6.5 2h11A4.5 4.5 0 0122 6.5v11a4.5 4.5 0 01-4.5 4.5h-11A4.5 4.5 0 012 17.5v-11A4.5 4.5 0 016.5 2z" },
-                  { name: "YouTube", href: "https://youtube.com", icon: "M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 11.75a29 29 0 00.46 5.33A2.78 2.78 0 003.4 19.1c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 001.94-2 29 29 0 00.46-5.25 29 29 0 00-.46-5.43zM9.75 15.02V8.53l5.75 3.24-5.75 3.25z" },
-                ].map((s) => (
+            <div className="mt-6 flex flex-wrap items-start gap-8">
+              <div>
+                <div className="text-xs font-semibold text-jet-black mb-3">FOLLOW US</div>
+                <div className="flex items-center gap-2.5">
                   <a
-                    key={s.name}
-                    href={s.href}
+                    href={SOCIAL_LINKS.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-input text-text-grey transition-colors hover:bg-brand-primary hover:text-white"
-                    aria-label={s.name}
+                    aria-label="Instagram"
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d={s.icon} />
+                      <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37zm1.5-4.87h.01M6.5 2h11A4.5 4.5 0 0122 6.5v11a4.5 4.5 0 01-4.5 4.5h-11A4.5 4.5 0 012 17.5v-11A4.5 4.5 0 016.5 2z" />
                     </svg>
                   </a>
-                ))}
+                  <a
+                    href={SOCIAL_LINKS.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-input text-text-grey transition-colors hover:bg-brand-primary hover:text-white"
+                    aria-label="Facebook"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+
+              <div className="border-l border-border pl-8">
+                <div className="text-xs font-semibold text-jet-black mb-3">CONTACT US</div>
+                <div className="flex flex-col gap-2 text-xs text-text-grey">
+                  <a
+                    href={`mailto:${CONTACT_EMAIL}`}
+                    className="flex items-center gap-2 transition-colors hover:text-brand-primary"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect width="20" height="16" x="2" y="4" rx="2" />
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                    </svg>
+                    {CONTACT_EMAIL}
+                  </a>
+                  <a
+                    href={`tel:${CONTACT_PHONE.replace(/\s+/g, "")}`}
+                    className="flex items-center gap-2 transition-colors hover:text-brand-primary"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
+                    {CONTACT_PHONE}
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -132,7 +163,11 @@ export async function PublicFooter() {
           <div>
             &copy; {new Date().getFullYear()} itsmyKalyanam Technologies Pvt. Ltd. All rights reserved.
           </div>
-          <div className="mt-3 flex items-center gap-4 sm:mt-0">
+          <div className="mt-3 flex items-center gap-3 sm:mt-0">
+            <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-brand-primary hover:underline">{CONTACT_EMAIL}</a>
+            <span>&middot;</span>
+            <a href={`tel:${CONTACT_PHONE.replace(/\s+/g, "")}`} className="hover:text-brand-primary hover:underline">{CONTACT_PHONE}</a>
+            <span>&middot;</span>
             <a href="/sitemap.xml" className="hover:text-brand-primary hover:underline">Sitemap</a>
           </div>
         </div>

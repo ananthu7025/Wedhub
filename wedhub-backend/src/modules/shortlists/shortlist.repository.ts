@@ -10,6 +10,10 @@ const SHORTLIST_WITH_ITEMS_INCLUDE = {
           slug: true,
           status: true,
           verificationLevel: true,
+          categories: {
+            select: { categoryId: true },
+            take: 1,
+          },
           profile: {
             select: {
               shortDescription: true,

@@ -4,10 +4,11 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { VendorHeartButton } from "@/components/shared/VendorHeartButton";
-import { PremiumBadge } from "@/components/shared/PremiumBadge";
+import { PremiumBadge, CrownRibbonBadge, VerifiedBadge } from "@/components/shared/PremiumBadge";
 import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { trackEvent } from "@/lib/analytics/track";
 import { formatResponseTimeBucket } from "@/lib/utils/response-time";
+import { cn } from "@/lib/utils/cn";
 import type { VerificationLevel } from "@/lib/api/vendors.types";
 
 interface SearchCardProps {
@@ -30,6 +31,8 @@ interface SearchCardProps {
   /** Item 16: compare-selection checkbox, rendered as a sibling overlay (same pattern as ShortlistGrid.tsx) since the whole card is a <Link>. Omitted entirely when not provided, e.g. on pages that don't offer comparison. */
   compareSelected?: boolean;
   onToggleCompare?: () => void;
+  compareDisabled?: boolean;
+  compareDisabledReason?: string;
   /** Item 4: null when the vendor has no responded leads yet — nothing rendered in that case. */
   avgResponseTimeMs?: number | null;
 }
@@ -51,6 +54,8 @@ export function SearchCard({
   initialFavorited,
   compareSelected,
   onToggleCompare,
+  compareDisabled = false,
+  compareDisabledReason,
   avgResponseTimeMs,
 }: SearchCardProps) {
   const responseTimeLabel = formatResponseTimeBucket(avgResponseTimeMs ?? null);
@@ -79,18 +84,37 @@ export function SearchCard({
 
   const compareCheckbox = onToggleCompare ? (
     <label
-      className="absolute bottom-3 left-3.5 z-10 flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-1 text-[11px] font-semibold shadow-sm"
-      onClick={(e) => e.stopPropagation()}
+      className={cn(
+        "absolute bottom-3 left-3.5 z-10 flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold shadow-sm transition-opacity",
+        compareDisabled
+          ? "bg-gray-100/90 text-gray-400 cursor-not-allowed opacity-60"
+          : "bg-white/90 text-gray-800 cursor-pointer hover:bg-white"
+      )}
+      title={compareDisabled ? (compareDisabledReason ?? "Can only compare vendors in the same category") : undefined}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (compareDisabled) {
+          e.preventDefault();
+          onToggleCompare();
+        }
+      }}
     >
       <input
         type="checkbox"
         checked={!!compareSelected}
+        disabled={compareDisabled}
         onChange={(e) => {
           e.stopPropagation();
           onToggleCompare();
         }}
-        onClick={(e) => e.stopPropagation()}
-        className="accent-[#e00b41]"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (compareDisabled) {
+            e.preventDefault();
+            onToggleCompare();
+          }
+        }}
+        className={cn("accent-[#e00b41]", compareDisabled && "cursor-not-allowed")}
       />
       Compare
     </label>
@@ -122,15 +146,8 @@ export function SearchCard({
             </div>
           )}
 
-          {/* Real Verified Badge (only if verified) */}
-          {isVerified && (
-            <div className="absolute top-3 left-0 bg-emerald-700 text-white px-2.5 py-0.5 text-[11px] font-bold tracking-wide rounded-r-md shadow-xs flex items-center gap-1">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              <span>Verified</span>
-            </div>
-          )}
+          {/* Crown Ribbon for Premium */}
+          {isPremiumEligible && <CrownRibbonBadge />}
 
           {/* Wishlist Heart Button */}
           <VendorHeartButton
@@ -148,8 +165,9 @@ export function SearchCard({
           <div>
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h3 className="flex items-center gap-1.5 text-lg font-bold text-gray-900 group-hover:text-[#e00b41] transition-colors">
+                <h3 className="flex items-center gap-1.5 text-lg font-bold text-gray-900 group-hover:text-[#e00b41] transition-colors flex-wrap">
                   {businessName}
+                  {isVerified && <VerifiedBadge />}
                   {isPremiumEligible && <PremiumBadge />}
                 </h3>
                 <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
@@ -241,15 +259,8 @@ export function SearchCard({
           </div>
         )}
 
-        {/* Real Verified Badge (only if verified) */}
-        {isVerified && (
-          <div className="absolute top-3 left-0 bg-emerald-700 text-white px-2.5 py-0.5 text-[11px] font-bold tracking-wide rounded-r-md shadow-xs flex items-center gap-1">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
-            <span>Verified</span>
-          </div>
-        )}
+        {/* Crown Ribbon for Premium */}
+        {isPremiumEligible && <CrownRibbonBadge />}
 
         {/* Heart wishlist button */}
         <VendorHeartButton
@@ -266,8 +277,9 @@ export function SearchCard({
       <div className="flex flex-1 flex-col justify-between p-4">
         <div>
           <div className="flex items-center justify-between gap-1">
-            <h3 className="flex min-w-0 items-center gap-1 truncate text-sm sm:text-base font-bold text-gray-900 group-hover:text-[#e00b41] transition-colors">
+            <h3 className="flex min-w-0 items-center gap-1.5 truncate text-sm sm:text-base font-bold text-gray-900 group-hover:text-[#e00b41] transition-colors">
               <span className="truncate">{businessName}</span>
+              {isVerified && <VerifiedBadge />}
               {isPremiumEligible && <PremiumBadge />}
             </h3>
             {cityName && (

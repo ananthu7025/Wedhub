@@ -1,6 +1,15 @@
 import { z } from "zod";
 
-const SORT_OPTIONS = ["relevance", "price_low", "price_high", "newest", "recommended", "fastest_reply"] as const;
+const SORT_OPTIONS = [
+  "relevance",
+  "price_low",
+  "price_high",
+  "newest",
+  "recommended",
+  "fastest_reply",
+  "rating",
+  "rating_high",
+] as const;
 
 export const searchVendorsQuerySchema = z.object({
   keyword: z.string().trim().min(1).max(200).optional(),

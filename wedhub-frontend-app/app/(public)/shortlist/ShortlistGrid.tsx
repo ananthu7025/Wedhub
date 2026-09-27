@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { VendorCard } from "@/components/shared/VendorCard";
+import { useToast } from "@/components/ui/Toast";
+import { cn } from "@/lib/utils/cn";
 import type { ShortlistItem } from "@/lib/api/shortlists.types";
 
 const MAX_COMPARE = 5;
@@ -14,27 +16,45 @@ const MAX_COMPARE = 5;
  * (delegated to VendorCard's own VendorHeartButton via onFavoriteToggle,
  * rather than a separate remove button, so shortlisting/un-shortlisting
  * looks and behaves identically here and in search results).
- * Comparison requires 2-5 vendors of the same primary category (backend
- * validates this — see frontenddocs/10-risks-and-open-questions.md); we
- * surface the backend's rejection message rather than re-implementing the
- * category-match check client-side.
+ * Comparison requires 2-5 vendors of the same primary category.
  */
 export function ShortlistGrid({ items }: { items: ShortlistItem[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselect = searchParams.get("compareVendorId");
+  const { showToast } = useToast();
 
   const [visibleItems, setVisibleItems] = useState(items);
   const [selected, setSelected] = useState<Set<string>>(new Set(preselect ? [preselect] : []));
 
-  function toggleSelected(vendorId: string) {
+  const activeCategoryId =
+    selected.size > 0
+      ? visibleItems.find((i) => selected.has(i.vendorId))?.vendor.categoryId ?? null
+      : null;
+
+  function toggleSelected(vendorId: string, vendorCategoryId?: string | null) {
+    if (selected.has(vendorId)) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(vendorId);
+        return next;
+      });
+      return;
+    }
+
+    if (activeCategoryId && vendorCategoryId && vendorCategoryId !== activeCategoryId) {
+      showToast("You can only compare vendors from the same category", "error");
+      return;
+    }
+
+    if (selected.size >= MAX_COMPARE) {
+      showToast(`You can compare up to ${MAX_COMPARE} vendors at a time`, "error");
+      return;
+    }
+
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(vendorId)) {
-        next.delete(vendorId);
-      } else if (next.size < MAX_COMPARE) {
-        next.add(vendorId);
-      }
+      next.add(vendorId);
       return next;
     });
   }
@@ -49,6 +69,16 @@ export function ShortlistGrid({ items }: { items: ShortlistItem[] }) {
   }
 
   function goToCompare() {
+    if (selected.size < 2) {
+      showToast("Select at least 2 vendors to compare", "error");
+      return;
+    }
+    const selectedItems = visibleItems.filter((i) => selected.has(i.vendorId));
+    const catIds = new Set(selectedItems.map((i) => i.vendor.categoryId).filter(Boolean));
+    if (catIds.size > 1) {
+      showToast("All vendors being compared must share the same primary category", "error");
+      return;
+    }
     router.push(`/compare?vendorIds=${Array.from(selected).join(",")}&from=shortlist`);
   }
 
@@ -83,34 +113,74 @@ export function ShortlistGrid({ items }: { items: ShortlistItem[] }) {
       </div>
 
       <div className="grid grid-cols-4 gap-5 max-[900px]:grid-cols-2">
-        {visibleItems.map((item) => (
-          <div key={item.vendorId} className="relative">
-            <VendorCard
-              vendorId={item.vendorId}
-              slug={item.vendor.slug}
-              businessName={item.vendor.businessName}
-              logoUrl={item.vendor.profile?.logoUrl ?? null}
-              logoBlurDataUrl={item.vendor.profile?.logoBlurDataUrl ?? null}
-              shortDescription={item.vendor.profile?.shortDescription ?? null}
-              startingPrice={item.vendor.profile?.startingPrice ?? null}
-              currency={item.vendor.profile?.currency ?? null}
-              isAuthenticated
-              listContext="shortlist"
-              onFavoriteToggle={(favorited) => {
-                if (!favorited) handleUnfavorite(item.vendorId);
-              }}
-            />
-            <label className="absolute bottom-3 left-3.5 z-10 flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-1 text-[13px] shadow-sm">
-              <input
-                type="checkbox"
-                checked={selected.has(item.vendorId)}
-                onChange={() => toggleSelected(item.vendorId)}
-                className="accent-brand-primary"
+        {visibleItems.map((item) => {
+          const isSelected = selected.has(item.vendorId);
+          const isMismatched = Boolean(
+            activeCategoryId &&
+            item.vendor.categoryId &&
+            item.vendor.categoryId !== activeCategoryId
+          );
+          const isMaxReached = selected.size >= MAX_COMPARE && !isSelected;
+          const isDisabled = isMismatched || isMaxReached;
+          const disabledReason = isMismatched
+            ? "Can only compare vendors in the same category"
+            : isMaxReached
+            ? `You can compare up to ${MAX_COMPARE} vendors at a time`
+            : undefined;
+
+          return (
+            <div key={item.vendorId} className="relative">
+              <VendorCard
+                vendorId={item.vendorId}
+                slug={item.vendor.slug}
+                businessName={item.vendor.businessName}
+                logoUrl={item.vendor.profile?.logoUrl ?? null}
+                logoBlurDataUrl={item.vendor.profile?.logoBlurDataUrl ?? null}
+                shortDescription={item.vendor.profile?.shortDescription ?? null}
+                startingPrice={item.vendor.profile?.startingPrice ?? null}
+                currency={item.vendor.profile?.currency ?? null}
+                categoryId={item.vendor.categoryId}
+                isAuthenticated
+                listContext="shortlist"
+                onFavoriteToggle={(favorited) => {
+                  if (!favorited) handleUnfavorite(item.vendorId);
+                }}
               />
-              Compare
-            </label>
-          </div>
-        ))}
+              <label
+                className={cn(
+                  "absolute bottom-3 left-3.5 z-10 flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] shadow-sm transition-opacity",
+                  isDisabled
+                    ? "bg-gray-100/90 text-gray-400 cursor-not-allowed opacity-60"
+                    : "bg-white/90 text-text-dark cursor-pointer hover:bg-white"
+                )}
+                title={isDisabled ? disabledReason : undefined}
+                onClick={(e) => {
+                  if (isDisabled) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    toggleSelected(item.vendorId, item.vendor.categoryId);
+                  }
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  disabled={isDisabled}
+                  onChange={() => toggleSelected(item.vendorId, item.vendor.categoryId)}
+                  onClick={(e) => {
+                    if (isDisabled) {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      toggleSelected(item.vendorId, item.vendor.categoryId);
+                    }
+                  }}
+                  className={cn("accent-brand-primary", isDisabled && "cursor-not-allowed")}
+                />
+                Compare
+              </label>
+            </div>
+          );
+        })}
       </div>
     </>
   );

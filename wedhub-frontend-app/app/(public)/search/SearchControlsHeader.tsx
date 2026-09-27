@@ -131,6 +131,19 @@ export function SearchControlsHeader({
             {/* Hidden inputs to preserve context in native submission */}
             {selectedCategory && <input type="hidden" name="categoryId" value={selectedCategory.id} />}
             {selectedCity && <input type="hidden" name="cityId" value={selectedCity.id} />}
+            {priceMin !== undefined && <input type="hidden" name="priceMin" value={priceMin} />}
+            {priceMax !== undefined && <input type="hidden" name="priceMax" value={priceMax} />}
+            {verified && <input type="hidden" name="verified" value="true" />}
+            {searchParams.get("sort") && <input type="hidden" name="sort" value={searchParams.get("sort")!} />}
+            {searchParams.get("catalogPriceMin") && (
+              <input type="hidden" name="catalogPriceMin" value={searchParams.get("catalogPriceMin")!} />
+            )}
+            {searchParams.get("catalogPriceMax") && (
+              <input type="hidden" name="catalogPriceMax" value={searchParams.get("catalogPriceMax")!} />
+            )}
+            {searchParams.get("maxReplyHours") && (
+              <input type="hidden" name="maxReplyHours" value={searchParams.get("maxReplyHours")!} />
+            )}
 
             <input
               name="keyword"

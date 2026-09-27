@@ -18,13 +18,15 @@ const roleHomeRoute: Record<string, string> = {
 };
 
 interface SignupPageProps {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; next?: string; redirect?: string }>;
 }
 
 export default async function SignupPage({ searchParams }: SignupPageProps) {
   const session = await getOptionalSession();
-  const { type } = await searchParams;
-  const accountType = type === "vendor" ? "VENDOR" : "END_USER";
+  const sp = await searchParams;
+  const accountType = sp.type === "vendor" ? "VENDOR" : "END_USER";
+  const target = sp.next || sp.redirect;
+  const loginHref = target ? `/login?next=${encodeURIComponent(target)}` : "/login";
 
   if (session) {
     // A signed-in customer clicking "Register as a Vendor" (footer CTA,
@@ -47,7 +49,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
         </div>
       );
     }
-    redirect(roleHomeRoute[session.role] ?? "/");
+    redirect(target ?? roleHomeRoute[session.role] ?? "/");
   }
 
   return (
@@ -59,7 +61,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <p className="mb-6 text-[13px] text-text-grey">
           Already have an account?
-          <Link href="/login" className="ml-1 font-bold text-brand-primary no-underline">
+          <Link href={loginHref} className="ml-1 font-bold text-brand-primary no-underline">
             Log in
           </Link>
         </p>
