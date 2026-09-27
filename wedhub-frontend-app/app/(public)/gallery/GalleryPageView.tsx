@@ -163,30 +163,55 @@ export function GalleryPageView({
           <p className="text-sm text-text-grey">No photos in this category yet.</p>
         </div>
       ) : (
-        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+        <div className="columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3 sm:gap-4 space-y-3 sm:space-y-4">
           {displayItems.map((item, idx) => (
             <div
               key={item.key}
               onClick={() => setActiveIndex(idx)}
-              className="group relative cursor-pointer break-inside-avoid overflow-hidden rounded-2xl border border-border bg-surface-input shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+              className="group break-inside-avoid cursor-pointer mb-3 sm:mb-4"
             >
-              <div className={`relative w-full ${item.aspectRatioClass}`}>
+              {/* Photo Box */}
+              <div
+                className={`relative w-full ${item.aspectRatioClass} overflow-hidden rounded-[20px] sm:rounded-2xl border border-border bg-surface-input shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md`}
+              >
                 <Image
                   src={item.thumbUrl}
                   alt={item.title}
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
                   unoptimized={isPreOptimizedMediaUrl(item.thumbUrl)}
                   {...(item.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: item.blurDataUrl } : {})}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity group-hover:opacity-95" />
-                <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-                  <span className="inline-block rounded-full bg-white/25 px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm mb-1">
-                    {item.category}
-                  </span>
-                  <p className="text-xs font-bold leading-snug line-clamp-2">{item.title}</p>
+
+                {/* Desktop-only hover overlay (unchanged for screens > 900px) */}
+                <div className="hidden min-[901px]:block absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 transition-opacity group-hover:opacity-95">
+                  <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                    <span className="inline-block rounded-full bg-white/25 px-2 py-0.5 text-[10px] font-semibold backdrop-blur-sm mb-1">
+                      {item.category}
+                    </span>
+                    <p className="text-xs font-bold leading-snug line-clamp-2">{item.title}</p>
+                  </div>
                 </div>
+              </div>
+
+              {/* Mobile three-dots menu below photo on the right */}
+              <div className="flex justify-end pt-1.5 pb-0.5 pr-1 min-[901px]:hidden">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveIndex(idx);
+                  }}
+                  aria-label="Photo options"
+                  className="text-text-dark hover:text-text-grey p-1 transition-colors cursor-pointer"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <circle cx="5" cy="12" r="2" />
+                    <circle cx="12" cy="12" r="2" />
+                    <circle cx="19" cy="12" r="2" />
+                  </svg>
+                </button>
               </div>
             </div>
           ))}
