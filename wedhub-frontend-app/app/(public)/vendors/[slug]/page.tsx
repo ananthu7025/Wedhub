@@ -9,6 +9,7 @@ import { EnquiryCta } from "@/components/shared/EnquiryCta";
 import { JsonLd } from "@/components/shared/JsonLd";
 import { MessageVendorButton } from "@/components/shared/MessageVendorButton";
 import { VendorContactLinks } from "@/components/shared/VendorContactLinks";
+import { VendorMobileStickyBar } from "@/components/shared/VendorMobileStickyBar";
 import { VendorPortfolioTabs } from "@/components/portfolio/VendorPortfolioTabs";
 import { VendorRatingDistribution } from "@/components/portfolio/VendorRatingDistribution";
 import { MapPinIcon, StarIcon, CheckIcon } from "@/components/portfolio/icons";
@@ -294,6 +295,12 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                           {extraServiceAreaCities.length > 0 && ` +${extraServiceAreaCities.length} more city`}
                         </p>
                       )}
+                      {vendor.profile?.startingPrice && (
+                        <p className="mt-1 text-sm font-semibold text-white/95 min-[901px]:hidden">
+                          Starting from {vendor.profile.currency === "INR" ? "₹" : vendor.profile.currency}
+                          {Number(vendor.profile.startingPrice).toLocaleString("en-IN")}
+                        </p>
+                      )}
                       {vendor.profile?.shortDescription && (
                         <>
                           <div className="mt-2.5 h-px w-10 bg-white/50" />
@@ -348,6 +355,12 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                         {extraServiceAreaCities.length > 0 && ` +${extraServiceAreaCities.length} more city`}
                       </p>
                     )}
+                    {vendor.profile?.startingPrice && (
+                      <p className="mt-1 text-sm font-semibold text-brand-primary min-[901px]:hidden">
+                        Starting from {vendor.profile.currency === "INR" ? "₹" : vendor.profile.currency}
+                        {Number(vendor.profile.startingPrice).toLocaleString("en-IN")}
+                      </p>
+                    )}
                     {vendor.profile?.shortDescription && (
                       <p className="mt-1.5 text-sm font-medium text-text-dark">{vendor.profile.shortDescription}</p>
                     )}
@@ -363,7 +376,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
               )}
             </div>
 
-            <aside>
+            <aside className="max-[900px]:hidden">
               <div className="sticky top-[90px] rounded-xl border border-border bg-white p-5 shadow-[var(--shadow-card)]">
                 {vendor.profile?.startingPrice && (
                   <div className="mb-4 border-b border-border pb-4">
@@ -564,7 +577,13 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
           )}
         </div>
       </div>
-      <div className="h-16" />
+      <div className="h-16 max-[900px]:h-24" />
+      <VendorMobileStickyBar
+        vendorId={vendor.id}
+        vendorSlug={vendor.slug}
+        businessName={vendor.businessName}
+        isAuthenticated={session !== null}
+      />
     </>
   );
 }
