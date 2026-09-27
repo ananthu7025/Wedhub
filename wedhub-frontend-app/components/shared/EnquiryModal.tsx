@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { CloseIcon } from "@/components/portfolio/icons";
 import { createSingleVendorEnquiry } from "@/lib/api/shortlists-client";
 import { trackEvent } from "@/lib/analytics/track";
@@ -55,6 +56,7 @@ function EnquiryModalContent({
   onClose: () => void;
 }) {
   const { showToast } = useToast();
+  const [mounted, setMounted] = useState(false);
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -103,6 +105,10 @@ function EnquiryModalContent({
   const messageError = message.trim().length === 0 ? "Please tell the vendor what you need." : null;
 
   useEffect(() => {
+    setMounted(true);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     fetch("/api/users/me", { credentials: "include" })
       .then((res) => res.json())
       .then((json: { success: boolean; data?: MeResponse }) => {
@@ -146,6 +152,10 @@ function EnquiryModalContent({
       .catch(() => {
         // Prefill is a convenience, not a requirement — leave fields blank on failure.
       });
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
   }, []);
 
   useEffect(() => {
@@ -208,19 +218,21 @@ function EnquiryModalContent({
     }
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-200 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+      className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/60 backdrop-blur-xs overflow-y-auto p-0 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:max-h-[90vh] sm:max-w-[440px] sm:rounded-2xl sm:p-7"
+        className="relative max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[85dvh] sm:max-w-[480px] sm:rounded-2xl sm:p-7"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
-          className="float-right border-none bg-transparent text-lg text-text-grey"
+          className="float-right border-none bg-transparent p-1 text-lg text-text-grey hover:text-black cursor-pointer"
           aria-label="Close"
         >
           <CloseIcon className="h-4 w-4" />
@@ -379,6 +391,7 @@ function EnquiryModalContent({
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
