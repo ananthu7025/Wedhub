@@ -168,7 +168,7 @@ export async function PublicFooter() {
             <span>&middot;</span>
             <a href={`tel:${CONTACT_PHONE.replace(/\s+/g, "")}`} className="hover:text-brand-primary hover:underline">{CONTACT_PHONE}</a>
             <span>&middot;</span>
-            <a href="/sitemap.xml" className="hover:text-brand-primary hover:underline">Sitemap</a>
+            <Link href="/sitemap" className="hover:text-brand-primary hover:underline">Sitemap</Link>
           </div>
         </div>
       </div>

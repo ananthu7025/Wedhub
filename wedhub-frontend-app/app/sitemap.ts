@@ -90,6 +90,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/blog`, changeFrequency: "daily", priority: 0.7 },
     { url: `${SITE_URL}/gallery`, changeFrequency: "weekly", priority: 0.5 },
     { url: `${SITE_URL}/real-weddings`, changeFrequency: "weekly", priority: 0.5 },
+    { url: `${SITE_URL}/sitemap`, changeFrequency: "weekly", priority: 0.5 },
   ];
 
   const vendorEntries: MetadataRoute.Sitemap = vendors.map((vendor) => ({
