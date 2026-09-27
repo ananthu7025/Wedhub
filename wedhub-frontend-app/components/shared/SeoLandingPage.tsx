@@ -122,11 +122,25 @@ export async function SeoLandingPage({ seo }: { seo: SeoPageData }) {
         )}
 
         <div className="mb-5 flex items-center justify-between">
-          <span className="text-sm text-text-grey">
-            <strong className="text-text-dark">{meta?.total ?? vendors.length}</strong> vendors found
+          <span className="text-sm text-text-grey font-medium">
+            <strong className="text-text-dark font-bold">{meta?.total ?? vendors.length}</strong> vendors found
           </span>
-          <Link href={searchHref} className="text-[13px] font-bold text-brand-primary no-underline hover:underline">
-            Refine with filters →
+          <Link
+            href={searchHref}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-text-dark no-underline shadow-xs hover:bg-surface-input"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="4" y1="21" x2="4" y2="14" />
+              <line x1="4" y1="10" x2="4" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12" y2="3" />
+              <line x1="20" y1="21" x2="20" y2="16" />
+              <line x1="20" y1="12" x2="20" y2="3" />
+              <line x1="1" y1="14" x2="7" y2="14" />
+              <line x1="9" y1="8" x2="15" y2="8" />
+              <line x1="17" y1="16" x2="23" y2="16" />
+            </svg>
+            Filter
           </Link>
         </div>
 
@@ -138,23 +152,31 @@ export async function SeoLandingPage({ seo }: { seo: SeoPageData }) {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-5 max-[900px]:grid-cols-2">
-            {vendors.map((vendor) => (
-              <VendorCard
-                key={vendor.id}
-                vendorId={vendor.id}
-                slug={vendor.slug}
-                businessName={vendor.businessName}
-                logoUrl={vendor.logoUrl}
-                logoBlurDataUrl={vendor.logoBlurDataUrl}
-                shortDescription={vendor.shortDescription}
-                startingPrice={vendor.startingPrice}
-                currency={vendor.currency}
-                isPremiumEligible={vendor.isPremiumEligible}
-                isAuthenticated={session !== null}
-                listContext="seo_landing_page"
-              />
-            ))}
+          <div className="grid grid-cols-3 gap-6 max-[900px]:grid-cols-1 max-[900px]:gap-4">
+            {vendors.map((vendor) => {
+              const category = allCategories.find((c) => c.id === vendor.categoryId) ?? seo.category;
+              return (
+                <VendorCard
+                  key={vendor.id}
+                  vendorId={vendor.id}
+                  slug={vendor.slug}
+                  businessName={vendor.businessName}
+                  logoUrl={vendor.logoUrl}
+                  logoBlurDataUrl={vendor.logoBlurDataUrl}
+                  shortDescription={vendor.shortDescription}
+                  startingPrice={vendor.startingPrice}
+                  currency={vendor.currency}
+                  isPremiumEligible={vendor.isPremiumEligible}
+                  isAuthenticated={session !== null}
+                  listContext="seo_landing_page"
+                  categoryId={vendor.categoryId}
+                  categoryName={category?.name}
+                  cityName={seo.city?.name}
+                  avgRating={vendor.avgRating}
+                  reviewCount={vendor.reviewCount}
+                />
+              );
+            })}
           </div>
         )}
 
