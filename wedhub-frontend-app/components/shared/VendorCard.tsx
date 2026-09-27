@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { trackEvent } from "@/lib/analytics/track";
 import { VendorHeartButton } from "./VendorHeartButton";
-import { PremiumBadge, CrownRibbonBadge, VerifiedBadge } from "./PremiumBadge";
+import { CrownRibbonBadge, VerifiedBadge } from "./PremiumBadge";
 
 /**
  * Shared vendor card — reused across search results, homepage featured
@@ -129,7 +129,6 @@ export function VendorCard({
         <div className="mb-0.5 flex items-center gap-1.5 flex-wrap">
           <span className="truncate text-sm font-bold text-gray-900">{businessName}</span>
           {verificationLevel && verificationLevel !== "UNVERIFIED" && <VerifiedBadge />}
-          {isPremiumEligible && <PremiumBadge />}
         </div>
         {shortDescription && <p className="mb-2 line-clamp-2 text-xs text-text-grey">{shortDescription}</p>}
         {startingPrice && (

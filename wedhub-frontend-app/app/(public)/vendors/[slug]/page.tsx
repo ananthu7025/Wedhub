@@ -11,7 +11,7 @@ import { MessageVendorButton } from "@/components/shared/MessageVendorButton";
 import { VendorContactLinks } from "@/components/shared/VendorContactLinks";
 import { VendorPortfolioTabs } from "@/components/portfolio/VendorPortfolioTabs";
 import { VendorRatingDistribution } from "@/components/portfolio/VendorRatingDistribution";
-import { MapPinIcon, StarIcon, CheckIcon, SparkleIcon } from "@/components/portfolio/icons";
+import { MapPinIcon, StarIcon, CheckIcon } from "@/components/portfolio/icons";
 import { StarRating } from "@/components/ui/StarRating";
 import { pickPortfolioQuote } from "@/lib/utils/portfolio-quotes";
 import { CuratedVendorShelf } from "../CuratedVendorShelf";
@@ -280,11 +280,6 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                             <CheckIcon className="inline h-3 w-3" /> {verificationLabel}
                           </Badge>
                         )}
-                        {vendor.isPremiumEligible && (
-                          <Badge variant="crimson">
-                            <SparkleIcon className="inline h-3 w-3" /> Premium Vendor
-                          </Badge>
-                        )}
                         {hasRating && (
                           <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-xs">
                             <StarIcon filled className="inline h-3.5 w-3.5" /> {Number(vendor.averageRating).toFixed(1)}
@@ -339,11 +334,6 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                             <CheckIcon className="inline h-3 w-3" /> {verificationLabel}
                           </Badge>
                         )}
-                      {vendor.isPremiumEligible && (
-                        <Badge variant="crimson">
-                          <SparkleIcon className="inline h-3 w-3" /> Premium Vendor
-                        </Badge>
-                      )}
                       {hasRating && (
                         <span className="flex items-center gap-1 text-xs font-bold text-text-dark">
                           <StarIcon filled className="inline h-3.5 w-3.5" /> {Number(vendor.averageRating).toFixed(1)}
