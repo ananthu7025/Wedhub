@@ -255,123 +255,166 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
               overlaying white text on a solid surface-input box would be
               illegible. */}
           <div className="grid grid-cols-[1fr_360px] gap-6 max-[900px]:grid-cols-1">
-            <div className="relative aspect-16/9 w-full overflow-hidden rounded-xl bg-surface-input sm:aspect-21/9">
-              {heroImageUrl ? (
-                <>
-                  <Image
-                    src={heroImageUrl}
-                    alt={vendor.businessName}
-                    fill
-                    sizes="(max-width: 900px) 100vw, 800px"
-                    className="object-cover"
-                    priority
-                    unoptimized={isPreOptimizedMediaUrl(heroImageUrl)}
-                    {...(coverMedia?.blurDataUrl ?? heroMedia?.blurDataUrl
-                      ? { placeholder: "blur" as const, blurDataURL: coverMedia?.blurDataUrl ?? heroMedia?.blurDataUrl ?? undefined }
-                      : {})}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-transparent" />
+            <div className="min-w-0">
+              <div className="relative aspect-16/9 w-full overflow-hidden rounded-xl bg-surface-input sm:aspect-21/9">
+                {heroImageUrl ? (
+                  <>
+                    <Image
+                      src={heroImageUrl}
+                      alt={vendor.businessName}
+                      fill
+                      sizes="(max-width: 900px) 100vw, 800px"
+                      className="object-cover"
+                      priority
+                      unoptimized={isPreOptimizedMediaUrl(heroImageUrl)}
+                      {...(coverMedia?.blurDataUrl ?? heroMedia?.blurDataUrl
+                        ? { placeholder: "blur" as const, blurDataURL: coverMedia?.blurDataUrl ?? heroMedia?.blurDataUrl ?? undefined }
+                        : {})}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-transparent max-[900px]:hidden" />
 
-                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-7">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <h1 className="text-2xl font-bold text-white drop-shadow-sm sm:text-[32px]">{vendor.businessName}</h1>
-                        {verificationLabel && (
-                          <Badge variant="green">
-                            <CheckIcon className="inline h-3 w-3" /> {verificationLabel}
-                          </Badge>
+                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-7 max-[900px]:hidden">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <h1 className="text-2xl font-bold text-white drop-shadow-sm sm:text-[32px]">{vendor.businessName}</h1>
+                          {verificationLabel && (
+                            <Badge variant="green">
+                              <CheckIcon className="inline h-3 w-3" /> {verificationLabel}
+                            </Badge>
+                          )}
+                          {hasRating && (
+                            <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-xs">
+                              <StarIcon filled className="inline h-3.5 w-3.5" /> {Number(vendor.averageRating).toFixed(1)}
+                              <span className="font-medium text-white/80">({vendor.reviewCount})</span>
+                            </span>
+                          )}
+                        </div>
+                        {vendor.city && (
+                          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-white/90">
+                            <MapPinIcon className="h-4 w-4 flex-shrink-0" />
+                            {vendor.city.name}
+                            {extraServiceAreaCities.length > 0 && ` +${extraServiceAreaCities.length} more city`}
+                          </p>
                         )}
+                        {vendor.profile?.shortDescription && (
+                          <>
+                            <div className="mt-2.5 h-px w-10 bg-white/50" />
+                            <p className="mt-2 text-sm font-medium text-white/95">{vendor.profile.shortDescription}</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <VendorHeartButton
+                      vendorId={vendor.id}
+                      vendorSummary={vendorSummary}
+                      isAuthenticated={session !== null}
+                      initialFavorited={isFavorited}
+                      className="absolute bottom-4 right-4 h-10 w-10 border-none bg-white shadow-md sm:bottom-7 sm:right-7 sm:h-11 sm:w-11"
+                    />
+                  </>
+                ) : (
+                  <div className="flex h-full w-full items-center gap-4 p-6">
+                    {logoImageUrl && (
+                      <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-2 border-white shadow-[var(--shadow-card)]">
+                        <Image
+                          src={logoImageUrl}
+                          alt={vendor.businessName}
+                          fill
+                          sizes="64px"
+                          className="object-cover"
+                          unoptimized={isPreOptimizedMediaUrl(logoImageUrl)}
+                          {...(logoMedia?.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoMedia.blurDataUrl } : {})}
+                        />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <h1 className="text-2xl font-bold">{vendor.businessName}</h1>
+                        {verificationLabel && (
+                            <Badge variant="green">
+                              <CheckIcon className="inline h-3 w-3" /> {verificationLabel}
+                            </Badge>
+                          )}
                         {hasRating && (
-                          <span className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-xs">
+                          <span className="flex items-center gap-1 text-xs font-bold text-text-dark">
                             <StarIcon filled className="inline h-3.5 w-3.5" /> {Number(vendor.averageRating).toFixed(1)}
-                            <span className="font-medium text-white/80">({vendor.reviewCount})</span>
+                            <span className="font-medium text-text-grey">({vendor.reviewCount})</span>
                           </span>
                         )}
                       </div>
                       {vendor.city && (
-                        <p className="mt-1.5 flex items-center gap-1.5 text-sm text-white/90">
+                        <p className="mt-1 flex items-center gap-1.5 text-sm text-text-grey">
                           <MapPinIcon className="h-4 w-4 flex-shrink-0" />
                           {vendor.city.name}
                           {extraServiceAreaCities.length > 0 && ` +${extraServiceAreaCities.length} more city`}
                         </p>
                       )}
-                      {vendor.profile?.startingPrice && (
-                        <p className="mt-1 text-sm font-semibold text-white/95 min-[901px]:hidden">
-                          Starting from {vendor.profile.currency === "INR" ? "₹" : vendor.profile.currency}
-                          {Number(vendor.profile.startingPrice).toLocaleString("en-IN")}
-                        </p>
-                      )}
                       {vendor.profile?.shortDescription && (
-                        <>
-                          <div className="mt-2.5 h-px w-10 bg-white/50" />
-                          <p className="mt-2 text-sm font-medium text-white/95">{vendor.profile.shortDescription}</p>
-                        </>
+                        <p className="mt-1.5 text-sm font-medium text-text-dark">{vendor.profile.shortDescription}</p>
                       )}
                     </div>
+                    <VendorHeartButton
+                      vendorId={vendor.id}
+                      vendorSummary={vendorSummary}
+                      isAuthenticated={session !== null}
+                      initialFavorited={isFavorited}
+                      className="static h-10 w-10 flex-shrink-0 border border-border bg-white shadow-none"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile-only vendor details below hero photo */}
+              {heroImageUrl && (
+                <div className="mt-4 flex flex-col gap-2.5 min-[901px]:hidden px-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-2xl font-bold text-text-dark sm:text-[28px]">{vendor.businessName}</h1>
                   </div>
 
-                  <VendorHeartButton
-                    vendorId={vendor.id}
-                    vendorSummary={vendorSummary}
-                    isAuthenticated={session !== null}
-                    initialFavorited={isFavorited}
-                    className="absolute bottom-5 right-5 h-11 w-11 border-none bg-white shadow-md sm:bottom-7 sm:right-7"
-                  />
-                </>
-              ) : (
-                <div className="flex h-full w-full items-center gap-4 p-6">
-                  {logoImageUrl && (
-                    <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-2 border-white shadow-[var(--shadow-card)]">
-                      <Image
-                        src={logoImageUrl}
-                        alt={vendor.businessName}
-                        fill
-                        sizes="64px"
-                        className="object-cover"
-                        unoptimized={isPreOptimizedMediaUrl(logoImageUrl)}
-                        {...(logoMedia?.blurDataUrl ? { placeholder: "blur" as const, blurDataURL: logoMedia.blurDataUrl } : {})}
-                      />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <h1 className="text-2xl font-bold">{vendor.businessName}</h1>
-                      {verificationLabel && (
-                          <Badge variant="green">
-                            <CheckIcon className="inline h-3 w-3" /> {verificationLabel}
-                          </Badge>
-                        )}
-                      {hasRating && (
-                        <span className="flex items-center gap-1 text-xs font-bold text-text-dark">
-                          <StarIcon filled className="inline h-3.5 w-3.5" /> {Number(vendor.averageRating).toFixed(1)}
-                          <span className="font-medium text-text-grey">({vendor.reviewCount})</span>
-                        </span>
-                      )}
-                    </div>
-                    {vendor.city && (
-                      <p className="mt-1 flex items-center gap-1.5 text-sm text-text-grey">
-                        <MapPinIcon className="h-4 w-4 flex-shrink-0" />
-                        {vendor.city.name}
-                        {extraServiceAreaCities.length > 0 && ` +${extraServiceAreaCities.length} more city`}
-                      </p>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    {hasRating && (
+                      <span className="flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200/80 px-2 py-0.5 font-bold text-text-dark">
+                        <StarIcon filled className="inline h-3.5 w-3.5 text-[#f0a202]" /> {Number(vendor.averageRating).toFixed(1)}
+                        <span className="font-medium text-text-grey">({vendor.reviewCount})</span>
+                      </span>
                     )}
-                    {vendor.profile?.startingPrice && (
-                      <p className="mt-1 text-sm font-semibold text-brand-primary min-[901px]:hidden">
-                        Starting from {vendor.profile.currency === "INR" ? "₹" : vendor.profile.currency}
-                        {Number(vendor.profile.startingPrice).toLocaleString("en-IN")}
-                      </p>
+                    {verificationLabel && (
+                      <Badge variant="green">
+                        <CheckIcon className="inline h-3 w-3" /> {verificationLabel}
+                      </Badge>
                     )}
-                    {vendor.profile?.shortDescription && (
-                      <p className="mt-1.5 text-sm font-medium text-text-dark">{vendor.profile.shortDescription}</p>
+                    {primaryCategory && (
+                      <span className="font-medium text-text-grey">
+                        • {primaryCategory.name}
+                      </span>
                     )}
                   </div>
-                  <VendorHeartButton
-                    vendorId={vendor.id}
-                    vendorSummary={vendorSummary}
-                    isAuthenticated={session !== null}
-                    initialFavorited={isFavorited}
-                    className="static h-10 w-10 flex-shrink-0 border border-border bg-white shadow-none"
-                  />
+
+                  {vendor.city && (
+                    <p className="flex items-center gap-1.5 text-sm text-text-grey">
+                      <MapPinIcon className="h-4 w-4 flex-shrink-0" />
+                      <span>{vendor.city.name}{extraServiceAreaCities.length > 0 && ` +${extraServiceAreaCities.length} more city`}</span>
+                    </p>
+                  )}
+
+                  {vendor.profile?.startingPrice && (
+                    <div className="flex items-baseline gap-2 pt-0.5">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-text-grey">Starting Price:</span>
+                      <span className="text-lg font-bold text-brand-primary">
+                        {vendor.profile.currency === "INR" ? "₹" : vendor.profile.currency}
+                        {Number(vendor.profile.startingPrice).toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  )}
+
+                  {vendor.profile?.shortDescription && (
+                    <p className="text-sm leading-relaxed text-text-body">{vendor.profile.shortDescription}</p>
+                  )}
+
+                  {responseTimeLabel && (
+                    <p className="text-xs font-medium text-emerald-700">{responseTimeLabel}</p>
+                  )}
                 </div>
               )}
             </div>
