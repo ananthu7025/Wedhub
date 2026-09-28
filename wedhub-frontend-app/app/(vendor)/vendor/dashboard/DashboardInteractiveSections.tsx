@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { StarRating } from "@/components/ui/StarRating";
@@ -105,6 +105,16 @@ export function DashboardInteractiveSections({
 }: DashboardInteractiveSectionsProps) {
   const [leadsTab, setLeadsTab] = useState<"leads" | "inquiries">("leads");
   const [activityTab, setActivityTab] = useState<"activity" | "feedbacks">("activity");
+
+  const deduplicatedNotifications = useMemo(() => {
+    const seen = new Set<string>();
+    return notifications.filter((item) => {
+      const key = item.readAt === null ? `unread:${item.title}|${item.body}` : item.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [notifications]);
 
   const inquiries = leads.filter((l) => l.status === "NEW" || l.status === "CONTACTED");
   const displayedLeads = leadsTab === "leads" ? leads : inquiries;
@@ -465,7 +475,7 @@ export function DashboardInteractiveSections({
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
-                Recent Activity ({notifications.length})
+                Recent Activity ({deduplicatedNotifications.length})
               </button>
               <button
                 type="button"
@@ -496,8 +506,8 @@ export function DashboardInteractiveSections({
           {/* Feed Content */}
           {activityTab === "activity" ? (
             <div className="flex flex-col gap-3.5">
-              {notifications.length > 0 ? (
-                notifications.slice(0, 6).map((item) => (
+              {deduplicatedNotifications.length > 0 ? (
+                deduplicatedNotifications.slice(0, 6).map((item) => (
                   <div key={item.id} className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
                       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary-soft text-brand-primary">

@@ -1,6 +1,7 @@
 import { Worker, type Job } from "bullmq";
 import { createRedisConnection } from "../../config/redis";
 import { logger } from "../../config/logger";
+import { prisma } from "../../config/database";
 import * as vendorRepository from "../../modules/vendors/vendor.repository";
 import * as notificationService from "../../modules/notifications/notification.service";
 import type { ProfileCompletionReminderJobData } from "../queues/profile-completion-reminder.queue";
@@ -20,6 +21,19 @@ async function runReminderSweep(): Promise<{ notified: number; failed: number }>
   for (const vendor of vendors) {
     if (!vendor.ownerUserId) continue;
     try {
+      // Do not send repetitive reminders if one was already sent within the last 7 days
+      const recentReminder = await prisma.notification.findFirst({
+        where: {
+          userId: vendor.ownerUserId,
+          eventType: "PROFILE_COMPLETION_REMINDER",
+          relatedEntityId: vendor.id,
+          createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        },
+      });
+      if (recentReminder) {
+        continue;
+      }
+
       await notificationService.notify({
         userId: vendor.ownerUserId,
         eventType: "PROFILE_COMPLETION_REMINDER",

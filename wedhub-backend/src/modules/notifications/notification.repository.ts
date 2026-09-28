@@ -9,6 +9,42 @@ export function findPreferences(userId: string, eventType: NotificationEventType
   return prisma.notificationPreference.findMany({ where: { userId, eventType } });
 }
 
+export function findExistingUnreadInApp(
+  userId: string,
+  eventType: NotificationEventType,
+  relatedEntityId?: string,
+) {
+  return prisma.notification.findFirst({
+    where: {
+      userId,
+      channel: "IN_APP",
+      eventType,
+      readAt: null,
+      relatedEntityId: relatedEntityId !== undefined ? relatedEntityId : null,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export function updateNotificationContent(
+  id: string,
+  data: {
+    title: string;
+    body: string;
+    data?: Prisma.InputJsonValue | undefined;
+  },
+) {
+  return prisma.notification.update({
+    where: { id },
+    data: {
+      title: data.title,
+      body: data.body,
+      ...(data.data !== undefined ? { data: data.data } : {}),
+      createdAt: new Date(),
+    },
+  });
+}
+
 export function createNotification(data: {
   userId: string;
   eventType: NotificationEventType;

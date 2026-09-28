@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { markAllNotificationsRead, markNotificationRead } from "@/lib/api/account-client";
 import type { NotificationItem } from "@/lib/api/account.types";
 
@@ -27,7 +27,17 @@ function formatRelativeTime(iso: string): string {
 }
 
 export function NotificationsList({ initialNotifications }: { initialNotifications: NotificationItem[] }) {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const deduplicated = useMemo(() => {
+    const seen = new Set<string>();
+    return initialNotifications.filter((n) => {
+      const key = n.readAt === null ? `unread:${n.title}|${n.body}` : n.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [initialNotifications]);
+
+  const [notifications, setNotifications] = useState(deduplicated);
   const unreadCount = notifications.filter((n) => n.readAt === null).length;
 
   async function handleMarkAllRead() {

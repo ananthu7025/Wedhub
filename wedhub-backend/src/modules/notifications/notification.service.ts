@@ -54,6 +54,39 @@ export async function notify(input: NotifyInput): Promise<void> {
             ? Object.fromEntries(Object.entries(input.data).filter(([key]) => key !== "token"))
             : input.data;
 
+        if (channel === "IN_APP") {
+          // Prevent duplicate unread in-app notifications for the same event/entity.
+          // If an unread notification already exists, refresh its content and timestamp
+          // rather than creating another unread row.
+          const existingUnread = await notificationRepository.findExistingUnreadInApp(
+            input.userId,
+            input.eventType,
+            input.relatedEntityId,
+          );
+
+          if (existingUnread) {
+            await notificationRepository.updateNotificationContent(existingUnread.id, {
+              title: content.title,
+              body: content.body,
+              ...(persistedData !== undefined ? { data: persistedData as Prisma.InputJsonValue } : {}),
+            });
+            return;
+          }
+
+          const notification = await notificationRepository.createNotification({
+            userId: input.userId,
+            eventType: input.eventType,
+            channel,
+            title: content.title,
+            body: content.body,
+            data: persistedData as Prisma.InputJsonValue | undefined,
+            relatedEntityType: input.relatedEntityType,
+            relatedEntityId: input.relatedEntityId,
+          });
+          await notificationRepository.markSent(notification.id);
+          return;
+        }
+
         const notification = await notificationRepository.createNotification({
           userId: input.userId,
           eventType: input.eventType,
@@ -64,13 +97,6 @@ export async function notify(input: NotifyInput): Promise<void> {
           relatedEntityType: input.relatedEntityType,
           relatedEntityId: input.relatedEntityId,
         });
-        // IN_APP has no external delivery step — the row itself, once
-        // written, IS the delivered notification (it's what listNotifications
-        // reads). Only EMAIL/TELEGRAM need an actual delivery job.
-        if (channel === "IN_APP") {
-          await notificationRepository.markSent(notification.id);
-          return;
-        }
         await enqueueNotificationDelivery(notification.id);
       }),
     );
