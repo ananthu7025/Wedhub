@@ -109,11 +109,16 @@ function CollectionCoverUpload({
 export function CatalogCollectionsManager({
   collections,
   onChange,
+  standalone = false,
 }: {
   collections: CatalogCollection[];
   onChange: (collections: CatalogCollection[]) => void;
+  /** Rendered on its own dedicated page (/vendor/catalog/collections), whose
+   * own heading already describes this panel — skips the redundant
+   * collapsible header/description and always shows the content. */
+  standalone?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(standalone);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,33 +167,35 @@ export function CatalogCollectionsManager({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-white p-4">
-      <button
-        type="button"
-        onClick={() => setExpanded((prev) => !prev)}
-        className="w-full flex items-center justify-between text-left"
-      >
-        <div>
-          <p className="text-sm font-bold text-text-dark">Collections</p>
-          <p className="text-xs text-text-grey">
-            Group items into named collections (e.g. Best Sellers, Festive Edit) to control what shows in your
-            storefront&apos;s category grid and tab filters. Each can have its own cover photo — otherwise it
-            falls back to the first assigned item&apos;s photo.
-          </p>
-        </div>
-        <svg
-          className={`w-4 h-4 text-text-grey transition-transform ${expanded ? "rotate-180" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
+    <div className={standalone ? "" : "rounded-xl border border-border bg-white p-4"}>
+      {!standalone && (
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          className="w-full flex items-center justify-between text-left"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-        </svg>
-      </button>
+          <div>
+            <p className="text-sm font-bold text-text-dark">Collections</p>
+            <p className="text-xs text-text-grey">
+              Group items into named collections (e.g. Best Sellers, Festive Edit) to control what shows in your
+              storefront&apos;s category grid and tab filters. Each can have its own cover photo — otherwise it
+              falls back to the first assigned item&apos;s photo.
+            </p>
+          </div>
+          <svg
+            className={`w-4 h-4 text-text-grey transition-transform ${expanded ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+      )}
 
       {expanded && (
-        <div className="mt-4 space-y-3">
+        <div className={standalone ? "space-y-3" : "mt-4 space-y-3"}>
           {error && <div className="rounded-lg bg-red-50 border border-red-200 p-2.5 text-xs text-red-800">{error}</div>}
 
           {collections.length === 0 ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createMyCatalogItem, updateMyCatalogItem } from "@/lib/api/vendor-catalog-client";
 import { createMediaUploadRequest, confirmMediaUpload } from "@/lib/api/vendor-self-client";
@@ -13,19 +14,118 @@ import type {
   CatalogVariantField,
 } from "@/lib/api/vendor-catalog.types";
 
-export function CatalogItemModal({
+interface VariantDraft {
+  attributes: Record<string, unknown>;
+  price: string;
+  sku: string;
+  stockQuantity: string;
+  isAvailable: boolean;
+}
+
+interface ComponentDraft {
+  name: string;
+  defaultQty: string;
+  minQty: string;
+  maxQty: string;
+  unitPrice: string;
+  isRequired: boolean;
+}
+
+/**
+ * Shopify-style card section wrapper — every distinct part of the product
+ * form (Title & Description, Media, Pricing, Variants, Package Components)
+ * renders as its own bordered card stacked down the page, matching a real
+ * product-edit page rather than one long form.
+ */
+function FormCard({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-neutral-grey-40 bg-white">
+      <div className="border-b border-neutral-grey-40 px-5 py-4">
+        <h2 className="text-sm font-bold text-text-dark">{title}</h2>
+        {description && <p className="mt-0.5 text-xs text-text-grey">{description}</p>}
+      </div>
+      <div className="p-5 space-y-4">{children}</div>
+    </div>
+  );
+}
+
+function VariantFieldInput({
+  field,
+  value,
+  onChange,
+}: {
+  field: CatalogVariantField;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const options = Array.isArray(field.options) ? (field.options as string[]) : [];
+
+  if (field.dataType === "BOOLEAN") {
+    return (
+      <label className="flex items-center gap-1.5 self-end pb-1.5 text-[11px] font-semibold text-text-grey">
+        <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} className="accent-brand-primary" />
+        {field.label}
+      </label>
+    );
+  }
+
+  if (field.dataType === "SELECT" || field.dataType === "MULTI_SELECT") {
+    return (
+      <label className="block">
+        <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">{field.label}</span>
+        <select
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-32 rounded-md border border-neutral-grey-40 px-2 py-1 text-xs bg-white"
+        >
+          <option value="">—</option>
+          {options.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  if (field.dataType === "NUMBER") {
+    return (
+      <label className="block">
+        <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">{field.label}</span>
+        <input
+          type="number"
+          value={typeof value === "number" || typeof value === "string" ? value : ""}
+          onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+          className="w-24 rounded-md border border-neutral-grey-40 px-2 py-1 text-xs"
+        />
+      </label>
+    );
+  }
+
+  return (
+    <label className="block">
+      <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">{field.label}</span>
+      <input
+        type="text"
+        value={typeof value === "string" ? value : ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-28 rounded-md border border-neutral-grey-40 px-2 py-1 text-xs"
+      />
+    </label>
+  );
+}
+
+export function CatalogItemForm({
   item,
   variantFields,
   collections,
-  onClose,
-  onSaved,
 }: {
   item?: CatalogItem | null;
   variantFields: CatalogVariantField[];
   collections: CatalogCollection[];
-  onClose: () => void;
-  onSaved: (item: CatalogItem) => void;
 }) {
+  const router = useRouter();
   const isEditing = Boolean(item);
 
   const [title, setTitle] = useState(item?.title ?? "");
@@ -212,114 +312,47 @@ export function CatalogItemModal({
       return;
     }
 
-    onSaved(res.data);
+    router.push("/vendor/catalog");
+    router.refresh();
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl my-8">
-        <div className="flex items-center justify-between border-b border-border pb-4 mb-5">
-          <h2 className="text-lg font-bold text-text-dark">{isEditing ? "Edit Catalog Item" : "Add Catalog Item"}</h2>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-text-grey hover:bg-surface-input hover:text-text-dark">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {errorMsg && <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-800">{errorMsg}</div>}
 
-        {errorMsg && <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-800">{errorMsg}</div>}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-text-grey mb-1">
-              Title <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Red Mercedes S-Class"
-              maxLength={200}
-              className="w-full rounded-lg border border-border px-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 space-y-5">
+          <FormCard title="Title & description">
             <div>
-              <label className="block text-xs font-semibold text-text-grey mb-1">Base price (₹, optional)</label>
+              <label className="block text-xs font-semibold text-text-grey mb-1">
+                Title <span className="text-red-500">*</span>
+              </label>
               <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={basePrice}
-                onChange={(e) => setBasePrice(e.target.value)}
-                placeholder="Leave blank if only variants have a price"
-                className="w-full rounded-lg border border-border px-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Red Mercedes S-Class"
+                maxLength={200}
+                className="w-full rounded-lg border border-neutral-grey-40 px-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
               />
             </div>
-            <div className="flex items-end gap-4 pb-1">
-              <label className="flex items-center gap-2 text-xs font-semibold text-text-dark">
-                <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="accent-brand-primary" />
-                Active
-              </label>
-              <label className="flex items-center gap-2 text-xs font-semibold text-text-dark">
-                <input
-                  type="checkbox"
-                  checked={isCustomizable}
-                  onChange={(e) => setIsCustomizable(e.target.checked)}
-                  className="accent-brand-primary"
-                />
-                Customizable package
-              </label>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-text-grey mb-1">Description</label>
-            <textarea
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={5000}
-              className="w-full rounded-lg border border-border px-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
-            />
-          </div>
-
-          {collections.length > 0 && (
             <div>
-              <label className="block text-xs font-semibold text-text-grey mb-2">
-                Collections <span className="font-normal text-text-grey/70">(shown on your public catalog page)</span>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {collections.map((collection) => (
-                  <label
-                    key={collection.id}
-                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold cursor-pointer transition ${
-                      selectedCollectionIds.includes(collection.id)
-                        ? "border-brand-primary bg-brand-primary-soft text-brand-primary"
-                        : "border-border text-text-dark hover:bg-surface-input"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedCollectionIds.includes(collection.id)}
-                      onChange={() => toggleCollection(collection.id)}
-                      className="sr-only"
-                    />
-                    {collection.name}
-                  </label>
-                ))}
-              </div>
+              <label className="block text-xs font-semibold text-text-grey mb-1">Description</label>
+              <textarea
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={5000}
+                className="w-full rounded-lg border border-neutral-grey-40 px-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
+              />
             </div>
-          )}
+          </FormCard>
 
-          {/* Photos */}
-          <div>
-            <label className="block text-xs font-semibold text-text-grey mb-2">Photos</label>
-            <div className="flex flex-wrap gap-3 mb-3">
+          <FormCard title="Media" description="Photos shown on your public catalog page and in search results.">
+            <div className="flex flex-wrap gap-3">
               {mediaList.map((m) => (
-                <div key={m.id} className="relative h-20 w-20 rounded-lg border border-border overflow-hidden group">
+                <div key={m.id} className="relative h-20 w-20 rounded-lg border border-neutral-grey-40 overflow-hidden group">
                   {m.url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={m.url} alt="Catalog item preview" className="h-full w-full object-cover" />
@@ -339,7 +372,7 @@ export function CatalogItemModal({
                 </div>
               ))}
               <label
-                className={`h-20 w-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center text-xs text-text-grey cursor-pointer hover:border-brand-primary hover:text-brand-primary transition-colors ${uploadingImage ? "opacity-50 cursor-not-allowed" : ""}`}
+                className={`h-20 w-20 rounded-lg border-2 border-dashed border-neutral-grey-40 flex flex-col items-center justify-center text-xs text-text-grey cursor-pointer hover:border-brand-primary hover:text-brand-primary transition-colors ${uploadingImage ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <input
                   type="file"
@@ -355,24 +388,23 @@ export function CatalogItemModal({
                 {uploadingImage ? "Uploading…" : "Add photo"}
               </label>
             </div>
-          </div>
+          </FormCard>
 
-          {/* Variants */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-semibold text-text-grey">Variants</label>
+          <FormCard title="Variants" description="Options like size, color, or rental terms — each with its own price.">
+            <div className="flex items-center justify-between -mt-1 mb-1">
+              <span />
               <button type="button" onClick={addVariant} className="text-xs font-bold text-brand-primary hover:underline">
                 + Add variant
               </button>
             </div>
             {variantFields.length === 0 && (
-              <p className="text-[11px] text-text-grey mb-2">
-                No variant fields configured for your category yet. You can still save item-level pricing above.
+              <p className="text-[11px] text-text-grey">
+                No variant fields configured for your category yet. You can still save item-level pricing in the Pricing card.
               </p>
             )}
             <div className="space-y-3">
               {variants.map((variant, index) => (
-                <div key={index} className="rounded-lg border border-border p-3 space-y-2">
+                <div key={index} className="rounded-lg border border-neutral-grey-40 p-3 space-y-2">
                   <div className="flex flex-wrap gap-2">
                     {variantFields.map((field) => (
                       <VariantFieldInput
@@ -390,7 +422,7 @@ export function CatalogItemModal({
                         step="0.01"
                         value={variant.price}
                         onChange={(e) => updateVariant(index, { price: e.target.value })}
-                        className="w-28 rounded-md border border-border px-2 py-1 text-xs"
+                        className="w-28 rounded-md border border-neutral-grey-40 px-2 py-1 text-xs"
                       />
                     </label>
                     <label className="block">
@@ -399,7 +431,7 @@ export function CatalogItemModal({
                         type="text"
                         value={variant.sku}
                         onChange={(e) => updateVariant(index, { sku: e.target.value })}
-                        className="w-28 rounded-md border border-border px-2 py-1 text-xs"
+                        className="w-28 rounded-md border border-neutral-grey-40 px-2 py-1 text-xs"
                       />
                     </label>
                     <label className="block">
@@ -409,7 +441,7 @@ export function CatalogItemModal({
                         min="0"
                         value={variant.stockQuantity}
                         onChange={(e) => updateVariant(index, { stockQuantity: e.target.value })}
-                        className="w-32 rounded-md border border-border px-2 py-1 text-xs"
+                        className="w-32 rounded-md border border-neutral-grey-40 px-2 py-1 text-xs"
                       />
                     </label>
                   </div>
@@ -430,27 +462,26 @@ export function CatalogItemModal({
                 </div>
               ))}
             </div>
-          </div>
+          </FormCard>
 
-          {/* Customizable package components (decorators) */}
           {isCustomizable && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-semibold text-text-grey">Package components</label>
+            <FormCard title="Package components" description="Adjustable line items for a fully customizable package.">
+              <div className="flex items-center justify-between -mt-1 mb-1">
+                <span />
                 <button type="button" onClick={addComponent} className="text-xs font-bold text-brand-primary hover:underline">
                   + Add component
                 </button>
               </div>
               <div className="space-y-2">
                 {components.map((component, index) => (
-                  <div key={index} className="flex flex-wrap items-end gap-2 rounded-lg border border-border p-2.5">
+                  <div key={index} className="flex flex-wrap items-end gap-2 rounded-lg border border-neutral-grey-40 p-2.5">
                     <label className="block flex-1 min-w-[140px]">
                       <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">Name</span>
                       <input
                         value={component.name}
                         onChange={(e) => updateComponent(index, { name: e.target.value })}
                         placeholder="Party poppers with rose petals"
-                        className="w-full rounded-md border border-border px-2 py-1 text-xs"
+                        className="w-full rounded-md border border-neutral-grey-40 px-2 py-1 text-xs"
                       />
                     </label>
                     <label className="block">
@@ -460,7 +491,7 @@ export function CatalogItemModal({
                         min="0"
                         value={component.defaultQty}
                         onChange={(e) => updateComponent(index, { defaultQty: e.target.value })}
-                        className="w-20 rounded-md border border-border px-2 py-1 text-xs"
+                        className="w-20 rounded-md border border-neutral-grey-40 px-2 py-1 text-xs"
                       />
                     </label>
                     <label className="block">
@@ -470,7 +501,7 @@ export function CatalogItemModal({
                         min="0"
                         value={component.minQty}
                         onChange={(e) => updateComponent(index, { minQty: e.target.value })}
-                        className="w-20 rounded-md border border-border px-2 py-1 text-xs"
+                        className="w-20 rounded-md border border-neutral-grey-40 px-2 py-1 text-xs"
                       />
                     </label>
                     <label className="block">
@@ -481,7 +512,7 @@ export function CatalogItemModal({
                         value={component.maxQty}
                         onChange={(e) => updateComponent(index, { maxQty: e.target.value })}
                         placeholder="Uncapped"
-                        className="w-20 rounded-md border border-border px-2 py-1 text-xs"
+                        className="w-20 rounded-md border border-neutral-grey-40 px-2 py-1 text-xs"
                       />
                     </label>
                     <label className="block">
@@ -492,7 +523,7 @@ export function CatalogItemModal({
                         value={component.unitPrice}
                         onChange={(e) => updateComponent(index, { unitPrice: e.target.value })}
                         placeholder="Included"
-                        className="w-24 rounded-md border border-border px-2 py-1 text-xs"
+                        className="w-24 rounded-md border border-neutral-grey-40 px-2 py-1 text-xs"
                       />
                     </label>
                     <label className="flex items-center gap-1 text-[11px] font-semibold text-text-grey pb-1.5">
@@ -510,107 +541,85 @@ export function CatalogItemModal({
                   </div>
                 ))}
               </div>
-            </div>
+            </FormCard>
           )}
+        </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-border mt-5">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-xs font-bold text-text-dark hover:bg-surface-input">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || uploadingImage}
-              className="rounded-lg bg-brand-primary px-5 py-2 text-xs font-bold text-white hover:bg-brand-primary-hover disabled:opacity-60"
-            >
-              {saving ? "Saving…" : isEditing ? "Save Changes" : "Create Item"}
-            </button>
-          </div>
-        </form>
+        <div className="space-y-5">
+          <FormCard title="Status">
+            <label className="flex items-center gap-2 text-xs font-semibold text-text-dark">
+              <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="accent-brand-primary" />
+              Active — visible on your public catalog page
+            </label>
+            <label className="flex items-center gap-2 text-xs font-semibold text-text-dark">
+              <input
+                type="checkbox"
+                checked={isCustomizable}
+                onChange={(e) => setIsCustomizable(e.target.checked)}
+                className="accent-brand-primary"
+              />
+              Customizable package
+            </label>
+          </FormCard>
+
+          <FormCard title="Pricing">
+            <div>
+              <label className="block text-xs font-semibold text-text-grey mb-1">Base price (₹, optional)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={basePrice}
+                onChange={(e) => setBasePrice(e.target.value)}
+                placeholder="Leave blank if only variants have a price"
+                className="w-full rounded-lg border border-neutral-grey-40 px-3.5 py-2 text-sm focus:border-brand-primary focus:outline-none"
+              />
+            </div>
+          </FormCard>
+
+          {collections.length > 0 && (
+            <FormCard title="Collections" description="Shown on your public catalog page's category tiles.">
+              <div className="flex flex-wrap gap-2">
+                {collections.map((collection) => (
+                  <label
+                    key={collection.id}
+                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold cursor-pointer transition ${
+                      selectedCollectionIds.includes(collection.id)
+                        ? "border-brand-primary bg-brand-primary-soft text-brand-primary"
+                        : "border-neutral-grey-40 text-text-dark hover:bg-surface-input"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedCollectionIds.includes(collection.id)}
+                      onChange={() => toggleCollection(collection.id)}
+                      className="sr-only"
+                    />
+                    {collection.name}
+                  </label>
+                ))}
+              </div>
+            </FormCard>
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
 
-interface VariantDraft {
-  attributes: Record<string, unknown>;
-  price: string;
-  sku: string;
-  stockQuantity: string;
-  isAvailable: boolean;
-}
-
-interface ComponentDraft {
-  name: string;
-  defaultQty: string;
-  minQty: string;
-  maxQty: string;
-  unitPrice: string;
-  isRequired: boolean;
-}
-
-function VariantFieldInput({
-  field,
-  value,
-  onChange,
-}: {
-  field: CatalogVariantField;
-  value: unknown;
-  onChange: (value: unknown) => void;
-}) {
-  const options = Array.isArray(field.options) ? (field.options as string[]) : [];
-
-  if (field.dataType === "BOOLEAN") {
-    return (
-      <label className="flex items-center gap-1.5 self-end pb-1.5 text-[11px] font-semibold text-text-grey">
-        <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} className="accent-brand-primary" />
-        {field.label}
-      </label>
-    );
-  }
-
-  if (field.dataType === "SELECT" || field.dataType === "MULTI_SELECT") {
-    return (
-      <label className="block">
-        <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">{field.label}</span>
-        <select
-          value={typeof value === "string" ? value : ""}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-32 rounded-md border border-border px-2 py-1 text-xs bg-white"
+      <div className="flex justify-end gap-3 border-t border-neutral-grey-40 pt-4">
+        <button
+          type="button"
+          onClick={() => router.push("/vendor/catalog")}
+          className="rounded-lg border border-neutral-grey-40 px-4 py-2 text-xs font-bold text-text-dark hover:bg-surface-input"
         >
-          <option value="">—</option>
-          {options.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
-      </label>
-    );
-  }
-
-  if (field.dataType === "NUMBER") {
-    return (
-      <label className="block">
-        <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">{field.label}</span>
-        <input
-          type="number"
-          value={typeof value === "number" || typeof value === "string" ? value : ""}
-          onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
-          className="w-24 rounded-md border border-border px-2 py-1 text-xs"
-        />
-      </label>
-    );
-  }
-
-  return (
-    <label className="block">
-      <span className="mb-0.5 block text-[10px] font-semibold text-text-grey">{field.label}</span>
-      <input
-        type="text"
-        value={typeof value === "string" ? value : ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-28 rounded-md border border-border px-2 py-1 text-xs"
-      />
-    </label>
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={saving || uploadingImage}
+          className="rounded-lg bg-brand-primary px-5 py-2 text-xs font-bold text-white hover:bg-brand-primary-hover disabled:opacity-60"
+        >
+          {saving ? "Saving…" : isEditing ? "Save changes" : "Create item"}
+        </button>
+      </div>
+    </form>
   );
 }

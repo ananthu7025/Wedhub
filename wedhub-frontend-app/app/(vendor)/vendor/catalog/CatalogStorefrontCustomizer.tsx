@@ -334,10 +334,15 @@ export function CatalogStorefrontCustomizer({
   initialSettings,
   collections,
   onClose,
+  variant = "modal",
 }: {
   initialSettings?: CatalogStoreSettings | null;
   collections: CatalogCollection[];
   onClose: () => void;
+  /** "page": rendered inline on its own dedicated page
+   * (/vendor/catalog/storefront) — no backdrop/overlay, no max-height
+   * scroll clamp. Defaults to the original centered-modal presentation. */
+  variant?: "modal" | "page";
 }) {
   const [activeTab, setActiveTab] = useState<Tab>("Banner & Theme");
 
@@ -497,9 +502,23 @@ export function CatalogStorefrontCustomizer({
     }, 1500);
   }
 
+  const isPage = variant === "page";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh]">
+    <div
+      className={
+        isPage
+          ? ""
+          : "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+      }
+    >
+      <div
+        className={
+          isPage
+            ? "bg-white w-full rounded-lg border border-neutral-grey-40 flex flex-col"
+            : "bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh]"
+        }
+      >
         <div className="flex items-center justify-between border-b border-neutral-100 px-6 sm:px-7 pt-6 pb-4">
           <div>
             <h3 className="font-bold text-base text-neutral-900">Customize Storefront</h3>
@@ -507,14 +526,16 @@ export function CatalogStorefrontCustomizer({
               Everything shown on your public catalog page is set here — a section stays hidden until you fill it in.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-full hover:bg-neutral-100 text-neutral-400 font-bold"
-            aria-label="Close"
-          >
-            <CloseIcon className="h-4 w-4" />
-          </button>
+          {!isPage && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 rounded-full hover:bg-neutral-100 text-neutral-400 font-bold"
+              aria-label="Close"
+            >
+              <CloseIcon className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         <div className="flex gap-1 px-6 sm:px-7 pt-3 border-b border-neutral-100 overflow-x-auto no-scrollbar">
