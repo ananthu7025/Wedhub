@@ -155,80 +155,37 @@ export function CatalogItemsManager({
     }
   }
 
-  function handleShareStorefrontWhatsApp() {
-    const fullUrl = typeof window !== "undefined" && vendorSlug ? `${window.location.origin}/catalog/${vendorSlug}` : "";
-    const msg = `✨ Browse our exclusive bridal rental collection & jewelry sets on our WedHub Storefront:\n${fullUrl}\n\nBook direct with us on WhatsApp!`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
-  }
-
   return (
     <CatalogSectionShell>
       <div className="space-y-5">
-        {/* Public Storefront Banner */}
+        {/* Compact storefront-link row — replaces an earlier wide banner
+            card whose action buttons overflowed on smaller viewports and
+            forced the whole page to scroll horizontally. */}
         {vendorSlug && (
-          <div className="rounded-lg border border-neutral-grey-40 bg-white p-5">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3.5">
-                <div className="h-10 w-10 rounded-lg bg-text-dark text-white flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5 fill-none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009 9.35c.663 0 1.285-.216 1.79-.582a3.003 3.003 0 004.42 0c.505.366 1.127.582 1.79.582a2.993 2.993 0 002.46-1.214 3.001 3.001 0 003.75.614m-16.5 0v-4.5a3 3 0 013-3h10.5a3 3 0 013 3v4.5" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-text-dark">Your public storefront is live</h3>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      Live
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-text-grey max-w-xl leading-relaxed">
-                    Couples can browse your entire catalog, filter by collection, and place orders directly to your
-                    WhatsApp.
-                  </p>
-                  <div className="mt-2 text-xs font-mono text-text-dark font-semibold truncate max-w-md">
-                    {publicCatalogUrl}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <Link
-                  href="/vendor/catalog/storefront"
-                  className="px-3.5 py-2 rounded-lg border border-neutral-grey-40 bg-white text-text-dark text-xs font-bold hover:bg-surface-input transition flex items-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
-                  </svg>
-                  <span>Customize Storefront</span>
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleShareStorefrontWhatsApp}
-                  className="px-3.5 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.698.073-2.112-.513-1.636-.68-2.69-2.339-2.772-2.449-.082-.11-1.391-1.85-1.391-3.529 0-1.678.877-2.503 1.189-2.846.312-.343.681-.43 1.093-.43.136 0 .257.007.366.015.318.016.478.038.687.542.261.626.892 2.176.97 2.335.078.16.13.348.026.557-.104.209-.156.339-.312.521-.156.183-.328.409-.469.549-.156.157-.319.327-.137.64.182.313.809 1.334 1.735 2.16 1.191 1.061 2.195 1.389 2.508 1.545.313.156.496.13.679-.079.183-.209.782-.913.991-1.226.209-.313.418-.261.698-.157.28.104 1.776.837 2.081.989.305.153.508.228.583.355.074.128.074.743-.07 1.148z" />
-                  </svg>
-                  <span>Share WhatsApp</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCopyStorefrontLink}
-                  className="px-3.5 py-2 rounded-lg border border-neutral-grey-40 bg-white text-text-dark text-xs font-bold hover:bg-surface-input transition flex items-center gap-1.5"
-                >
-                  <span>{copiedLink ? <><CheckIcon className="inline h-3 w-3" /> Copied!</> : "Copy Link"}</span>
-                </button>
-                <Link
-                  href={`/catalog/${vendorSlug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3.5 py-2 rounded-lg border border-text-dark bg-text-dark text-white text-xs font-bold hover:bg-black transition flex items-center gap-1"
-                >
-                  <span>View Storefront</span>
-                  <span className="text-[10px]">↗</span>
-                </Link>
-              </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-grey-40 bg-white px-4 py-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="inline-flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Live
+              </span>
+              <span className="text-xs font-mono text-text-dark truncate">{publicCatalogUrl}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleCopyStorefrontLink}
+                className="px-3 py-1.5 rounded-lg border border-neutral-grey-40 bg-white text-text-dark text-xs font-bold hover:bg-surface-input transition"
+              >
+                {copiedLink ? <><CheckIcon className="inline h-3 w-3" /> Copied!</> : "Copy Link"}
+              </button>
+              <Link
+                href={`/catalog/${vendorSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg border border-text-dark bg-text-dark text-white text-xs font-bold hover:bg-black transition no-underline"
+              >
+                View Storefront ↗
+              </Link>
             </div>
           </div>
         )}
