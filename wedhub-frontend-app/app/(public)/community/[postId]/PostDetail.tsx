@@ -119,7 +119,7 @@ function CommentRow({
         <strong className="text-text-dark">{displayAuthorName(comment.author)}</strong>
         <span>{formatRelativeTime(comment.createdAt)}</span>
       </div>
-      <p className="mb-1.5 text-[13px] text-text-body">{comment.body}</p>
+      <p className="mb-1.5 text-[13px] text-text-body break-words-anywhere">{comment.body}</p>
       {!replying && (
         <button type="button" onClick={() => setReplying(true)} className="text-xs font-bold text-text-grey hover:text-text-dark">
           Reply
@@ -146,7 +146,7 @@ function CommentRow({
                 <strong className="text-text-dark">{displayAuthorName(reply.author)}</strong>
                 <span>{formatRelativeTime(reply.createdAt)}</span>
               </div>
-              <p className="text-[13px] text-text-body">{reply.body}</p>
+              <p className="text-[13px] text-text-body break-words-anywhere">{reply.body}</p>
             </div>
           ))}
         </div>
@@ -210,14 +210,14 @@ export function PostDetail({
 
   return (
     <div>
-      <div className="rounded-xl border border-border bg-white p-5">
+      <div className="rounded-xl border border-border bg-white p-5 min-w-0">
         <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-text-grey">
           {post.tag && <Badge variant="crimson">{post.tag.name}</Badge>}
           <span>
             {displayAuthorName(post.author)} · {formatRelativeTime(post.createdAt)}
           </span>
         </div>
-        <h1 className="mb-2 text-xl font-bold">{post.title}</h1>
+        <h1 className="mb-2 text-xl font-bold break-words-anywhere">{post.title}</h1>
         {post.postType === "POLL" ? (
           <div className="mb-3">
             <PollBlock
@@ -226,11 +226,11 @@ export function PostDetail({
               myOptionId={post.pollVotes?.[0]?.optionId}
               isAuthenticated={isAuthenticated}
             />
-            {post.body && <p className="whitespace-pre-wrap text-sm text-text-body">{post.body}</p>}
+            {post.body && <p className="whitespace-pre-wrap break-words-anywhere text-sm text-text-body">{post.body}</p>}
           </div>
         ) : (
           <>
-            {post.body && <p className="mb-3 whitespace-pre-wrap text-sm text-text-body">{post.body}</p>}
+            {post.body && <p className="mb-3 whitespace-pre-wrap break-words-anywhere text-sm text-text-body">{post.body}</p>}
             {photoKey && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={getPublicMediaUrl(photoKey)} alt="" className="mb-3 max-h-[420px] w-full rounded-md object-cover" />
@@ -279,7 +279,7 @@ export function PostDetail({
         )}
       </div>
 
-      <div className="mt-5 rounded-xl border border-border bg-white p-5">
+      <div className="mt-5 rounded-xl border border-border bg-white p-5 min-w-0">
         <h2 className="mb-3 text-base font-bold">
           {comments.length} comment{comments.length === 1 ? "" : "s"}
         </h2>

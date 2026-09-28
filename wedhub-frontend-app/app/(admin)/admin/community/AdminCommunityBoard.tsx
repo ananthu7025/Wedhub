@@ -69,7 +69,7 @@ export function AdminCommunityBoard({ initialPosts, total }: { initialPosts: Adm
             const photoKey = photo?.thumbnailObjectKey ?? photo?.optimizedObjectKey ?? photo?.originalObjectKey;
             const latestReport = post.reports[post.reports.length - 1];
             return (
-              <div key={post.id} className="rounded-xl border border-border bg-white p-5">
+              <div key={post.id} className="rounded-xl border border-border bg-white p-5 min-w-0">
                 <div className="mb-2.5 flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2.5">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-ink-soft text-xs font-bold text-white">
@@ -86,16 +86,16 @@ export function AdminCommunityBoard({ initialPosts, total }: { initialPosts: Adm
                   <Badge variant="red">FLAGGED</Badge>
                 </div>
 
-                <div className="mb-1 flex items-center gap-2 text-sm font-bold">
-                  {post.title}
+                <div className="mb-1 flex flex-wrap items-center gap-2 text-sm font-bold break-words-anywhere">
+                  <span>{post.title}</span>
                   {post.postType === "POLL" && <Badge variant="blue">POLL</Badge>}
                 </div>
-                {post.body && <p className="mb-2 text-[13px] leading-relaxed">{post.body}</p>}
+                {post.body && <p className="mb-2 text-[13px] leading-relaxed break-words-anywhere">{post.body}</p>}
 
                 {post.postType === "POLL" && (
                   <ul className="mb-2 list-disc pl-5 text-[13px] text-text-grey">
                     {post.pollOptions.map((option) => (
-                      <li key={option.id}>
+                      <li key={option.id} className="break-words-anywhere">
                         {option.label} — {option.voteCount} vote{option.voteCount === 1 ? "" : "s"}
                       </li>
                     ))}
@@ -112,7 +112,7 @@ export function AdminCommunityBoard({ initialPosts, total }: { initialPosts: Adm
                     <strong className="mb-1.5 block text-xs text-red-70">
                       Reported ({post.reports.length}) — most recent by {authorName(latestReport.reporter)}
                     </strong>
-                    {latestReport.reason}
+                    <p className="break-words-anywhere">{latestReport.reason}</p>
                   </div>
                 )}
 

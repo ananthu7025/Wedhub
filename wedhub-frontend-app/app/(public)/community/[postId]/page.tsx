@@ -41,7 +41,7 @@ export default async function CommunityPostPage({ params }: CommunityPostPagePro
   return (
     <>
       <PublicTopbar activeHref="/community" />
-      <div className="mx-auto max-w-[720px] px-10 py-7 max-[900px]:px-4">
+      <div className="mx-auto max-w-[720px] px-10 py-7 max-[900px]:px-4 min-w-0">
         <Link href="/community" className="mb-3 inline-block text-[13px] font-semibold text-text-grey no-underline">
           ← Back to community
         </Link>

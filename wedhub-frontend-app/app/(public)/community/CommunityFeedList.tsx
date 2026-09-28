@@ -175,19 +175,19 @@ export function CommunityFeedList({
           .filter((key): key is string => Boolean(key));
 
         return (
-          <div key={post.id} className="rounded-xl border border-border bg-white p-4.5">
+          <div key={post.id} className="rounded-xl border border-border bg-white p-4.5 min-w-0">
             <div className="mb-2.5 flex items-center gap-2.5">
               <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary-soft text-xs font-bold text-brand-primary">
                 {initialsFromUsername(authorName)}
               </div>
-              <div className="min-w-0">
-                <div className="text-[13px] font-bold text-text-dark">{authorName}</div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[13px] font-bold text-text-dark">{authorName}</div>
                 <div className="text-xs text-text-grey">{formatRelativeTime(post.createdAt)}</div>
               </div>
             </div>
 
             <Link href={`/community/${post.id}`} className="no-underline">
-              <h3 className="mb-1 text-[15px] font-bold text-text-dark">{post.title}</h3>
+              <h3 className="mb-1 text-[15px] font-bold text-text-dark break-words-anywhere">{post.title}</h3>
             </Link>
 
             {post.postType === "POLL" ? (
@@ -199,7 +199,7 @@ export function CommunityFeedList({
               />
             ) : (
               <>
-                {post.body && <p className="mb-2 line-clamp-2 text-[13px] text-text-grey">{post.body}</p>}
+                {post.body && <p className="mb-2 line-clamp-2 text-[13px] text-text-grey break-words-anywhere">{post.body}</p>}
                 <PhotoGrid photoKeys={photoKeys} />
               </>
             )}

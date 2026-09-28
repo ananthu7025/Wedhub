@@ -86,9 +86,9 @@ export function PollBlock({
               className={`absolute inset-y-0 left-0 ${selected ? "bg-brand-primary-soft" : "bg-surface-input"}`}
               style={{ width: `${percent}%` }}
             />
-            <span className="relative flex items-center justify-between gap-2">
-              <span className="text-text-dark">{option.label}</span>
-              <span className="text-text-grey">{percent}%</span>
+            <span className="relative flex items-center justify-between gap-3">
+              <span className="min-w-0 flex-1 break-words-anywhere text-text-dark leading-snug">{option.label}</span>
+              <span className="ml-auto flex-shrink-0 tabular-nums text-text-grey font-medium">{percent}%</span>
             </span>
           </button>
         );

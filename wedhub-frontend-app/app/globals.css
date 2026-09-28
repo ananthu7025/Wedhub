@@ -127,3 +127,9 @@ body {
   scrollbar-width: none;  /* Firefox */
 }
 
+/* Break long unbroken words or text gracefully without breaking container boundaries */
+.break-words-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+

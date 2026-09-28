@@ -155,16 +155,30 @@ export function NewPostForm({
 
       <label className="mb-4 block text-sm">
         <span className="mb-1.5 block font-bold text-[13px]">{postType === "POLL" ? "Question" : "Title"}</span>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={() => setTouched((t) => ({ ...t, title: true }))}
-          maxLength={200}
-          placeholder={postType === "POLL" ? "Ask couples a question…" : "What's on your mind?"}
-          className={`w-full rounded-md border px-3 py-2.5 text-sm ${
-            touched.title && titleError ? "border-red focus:border-red" : "border-border focus:border-brand-primary"
-          }`}
-        />
+        {postType === "POLL" ? (
+          <textarea
+            value={title}
+            onChange={(e) => setTitle(e.target.value.replace(/[\r\n]+/g, " "))}
+            onBlur={() => setTouched((t) => ({ ...t, title: true }))}
+            maxLength={200}
+            rows={2}
+            placeholder="Ask couples a question…"
+            className={`min-h-[56px] w-full rounded-md border px-3 py-2 text-sm resize-none ${
+              touched.title && titleError ? "border-red focus:border-red" : "border-border focus:border-brand-primary"
+            }`}
+          />
+        ) : (
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, title: true }))}
+            maxLength={200}
+            placeholder="What's on your mind?"
+            className={`w-full rounded-md border px-3 py-2.5 text-sm ${
+              touched.title && titleError ? "border-red focus:border-red" : "border-border focus:border-brand-primary"
+            }`}
+          />
+        )}
         {touched.title && <FieldError message={titleError} />}
       </label>
 
@@ -182,7 +196,7 @@ export function NewPostForm({
                   onBlur={() => setTouched((t) => ({ ...t, pollOptions: true }))}
                   maxLength={100}
                   placeholder={`Option ${index + 1}`}
-                  className="w-full rounded-md border border-border px-3 py-2 text-sm"
+                  className="min-w-0 flex-1 rounded-md border border-border px-3 py-2 text-sm"
                 />
                 {pollOptions.length > MIN_POLL_OPTIONS && (
                   <button
