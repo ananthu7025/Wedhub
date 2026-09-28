@@ -298,6 +298,75 @@ interface RealWeddingsViewProps {
 
 const PAGE_SIZE = 6;
 
+const WEDDING_THEMES = [
+  {
+    id: "south-indian",
+    name: "South Indian Traditions",
+    subtext: "Temple ceremonies, Kanjeevaram silks & traditional rituals",
+    tagFilter: "South Indian Traditional",
+    bg: "bg-[#eef2ff]",
+    border: "border-[#dce4ff]",
+    textColor: "text-indigo-900",
+    imageUrl: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=500&q=80",
+    keywords: ["south indian", "kerala", "temple", "tamil", "chettinad", "traditional"],
+  },
+  {
+    id: "royal-heritage",
+    name: "Royal Heritage & Palaces",
+    subtext: "Majestic forts, royal palace courtyards & opulent regal decor",
+    tagFilter: "Royal Heritage Wedding",
+    bg: "bg-[#fff1f2]",
+    border: "border-[#ffe4e6]",
+    textColor: "text-rose-900",
+    imageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=500&q=80",
+    keywords: ["royal", "heritage", "palace", "fort", "rajasthani", "regal"],
+  },
+  {
+    id: "beach-destination",
+    name: "Beachside & Destination",
+    subtext: "Sunset vows, coastal celebrations & bohemian ocean vibes",
+    tagFilter: "Beachside Destination",
+    bg: "bg-[#f0fdfa]",
+    border: "border-[#ccfbf1]",
+    textColor: "text-teal-900",
+    imageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=500&q=80",
+    keywords: ["beach", "destination", "goa", "sunset", "cliffside", "himalayan"],
+  },
+  {
+    id: "kerala-backwaters",
+    name: "Kerala Backwater Nuptials",
+    subtext: "Houseboat processions, tranquil lagoons & serene ceremonies",
+    tagFilter: "Kerala Christian Wedding",
+    bg: "bg-[#f0fdf4]",
+    border: "border-[#dcfce7]",
+    textColor: "text-emerald-900",
+    imageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=500&q=80",
+    keywords: ["kerala", "backwater", "alleppey", "christian", "lotus pond"],
+  },
+  {
+    id: "lakeside-luxury",
+    name: "Lakeside Luxury Celebrations",
+    subtext: "Palatial lake views, sunset mandaps & luxury resort soirees",
+    tagFilter: "Lakeside Luxury Wedding",
+    bg: "bg-[#fefce8]",
+    border: "border-[#fef9c3]",
+    textColor: "text-yellow-900",
+    imageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=500&q=80",
+    keywords: ["lakeside", "luxury", "udaipur", "leela", "lake"],
+  },
+  {
+    id: "big-fat-punjabi",
+    name: "Grand & Big Fat Celebrations",
+    subtext: "Foot-tapping dhol beats, glamorous sangeets & grand parties",
+    tagFilter: "Punjabi Big Fat Wedding",
+    bg: "bg-[#faf5ff]",
+    border: "border-[#f3e8ff]",
+    textColor: "text-purple-900",
+    imageUrl: "https://images.unsplash.com/photo-1545232979-fbf68fe9b1af?w=500&q=80",
+    keywords: ["punjabi", "big fat", "fusion", "grand", "sangeet", "anand karaj"],
+  },
+];
+
 export function RealWeddingsView({ initialData, currentPage = 1, searchParams }: RealWeddingsViewProps) {
   // Map real database stories to display cards
   const realDisplayStories: DisplayRealWeddingStory[] = useMemo(() => {
@@ -347,6 +416,32 @@ export function RealWeddingsView({ initialData, currentPage = 1, searchParams }:
     const startIndex = (page - 1) * PAGE_SIZE;
     return ALL_SAMPLE_STORIES.slice(startIndex, startIndex + PAGE_SIZE);
   }, [isUsingRealStories, realDisplayStories, page]);
+
+  // All available stories to populate mobile shelves
+  const allAvailableStories = useMemo(() => {
+    return isUsingRealStories && realDisplayStories.length >= 6 ? realDisplayStories : ALL_SAMPLE_STORIES;
+  }, [isUsingRealStories, realDisplayStories]);
+
+  // Group stories into themed carousels for mobile shelf UX
+  const themedShelves = useMemo(() => {
+    return WEDDING_THEMES.map((theme) => {
+      const matched = allAvailableStories.filter((s) => {
+        const textToSearch = `${s.tag} ${s.snippet} ${s.location} ${s.coupleName}`.toLowerCase();
+        return theme.keywords.some((k) => textToSearch.includes(k.toLowerCase()));
+      });
+
+      let shelfStories = matched;
+      if (shelfStories.length < 3) {
+        const additional = allAvailableStories.filter((s) => !shelfStories.some((m) => m.id === s.id));
+        shelfStories = [...shelfStories, ...additional].slice(0, 4);
+      }
+
+      return {
+        theme,
+        stories: shelfStories,
+      };
+    });
+  }, [allAvailableStories]);
 
   function buildPageUrl(pageNumber: number) {
     const params = new URLSearchParams();
@@ -428,88 +523,181 @@ export function RealWeddingsView({ initialData, currentPage = 1, searchParams }:
           </div>
         </div>
 
-        {/* 3-Column Card Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
-          {displayedStories.map((story) => (
-            <RealWeddingCollageCard key={story.id} story={story} />
-          ))}
+        {/* MOBILE VIEW: UX matching Vendors Page Structure (block md:hidden) */}
+        <div className="block md:hidden">
+          {/* Category Card Grid Header */}
+          <div className="mb-4">
+            <h2 className="text-xl font-bold tracking-tight text-gray-900">
+              Wedding Categories
+            </h2>
+            <p className="mt-0.5 text-xs text-gray-500">
+              Browse authentic real weddings and photography inspiration by theme
+            </p>
+          </div>
+
+          {/* Top Pastel Category Cards Grid */}
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+            {WEDDING_THEMES.map((theme) => (
+              <a
+                key={theme.id}
+                href={`#shelf-${theme.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById(`shelf-${theme.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                className={`group relative flex h-[115px] sm:h-[135px] items-center justify-between overflow-hidden rounded-2xl border ${theme.border} ${theme.bg} p-3.5 sm:p-4 text-inherit no-underline transition-all duration-300 active:scale-[0.98] shadow-xs`}
+              >
+                {/* Left Content */}
+                <div className="flex flex-col justify-center pr-3 max-w-[62%] sm:max-w-[65%]">
+                  <div className="flex items-center gap-1 font-bold text-gray-900 text-sm sm:text-base group-hover:text-[#e00b41] transition-colors">
+                    <span>{theme.name}</span>
+                    <span className="text-gray-400 group-hover:text-[#e00b41] group-hover:translate-x-0.5 transition-all text-xs">
+                      ›
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-gray-600 line-clamp-2 leading-relaxed">
+                    {theme.subtext}
+                  </p>
+                </div>
+
+                {/* Right Arched Cutout: Real wedding image */}
+                <div className="relative h-full w-[95px] sm:w-[115px] shrink-0 overflow-hidden rounded-l-[40px] sm:rounded-l-[50px] shadow-xs bg-white/50">
+                  <Image
+                    src={theme.imageUrl}
+                    alt={theme.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="120px"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-black/5" />
+                </div>
+              </a>
+            ))}
+          </div>
+
+          {/* Themed Shelves with Horizontal Carousels */}
+          <div className="mt-8 space-y-8">
+            {themedShelves.map(({ theme, stories }) => (
+              <section key={theme.id} id={`shelf-${theme.id}`} className="scroll-mt-4">
+                {/* Shelf Header */}
+                <div className="mb-3 flex items-end justify-between">
+                  <div className="pr-2">
+                    <h3 className="text-lg font-bold tracking-tight text-gray-900">
+                      {theme.name}
+                    </h3>
+                    <p className="mt-0.5 text-xs text-gray-500 line-clamp-1">
+                      {theme.subtext}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/real-weddings?tag=${encodeURIComponent(theme.tagFilter)}`}
+                    className="text-xs font-bold text-[#e00b41] hover:underline shrink-0"
+                  >
+                    View all ›
+                  </Link>
+                </div>
+
+                {/* Horizontal Carousel Track */}
+                <div
+                  className="flex gap-3.5 overflow-x-auto pb-3 pt-1 snap-x scroll-smooth no-scrollbar"
+                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                >
+                  {stories.map((story) => (
+                    <div key={story.id} className="w-[275px] shrink-0 snap-start">
+                      <RealWeddingCollageCard story={story} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         </div>
 
-        {/* Numbered Pagination Bar */}
-        {totalPages > 1 && (
-          <div className="mt-14 flex justify-center">
-            <nav aria-label="Pagination" className="inline-flex items-center gap-1.5 rounded-2xl border border-border/80 bg-white p-1.5 shadow-xs">
-              {/* Previous Page Link / Button */}
-              {page > 1 ? (
-                <Link
-                  href={buildPageUrl(page - 1)}
-                  aria-label="Previous page"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black transition-colors hover:bg-surface-input"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
-                </Link>
-              ) : (
-                <span
-                  aria-disabled="true"
-                  aria-label="Previous page"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black opacity-30 cursor-not-allowed pointer-events-none"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
-                </span>
-              )}
-
-              {/* Page Numbers */}
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                const isCurrent = p === page;
-                return isCurrent ? (
-                  <span
-                    key={p}
-                    aria-current="page"
-                    className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-extrabold bg-crimson text-white shadow-sm cursor-default"
-                  >
-                    {p}
-                  </span>
-                ) : (
-                  <Link
-                    key={p}
-                    href={buildPageUrl(p)}
-                    aria-label={`Page ${p}`}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-extrabold text-jet-black transition-all hover:bg-surface-input"
-                  >
-                    {p}
-                  </Link>
-                );
-              })}
-
-              {/* Next Page Link / Button */}
-              {page < totalPages ? (
-                <Link
-                  href={buildPageUrl(page + 1)}
-                  aria-label="Next page"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black transition-colors hover:bg-surface-input"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </Link>
-              ) : (
-                <span
-                  aria-disabled="true"
-                  aria-label="Next page"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black opacity-30 cursor-not-allowed pointer-events-none"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </span>
-              )}
-            </nav>
+        {/* DESKTOP VIEW: 3-Column Card Grid + Numbered Pagination Bar (hidden md:block) */}
+        <div className="hidden md:block">
+          {/* 3-Column Card Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
+            {displayedStories.map((story) => (
+              <RealWeddingCollageCard key={story.id} story={story} />
+            ))}
           </div>
-        )}
+
+          {/* Numbered Pagination Bar */}
+          {totalPages > 1 && (
+            <div className="mt-14 flex justify-center">
+              <nav aria-label="Pagination" className="inline-flex items-center gap-1.5 rounded-2xl border border-border/80 bg-white p-1.5 shadow-xs">
+                {/* Previous Page Link / Button */}
+                {page > 1 ? (
+                  <Link
+                    href={buildPageUrl(page - 1)}
+                    aria-label="Previous page"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black transition-colors hover:bg-surface-input"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </Link>
+                ) : (
+                  <span
+                    aria-disabled="true"
+                    aria-label="Previous page"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black opacity-30 cursor-not-allowed pointer-events-none"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </span>
+                )}
+
+                {/* Page Numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                  const isCurrent = p === page;
+                  return isCurrent ? (
+                    <span
+                      key={p}
+                      aria-current="page"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-extrabold bg-crimson text-white shadow-sm cursor-default"
+                    >
+                      {p}
+                    </span>
+                  ) : (
+                    <Link
+                      key={p}
+                      href={buildPageUrl(p)}
+                      aria-label={`Page ${p}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-extrabold text-jet-black transition-all hover:bg-surface-input"
+                    >
+                      {p}
+                    </Link>
+                  );
+                })}
+
+                {/* Next Page Link / Button */}
+                {page < totalPages ? (
+                  <Link
+                    href={buildPageUrl(page + 1)}
+                    aria-label="Next page"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black transition-colors hover:bg-surface-input"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </Link>
+                ) : (
+                  <span
+                    aria-disabled="true"
+                    aria-label="Next page"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black opacity-30 cursor-not-allowed pointer-events-none"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </span>
+                )}
+              </nav>
+            </div>
+          )}
+        </div>
 
         {/* Editorial SEO Blurb (Matching WedMeGood Footer Section) */}
         <section className="mt-16 rounded-2xl border border-border/80 bg-white p-6 sm:p-8 shadow-xs">
