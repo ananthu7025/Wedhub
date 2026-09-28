@@ -9,6 +9,7 @@ import { EnquiryCta } from "@/components/shared/EnquiryCta";
 import { JsonLd } from "@/components/shared/JsonLd";
 import { MessageVendorButton } from "@/components/shared/MessageVendorButton";
 import { VendorContactLinks } from "@/components/shared/VendorContactLinks";
+import { AddToCompareButton } from "@/components/shared/AddToCompareButton";
 import { VendorMobileStickyBar } from "@/components/shared/VendorMobileStickyBar";
 import { VendorPortfolioTabs } from "@/components/portfolio/VendorPortfolioTabs";
 import { VendorRatingDistribution } from "@/components/portfolio/VendorRatingDistribution";
@@ -155,6 +156,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
     slug: vendor.slug,
     status: vendor.status,
     verificationLevel: vendor.verificationLevel,
+    categoryId: primaryCategory?.id ?? null,
     profile: {
       shortDescription: vendor.profile?.shortDescription ?? null,
       startingPrice: vendor.profile?.startingPrice ?? null,
@@ -445,16 +447,14 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
                   />
                 </div>
 
-                <Link
-                  href={`/shortlist?compareVendorId=${vendor.id}`}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-white py-2.5 text-center text-xs font-bold text-text-dark no-underline hover:bg-surface-input"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <rect x="3" y="3" width="7" height="18" rx="1.5" />
-                    <rect x="14" y="3" width="7" height="18" rx="1.5" />
-                  </svg>
-                  Add to compare
-                </Link>
+                <AddToCompareButton
+                  vendorId={vendor.id}
+                  vendorName={vendor.businessName}
+                  categoryName={primaryCategory?.name}
+                  vendorSummary={vendorSummary}
+                  isAuthenticated={session !== null}
+                  initialFavorited={isFavorited}
+                />
 
                 {responseTimeLabel && (
                   <p className="mt-3 text-center text-xs font-medium text-emerald-700">{responseTimeLabel}</p>

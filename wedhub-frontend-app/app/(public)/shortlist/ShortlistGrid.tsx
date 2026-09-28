@@ -82,12 +82,18 @@ export function ShortlistGrid({ items }: { items: ShortlistItem[] }) {
     router.push(`/compare?vendorIds=${Array.from(selected).join(",")}&from=shortlist`);
   }
 
+  const preselectedItem = preselect ? visibleItems.find((i) => i.vendorId === preselect) : undefined;
+  const preselectedCategory = preselectedItem?.vendor.categoryId;
+  const sameCategoryCount = preselectedCategory
+    ? visibleItems.filter((i) => i.vendor.categoryId === preselectedCategory).length
+    : 0;
+
   if (visibleItems.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-white px-6 py-18 text-center">
         <h3 className="mb-1.5 text-[15px] font-bold">No vendors saved yet</h3>
-        <p className="mb-4 max-w-[320px] text-[13px] text-text-grey">
-          Browse vendors and tap the heart icon to save them here.
+        <p className="mb-4 max-w-[360px] text-[13px] text-text-grey">
+          To compare vendors side-by-side, shortlist at least 2 vendors from the same category. Tap the heart icon or click &ldquo;Add to compare&rdquo; on any vendor profile.
         </p>
         <Link href="/search" className="rounded-md bg-brand-primary px-5 py-2.5 text-sm font-bold text-white no-underline">
           Find vendors
@@ -98,6 +104,49 @@ export function ShortlistGrid({ items }: { items: ShortlistItem[] }) {
 
   return (
     <>
+      {preselectedItem && sameCategoryCount < 2 && (
+        <div className="mb-5 flex flex-col gap-2 rounded-xl border border-byzantine-blue-10 bg-byzantine-blue-10/40 p-4 text-[13px] text-text-dark sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5">
+            <svg className="h-5 w-5 text-byzantine-blue flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            <div>
+              <p className="font-bold">
+                &ldquo;{preselectedItem.vendor.businessName}&rdquo; is selected for comparison
+              </p>
+              <p className="text-text-grey text-xs mt-0.5">
+                Comparison requires at least 2 vendors from the same category. Shortlist another vendor to compare them side-by-side.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/search"
+            className="inline-flex self-start rounded-md bg-brand-primary px-3.5 py-1.5 text-xs font-bold text-white no-underline hover:bg-brand-primary-hover sm:self-center shrink-0"
+          >
+            Find vendors to compare →
+          </Link>
+        </div>
+      )}
+
+      {preselectedItem && sameCategoryCount >= 2 && (
+        <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-emerald-30 bg-emerald-10/50 p-4 text-[13px] text-text-dark">
+          <svg className="h-5 w-5 text-emerald flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          <div>
+            <p className="font-bold">
+              &ldquo;{preselectedItem.vendor.businessName}&rdquo; is selected for comparison
+            </p>
+            <p className="text-text-grey text-xs mt-0.5">
+              Select at least 1 more vendor of the same category below, then click <strong>Compare selected</strong>.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mb-5 flex items-center justify-between rounded-xl border border-border bg-white px-5 py-3.5">
         <span className="text-sm text-text-grey">
           <strong className="text-text-dark">{selected.size}</strong> selected for comparison (2–5, same category)
