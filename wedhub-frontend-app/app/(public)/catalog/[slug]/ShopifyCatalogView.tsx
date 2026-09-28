@@ -12,6 +12,8 @@ import type {
 } from "@/lib/api/vendor-catalog.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { themeForCatalog } from "./catalog-theme";
+import { formatCatalogPrice, getCatalogCalculatedPrice, getCatalogItemBasePrice, type RentalDuration } from "./catalog-pricing";
+import { useCatalogCart } from "./useCatalogCart";
 
 // --- Clean SVG Icon Definitions (No System Icons / Emojis) ---
 
@@ -158,13 +160,6 @@ function CheckSvg({ className = "w-3.5 h-3.5" }: { className?: string }) {
   );
 }
 
-interface CartItemEntry {
-  item: CatalogItem;
-  variant?: CatalogItemVariant;
-  rentalDuration: "1-day" | "3-days" | "5-days";
-  quantity: number;
-}
-
 export function ShopifyCatalogView({
   vendor,
   initialItems,
@@ -195,15 +190,11 @@ export function ShopifyCatalogView({
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [showWishlistOnly, setShowWishlistOnly] = useState(false);
 
-  // Cart Drawer state
-  const [cart, setCart] = useState<CartItemEntry[]>([]);
+  // Cart state — shared with the standalone product page via sessionStorage
+  // (see useCatalogCart's own header comment) so adding an item on a
+  // product-detail page and navigating back to this grid doesn't lose it.
+  const { cart, addToCart, updateQuantity, cartItemCount, cartSubtotal } = useCatalogCart(vendor.id);
   const [isCartOpen, setIsCartOpen] = useState(false);
-
-  // Quick View Modal state
-  const [quickViewItem, setQuickViewItem] = useState<CatalogItem | null>(null);
-  const [quickViewActivePhotoIdx, setQuickViewActivePhotoIdx] = useState<number>(0);
-  const [selectedVariant, setSelectedVariant] = useState<CatalogItemVariant | null>(null);
-  const [selectedDuration, setSelectedDuration] = useState<"1-day" | "3-days" | "5-days">("3-days");
 
   // WhatsApp Checkout Form inside Cart Drawer
   const [clientName, setClientName] = useState("");
@@ -243,27 +234,9 @@ export function ShopifyCatalogView({
     [collections],
   );
 
-  function formatPrice(amount: number) {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  }
-
-  function getItemBasePrice(item: CatalogItem, variant?: CatalogItemVariant): number {
-    if (variant) return variant.price;
-    if (item.variants.length > 0) {
-      return Math.min(...item.variants.map((v) => v.price));
-    }
-    return item.basePrice || 0;
-  }
-
-  function getCalculatedPrice(basePrice: number, duration: "1-day" | "3-days" | "5-days"): number {
-    if (duration === "1-day") return Math.round(basePrice * 0.75);
-    if (duration === "5-days") return Math.round(basePrice * 1.35);
-    return basePrice;
-  }
+  const formatPrice = formatCatalogPrice;
+  const getItemBasePrice = getCatalogItemBasePrice;
+  const getCalculatedPrice = getCatalogCalculatedPrice;
 
   // Filtered items based on search and vendor-assigned collection
   const filteredItems = useMemo(() => {
@@ -290,57 +263,13 @@ export function ShopifyCatalogView({
     setWishlist((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   }
 
-  // Cart calculation
-  const cartItemCount = cart.reduce((acc, curr) => acc + curr.quantity, 0);
-  const cartSubtotal = cart.reduce((acc, curr) => {
-    const base = getItemBasePrice(curr.item, curr.variant);
-    const price = getCalculatedPrice(base, curr.rentalDuration);
-    return acc + price * curr.quantity;
-  }, 0);
-
-  function handleAddToCart(
-    item: CatalogItem,
-    variant?: CatalogItemVariant,
-    duration: "1-day" | "3-days" | "5-days" = "3-days"
-  ) {
-    setCart((prev) => {
-      const idx = prev.findIndex(
-        (c) => c.item.id === item.id && c.variant?.id === variant?.id && c.rentalDuration === duration
-      );
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = { ...next[idx], quantity: next[idx].quantity + 1 };
-        return next;
-      }
-      return [...prev, { item, variant, rentalDuration: duration, quantity: 1 }];
-    });
+  function handleAddToCart(item: CatalogItem, variant?: CatalogItemVariant, duration: RentalDuration = "3-days") {
+    addToCart(item, variant, duration);
     setIsCartOpen(true);
   }
 
-  function handleUpdateCartQty(
-    itemId: string,
-    variantId: string | undefined,
-    duration: string,
-    delta: number
-  ) {
-    setCart((prev) =>
-      prev
-        .map((entry) => {
-          if (entry.item.id === itemId && entry.variant?.id === variantId && entry.rentalDuration === duration) {
-            const nextQty = entry.quantity + delta;
-            return nextQty > 0 ? { ...entry, quantity: nextQty } : null;
-          }
-          return entry;
-        })
-        .filter(Boolean) as CartItemEntry[]
-    );
-  }
-
-  function handleOpenQuickView(item: CatalogItem) {
-    setQuickViewItem(item);
-    setQuickViewActivePhotoIdx(0);
-    setSelectedVariant(item.variants[0] || null);
-    setSelectedDuration("3-days");
+  function handleUpdateCartQty(itemId: string, variantId: string | undefined, duration: string, delta: number) {
+    updateQuantity(itemId, variantId, duration, delta);
   }
 
   function handleSendWhatsAppOrder() {
@@ -783,22 +712,21 @@ export function ShopifyCatalogView({
                 >
                   <div>
                     {/* Image Area with Badge & Heart */}
-                    <div
-                      className="relative aspect-square rounded-xl bg-[#F8F6F2] overflow-hidden cursor-pointer"
-                      onClick={() => handleOpenQuickView(item)}
-                    >
-                      {imgUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={imgUrl}
-                          alt={item.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#B0A798]">
-                          <SparklesSvg className="w-8 h-8" />
-                        </div>
-                      )}
+                    <div className="relative aspect-square rounded-xl bg-[#F8F6F2] overflow-hidden">
+                      <Link href={`/catalog/${vendor.slug}/${item.slug}`} className="block h-full w-full">
+                        {imgUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={imgUrl}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[#B0A798]">
+                            <SparklesSvg className="w-8 h-8" />
+                          </div>
+                        )}
+                      </Link>
 
                       {/* "New" Ochre Badge */}
                       <span className={`absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full ${theme.accentBgClass} text-white text-[10px] font-bold tracking-wide`}>
@@ -808,10 +736,7 @@ export function ShopifyCatalogView({
                       {/* Wishlist Heart */}
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleWishlist(item.id);
-                        }}
+                        onClick={() => toggleWishlist(item.id)}
                         className="absolute top-2.5 right-2.5 h-7 w-7 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center text-[#554C41] hover:text-rose-500 transition shadow-xs"
                       >
                         <HeartSvg className={`w-3.5 h-3.5 ${isWishlisted ? "fill-rose-500 text-rose-500" : ""}`} filled={isWishlisted} />
@@ -820,12 +745,12 @@ export function ShopifyCatalogView({
 
                     {/* Title & Subtitle */}
                     <div className="mt-3.5">
-                      <h4
-                        onClick={() => handleOpenQuickView(item)}
-                        className="font-serif font-bold text-sm text-[#1C1A17] line-clamp-1 hover:text-[#916B33] cursor-pointer transition"
+                      <Link
+                        href={`/catalog/${vendor.slug}/${item.slug}`}
+                        className="block font-serif font-bold text-sm text-[#1C1A17] line-clamp-1 hover:text-[#916B33] transition no-underline"
                       >
                         {item.title}
-                      </h4>
+                      </Link>
                       <p className="text-[11px] text-[#7A7165] line-clamp-1 mt-0.5 font-light">
                         {item.description || `${primaryCategory} suite`}
                       </p>
@@ -1083,176 +1008,6 @@ export function ShopifyCatalogView({
           </div>
         </div>
       </footer>
-
-      {/* 9. Quick View PDP Modal */}
-      {quickViewItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col md:flex-row">
-            {/* Modal Image Area */}
-            <div className="md:w-1/2 bg-[#F8F6F2] relative min-h-[300px] md:min-h-full flex flex-col justify-between p-4">
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-white shadow-xs">
-                {quickViewItem.media[quickViewActivePhotoIdx] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={
-                      quickViewItem.media[quickViewActivePhotoIdx].url ??
-                      quickViewItem.media[quickViewActivePhotoIdx].thumbnailUrl ??
-                      ""
-                    }
-                    alt={quickViewItem.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[#B0A798]">
-                    <SparklesSvg className="w-12 h-12" />
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setQuickViewItem(null)}
-                  className="absolute top-3 left-3 md:hidden h-8 w-8 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-neutral-800 font-bold"
-                  aria-label="Close"
-                >
-                  <CloseIcon className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Thumbnails */}
-              {quickViewItem.media.length > 1 && (
-                <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
-                  {quickViewItem.media.map((m, idx) => (
-                    <button
-                      key={m.id || idx}
-                      type="button"
-                      onClick={() => setQuickViewActivePhotoIdx(idx)}
-                      className={`h-14 w-14 rounded-xl border-2 overflow-hidden shrink-0 transition ${
-                        quickViewActivePhotoIdx === idx ? "border-[#1F1C18] scale-105" : "border-[#E5DEC7] opacity-60"
-                      }`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={m.url ?? m.thumbnailUrl ?? ""} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Modal Product Details */}
-            <div className="md:w-1/2 p-6 sm:p-8 flex flex-col justify-between overflow-y-auto max-h-[60vh] md:max-h-[90vh]">
-              <div>
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <span className="text-[10px] font-bold text-[#8F6B38] uppercase tracking-widest">
-                      {primaryCategory}
-                    </span>
-                    <h3 className="text-xl sm:text-2xl font-serif font-bold text-[#1F1C18] mt-1">
-                      {quickViewItem.title}
-                    </h3>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setQuickViewItem(null)}
-                    className="hidden md:flex h-8 w-8 rounded-full hover:bg-neutral-100 items-center justify-center text-neutral-500 font-bold"
-                    aria-label="Close"
-                  >
-                    <CloseIcon className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <div className="mt-4 p-3 bg-[#FAF8F5] rounded-xl border border-[#EDE8E0]">
-                  <div className="text-[10px] uppercase font-bold text-[#8A8175]">Rental Rate:</div>
-                  <div className="text-2xl font-bold text-[#1F1C18] font-mono mt-0.5">
-                    {formatPrice(
-                      getCalculatedPrice(
-                        getItemBasePrice(quickViewItem, selectedVariant || undefined),
-                        selectedDuration
-                      )
-                    )}
-                    <span className="text-xs text-[#7A7165] font-sans font-normal ml-1">
-                      ({selectedDuration.replace("-", " ")})
-                    </span>
-                  </div>
-                </div>
-
-                {/* Duration selector */}
-                <div className="mt-4">
-                  <label className="block text-xs font-bold text-[#2A2621] mb-1.5">Rental Duration:</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDuration("1-day")}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition text-center ${
-                        selectedDuration === "1-day"
-                          ? "bg-[#1C1A17] text-white border-[#1C1A17]"
-                          : "bg-white text-[#2A2621] border-[#E0D7C8] hover:bg-[#FAF8F5]"
-                      }`}
-                    >
-                      <div>1 Day</div>
-                      <div className="text-[10px] opacity-75 font-normal">Trial / Shoot</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDuration("3-days")}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition text-center ${
-                        selectedDuration === "3-days"
-                          ? "bg-[#1C1A17] text-white border-[#1C1A17]"
-                          : "bg-white text-[#2A2621] border-[#E0D7C8] hover:bg-[#FAF8F5]"
-                      }`}
-                    >
-                      <div>3 Days</div>
-                      <div className="text-[10px] opacity-75 font-normal">Wedding Standard</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDuration("5-days")}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition text-center ${
-                        selectedDuration === "5-days"
-                          ? "bg-[#1C1A17] text-white border-[#1C1A17]"
-                          : "bg-white text-[#2A2621] border-[#E0D7C8] hover:bg-[#FAF8F5]"
-                      }`}
-                    >
-                      <div>5 Days</div>
-                      <div className="text-[10px] opacity-75 font-normal">Extended Events</div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Included pieces */}
-                {quickViewItem.components.length > 0 && (
-                  <div className="mt-4 bg-[#FAF8F5] rounded-xl p-4 border border-[#EDE8E0]">
-                    <h5 className="text-xs font-bold text-[#1F1C18] mb-2">
-                      Included in Suite ({quickViewItem.components.length}):
-                    </h5>
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-[#524B43]">
-                      {quickViewItem.components.map((comp) => (
-                        <li key={comp.id} className="flex items-center gap-1.5">
-                          <CheckSvg className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>{comp.name} {comp.defaultQty > 1 ? `(${comp.defaultQty})` : ""}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="mt-6 pt-4 border-t border-[#EDE8E0] flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleAddToCart(quickViewItem, selectedVariant || undefined, selectedDuration);
-                    setQuickViewItem(null);
-                  }}
-                  className="flex-1 py-3.5 px-4 rounded-xl bg-[#1C1A17] text-white text-xs font-bold hover:bg-black transition shadow-md flex items-center justify-center gap-2"
-                >
-                  <BagSvg className="w-4 h-4" />
-                  <span>Add to Rental Bag</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 10. Slide-out Cart Drawer with WhatsApp Checkout */}
       {isCartOpen && (
