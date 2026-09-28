@@ -7,7 +7,9 @@ import { createMediaUploadRequest, confirmMediaUpload } from "@/lib/api/vendor-s
 import { compressImageIfPossible } from "@/lib/media/compress-image";
 import { UPLOAD_CACHE_CONTROL } from "@/lib/media/upload";
 import type {
+  CatalogCollection,
   CatalogFooterLink,
+  CatalogPromoTileInput,
   CatalogStoreSettings,
   CatalogTrustBadge,
   StoreAccentColor,
@@ -214,11 +216,127 @@ function MultiImageUploader({
   );
 }
 
+interface PromoTileDraft {
+  mediaId: string | null;
+  previewUrl: string | null;
+  heading: string;
+  description: string;
+  buttonLabel: string;
+  linkedCollectionId: string;
+}
+
+function PromoTileEditor({
+  tile,
+  index,
+  collections,
+  onChange,
+  onRemove,
+}: {
+  tile: PromoTileDraft;
+  index: number;
+  collections: CatalogCollection[];
+  onChange: (next: PromoTileDraft) => void;
+  onRemove: () => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const uploaded = await uploadCatalogImage(file);
+      onChange({ ...tile, mediaId: uploaded.mediaId, previewUrl: uploaded.previewUrl });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image upload failed");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-neutral-200 p-3 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <span className="font-bold text-neutral-700">Tile {index + 1}</span>
+        <button type="button" onClick={onRemove} className="text-[11px] font-semibold text-red-600 hover:underline">
+          Remove
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="relative h-16 w-16 shrink-0 rounded-lg border border-neutral-200 overflow-hidden bg-neutral-50">
+          {tile.previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={tile.previewUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-[10px] text-neutral-400">No image</div>
+          )}
+        </div>
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-[11px] font-bold text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
+        >
+          {uploading ? "…" : tile.previewUrl ? "Replace photo" : "Upload photo"}
+        </button>
+        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} className="sr-only" />
+      </div>
+      {error && <p className="text-[11px] text-red-600">{error}</p>}
+
+      <input
+        type="text"
+        placeholder="Heading, e.g. Bridal Collection"
+        value={tile.heading}
+        onChange={(e) => onChange({ ...tile, heading: e.target.value })}
+        className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
+      />
+      <textarea
+        rows={2}
+        placeholder="Description, e.g. Traditional designs for your big day"
+        value={tile.description}
+        onChange={(e) => onChange({ ...tile, description: e.target.value })}
+        className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
+      />
+      <input
+        type="text"
+        placeholder="Button label, e.g. Explore Now"
+        value={tile.buttonLabel}
+        onChange={(e) => onChange({ ...tile, buttonLabel: e.target.value })}
+        className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
+      />
+      <div>
+        <label className="block text-[11px] font-semibold text-neutral-600 mb-1">
+          Links to (optional — button does nothing if left unset)
+        </label>
+        <select
+          value={tile.linkedCollectionId}
+          onChange={(e) => onChange({ ...tile, linkedCollectionId: e.target.value })}
+          className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary bg-white"
+        >
+          <option value="">No link</option>
+          {collections.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
 export function CatalogStorefrontCustomizer({
   initialSettings,
+  collections,
   onClose,
 }: {
   initialSettings?: CatalogStoreSettings | null;
+  collections: CatalogCollection[];
   onClose: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>("Banner & Theme");
@@ -251,10 +369,16 @@ export function CatalogStorefrontCustomizer({
     initialSettings?.featuredSectionSubheading ?? "",
   );
 
-  const [promoEyebrow, setPromoEyebrow] = useState(initialSettings?.promoEyebrow ?? "");
-  const [promoHeading, setPromoHeading] = useState(initialSettings?.promoHeading ?? "");
-  const [promoDescription, setPromoDescription] = useState(initialSettings?.promoDescription ?? "");
-  const [promoQuote, setPromoQuote] = useState(initialSettings?.promoQuote ?? "");
+  const [promoTiles, setPromoTiles] = useState<PromoTileDraft[]>(
+    (initialSettings?.promoTiles ?? []).map((tile) => ({
+      mediaId: tile.mediaId,
+      previewUrl: tile.imageUrl,
+      heading: tile.heading,
+      description: tile.description ?? "",
+      buttonLabel: tile.buttonLabel ?? "",
+      linkedCollectionId: tile.linkedCollection?.id ?? "",
+    })),
+  );
 
   const [galleryHeading, setGalleryHeading] = useState(initialSettings?.galleryHeading ?? "");
   const [gallerySubheading, setGallerySubheading] = useState(initialSettings?.gallerySubheading ?? "");
@@ -287,6 +411,22 @@ export function CatalogStorefrontCustomizer({
     setTrustBadges((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function addPromoTile() {
+    if (promoTiles.length >= 4) return;
+    setPromoTiles((prev) => [
+      ...prev,
+      { mediaId: null, previewUrl: null, heading: "", description: "", buttonLabel: "", linkedCollectionId: "" },
+    ]);
+  }
+
+  function updatePromoTile(index: number, next: PromoTileDraft) {
+    setPromoTiles((prev) => prev.map((t, i) => (i === index ? next : t)));
+  }
+
+  function removePromoTile(index: number) {
+    setPromoTiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
   function addFooterLink() {
     if (footerLinks.length >= 12) return;
     setFooterLinks((prev) => [...prev, { label: "", url: "" }]);
@@ -306,6 +446,15 @@ export function CatalogStorefrontCustomizer({
 
     const cleanBadges = trustBadges.filter((b) => b.title.trim() && b.subtitle.trim());
     const cleanLinks = footerLinks.filter((l) => l.label.trim() && l.url.trim());
+    const cleanPromoTiles: CatalogPromoTileInput[] = promoTiles
+      .filter((t) => t.heading.trim())
+      .map((t) => ({
+        mediaId: t.mediaId,
+        heading: t.heading.trim(),
+        description: t.description.trim() || null,
+        buttonLabel: t.buttonLabel.trim() || null,
+        linkedCollectionId: t.linkedCollectionId || null,
+      }));
 
     const body: UpdateCatalogStoreSettingsInput = {
       heroMediaIds: heroImages.map((img) => img.mediaId),
@@ -321,10 +470,7 @@ export function CatalogStorefrontCustomizer({
       categorySectionSubheading: categorySectionSubheading.trim() || null,
       featuredSectionHeading: featuredSectionHeading.trim() || null,
       featuredSectionSubheading: featuredSectionSubheading.trim() || null,
-      promoEyebrow: promoEyebrow.trim() || null,
-      promoHeading: promoHeading.trim() || null,
-      promoDescription: promoDescription.trim() || null,
-      promoQuote: promoQuote.trim() || null,
+      promoTiles: cleanPromoTiles.length > 0 ? cleanPromoTiles : null,
       galleryHeading: galleryHeading.trim() || null,
       gallerySubheading: gallerySubheading.trim() || null,
       instagramUrl: instagramUrl.trim() || null,
@@ -501,29 +647,29 @@ export function CatalogStorefrontCustomizer({
           {activeTab === "Promo Banner" && (
             <>
               <p className="text-[11px] text-neutral-500">
-                An optional promo block (e.g. a studio-trial invite). Hidden entirely until you set a heading.
+                Up to 4 promo tiles shown side by side (e.g. &ldquo;Bridal Collection&rdquo; / &ldquo;Rental Collection&rdquo;).
+                Each has its own photo, heading, description, and button — optionally linking to one of your collections.
+                Hidden entirely until you add at least one tile with a heading.
               </p>
-              <TextField label="Eyebrow Label" placeholder="e.g. Studio Trials" value={promoEyebrow} onChange={setPromoEyebrow} />
-              <TextField
-                label="Heading"
-                placeholder="e.g. Try Before Your Big Day"
-                value={promoHeading}
-                onChange={setPromoHeading}
-              />
-              <TextField
-                label="Description"
-                placeholder="e.g. Visit our studio and experience our collections in person."
-                value={promoDescription}
-                onChange={setPromoDescription}
-                textarea
-              />
-              <TextField
-                label="Decorative Quote (optional)"
-                placeholder="e.g. Make it Memorable"
-                value={promoQuote}
-                onChange={setPromoQuote}
-              />
-              <p className="text-[11px] text-neutral-500">Uses the Trial CTA Button Label set in the Hero tab.</p>
+              {promoTiles.map((tile, idx) => (
+                <PromoTileEditor
+                  key={idx}
+                  tile={tile}
+                  index={idx}
+                  collections={collections}
+                  onChange={(next) => updatePromoTile(idx, next)}
+                  onRemove={() => removePromoTile(idx)}
+                />
+              ))}
+              {promoTiles.length < 4 && (
+                <button
+                  type="button"
+                  onClick={addPromoTile}
+                  className="w-full rounded-xl border border-dashed border-neutral-300 py-2 text-xs font-bold text-neutral-600 hover:bg-neutral-50"
+                >
+                  + Add promo tile
+                </button>
+              )}
             </>
           )}
 

@@ -9,6 +9,7 @@ export type {
   UpsertCatalogStoreSettingsInput,
   CatalogTrustBadgeInput,
   CatalogFooterLinkInput,
+  CatalogPromoTileInput,
   CreateCatalogCollectionInput,
   UpdateCatalogCollectionInput,
   ReorderCatalogCollectionsInput,

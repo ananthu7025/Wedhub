@@ -25,14 +25,6 @@ function SparklesSvg({ className = "w-3.5 h-3.5" }: { className?: string }) {
   );
 }
 
-function HomeSvg({ className = "w-3.5 h-3.5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-    </svg>
-  );
-}
-
 function MapPinSvg({ className = "w-3.5 h-3.5" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -238,6 +230,36 @@ export function ShopifyCatalogView({
   const getItemBasePrice = getCatalogItemBasePrice;
   const getCalculatedPrice = getCatalogCalculatedPrice;
 
+  // Curated shelf rows — stacked, titled sections (New Arrivals, Best
+  // Sellers, then the vendor's single largest collection) rather than one
+  // grid with tab filters, matching a reference layout the vendor asked to
+  // match closely. Each row only renders if that named collection actually
+  // exists (a vendor who never created a "New Arrivals"/"Best Sellers"
+  // collection simply doesn't get that shelf — no fabricated content), and
+  // is capped at 5 items so the homepage stays a preview, not the full
+  // catalog (the collection's own "View All" link/tab still reaches every
+  // item in it via the Featured Pieces section below).
+  const shelfRows = useMemo(() => {
+    const activeItemsByCollection = (collectionId: string) =>
+      collections.find((c) => c.id === collectionId)?.items.filter((i) => i.isActive).slice(0, 5) ?? [];
+
+    const newArrivals = collections.find((c) => c.name.toLowerCase() === "new arrivals");
+    const bestSellers = collections.find((c) => c.name.toLowerCase() === "best sellers");
+    // The largest remaining named collection (excluding the two cross-cutting
+    // ones above) stands in for a single extra themed row, e.g. "Necklaces".
+    const remaining = collections
+      .filter((c) => c.id !== newArrivals?.id && c.id !== bestSellers?.id)
+      .sort((a, b) => b.items.length - a.items.length);
+    const spotlight = remaining[0];
+
+    const candidates: Array<{ id: string; name: string; subheading: string; items: CatalogItem[] } | null> = [
+      newArrivals ? { id: newArrivals.id, name: "New Arrivals", subheading: "Fresh designs for your special moments", items: activeItemsByCollection(newArrivals.id) } : null,
+      bestSellers ? { id: bestSellers.id, name: "Best Sellers", subheading: "Our most-loved jewellery pieces", items: activeItemsByCollection(bestSellers.id) } : null,
+      spotlight ? { id: spotlight.id, name: spotlight.name, subheading: "Elegant pieces for every occasion", items: activeItemsByCollection(spotlight.id) } : null,
+    ];
+    return candidates.filter((row): row is { id: string; name: string; subheading: string; items: CatalogItem[] } => row !== null && row.items.length > 0);
+  }, [collections]);
+
   // Filtered items based on search and vendor-assigned collection
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -343,6 +365,153 @@ export function ShopifyCatalogView({
     () => (customConfig?.galleryImages ?? []).map((img) => img.url).filter((url): url is string => url !== null),
     [customConfig?.galleryImages],
   );
+
+  // Shared product card — used by every curated shelf row (New Arrivals,
+  // Best Sellers, the spotlight collection) and the "Featured Pieces" grid,
+  // so all four product listings render identically.
+  function renderProductCard(item: CatalogItem) {
+    const primaryMedia = item.media[0];
+    const imgUrl = primaryMedia?.url ?? primaryMedia?.thumbnailUrl;
+    const price = getItemBasePrice(item);
+    const originalEstimated = Math.round(price * 2.5);
+    const isWishlisted = wishlist.includes(item.id);
+
+    return (
+      <div
+        key={item.id}
+        className="bg-white rounded-2xl border border-[#EDE8E0] p-4 flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow group"
+      >
+        <div>
+          {/* Image Area with Badge & Heart */}
+          <div className="relative aspect-square rounded-xl bg-[#F8F6F2] overflow-hidden">
+            <Link href={`/catalog/${vendor.slug}/${item.slug}`} className="block h-full w-full">
+              {imgUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imgUrl}
+                  alt={item.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[#B0A798]">
+                  <SparklesSvg className="w-8 h-8" />
+                </div>
+              )}
+            </Link>
+
+            {/* "New" Ochre Badge */}
+            <span className={`absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full ${theme.accentBgClass} text-white text-[10px] font-bold tracking-wide`}>
+              New
+            </span>
+
+            {/* Wishlist Heart */}
+            <button
+              type="button"
+              onClick={() => toggleWishlist(item.id)}
+              className="absolute top-2.5 right-2.5 h-7 w-7 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center text-[#554C41] hover:text-rose-500 transition shadow-xs"
+            >
+              <HeartSvg className={`w-3.5 h-3.5 ${isWishlisted ? "fill-rose-500 text-rose-500" : ""}`} filled={isWishlisted} />
+            </button>
+          </div>
+
+          {/* Title & Subtitle */}
+          <div className="mt-3.5">
+            <Link
+              href={`/catalog/${vendor.slug}/${item.slug}`}
+              className="block font-serif font-bold text-sm text-[#1C1A17] line-clamp-1 hover:text-[#916B33] transition no-underline"
+            >
+              {item.title}
+            </Link>
+            <p className="text-[11px] text-[#7A7165] line-clamp-1 mt-0.5 font-light">
+              {item.description || `${primaryCategory} suite`}
+            </p>
+          </div>
+
+          {/* Price Block */}
+          <div className="mt-3">
+            <div className="text-[10px] uppercase tracking-wider text-[#8A8175] font-semibold">
+              Rental Price
+            </div>
+            <div className="flex items-baseline justify-between mt-0.5">
+              <div className="font-mono text-base font-bold text-[#1C1A17]">
+                {formatPrice(price)}
+                <span className="text-[11px] text-[#7A7165] font-sans font-normal ml-1">/ 3 days</span>
+              </div>
+              <div className="text-xs text-[#9E9588] line-through font-mono">
+                {formatPrice(originalEstimated)}
+              </div>
+            </div>
+          </div>
+
+          {/* Availability Status */}
+          <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-[#1E7446] font-medium">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span>Available for your dates</span>
+          </div>
+        </div>
+
+        {/* Add to Bag Button */}
+        <button
+          type="button"
+          onClick={() => handleAddToCart(item)}
+          className="mt-4 w-full py-2.5 px-3 rounded-lg border border-[#D5CDBD] text-[#1F1C18] text-xs font-bold hover:bg-[#1C1A17] hover:text-white transition flex items-center justify-center gap-2"
+        >
+          <BagSvg className="w-3.5 h-3.5" />
+          <span>Add to Bag</span>
+        </button>
+      </div>
+    );
+  }
+
+  // Vendor-authored promo tiles (Customize Storefront → Promo Banner) — a
+  // repeatable list, not a fixed pair, so 1-4 tiles all render the same way.
+  // Every piece of a tile (image, heading, description, button label, and
+  // which real collection the button links to) is vendor-set; a tile with
+  // no heading was already filtered out server-side. Hidden entirely if the
+  // vendor has never added a tile.
+  function renderPromoTiles() {
+    if (!customConfig?.promoTiles || customConfig.promoTiles.length === 0) return null;
+
+    return (
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className={`grid grid-cols-1 gap-4 sm:gap-5 ${customConfig.promoTiles.length > 1 ? "sm:grid-cols-2" : ""}`}>
+          {customConfig.promoTiles.map((tile) => (
+            <div
+              key={tile.id}
+              className="relative rounded-2xl overflow-hidden bg-[#2A2620] h-56 sm:h-64 flex items-end border border-[#E0D7C8]"
+            >
+              {tile.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={tile.imageUrl} alt={tile.heading} className="absolute inset-0 w-full h-full object-cover" />
+              ) : null}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="relative p-6 sm:p-7">
+                <h3 className="text-xl sm:text-2xl font-serif text-white font-medium">{tile.heading}</h3>
+                {tile.description && (
+                  <p className="mt-1 text-xs text-white/85 max-w-xs">{tile.description}</p>
+                )}
+                {tile.buttonLabel && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (tile.linkedCollection) {
+                        setSelectedCollectionId(tile.linkedCollection.id);
+                        document.getElementById("featured-collections")?.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }}
+                    className={`mt-4 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg ${theme.accentBgClass} ${theme.accentBgHoverClass} text-white text-xs font-semibold transition`}
+                  >
+                    <span>{tile.buttonLabel}</span>
+                    <ArrowRightSvg className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FCFBF7] text-[#1E1E1E] font-sans antialiased selection:bg-[#8F6B38] selection:text-white">
@@ -565,16 +734,18 @@ export function ShopifyCatalogView({
         )}
       </section>
 
-      {/* 4. "Shop by Category" Section — vendor-curated collections only */}
+      {/* 4. "Shop by Category" Section — circular avatar icons in a row,
+          vendor-curated collections only. Each icon crops to a circle via
+          object-cover on a fixed-size round frame, matching a reference
+          layout the vendor asked to match closely (as opposed to this
+          section's earlier large rectangular tile treatment). */}
       {collectionSummaries.length > 0 && (
-        <section id="catalog-grid" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="flex items-end justify-between mb-8">
+        <section id="catalog-grid" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <div className="flex items-end justify-between mb-7">
             <div>
-              {customConfig?.categorySectionHeading && (
-                <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">
-                  {customConfig.categorySectionHeading}
-                </h2>
-              )}
+              <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">
+                {customConfig?.categorySectionHeading || "Shop by Category"}
+              </h2>
               {customConfig?.categorySectionSubheading && (
                 <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
                   {customConfig.categorySectionSubheading}
@@ -584,49 +755,84 @@ export function ShopifyCatalogView({
             <button
               type="button"
               onClick={() => setSelectedCollectionId("ALL")}
-              className="text-xs font-semibold text-[#8C6732] hover:underline flex items-center gap-1"
+              className="text-xs font-semibold text-[#8C6732] hover:underline flex items-center gap-1 shrink-0"
             >
               <span>View All</span>
               <ArrowRightSvg className="w-3 h-3" />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
+          <div className="flex items-start gap-5 sm:gap-8 overflow-x-auto no-scrollbar pb-2">
             {collectionSummaries.map((collection) => {
               const isSelected = selectedCollectionId === collection.id;
               return (
-                <div
+                <button
+                  type="button"
                   key={collection.id}
                   onClick={() => setSelectedCollectionId(isSelected ? "ALL" : collection.id)}
-                  className={`group relative aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer shadow-sm transition-all duration-300 hover:shadow-lg bg-[#EFE9DF] ${
-                    isSelected ? `ring-2 ${theme.accentRingClass} scale-[1.02]` : ""
-                  }`}
+                  className="group flex flex-col items-center gap-2.5 shrink-0 w-20 sm:w-24"
                 >
-                  {collection.sampleImage ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={collection.sampleImage}
-                      alt={collection.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-gradient-to-b from-[#F7F4EE] to-[#E5DEC7]">
-                      <SparklesSvg className="w-8 h-8 text-[#9A743D]" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-                  <div className="absolute inset-x-3 bottom-3 text-white">
-                    <h3 className="font-serif text-sm font-bold leading-tight">{collection.name}</h3>
-                    <p className="text-[10px] text-[#E0D7C8] opacity-90 mt-0.5">
-                      {collection.count} {collection.count === 1 ? "piece" : "pieces"}
-                    </p>
+                  <div
+                    className={`relative h-16 w-16 sm:h-20 sm:w-20 rounded-full overflow-hidden bg-[#EFE9DF] shadow-sm transition-all duration-300 group-hover:shadow-md ${
+                      isSelected ? `ring-2 ${theme.accentRingClass} ring-offset-2` : "ring-1 ring-[#EDE8E0]"
+                    }`}
+                  >
+                    {collection.sampleImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={collection.sampleImage}
+                        alt={collection.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-[#F7F4EE] to-[#E5DEC7]">
+                        <SparklesSvg className="w-6 h-6 text-[#9A743D]" />
+                      </div>
+                    )}
                   </div>
-                </div>
+                  <span className="text-[11px] sm:text-xs font-semibold text-[#2E2A25] text-center leading-tight">
+                    {collection.name}
+                  </span>
+                </button>
               );
             })}
           </div>
         </section>
       )}
+
+      {/* 4b. Curated shelf rows — New Arrivals, Best Sellers, and a spotlight
+          collection, each its own titled, stacked section (rather than tab
+          filters on one grid), matching a reference layout the vendor asked
+          to match closely. The vendor's own promo tiles (section 7 below)
+          render after the first shelf row, same position as that reference. */}
+      {shelfRows.map((row, idx) => (
+        <div key={row.id}>
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex items-end justify-between mb-6">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">{row.name}</h2>
+                <p className="text-xs sm:text-sm text-[#7A7165] mt-1">{row.subheading}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCollectionId(row.id);
+                  document.getElementById("featured-collections")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="text-xs font-semibold text-[#8C6732] hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>View All</span>
+                <ArrowRightSvg className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5 sm:gap-6">
+              {row.items.map((item) => renderProductCard(item))}
+            </div>
+          </section>
+
+          {idx === 0 && renderPromoTiles()}
+        </div>
+      ))}
 
       {/* 5. "Featured Collections" Section */}
       <section id="featured-collections" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-[#EAE5DC]">
@@ -817,63 +1023,7 @@ export function ShopifyCatalogView({
         </section>
       )}
 
-      {/* 7. Studio Trials / promo banner — fully vendor-authored, hidden if unset */}
-      {customConfig?.promoHeading && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="bg-[#EFE9DF] rounded-3xl overflow-hidden border border-[#E0D7C8] flex flex-col md:flex-row items-center justify-between shadow-sm">
-            <div className="w-full md:w-1/2 aspect-[16/9] md:aspect-auto h-56 md:h-72 overflow-hidden bg-[#E2DBD0]">
-              {items[1]?.media[0]?.url || heroImages[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={items[1]?.media[0]?.url || heroImages[0] || ""}
-                  alt={customConfig.promoHeading}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-[#9A743D]">
-                  <HomeSvg className="w-12 h-12" />
-                </div>
-              )}
-            </div>
-
-            <div className="p-8 md:p-12 w-full md:w-1/2 relative">
-              {customConfig.promoEyebrow && (
-                <span className="text-[10px] uppercase tracking-widest text-[#8F6B38] font-bold">
-                  {customConfig.promoEyebrow}
-                </span>
-              )}
-              <h3 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] mt-1.5 font-normal">
-                {customConfig.promoHeading}
-              </h3>
-              {customConfig.promoDescription && (
-                <p className="mt-2 text-xs sm:text-sm text-[#61584C] font-light max-w-md leading-relaxed">
-                  {customConfig.promoDescription}
-                </p>
-              )}
-
-              {trialBtnLabel && (
-                <a
-                  href={`https://wa.me/${vendorPhone}?text=${encodeURIComponent(`Hi ${vendor.businessName}, I would like to book a studio appointment.`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-[#181818] text-white text-xs sm:text-sm font-semibold hover:bg-black transition shadow-sm"
-                >
-                  <span>{trialBtnLabel}</span>
-                  <ArrowRightSvg className="w-4 h-4" />
-                </a>
-              )}
-
-              {customConfig.promoQuote && (
-                <div className="hidden sm:block absolute right-8 bottom-6 font-serif italic text-2xl text-[#8F6B38]/80">
-                  {customConfig.promoQuote}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* 7b. Vendor-authored photo gallery — real catalog photos only, no
+      {/* 7. Vendor-authored photo gallery — real catalog photos only, no
           fabricated testimonial quotes/names. Hidden unless the vendor has
           both set a heading and there are photos to show. */}
       {galleryPhotos.length > 0 && customConfig?.galleryHeading && (

@@ -185,6 +185,24 @@ export interface CatalogFooterLink {
   url: string;
 }
 
+export interface CatalogPromoTile {
+  id: string;
+  mediaId: string | null;
+  imageUrl: string | null;
+  heading: string;
+  description: string | null;
+  buttonLabel: string | null;
+  linkedCollection: { id: string; name: string; slug: string } | null;
+}
+
+export interface CatalogPromoTileInput {
+  mediaId?: string | null;
+  heading: string;
+  description?: string | null;
+  buttonLabel?: string | null;
+  linkedCollectionId?: string | null;
+}
+
 export interface CatalogStoreImage {
   mediaId: string;
   url: string | null;
@@ -205,10 +223,7 @@ export interface CatalogStoreSettings {
   categorySectionSubheading: string | null;
   featuredSectionHeading: string | null;
   featuredSectionSubheading: string | null;
-  promoEyebrow: string | null;
-  promoHeading: string | null;
-  promoDescription: string | null;
-  promoQuote: string | null;
+  promoTiles: CatalogPromoTile[];
   galleryHeading: string | null;
   gallerySubheading: string | null;
   instagramUrl: string | null;
@@ -234,10 +249,7 @@ export interface UpdateCatalogStoreSettingsInput {
   categorySectionSubheading?: string | null;
   featuredSectionHeading?: string | null;
   featuredSectionSubheading?: string | null;
-  promoEyebrow?: string | null;
-  promoHeading?: string | null;
-  promoDescription?: string | null;
-  promoQuote?: string | null;
+  promoTiles?: CatalogPromoTileInput[] | null;
   galleryHeading?: string | null;
   gallerySubheading?: string | null;
   instagramUrl?: string | null;

@@ -838,9 +838,10 @@ model CatalogCollection {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  vendor     Vendor                  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  coverMedia Media?                  @relation("CatalogCollectionCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
-  items      CatalogItemCollection[]
+  vendor       Vendor                  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  coverMedia   Media?                  @relation("CatalogCollectionCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  items        CatalogItemCollection[]
+  promoTileFor CatalogStorePromoTile[] @relation("CatalogStorePromoTileCollection")
 
   @@unique([vendorId, slug])
   @@index([vendorId, sortOrder])
@@ -971,12 +972,6 @@ model CatalogStoreSettings {
   featuredSectionHeading    String? @map("featured_section_heading")
   featuredSectionSubheading String? @map("featured_section_subheading")
 
-  // Studio-trial / promo banner block
-  promoEyebrow     String? @map("promo_eyebrow")
-  promoHeading     String? @map("promo_heading")
-  promoDescription String? @map("promo_description") @db.Text
-  promoQuote       String? @map("promo_quote")
-
   // "Real Brides, Real Moments" photo gallery section — real catalog photos
   // only, no fabricated testimonial quotes/names (no such data model exists).
   galleryHeading    String? @map("gallery_heading")
@@ -1002,6 +997,7 @@ model CatalogStoreSettings {
   vendor       Vendor                     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   heroMedia    CatalogStoreHeroMedia[]
   galleryMedia CatalogStoreGalleryMedia[]
+  promoTiles   CatalogStorePromoTile[]
 
   @@map("catalog_store_settings")
 }
@@ -1040,6 +1036,34 @@ model CatalogStoreGalleryMedia {
   @@unique([settingsId, mediaId])
   @@index([settingsId, sortOrder])
   @@map("catalog_store_gallery_media")
+}
+
+// Vendor-authored promo banner tiles (e.g. "Bridal Collection" / "Rental
+// Collection" side-by-side cards) — a repeatable, ordered list rather than
+// a fixed pair of tiles, so a vendor can have just one tile or several.
+// Replaces the earlier fixed promoEyebrow/promoHeading/promoDescription/
+// promoQuote singular fields (that shape could only ever describe one
+// tile). Each tile is fully vendor-authored: its own uploaded image,
+// heading, description, button label, and (optionally) a real vendor
+// collection to link the button to — never a hardcoded "Bridal
+// Collection"-style tile baked into the storefront component itself.
+model CatalogStorePromoTile {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  settingsId         String   @map("settings_id") @db.Uuid
+  mediaId            String?  @map("media_id") @db.Uuid
+  heading            String
+  description        String?  @db.Text
+  buttonLabel        String?  @map("button_label")
+  linkedCollectionId String?  @map("linked_collection_id") @db.Uuid
+  sortOrder          Int      @default(0) @map("sort_order")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  settings         CatalogStoreSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+  media            Media?               @relation("CatalogStorePromoTileMedia", fields: [mediaId], references: [id], onDelete: SetNull)
+  linkedCollection CatalogCollection?   @relation("CatalogStorePromoTileCollection", fields: [linkedCollectionId], references: [id], onDelete: SetNull)
+
+  @@index([settingsId, sortOrder])
+  @@map("catalog_store_promo_tiles")
 }
 
 model VendorInvitation {
@@ -1227,6 +1251,7 @@ model Media {
   catalogStoreHeroFor          CatalogStoreHeroMedia[]    @relation("CatalogStoreHeroMedia")
   catalogStoreGalleryFor       CatalogStoreGalleryMedia[] @relation("CatalogStoreGalleryMedia")
   catalogCollectionCoverFor    CatalogCollection[]        @relation("CatalogCollectionCover")
+  catalogStorePromoTileFor     CatalogStorePromoTile[]    @relation("CatalogStorePromoTileMedia")
 
   @@index([vendorId])
   @@index([userId])

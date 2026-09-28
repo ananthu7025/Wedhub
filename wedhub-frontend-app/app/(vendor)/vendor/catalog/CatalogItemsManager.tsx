@@ -463,6 +463,7 @@ export function CatalogItemsManager({
       {customizerOpen && (
         <CatalogStorefrontCustomizer
           initialSettings={initialStoreSettings}
+          collections={collections}
           onClose={() => setCustomizerOpen(false)}
         />
       )}

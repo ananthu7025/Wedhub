@@ -135,6 +135,14 @@ export const catalogFooterLinkSchema = z.object({
   url: z.string().min(1).max(500),
 });
 
+export const catalogPromoTileSchema = z.object({
+  mediaId: z.string().uuid().nullable().optional(),
+  heading: z.string().min(1).max(150),
+  description: z.string().max(500).nullable().optional(),
+  buttonLabel: z.string().max(60).nullable().optional(),
+  linkedCollectionId: z.string().uuid().nullable().optional(),
+});
+
 export const upsertCatalogStoreSettingsSchema = z.object({
   heroMediaIds: z.array(z.string().uuid()).max(5).optional(),
   galleryMediaIds: z.array(z.string().uuid()).max(12).optional(),
@@ -152,10 +160,13 @@ export const upsertCatalogStoreSettingsSchema = z.object({
   featuredSectionHeading: z.string().max(150).nullable().optional(),
   featuredSectionSubheading: z.string().max(250).nullable().optional(),
 
-  promoEyebrow: z.string().max(60).nullable().optional(),
-  promoHeading: z.string().max(150).nullable().optional(),
-  promoDescription: z.string().max(500).nullable().optional(),
-  promoQuote: z.string().max(150).nullable().optional(),
+  // A repeatable list rather than a fixed pair — a vendor can have 1, 2, or
+  // more promo tiles (e.g. "Bridal Collection" / "Rental Collection"), each
+  // with its own image, copy, button label, and an optional link to one of
+  // the vendor's own real collections. Capped at 4, matching this schema's
+  // existing convention for other vendor-ordered lists (trustBadges,
+  // footerLinks) rather than an unbounded array.
+  promoTiles: z.array(catalogPromoTileSchema).max(4).nullable().optional(),
 
   galleryHeading: z.string().max(150).nullable().optional(),
   gallerySubheading: z.string().max(250).nullable().optional(),
@@ -180,6 +191,7 @@ export type ImportCatalogItemsInput = z.infer<typeof importCatalogItemsSchema>;
 export type UpsertCatalogStoreSettingsInput = z.infer<typeof upsertCatalogStoreSettingsSchema>;
 export type CatalogTrustBadgeInput = z.infer<typeof catalogTrustBadgeSchema>;
 export type CatalogFooterLinkInput = z.infer<typeof catalogFooterLinkSchema>;
+export type CatalogPromoTileInput = z.infer<typeof catalogPromoTileSchema>;
 export type CreateCatalogCollectionInput = z.infer<typeof createCatalogCollectionSchema>;
 export type UpdateCatalogCollectionInput = z.infer<typeof updateCatalogCollectionSchema>;
 export type ReorderCatalogCollectionsInput = z.infer<typeof reorderCatalogCollectionsSchema>;

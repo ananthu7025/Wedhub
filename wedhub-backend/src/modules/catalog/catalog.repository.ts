@@ -395,6 +395,10 @@ const MEDIA_SELECT = {
 const STORE_SETTINGS_INCLUDE = {
   heroMedia: { include: { media: { select: MEDIA_SELECT } }, orderBy: { sortOrder: "asc" as const } },
   galleryMedia: { include: { media: { select: MEDIA_SELECT } }, orderBy: { sortOrder: "asc" as const } },
+  promoTiles: {
+    include: { media: { select: MEDIA_SELECT }, linkedCollection: { select: { id: true, name: true, slug: true } } },
+    orderBy: { sortOrder: "asc" as const },
+  },
 } satisfies Prisma.CatalogStoreSettingsInclude;
 
 export function findStoreSettingsByVendorId(vendorId: string) {
@@ -418,10 +422,6 @@ export interface UpsertStoreSettingsData {
   categorySectionSubheading?: string | null | undefined;
   featuredSectionHeading?: string | null | undefined;
   featuredSectionSubheading?: string | null | undefined;
-  promoEyebrow?: string | null | undefined;
-  promoHeading?: string | null | undefined;
-  promoDescription?: string | null | undefined;
-  promoQuote?: string | null | undefined;
   galleryHeading?: string | null | undefined;
   gallerySubheading?: string | null | undefined;
   instagramUrl?: string | null | undefined;
@@ -431,10 +431,20 @@ export interface UpsertStoreSettingsData {
   footerSupportHeading?: string | null | undefined;
   footerSocialHeading?: string | null | undefined;
   footerLinks?: { label: string; url: string }[] | null | undefined;
+  promoTiles?:
+    | {
+        mediaId?: string | null | undefined;
+        heading: string;
+        description?: string | null | undefined;
+        buttonLabel?: string | null | undefined;
+        linkedCollectionId?: string | null | undefined;
+      }[]
+    | null
+    | undefined;
 }
 
 export async function upsertStoreSettings(vendorId: string, data: UpsertStoreSettingsData) {
-  const { heroMediaIds, galleryMediaIds, ...rest } = data;
+  const { heroMediaIds, galleryMediaIds, promoTiles, ...rest } = data;
   const fields = omitUndefined({
     ...rest,
     trustBadges: rest.trustBadges as Prisma.InputJsonValue | undefined,
@@ -462,6 +472,27 @@ export async function upsertStoreSettings(vendorId: string, data: UpsertStoreSet
       if (galleryMediaIds.length > 0) {
         await tx.catalogStoreGalleryMedia.createMany({
           data: galleryMediaIds.map((mediaId, index) => ({ settingsId: settings.id, mediaId, sortOrder: index })),
+        });
+      }
+    }
+
+    // Same full-replace convention as heroMediaIds/galleryMediaIds above —
+    // the vendor's Customize Storefront UI always resubmits the complete
+    // ordered tile list on save, so a delete-then-recreate is simpler and
+    // safer than diffing against the previous set.
+    if (promoTiles !== undefined) {
+      await tx.catalogStorePromoTile.deleteMany({ where: { settingsId: settings.id } });
+      if (promoTiles !== null && promoTiles.length > 0) {
+        await tx.catalogStorePromoTile.createMany({
+          data: promoTiles.map((tile, index) => ({
+            settingsId: settings.id,
+            mediaId: tile.mediaId ?? null,
+            heading: tile.heading,
+            description: tile.description ?? null,
+            buttonLabel: tile.buttonLabel ?? null,
+            linkedCollectionId: tile.linkedCollectionId ?? null,
+            sortOrder: index,
+          })),
         });
       }
     }
