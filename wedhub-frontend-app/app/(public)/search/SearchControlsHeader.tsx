@@ -181,42 +181,44 @@ export function SearchControlsHeader({
           </form>
 
           {/* List / Grid Toggle Switcher */}
-          <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-1 text-xs">
+          <div className="flex shrink-0 items-center rounded-lg border border-gray-200 bg-gray-50 p-1 text-xs">
             <button
               type="button"
               onClick={() => onToggleView("list")}
-              className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition-all ${
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 font-medium transition-all ${
                 viewMode === "list"
-                  ? "bg-white text-gray-900 shadow-xs font-bold"
+                  ? "bg-white text-[#e00b41] shadow-xs font-bold"
                   : "text-gray-500 hover:text-gray-900"
               }`}
               title="List view"
+              aria-label="List view"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="9" y1="6" x2="20" y2="6" />
+                <line x1="9" y1="12" x2="20" y2="12" />
+                <line x1="9" y1="18" x2="20" y2="18" />
+                <circle cx="4.5" cy="6" r="1.5" fill="currentColor" stroke="none" />
+                <circle cx="4.5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                <circle cx="4.5" cy="18" r="1.5" fill="currentColor" stroke="none" />
               </svg>
               <span>List</span>
             </button>
             <button
               type="button"
               onClick={() => onToggleView("grid")}
-              className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium transition-all ${
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 font-medium transition-all ${
                 viewMode === "grid"
                   ? "bg-white text-[#e00b41] shadow-xs font-bold"
                   : "text-gray-500 hover:text-gray-900"
               }`}
               title="Grid view"
+              aria-label="Grid view"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                <rect x="3" y="14" width="7" height="7" rx="1.5" />
               </svg>
               <span>Grid</span>
             </button>

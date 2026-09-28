@@ -21,6 +21,8 @@ interface SearchResultsViewProps {
   keyword?: string;
   priceMin?: number;
   priceMax?: number;
+  catalogPriceMin?: number;
+  catalogPriceMax?: number;
   verified?: boolean;
   page: number;
   totalPages: number;
@@ -39,6 +41,8 @@ export function SearchResultsView({
   keyword,
   priceMin,
   priceMax,
+  catalogPriceMin,
+  catalogPriceMax,
   verified,
   page,
   totalPages,
@@ -194,7 +198,16 @@ export function SearchResultsView({
           keyword={keyword}
           categories={categories}
           cities={cities}
-          hasActiveFilters={Boolean(keyword || selectedCategory || selectedCity || priceMin !== undefined || priceMax !== undefined || verified)}
+          hasActiveFilters={Boolean(
+            keyword ||
+            selectedCategory ||
+            selectedCity ||
+            priceMin !== undefined ||
+            priceMax !== undefined ||
+            catalogPriceMin !== undefined ||
+            catalogPriceMax !== undefined ||
+            verified
+          )}
         />
       ) : viewMode === "list" ? (
         <div className="flex flex-col gap-5">

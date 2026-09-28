@@ -342,12 +342,8 @@ function buildWhere(filters: VendorSearchFilters, parsed: KeywordParse, resolved
     conditions.push(Prisma.sql`vp.starting_price <= ${filters.priceMax}`);
   }
 
-  // Item 11: matches if ANY of the vendor's active catalog items falls in
-  // range — via a variant's own price when the item has variants, or the
-  // item's basePrice when it doesn't (an item with variants has no
-  // meaningful basePrice of its own, so it's deliberately excluded from the
-  // basePrice branch once any variant row exists, to avoid double-counting
-  // the same item under two different prices).
+  // Matches if ANY of the vendor's active catalog items falls in
+  // range — either via variant prices or the item's base price.
   if (filters.catalogPriceMin !== undefined || filters.catalogPriceMax !== undefined) {
     const min = filters.catalogPriceMin;
     const max = filters.catalogPriceMax;
@@ -364,8 +360,8 @@ function buildWhere(filters: VendorSearchFilters, parsed: KeywordParse, resolved
         SELECT 1 FROM catalog_items ci
         WHERE ci.vendor_id = v.id AND ci.is_active = true
           AND (
-            EXISTS (SELECT 1 FROM catalog_item_variants civ WHERE civ.item_id = ci.id AND ${variantRange})
-            OR (ci.base_price IS NOT NULL AND NOT EXISTS (SELECT 1 FROM catalog_item_variants civ2 WHERE civ2.item_id = ci.id) AND ${baseRange})
+            EXISTS (SELECT 1 FROM catalog_item_variants civ WHERE civ.item_id = ci.id AND civ.is_available = true AND ${variantRange})
+            OR (ci.base_price IS NOT NULL AND ${baseRange})
           )
       )`,
     );

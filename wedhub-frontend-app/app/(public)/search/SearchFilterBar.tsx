@@ -45,17 +45,17 @@ export function SearchFilterBar({
   const [tempMax, setTempMax] = useState<string>(priceMax ? String(priceMax) : "");
 
   // Item price local state for the catalog-price popover
-  const [tempCatalogMin, setTempCatalogMin] = useState<string>(catalogPriceMin ? String(catalogPriceMin) : "");
-  const [tempCatalogMax, setTempCatalogMax] = useState<string>(catalogPriceMax ? String(catalogPriceMax) : "");
+  const [tempCatalogMin, setTempCatalogMin] = useState<string>(catalogPriceMin !== undefined ? String(catalogPriceMin) : "");
+  const [tempCatalogMax, setTempCatalogMax] = useState<string>(catalogPriceMax !== undefined ? String(catalogPriceMax) : "");
 
   const barRef = useRef<HTMLDivElement>(null);
 
   // Sync temp budget/item-price state with incoming props
   useEffect(() => {
-    setTempMin(priceMin ? String(priceMin) : "");
-    setTempMax(priceMax ? String(priceMax) : "");
-    setTempCatalogMin(catalogPriceMin ? String(catalogPriceMin) : "");
-    setTempCatalogMax(catalogPriceMax ? String(catalogPriceMax) : "");
+    setTempMin(priceMin !== undefined ? String(priceMin) : "");
+    setTempMax(priceMax !== undefined ? String(priceMax) : "");
+    setTempCatalogMin(catalogPriceMin !== undefined ? String(catalogPriceMin) : "");
+    setTempCatalogMax(catalogPriceMax !== undefined ? String(catalogPriceMax) : "");
   }, [priceMin, priceMax, catalogPriceMin, catalogPriceMax]);
 
   // Close dropdown on click outside
@@ -108,7 +108,7 @@ export function SearchFilterBar({
 
   const hasBudgetFilter = priceMin !== undefined || priceMax !== undefined;
   const hasCatalogPriceFilter = catalogPriceMin !== undefined || catalogPriceMax !== undefined;
-  const showCatalogPriceFilter = Boolean(currentCategory?.hasCatalogEnabled);
+  const showCatalogPriceFilter = !currentCategory || Boolean(currentCategory.hasCatalogEnabled) || hasCatalogPriceFilter;
 
   // Item: mobile dropdown visibility fix. The filter pills live in a
   // horizontally-scrolling row (overflow-x-auto below `sm:`), and a CSS
@@ -358,8 +358,8 @@ export function SearchFilterBar({
               >
                 <span>
                   {hasCatalogPriceFilter
-                    ? `₹${catalogPriceMin ? catalogPriceMin.toLocaleString("en-IN") : "0"} - ₹${
-                        catalogPriceMax ? catalogPriceMax.toLocaleString("en-IN") : "Any"
+                    ? `₹${catalogPriceMin !== undefined ? catalogPriceMin.toLocaleString("en-IN") : "0"} - ₹${
+                        catalogPriceMax !== undefined ? catalogPriceMax.toLocaleString("en-IN") : "Any"
                       }`
                     : "Item Price"}
                 </span>

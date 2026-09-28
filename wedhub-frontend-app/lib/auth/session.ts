@@ -12,7 +12,7 @@ const isProduction = process.env.NODE_ENV === "production";
  * is an optimistic read for routing/UI decisions; every actual data request
  * still goes through the backend, which re-verifies the token itself.
  */
-function decodeAccessToken(token: string): Session | null {
+function decodeAccessToken(token: string, hasRefreshToken = false): Session | null {
   try {
     const payloadSegment = token.split(".")[1];
     if (!payloadSegment) return null;
@@ -24,7 +24,12 @@ function decodeAccessToken(token: string): Session | null {
       emailVerified?: boolean;
     };
     if (!payload.sub || !payload.role) return null;
-    if (payload.exp && payload.exp * 1000 < Date.now()) return null;
+    // Reject expired tokens unless a valid refresh_token cookie is present for re-minting
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      if (!hasRefreshToken) return null;
+      // Do not accept tokens older than 30 days even with refresh token
+      if (payload.exp * 1000 < Date.now() - 30 * 24 * 60 * 60 * 1000) return null;
+    }
     return { userId: payload.sub, role: payload.role, emailVerified: payload.emailVerified ?? false };
   } catch {
     return null;
@@ -35,7 +40,8 @@ export async function getSession(): Promise<Session | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
-  return decodeAccessToken(token);
+  const hasRefreshToken = cookieStore.has("refresh_token");
+  return decodeAccessToken(token, hasRefreshToken);
 }
 
 export async function getAccessToken(): Promise<string | null> {

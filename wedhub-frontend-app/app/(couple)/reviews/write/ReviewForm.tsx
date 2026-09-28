@@ -34,6 +34,7 @@ export function ReviewForm({
   >([]);
   const [status, setStatus] = useState<"idle" | "uploading" | "submitting" | "success" | "error">("idle");
   const [ratingTouched, setRatingTouched] = useState(false);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
 
   const ratingError = rating === 0 ? "Please select a star rating" : null;
 
@@ -45,13 +46,24 @@ export function ReviewForm({
       event.target.value = "";
       return;
     }
-    setPhotos((prev) =>
-      [
-        ...prev,
-        ...selected.map((file) => ({ id: `${file.name}-${Date.now()}-${Math.random()}`, file, state: "pending" as const })),
-      ].slice(0, MAX_PHOTOS),
-    );
+
+    if (photos.length + selected.length > MAX_PHOTOS) {
+      showToast(`Maximum ${MAX_PHOTOS} photos allowed per review.`, "error");
+    }
+
+    const availableSlots = MAX_PHOTOS - photos.length;
+    const toAdd = selected.slice(0, availableSlots);
+
+    setPhotos((prev) => [
+      ...prev,
+      ...toAdd.map((file) => ({ id: `${file.name}-${Date.now()}-${Math.random()}`, file, state: "pending" as const })),
+    ]);
     event.target.value = "";
+  }
+
+  function confirmAndOpenPicker() {
+    setShowPermissionPrompt(false);
+    fileInputRef.current?.click();
   }
 
   function removePhoto(id: string) {
@@ -206,10 +218,10 @@ export function ReviewForm({
         {photos.length < MAX_PHOTOS && (
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => setShowPermissionPrompt(true)}
             className="w-full cursor-pointer rounded-md border-[1.5px] border-dashed border-border px-6 py-6 text-center text-[13px] text-text-grey"
           >
-            + Upload photos
+            + Upload photos (max {MAX_PHOTOS})
           </button>
         )}
         <input
@@ -221,6 +233,33 @@ export function ReviewForm({
           onChange={handlePhotoSelect}
         />
       </div>
+
+      {showPermissionPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl">
+            <h3 className="mb-2 text-base font-bold text-gray-900">Photo Gallery Access</h3>
+            <p className="mb-5 text-xs text-gray-600 leading-relaxed">
+              WedHub requests access to your photo gallery to select and upload up to {MAX_PHOTOS} photos for your review.
+            </p>
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={confirmAndOpenPicker}
+                className="flex-1 rounded-md bg-brand-primary py-2.5 text-xs font-bold text-white transition-colors hover:bg-brand-primary-hover shadow-xs"
+              >
+                Allow &amp; Choose Photos
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPermissionPrompt(false)}
+                className="flex-1 rounded-md border border-gray-300 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <button
         type="submit"

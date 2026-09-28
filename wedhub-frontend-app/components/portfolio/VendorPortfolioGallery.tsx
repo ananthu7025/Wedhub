@@ -164,6 +164,32 @@ export function VendorPortfolioGallery({ albums, businessName, quoteTile, page, 
         )}
       </div>
 
+      {pageCount > 1 && (
+        <div className="mt-4 flex items-center justify-between sm:hidden">
+          <span className="text-xs font-medium text-neutral-500">
+            Page {safePage + 1} of {pageCount} ({displayedMedia.length} photos)
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onPageChange(Math.max(0, safePage - 1))}
+              disabled={safePage === 0}
+              className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-700 disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => onPageChange(Math.min(pageCount - 1, safePage + 1))}
+              disabled={safePage >= pageCount - 1}
+              className="rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Fullscreen Lightbox Modal */}
       {activeMedia && (
         <div

@@ -123,7 +123,7 @@ export default async function EnquiriesPage({ searchParams }: EnquiriesPageProps
               }
 
               return (
-                <div key={lead.id} className="flex items-center gap-4 rounded-xl border border-border bg-white p-4.5 max-[700px]:flex-wrap">
+                <div key={lead.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-border bg-white p-4 sm:p-4.5">
                   <div className="min-w-0 flex-1">
                     <h3 className="mb-1 flex flex-wrap items-center gap-2 text-[15px] font-bold">
                       {lead.vendor.businessName}
@@ -132,11 +132,11 @@ export default async function EnquiriesPage({ searchParams }: EnquiriesPageProps
                     <p className="text-xs text-text-grey">{meta.join(" · ")}</p>
                     <LeadStatusTrack status={lead.status} />
                   </div>
-                  <div className="flex flex-shrink-0 gap-2">
+                  <div className="flex w-full flex-wrap sm:w-auto sm:flex-nowrap gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/60">
                     {lead.status === "WON" && (
                       <Link
                         href={`/reviews/write?vendor=${lead.vendor.slug}`}
-                        className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px] font-bold text-text-dark no-underline hover:bg-surface-input"
+                        className="flex-1 sm:flex-none text-center rounded-md border border-border bg-white px-3 py-2 text-[12px] sm:text-[13px] font-bold text-text-dark no-underline hover:bg-surface-input"
                       >
                         Write a review
                       </Link>
@@ -144,14 +144,14 @@ export default async function EnquiriesPage({ searchParams }: EnquiriesPageProps
                     {lead.conversations[0] && (
                       <Link
                         href={`/inbox?conversation=${lead.conversations[0].id}`}
-                        className="rounded-md bg-brand-primary px-3.5 py-2 text-[13px] font-bold text-white no-underline hover:bg-brand-primary-hover"
+                        className="flex-1 sm:flex-none text-center rounded-md bg-brand-primary px-3 py-2 text-[12px] sm:text-[13px] font-bold text-white no-underline hover:bg-brand-primary-hover"
                       >
                         Message vendor
                       </Link>
                     )}
                     <Link
                       href={`/vendors/${lead.vendor.slug}`}
-                      className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px] font-bold text-text-dark no-underline hover:bg-surface-input"
+                      className="flex-1 sm:flex-none text-center rounded-md border border-border bg-white px-3 py-2 text-[12px] sm:text-[13px] font-bold text-text-dark no-underline hover:bg-surface-input"
                     >
                       View vendor
                     </Link>

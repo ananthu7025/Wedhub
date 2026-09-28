@@ -161,7 +161,9 @@ export async function login(
   }
 
   if (user.status === "DEACTIVATED") {
-    throw new AuthenticationError("This account has been deactivated");
+    await authRepository.reactivateUser(user.id);
+    (user as { status: string }).status = "ACTIVE";
+    logger.info({ userId: user.id }, "Deactivated account automatically reactivated upon valid login");
   }
 
   if (user.status === "SUSPENDED") {
@@ -263,7 +265,9 @@ export async function loginWithGoogle(
       }
 
       if (existingByEmail.status === "DEACTIVATED") {
-        throw new AuthenticationError("This account has been deactivated");
+        await authRepository.reactivateUser(existingByEmail.id);
+        (existingByEmail as { status: string }).status = "ACTIVE";
+        logger.info({ userId: existingByEmail.id }, "Deactivated account automatically reactivated upon Google login");
       }
 
       if (existingByEmail.status === "SUSPENDED") {
@@ -374,8 +378,26 @@ export async function verifyEmail(presentedToken: string): Promise<{ email: stri
   const tokenHash = hashToken(presentedToken);
   const existing = await authRepository.findEmailVerificationTokenByHash(tokenHash);
 
-  if (!existing || existing.usedAt || existing.expiresAt < new Date()) {
+  if (!existing) {
     throw new ValidationError("Invalid or expired verification token");
+  }
+
+  // If already used, check if the user is already verified (e.g. email prefetching, double-click)
+  if (existing.usedAt) {
+    const user = await authRepository.findUserById(existing.userId);
+    if (user && user.emailVerifiedAt) {
+      return { email: user.email };
+    }
+    throw new ValidationError("This verification link has already been used");
+  }
+
+  if (existing.expiresAt < new Date()) {
+    // If expired, but user was already verified, still succeed
+    const user = await authRepository.findUserById(existing.userId);
+    if (user && user.emailVerifiedAt) {
+      return { email: user.email };
+    }
+    throw new ValidationError("Verification token has expired");
   }
 
   await authRepository.markEmailVerificationTokenUsed(existing.id);

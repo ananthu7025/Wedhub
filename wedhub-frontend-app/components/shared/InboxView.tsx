@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { listConversationMessagesClient, markConversationRead, sendMessage } from "@/lib/api/messaging-client";
 import type { ConversationListItem, Message } from "@/lib/api/messaging.types";
@@ -153,6 +153,12 @@ export function InboxView({
     );
   }
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+  }, [messages]);
+
   if (conversations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-white px-6 py-18 text-center">
@@ -167,7 +173,7 @@ export function InboxView({
   }
 
   return (
-    <div className="flex min-h-[70vh] overflow-hidden rounded-xl border border-border bg-white">
+    <div className="flex h-[calc(100dvh-170px)] sm:h-[75vh] max-h-[800px] overflow-hidden rounded-xl border border-border bg-white shadow-xs">
       {/* Conversation list */}
       <div className={`w-full flex-shrink-0 border-r border-border sm:w-[280px] ${selected ? "hidden sm:block" : "block"}`}>
         {conversations.map((conversation) => (
@@ -203,7 +209,7 @@ export function InboxView({
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+            <div className="flex items-center gap-2 border-b border-border px-4 py-3 shrink-0">
               <button
                 type="button"
                 onClick={() => setSelectedId(null)}
@@ -215,7 +221,7 @@ export function InboxView({
               <span className="text-[14px] font-bold">{otherPartyName(selected, viewerRole)}</span>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            <div className="flex-1 space-y-3 overflow-y-auto p-4 min-h-0">
               {loadingMessages ? (
                 <p className="text-center text-[13px] text-text-grey">Loading…</p>
               ) : (
@@ -249,12 +255,13 @@ export function InboxView({
                   );
                 })
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             {error && <p className="px-4 pb-1 text-[12px] text-red-70">{error}</p>}
 
             {viewerRole === "VENDOR" && ruleBookMediaId && (
-              <div className="border-t border-border px-4 py-2">
+              <div className="border-t border-border px-4 py-2 shrink-0 bg-white">
                 <button
                   type="button"
                   onClick={handleSendRuleBook}
@@ -266,7 +273,7 @@ export function InboxView({
               </div>
             )}
 
-            <form onSubmit={handleSend} className="flex gap-2 border-t border-border p-3">
+            <form onSubmit={handleSend} className="sticky bottom-0 z-10 shrink-0 flex gap-2 border-t border-border bg-white p-3">
               <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}

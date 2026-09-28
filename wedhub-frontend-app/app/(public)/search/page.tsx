@@ -45,21 +45,7 @@ interface SearchPageProps {
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
 
-  // Architectural Guard: Without any active filter or sort, redirect to /vendors directory
-  if (
-    !params.categoryId &&
-    !params.keyword?.trim() &&
-    !params.cityId &&
-    !params.priceMin &&
-    !params.priceMax &&
-    !params.catalogPriceMin &&
-    !params.catalogPriceMax &&
-    !params.verified &&
-    !params.maxReplyHours &&
-    !params.sort
-  ) {
-    redirect("/vendors");
-  }
+
 
   const rawPage = params.page ? Number(params.page) : 1;
   const page = typeof rawPage === "number" && !isNaN(rawPage) && rawPage >= 1 ? Math.floor(rawPage) : 1;
@@ -137,6 +123,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           keyword={params.keyword?.trim()}
           priceMin={priceMin}
           priceMax={priceMax}
+          catalogPriceMin={catalogPriceMin}
+          catalogPriceMax={catalogPriceMax}
           verified={params.verified === "true"}
           page={page}
           totalPages={meta?.totalPages ?? 1}

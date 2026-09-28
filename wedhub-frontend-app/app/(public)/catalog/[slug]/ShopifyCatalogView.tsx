@@ -181,12 +181,15 @@ export function ShopifyCatalogView({
   // Wishlist state
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [showWishlistOnly, setShowWishlistOnly] = useState(false);
+  const [lastWishlistedId, setLastWishlistedId] = useState<string | null>(null);
 
   // Cart state — shared with the standalone product page via sessionStorage
   // (see useCatalogCart's own header comment) so adding an item on a
   // product-detail page and navigating back to this grid doesn't lose it.
   const { cart, addToCart, updateQuantity, cartItemCount, cartSubtotal } = useCatalogCart(vendor.id);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [recentlyAddedItem, setRecentlyAddedItem] = useState<string | null>(null);
+  const [animateCartBadge, setAnimateCartBadge] = useState(false);
 
   // WhatsApp Checkout Form inside Cart Drawer
   const [clientName, setClientName] = useState("");
@@ -283,11 +286,16 @@ export function ShopifyCatalogView({
 
   function toggleWishlist(id: string) {
     setWishlist((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+    setLastWishlistedId(id);
+    setTimeout(() => setLastWishlistedId(null), 400);
   }
 
   function handleAddToCart(item: CatalogItem, variant?: CatalogItemVariant, duration: RentalDuration = "3-days") {
     addToCart(item, variant, duration);
-    setIsCartOpen(true);
+    setRecentlyAddedItem(item.title);
+    setAnimateCartBadge(true);
+    setTimeout(() => setAnimateCartBadge(false), 500);
+    setTimeout(() => setRecentlyAddedItem(null), 3500);
   }
 
   function handleUpdateCartQty(itemId: string, variantId: string | undefined, duration: string, delta: number) {
@@ -379,10 +387,10 @@ export function ShopifyCatalogView({
     return (
       <div
         key={item.id}
-        className="bg-white rounded-2xl border border-[#EDE8E0] p-4 flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow group"
+        className="bg-white rounded-2xl border border-[#EDE8E0] p-4 flex flex-col justify-between shadow-xs hover:shadow-xl hover:-translate-y-1.5 hover:border-[#D5CDBD] transition-all duration-300 ease-out group relative"
       >
         <div>
-          {/* Image Area with Badge & Heart */}
+          {/* Image Area with Badge & Heart & Quick Add */}
           <div className="relative aspect-square rounded-xl bg-[#F8F6F2] overflow-hidden">
             <Link href={`/catalog/${vendor.slug}/${item.slug}`} className="block h-full w-full">
               {imgUrl ? (
@@ -390,7 +398,7 @@ export function ShopifyCatalogView({
                 <img
                   src={imgUrl}
                   alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-[#B0A798]">
@@ -400,7 +408,7 @@ export function ShopifyCatalogView({
             </Link>
 
             {/* "New" Ochre Badge */}
-            <span className={`absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full ${theme.accentBgClass} text-white text-[10px] font-bold tracking-wide`}>
+            <span className={`absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full ${theme.accentBgClass} text-white text-[10px] font-bold tracking-wide shadow-xs`}>
               New
             </span>
 
@@ -408,17 +416,35 @@ export function ShopifyCatalogView({
             <button
               type="button"
               onClick={() => toggleWishlist(item.id)}
-              className="absolute top-2.5 right-2.5 h-7 w-7 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center text-[#554C41] hover:text-rose-500 transition shadow-xs"
+              className={`absolute top-2.5 right-2.5 h-7 w-7 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center text-[#554C41] hover:text-rose-500 transition-all shadow-xs active:scale-125 cursor-pointer ${
+                lastWishlistedId === item.id ? "animate-heart-pop" : ""
+              }`}
             >
-              <HeartSvg className={`w-3.5 h-3.5 ${isWishlisted ? "fill-rose-500 text-rose-500" : ""}`} filled={isWishlisted} />
+              <HeartSvg className={`w-3.5 h-3.5 transition-colors ${isWishlisted ? "fill-rose-500 text-rose-500" : ""}`} filled={isWishlisted} />
             </button>
+
+            {/* Quick Add Overlay on hover (Shopify signature) */}
+            <div className="absolute inset-x-2.5 bottom-2.5 z-10 hidden sm:block opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAddToCart(item);
+                }}
+                className="w-full py-2.5 px-3 rounded-xl bg-[#1C1A17]/95 hover:bg-[#1C1A17] backdrop-blur-md text-white text-[11px] font-bold shadow-xl flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 animate-shimmer cursor-pointer"
+              >
+                <BagSvg className="w-3.5 h-3.5" />
+                <span>+ Quick Add</span>
+              </button>
+            </div>
           </div>
 
           {/* Title & Subtitle */}
           <div className="mt-3.5">
             <Link
               href={`/catalog/${vendor.slug}/${item.slug}`}
-              className="block font-serif font-bold text-sm text-[#1C1A17] line-clamp-1 hover:text-[#916B33] transition no-underline"
+              className="block font-serif font-bold text-sm text-[#1C1A17] line-clamp-1 hover:text-[#916B33] transition-colors no-underline"
             >
               {item.title}
             </Link>
@@ -445,7 +471,7 @@ export function ShopifyCatalogView({
 
           {/* Availability Status */}
           <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-[#1E7446] font-medium">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span>Available for your dates</span>
           </div>
         </div>
@@ -454,7 +480,7 @@ export function ShopifyCatalogView({
         <button
           type="button"
           onClick={() => handleAddToCart(item)}
-          className="mt-4 w-full py-2.5 px-3 rounded-lg border border-[#D5CDBD] text-[#1F1C18] text-xs font-bold hover:bg-[#1C1A17] hover:text-white transition flex items-center justify-center gap-2"
+          className="mt-4 w-full py-2.5 px-3 rounded-lg border border-[#D5CDBD] text-[#1F1C18] text-xs font-bold hover:bg-[#1C1A17] hover:text-white hover:border-[#1C1A17] transition-all duration-200 flex items-center justify-center gap-2 active:scale-95 animate-shimmer cursor-pointer shadow-2xs hover:shadow-md"
         >
           <BagSvg className="w-3.5 h-3.5" />
           <span>Add to Bag</span>
@@ -478,14 +504,18 @@ export function ShopifyCatalogView({
           {customConfig.promoTiles.map((tile) => (
             <div
               key={tile.id}
-              className="relative rounded-2xl overflow-hidden bg-[#2A2620] h-56 sm:h-64 flex items-end border border-[#E0D7C8]"
+              className="group relative rounded-2xl overflow-hidden bg-[#2A2620] h-56 sm:h-64 flex items-end border border-[#E0D7C8] shadow-xs hover:shadow-xl transition-all duration-500"
             >
               {tile.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={tile.imageUrl} alt={tile.heading} className="absolute inset-0 w-full h-full object-cover" />
+                <img
+                  src={tile.imageUrl}
+                  alt={tile.heading}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
+                />
               ) : null}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className="relative p-6 sm:p-7">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent transition-opacity group-hover:opacity-90" />
+              <div className="relative p-6 sm:p-7 transition-transform duration-300 group-hover:-translate-y-0.5">
                 <h3 className="text-xl sm:text-2xl font-serif text-white font-medium">{tile.heading}</h3>
                 {tile.description && (
                   <p className="mt-1 text-xs text-white/85 max-w-xs">{tile.description}</p>
@@ -499,10 +529,10 @@ export function ShopifyCatalogView({
                         document.getElementById("featured-collections")?.scrollIntoView({ behavior: "smooth" });
                       }
                     }}
-                    className={`mt-4 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg ${theme.accentBgClass} ${theme.accentBgHoverClass} text-white text-xs font-semibold transition`}
+                    className={`mt-4 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg ${theme.accentBgClass} ${theme.accentBgHoverClass} active:scale-95 text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all duration-200`}
                   >
                     <span>{tile.buttonLabel}</span>
-                    <ArrowRightSvg className="w-3.5 h-3.5" />
+                    <ArrowRightSvg className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
                   </button>
                 )}
               </div>
@@ -515,19 +545,69 @@ export function ShopifyCatalogView({
 
   return (
     <div className="min-h-screen bg-[#FCFBF7] text-[#1E1E1E] font-sans antialiased selection:bg-[#8F6B38] selection:text-white">
-      {/* 1. Top Announcement Bar — single vendor-authored line, hidden if unset */}
-      <div className="bg-[#141414] text-[#E0D9CE] text-[11px] sm:text-xs py-2 px-4 sm:px-8 border-b border-[#2A2A2A]">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          {topAnnouncement ? (
-            <div className="hidden lg:flex items-center gap-1.5">
-              <SparklesSvg className="w-3.5 h-3.5 text-[#D8B478]" />
-              <span>{topAnnouncement}</span>
-            </div>
-          ) : (
-            <div className="hidden lg:block" />
-          )}
+      {/* Floating Added to Bag Notification (Shopify Style) */}
+      {recentlyAddedItem && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-slide-down-fade flex items-center gap-3 bg-[#1C1A17] text-white px-5 py-3 rounded-full shadow-2xl border border-white/10 text-xs font-semibold">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shrink-0">
+            <CheckSvg className="w-3.5 h-3.5" />
+          </span>
+          <span>Added &ldquo;{recentlyAddedItem}&rdquo; to Bag</span>
+          <button
+            type="button"
+            onClick={() => {
+              setRecentlyAddedItem(null);
+              setIsCartOpen(true);
+            }}
+            className="ml-2 underline text-[#E5C88A] hover:text-white transition cursor-pointer"
+          >
+            View Bag
+          </button>
+        </div>
+      )}
 
-          <div className="flex items-center justify-between w-full lg:w-auto gap-4 text-[11px]">
+      {/* 1. Top Announcement Bar with Infinite Scrolling Marquee */}
+      <div className="bg-[#141414] text-[#E0D9CE] text-[11px] sm:text-xs py-2 px-4 border-b border-[#2A2A2A] overflow-hidden relative">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
+          <div className="overflow-hidden flex-1 relative">
+            <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-[11px] font-medium tracking-wide">
+              <span className="flex items-center gap-1.5 text-white/95">
+                <SparklesSvg className="w-3.5 h-3.5 text-[#D8B478]" />
+                <span>{topAnnouncement || `Welcome to ${vendor.businessName} Luxury Bridal Catalog`}</span>
+              </span>
+              <span className="text-[#555]">•</span>
+              <span className="flex items-center gap-1.5 text-[#D8B478]">
+                <span>💎 100% Certified Authentic Suites</span>
+              </span>
+              <span className="text-[#555]">•</span>
+              <span className="flex items-center gap-1.5 text-white/90">
+                <span>✨ Studio Trial & Fitting Appointments Available</span>
+              </span>
+              <span className="text-[#555]">•</span>
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <span>🚚 Secure Delivery in {cityName}</span>
+              </span>
+              <span className="text-[#555]">•</span>
+              {/* Duplicate for seamless infinite loop */}
+              <span className="flex items-center gap-1.5 text-white/95">
+                <SparklesSvg className="w-3.5 h-3.5 text-[#D8B478]" />
+                <span>{topAnnouncement || `Welcome to ${vendor.businessName} Luxury Bridal Catalog`}</span>
+              </span>
+              <span className="text-[#555]">•</span>
+              <span className="flex items-center gap-1.5 text-[#D8B478]">
+                <span>💎 100% Certified Authentic Suites</span>
+              </span>
+              <span className="text-[#555]">•</span>
+              <span className="flex items-center gap-1.5 text-white/90">
+                <span>✨ Studio Trial & Fitting Appointments Available</span>
+              </span>
+              <span className="text-[#555]">•</span>
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <span>🚚 Secure Delivery in {cityName}</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="hidden sm:flex items-center shrink-0 gap-4 text-[11px]">
             <a
               href={`tel:${vendorPhone}`}
               className="flex items-center gap-1.5 hover:text-white transition text-[#C7BBAA]"
@@ -535,7 +615,7 @@ export function ShopifyCatalogView({
               <PhoneSvg className="w-3.5 h-3.5" />
               <span>{formattedPhone}</span>
             </a>
-            <span className="text-[#3A3A3A] hidden sm:inline">|</span>
+            <span className="text-[#3A3A3A]">|</span>
             <a
               href={`https://wa.me/${vendorPhone}?text=${encodeURIComponent(`Hi ${vendor.businessName}! I am browsing your online catalog.`)}`}
               target="_blank"
@@ -561,15 +641,15 @@ export function ShopifyCatalogView({
                   vendor.profile.logoMedia.optimizedObjectKey ?? vendor.profile.logoMedia.originalObjectKey
                 )}
                 alt={vendor.businessName}
-                className="h-11 w-11 rounded-full object-cover border border-[#E5DECF]"
+                className="h-11 w-11 rounded-full object-cover border border-[#E5DECF] transition-transform duration-300 group-hover:scale-105"
               />
             ) : (
-              <div className="h-10 w-10 rounded-full bg-[#181818] text-[#D8B478] flex items-center justify-center font-serif text-base font-bold border border-[#D8B478]/30">
+              <div className="h-10 w-10 rounded-full bg-[#181818] text-[#D8B478] flex items-center justify-center font-serif text-base font-bold border border-[#D8B478]/30 transition-transform duration-300 group-hover:scale-105">
                 {vendor.businessName.slice(0, 1).toUpperCase()}
               </div>
             )}
             <div>
-              <div className="font-serif tracking-widest text-base sm:text-lg font-bold uppercase text-[#1C1C1C]">
+              <div className="font-serif tracking-widest text-base sm:text-lg font-bold uppercase text-[#1C1C1C] transition-colors group-hover:text-[#916B33]">
                 {vendor.businessName}
               </div>
               <div className="text-[10px] tracking-wider uppercase text-[#887B6C] font-medium">
@@ -590,7 +670,7 @@ export function ShopifyCatalogView({
                     const el = document.getElementById("catalog-grid");
                     el?.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className="hover:text-[#916B33] transition"
+                  className="hover:text-[#916B33] transition-colors cursor-pointer"
                 >
                   {collection.name}
                 </button>
@@ -617,7 +697,7 @@ export function ShopifyCatalogView({
             <button
               type="button"
               onClick={() => setShowWishlistOnly((prev) => !prev)}
-              className="relative p-2 hover:opacity-75 transition"
+              className="relative p-2 hover:opacity-75 transition-transform active:scale-95 cursor-pointer"
               title="Saved items"
             >
               <HeartSvg className={`w-5 h-5 ${wishlist.length > 0 ? "fill-rose-500 text-rose-500" : "text-[#2E2A25]"}`} filled={wishlist.length > 0} />
@@ -626,15 +706,19 @@ export function ShopifyCatalogView({
               </span>
             </button>
 
-            {/* Shopping Bag Trigger */}
+            {/* Shopping Bag Trigger with Cart Pop Animation */}
             <button
               type="button"
               onClick={() => setIsCartOpen(true)}
-              className="relative p-2 hover:opacity-75 transition"
+              className="relative p-2 hover:opacity-75 transition-transform active:scale-95 cursor-pointer"
               title="Shopping Bag"
             >
               <BagSvg className="w-5 h-5 text-[#2E2A25]" />
-              <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-[#8F6B38] text-white text-[10px] font-bold flex items-center justify-center">
+              <span
+                className={`absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-[#8F6B38] text-white text-[10px] font-bold flex items-center justify-center shadow-xs ${
+                  animateCartBadge ? "animate-cart-pop" : ""
+                }`}
+              >
                 {cartItemCount}
               </span>
             </button>
@@ -642,19 +726,19 @@ export function ShopifyCatalogView({
         </div>
       </header>
 
-      {/* 3. Hero Section — full-bleed banner with text/buttons overlaid */}
+      {/* 3. Hero Section — full-bleed banner with Ken-Burns motion */}
       <section className="relative h-[70vh] min-h-[420px] max-h-[720px] overflow-hidden bg-[#1C1A17]">
         {activeHeroImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={activeHeroImage}
             alt={vendor.businessName}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover animate-ken-burns will-change-transform"
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-[#2A2620] to-[#1C1A17]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10" />
 
         <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12 sm:pb-16">
           <div className="max-w-xl">
@@ -677,10 +761,10 @@ export function ShopifyCatalogView({
                 {shopBtnLabel && (
                   <a
                     href="#catalog-grid"
-                    className={`px-7 py-3.5 rounded-lg ${theme.accentBgClass} ${theme.accentBgHoverClass} text-white text-xs sm:text-sm font-semibold tracking-wide transition shadow-sm flex items-center gap-2`}
+                    className={`px-7 py-3.5 rounded-lg ${theme.accentBgClass} ${theme.accentBgHoverClass} text-white text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-md hover:shadow-xl hover:scale-105 active:scale-95 flex items-center gap-2 animate-shimmer`}
                   >
                     <span>{shopBtnLabel}</span>
-                    <ArrowRightSvg className="w-4 h-4" />
+                    <ArrowRightSvg className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </a>
                 )}
                 {trialBtnLabel && (
@@ -688,7 +772,7 @@ export function ShopifyCatalogView({
                     href={`https://wa.me/${vendorPhone}?text=${encodeURIComponent(`Hi ${vendor.businessName}, I would like to book a trial appointment.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-6 py-3.5 rounded-lg border border-white/70 text-white hover:bg-white/10 text-xs sm:text-sm font-semibold tracking-wide transition flex items-center gap-2"
+                    className="px-6 py-3.5 rounded-lg border border-white/70 text-white hover:bg-white/10 text-xs sm:text-sm font-semibold tracking-wide transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
                   >
                     <span>{trialBtnLabel}</span>
                     <CalendarSvg className="w-4 h-4" />
@@ -762,7 +846,7 @@ export function ShopifyCatalogView({
             </button>
           </div>
 
-          <div className="flex items-start gap-5 sm:gap-8 overflow-x-auto no-scrollbar pb-2">
+          <div className="flex items-start gap-5 sm:gap-8 overflow-x-auto no-scrollbar pb-3 pt-1">
             {collectionSummaries.map((collection) => {
               const isSelected = selectedCollectionId === collection.id;
               return (
@@ -770,11 +854,11 @@ export function ShopifyCatalogView({
                   type="button"
                   key={collection.id}
                   onClick={() => setSelectedCollectionId(isSelected ? "ALL" : collection.id)}
-                  className="group flex flex-col items-center gap-2.5 shrink-0 w-20 sm:w-24"
+                  className="group flex flex-col items-center gap-2.5 shrink-0 w-20 sm:w-24 cursor-pointer transition-transform"
                 >
                   <div
-                    className={`relative h-16 w-16 sm:h-20 sm:w-20 rounded-full overflow-hidden bg-[#EFE9DF] shadow-sm transition-all duration-300 group-hover:shadow-md ${
-                      isSelected ? `ring-2 ${theme.accentRingClass} ring-offset-2` : "ring-1 ring-[#EDE8E0]"
+                    className={`relative h-16 w-16 sm:h-20 sm:w-20 rounded-full overflow-hidden bg-[#EFE9DF] shadow-xs transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1.5 ${
+                      isSelected ? `ring-2 ${theme.accentRingClass} ring-offset-2 ring-offset-[#FCFBF7] scale-105 shadow-md` : "ring-1 ring-[#EDE8E0]"
                     }`}
                   >
                     {collection.sampleImage ? (
@@ -782,7 +866,7 @@ export function ShopifyCatalogView({
                       <img
                         src={collection.sampleImage}
                         alt={collection.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-[#F7F4EE] to-[#E5DEC7]">
@@ -790,7 +874,9 @@ export function ShopifyCatalogView({
                       </div>
                     )}
                   </div>
-                  <span className="text-[11px] sm:text-xs font-semibold text-[#2E2A25] text-center leading-tight">
+                  <span className={`text-[11px] sm:text-xs font-semibold text-center leading-tight transition-colors ${
+                    isSelected ? "text-[#1F1C18] font-bold" : "text-[#554C41] group-hover:text-[#1F1C18]"
+                  }`}>
                     {collection.name}
                   </span>
                 </button>
@@ -904,99 +990,7 @@ export function ShopifyCatalogView({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-7">
-            {filteredItems.map((item) => {
-              const primaryMedia = item.media[0];
-              const imgUrl = primaryMedia?.url ?? primaryMedia?.thumbnailUrl;
-              const price = getItemBasePrice(item);
-              const originalEstimated = Math.round(price * 2.5);
-              const isWishlisted = wishlist.includes(item.id);
-
-              return (
-                <div
-                  key={item.id}
-                  className="bg-white rounded-2xl border border-[#EDE8E0] p-4 flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow group"
-                >
-                  <div>
-                    {/* Image Area with Badge & Heart */}
-                    <div className="relative aspect-square rounded-xl bg-[#F8F6F2] overflow-hidden">
-                      <Link href={`/catalog/${vendor.slug}/${item.slug}`} className="block h-full w-full">
-                        {imgUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={imgUrl}
-                            alt={item.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[#B0A798]">
-                            <SparklesSvg className="w-8 h-8" />
-                          </div>
-                        )}
-                      </Link>
-
-                      {/* "New" Ochre Badge */}
-                      <span className={`absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full ${theme.accentBgClass} text-white text-[10px] font-bold tracking-wide`}>
-                        New
-                      </span>
-
-                      {/* Wishlist Heart */}
-                      <button
-                        type="button"
-                        onClick={() => toggleWishlist(item.id)}
-                        className="absolute top-2.5 right-2.5 h-7 w-7 rounded-full bg-white/90 backdrop-blur-xs flex items-center justify-center text-[#554C41] hover:text-rose-500 transition shadow-xs"
-                      >
-                        <HeartSvg className={`w-3.5 h-3.5 ${isWishlisted ? "fill-rose-500 text-rose-500" : ""}`} filled={isWishlisted} />
-                      </button>
-                    </div>
-
-                    {/* Title & Subtitle */}
-                    <div className="mt-3.5">
-                      <Link
-                        href={`/catalog/${vendor.slug}/${item.slug}`}
-                        className="block font-serif font-bold text-sm text-[#1C1A17] line-clamp-1 hover:text-[#916B33] transition no-underline"
-                      >
-                        {item.title}
-                      </Link>
-                      <p className="text-[11px] text-[#7A7165] line-clamp-1 mt-0.5 font-light">
-                        {item.description || `${primaryCategory} suite`}
-                      </p>
-                    </div>
-
-                    {/* Price Block */}
-                    <div className="mt-3">
-                      <div className="text-[10px] uppercase tracking-wider text-[#8A8175] font-semibold">
-                        Rental Price
-                      </div>
-                      <div className="flex items-baseline justify-between mt-0.5">
-                        <div className="font-mono text-base font-bold text-[#1C1A17]">
-                          {formatPrice(price)}
-                          <span className="text-[11px] text-[#7A7165] font-sans font-normal ml-1">/ 3 days</span>
-                        </div>
-                        <div className="text-xs text-[#9E9588] line-through font-mono">
-                          {formatPrice(originalEstimated)}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Availability Status */}
-                    <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-[#1E7446] font-medium">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      <span>Available for your dates</span>
-                    </div>
-                  </div>
-
-                  {/* Add to Bag Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleAddToCart(item)}
-                    className="mt-4 w-full py-2.5 px-3 rounded-lg border border-[#D5CDBD] text-[#1F1C18] text-xs font-bold hover:bg-[#1C1A17] hover:text-white transition flex items-center justify-center gap-2"
-                  >
-                    <BagSvg className="w-3.5 h-3.5" />
-                    <span>Add to Bag</span>
-                  </button>
-                </div>
-              );
-            })}
+            {filteredItems.map((item) => renderProductCard(item))}
           </div>
         )}
       </section>
@@ -1008,12 +1002,17 @@ export function ShopifyCatalogView({
             {customConfig.trustBadges.slice(0, 4).map((badge, idx) => {
               const Icon = TRUST_BADGE_ICONS[idx] ?? SparklesSvg;
               return (
-                <div key={idx} className="bg-white p-5 rounded-2xl border border-[#EDE8E0] shadow-xs flex items-center gap-4">
-                  <div className="h-11 w-11 rounded-full bg-[#FAF6EE] border border-[#E8DFC8] flex items-center justify-center text-[#9A743D] shrink-0">
-                    <Icon className="w-5 h-5" />
+                <div
+                  key={idx}
+                  className="group bg-white p-5 rounded-2xl border border-[#EDE8E0] shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center gap-4 cursor-default"
+                >
+                  <div className="h-11 w-11 rounded-full bg-[#FAF6EE] border border-[#E8DFC8] flex items-center justify-center text-[#9A743D] shrink-0 group-hover:scale-110 group-hover:bg-[#F4ECE0] transition-all duration-300">
+                    <Icon className="w-5 h-5 transition-transform duration-300 group-hover:rotate-3" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs sm:text-sm text-[#1C1A17]">{badge.title}</h4>
+                    <h4 className="font-bold text-xs sm:text-sm text-[#1C1A17] group-hover:text-[#9A743D] transition-colors">
+                      {badge.title}
+                    </h4>
                     <p className="text-[11px] text-[#7A7165] mt-0.5">{badge.subtitle}</p>
                   </div>
                 </div>
@@ -1341,9 +1340,10 @@ export function ShopifyCatalogView({
                 <button
                   type="button"
                   onClick={handleSendWhatsAppOrder}
-                  className="w-full py-4 px-4 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition shadow-lg flex items-center justify-center gap-2"
+                  className="group relative overflow-hidden w-full py-4 px-4 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(16,185,129,0.35)] hover:shadow-[0_6px_25px_rgba(16,185,129,0.45)] flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <WhatsAppSvg className="w-5 h-5 fill-current" />
+                  <span className="absolute inset-0 -translate-x-full group-hover:animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+                  <WhatsAppSvg className="w-5 h-5 fill-current transition-transform duration-200 group-hover:scale-110" />
                   <span>Place Order via WhatsApp</span>
                 </button>
               </div>

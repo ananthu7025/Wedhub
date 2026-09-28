@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ApiResponse } from "@/lib/api/types";
@@ -27,8 +27,11 @@ export function VerifyEmailStatus({ token }: { token: string }) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>("verifying");
   const [errorMessage, setErrorMessage] = useState("");
+  const hasExecutedRef = useRef(false);
 
   useEffect(() => {
+    if (hasExecutedRef.current) return;
+    hasExecutedRef.current = true;
     let cancelled = false;
 
     async function run() {
@@ -52,17 +55,16 @@ export function VerifyEmailStatus({ token }: { token: string }) {
       setStatus("redirecting");
       if (!refreshResult.success) {
         // No session in this browser/tab — the account is genuinely
-        // verified (the POST above already succeeded), there's just nothing
-        // here to refresh into a dashboard redirect.
-        router.push(`/login?verifiedEmail=${encodeURIComponent(json.data.email)}`);
+        // verified (the POST above already succeeded), redirect cleanly
+        // to login without router cache interference.
+        window.location.replace(`/login?verifiedEmail=${encodeURIComponent(json.data.email)}`);
         return;
       }
 
       // /verify-email/pending re-checks the (now-fresh) session server-side
-      // and redirects onward to the right role's dashboard — see that page's
-      // own redirect(roleHomeRoute[...]) once session.emailVerified is true.
-      router.push("/verify-email/pending");
-      router.refresh();
+      // and redirects onward to the right role's dashboard. Using window.location.replace
+      // avoids stale Next.js client-side router cache holding onto the old unverified state.
+      window.location.replace("/verify-email/pending");
     }
 
     void run();

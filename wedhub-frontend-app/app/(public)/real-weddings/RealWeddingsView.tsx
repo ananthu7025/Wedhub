@@ -524,7 +524,7 @@ export function RealWeddingsView({ initialData, currentPage = 1, searchParams }:
             <Link href="/vendors" className="hover:underline no-underline">
               Find Wedding Photographers →
             </Link>
-            <Link href="/wedding/new" className="hover:underline no-underline">
+            <Link href="/wedding-website" className="hover:underline no-underline">
               Create Your Free Wedding Website →
             </Link>
           </div>

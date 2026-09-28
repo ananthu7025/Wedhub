@@ -77,21 +77,22 @@ export function CatalogProductDetail({
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
       <Link
         href={`/catalog/${vendor.slug}`}
-        className={`inline-flex items-center gap-1.5 text-xs font-bold ${theme.accentTextClass} hover:underline no-underline mb-6`}
+        className={`group inline-flex items-center gap-1.5 text-xs font-bold ${theme.accentTextClass} hover:underline no-underline mb-6 transition-all`}
       >
-        <ChevronLeftIcon className="h-3.5 w-3.5" /> Back to storefront
+        <ChevronLeftIcon className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-x-1" />
+        <span>Back to storefront</span>
       </Link>
 
       <div className="bg-white rounded-3xl border border-[#EDE8E0] shadow-xs overflow-hidden flex flex-col md:flex-row">
         {/* Photo gallery */}
-        <div className="md:w-1/2 bg-[#F8F6F2] flex flex-col justify-between p-4">
-          <div className="relative aspect-square rounded-2xl overflow-hidden bg-white shadow-xs">
+        <div className="md:w-1/2 bg-[#F8F6F2] flex flex-col justify-between p-4 sm:p-6">
+          <div className="group relative aspect-square rounded-2xl overflow-hidden bg-white shadow-xs">
             {activeMedia ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={activeMedia.url ?? activeMedia.thumbnailUrl ?? ""}
                 alt={item.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-[#B0A798]">
@@ -107,8 +108,10 @@ export function CatalogProductDetail({
                   key={m.id || idx}
                   type="button"
                   onClick={() => setActivePhotoIdx(idx)}
-                  className={`h-14 w-14 rounded-xl border-2 overflow-hidden shrink-0 transition ${
-                    activePhotoIdx === idx ? "border-[#1F1C18] scale-105" : "border-[#E5DEC7] opacity-60"
+                  className={`h-14 w-14 rounded-xl border-2 overflow-hidden shrink-0 transition-all duration-200 active:scale-90 ${
+                    activePhotoIdx === idx
+                      ? "border-[#1F1C18] scale-105 shadow-sm ring-2 ring-black/10"
+                      : "border-[#E5DEC7] opacity-60 hover:opacity-100 hover:scale-105"
                   }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -124,10 +127,10 @@ export function CatalogProductDetail({
           <div>
             <span className="text-[10px] font-bold text-[#8F6B38] uppercase tracking-widest">{primaryCategory}</span>
             <h1 className="text-xl sm:text-2xl font-serif font-bold text-[#1F1C18] mt-1">{item.title}</h1>
-            {item.description && <p className="mt-2 text-sm text-[#524B43]">{item.description}</p>}
+            {item.description && <p className="mt-2 text-sm text-[#524B43] leading-relaxed">{item.description}</p>}
 
-            <div className="mt-4 p-3 bg-[#FAF8F5] rounded-xl border border-[#EDE8E0]">
-              <div className="text-[10px] uppercase font-bold text-[#8A8175]">Rental Rate:</div>
+            <div className="mt-4 p-3.5 bg-[#FAF8F5] rounded-xl border border-[#EDE8E0]">
+              <div className="text-[10px] uppercase font-bold text-[#8A8175] tracking-wider">Rental Rate:</div>
               <div className="text-2xl font-bold text-[#1F1C18] font-mono mt-0.5">
                 {formatCatalogPrice(calculatedPrice)}
                 <span className="text-xs text-[#7A7165] font-sans font-normal ml-1">
@@ -145,9 +148,9 @@ export function CatalogProductDetail({
                       key={variant.id}
                       type="button"
                       onClick={() => setSelectedVariant(variant)}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition ${
+                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all duration-200 active:scale-95 ${
                         selectedVariant?.id === variant.id
-                          ? "bg-[#1C1A17] text-white border-[#1C1A17]"
+                          ? "bg-[#1C1A17] text-white border-[#1C1A17] shadow-xs"
                           : "bg-white text-[#2A2621] border-[#E0D7C8] hover:bg-[#FAF8F5]"
                       }`}
                     >
@@ -166,9 +169,9 @@ export function CatalogProductDetail({
                     key={duration.value}
                     type="button"
                     onClick={() => setSelectedDuration(duration.value)}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold border transition text-center ${
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all duration-200 active:scale-95 text-center ${
                       selectedDuration === duration.value
-                        ? "bg-[#1C1A17] text-white border-[#1C1A17]"
+                        ? "bg-[#1C1A17] text-white border-[#1C1A17] shadow-xs"
                         : "bg-white text-[#2A2621] border-[#E0D7C8] hover:bg-[#FAF8F5]"
                     }`}
                   >
@@ -187,7 +190,7 @@ export function CatalogProductDetail({
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-[#524B43]">
                   {item.components.map((comp) => (
                     <li key={comp.id} className="flex items-center gap-1.5">
-                      <CheckIcon className="w-3.5 h-3.5 text-emerald-600" />
+                      <CheckIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <span>
                         {comp.name} {comp.defaultQty > 1 ? `(${comp.defaultQty})` : ""}
                       </span>
@@ -202,9 +205,10 @@ export function CatalogProductDetail({
             <button
               type="button"
               onClick={() => onAddToCart(item, selectedVariant ?? undefined, selectedDuration)}
-              className="w-full py-3.5 px-4 rounded-xl bg-[#1C1A17] text-white text-xs font-bold hover:bg-black transition shadow-md flex items-center justify-center gap-2"
+              className="group relative overflow-hidden w-full py-3.5 px-4 rounded-xl bg-[#1C1A17] text-white text-xs font-bold hover:bg-black active:scale-[0.98] transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
             >
-              <BagIcon className="w-4 h-4" />
+              <span className="absolute inset-0 -translate-x-full group-hover:animate-shimmer bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
+              <BagIcon className="w-4 h-4 transition-transform duration-200 group-hover:scale-115" />
               <span>Add to Rental Bag</span>
             </button>
           </div>

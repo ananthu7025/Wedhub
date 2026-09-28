@@ -206,3 +206,10 @@ export function applyEmailChange(tokenId: string, userId: string, newEmail: stri
     });
   });
 }
+
+export function reactivateUser(id: string): Promise<User> {
+  return prisma.user.update({
+    where: { id },
+    data: { status: "ACTIVE" },
+  });
+}

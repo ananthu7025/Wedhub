@@ -48,9 +48,9 @@ test.describe("Vendors directory page", () => {
     await expect(page.getByText("Frame & Co. Photography")).toBeVisible();
   });
 
-  test("navigating to /search without filters redirects to /vendors", async ({ page }) => {
+  test("navigating to /search without filters renders search results", async ({ page }) => {
     await page.goto("/search");
-    await expect(page).toHaveURL(/\/vendors/);
+    await expect(page).toHaveURL(/\/search/);
   });
 });
 

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getAccessToken } from "@/lib/auth/session";
+import { getAccessToken, setAccessTokenCookie } from "@/lib/auth/session";
+import { backendAuthFetch, parseBackendJson, rewriteRefreshCookiePath } from "@/lib/auth/backend";
 
 /**
  * Generic authenticated proxy for every backend module EXCEPT /auth/* (which
@@ -26,7 +27,7 @@ async function proxyRequest(request: NextRequest, path: string[]): Promise<NextR
     );
   }
 
-  const accessToken = await getAccessToken();
+  let accessToken = await getAccessToken();
   const targetUrl = new URL(`/api/v1/${joinedPath}`, API_URL);
   targetUrl.search = request.nextUrl.search;
 
@@ -44,18 +45,60 @@ async function proxyRequest(request: NextRequest, path: string[]): Promise<NextR
   if (forwardedFor) headers["X-Forwarded-For"] = forwardedFor;
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
+  const requestBody = hasBody ? await request.text() : undefined;
 
-  const backendResponse = await fetch(targetUrl, {
+  let backendResponse = await fetch(targetUrl, {
     method: request.method,
     headers,
-    body: hasBody ? await request.text() : undefined,
+    body: requestBody,
   });
 
+  const extraSetCookies: string[] = [];
+
+  // If 401, check if we have a refresh token to perform automatic silent token refresh
+  if (backendResponse.status === 401) {
+    const rawCookieHeader = request.headers.get("cookie");
+    if (rawCookieHeader && rawCookieHeader.includes("refresh_token=")) {
+      try {
+        const refreshRes = await backendAuthFetch("/refresh", {
+          method: "POST",
+          cookie: rawCookieHeader,
+        });
+        const refreshJson = await parseBackendJson<{ accessToken: string }>(refreshRes);
+        if (refreshJson.success && refreshJson.data?.accessToken) {
+          const newAccessToken = refreshJson.data.accessToken;
+          await setAccessTokenCookie(newAccessToken);
+
+          const rotatedSetCookie = refreshRes.headers.get("set-cookie");
+          if (rotatedSetCookie) {
+            extraSetCookies.push(rewriteRefreshCookiePath(rotatedSetCookie));
+          }
+
+          // Retry original request with the new access token
+          headers["Authorization"] = `Bearer ${newAccessToken}`;
+          backendResponse = await fetch(targetUrl, {
+            method: request.method,
+            headers,
+            body: requestBody,
+          });
+        }
+      } catch {
+        // Fall back to original backend response if refresh fails
+      }
+    }
+  }
+
   const responseBody = await backendResponse.text();
-  return new NextResponse(responseBody, {
+  const res = new NextResponse(responseBody, {
     status: backendResponse.status,
     headers: { "Content-Type": backendResponse.headers.get("content-type") ?? "application/json" },
   });
+
+  for (const cookie of extraSetCookies) {
+    res.headers.append("set-cookie", cookie);
+  }
+
+  return res;
 }
 
 export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {

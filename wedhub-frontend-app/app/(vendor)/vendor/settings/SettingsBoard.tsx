@@ -1288,7 +1288,7 @@ export function SettingsBoard({
     const result = await deactivateAccount();
     if (result.success) {
       await logout();
-      router.push("/login");
+      router.push("/login?status=deactivated");
       return;
     }
     setDeactivating(false);
@@ -1367,8 +1367,8 @@ export function SettingsBoard({
       <div className="mb-4 rounded-xl border border-red-10 bg-white p-4 sm:p-6">
         <h3 className="mb-3 text-base font-bold text-red-70">Danger zone</h3>
         <p className="mb-4 text-[13.5px] text-text-grey">
-          Deactivating your account signs you out and disables login. Your vendor listing and its data are not
-          deleted, but you won&apos;t be able to access this dashboard again unless support reactivates your account.
+          Deactivating your account signs you out and hides your vendor listing. Your account and listing data are
+          preserved, and you can reactivate your account at any time by simply logging back in.
         </p>
         {deactivateError && <p className="mb-3 rounded-md bg-red-10 p-3 text-[13px] text-red-70">{deactivateError}</p>}
         {confirmingDeactivate ? (

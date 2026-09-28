@@ -10,6 +10,7 @@ export function FooterNewsletterForm() {
   const [subscribed, setSubscribed] = useState(false);
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
   const emailError = useMemo(() => validateField(emailSchema, email), [email]);
 
@@ -21,23 +22,43 @@ export function FooterNewsletterForm() {
     );
   }
 
+  function handleSubscribe(e: React.FormEvent) {
+    e.preventDefault();
+    setTouched(true);
+    setDuplicateError(null);
+
+    if (emailError) return;
+
+    const normalized = email.trim().toLowerCase();
+    try {
+      const stored = localStorage.getItem("wedhub_newsletter_subscribers");
+      const list: string[] = stored ? JSON.parse(stored) : [];
+      if (list.includes(normalized)) {
+        setDuplicateError("This email address is already subscribed to our newsletter.");
+        return;
+      }
+      list.push(normalized);
+      localStorage.setItem("wedhub_newsletter_subscribers", JSON.stringify(list));
+    } catch {
+      // localStorage may fail in private mode, ignore storage error
+    }
+
+    setSubscribed(true);
+  }
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        setTouched(true);
-        if (!emailError) setSubscribed(true);
-      }}
-      noValidate
-    >
+    <form onSubmit={handleSubscribe} noValidate>
       <div className="flex gap-2">
         <Input
           name="email"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (duplicateError) setDuplicateError(null);
+          }}
           onBlur={() => setTouched(true)}
-          invalid={touched && !!emailError}
+          invalid={(touched && !!emailError) || !!duplicateError}
           placeholder="Enter your email address"
           className="flex-1 border-neutral-grey px-3 py-2 text-xs"
         />
@@ -48,7 +69,7 @@ export function FooterNewsletterForm() {
           Subscribe
         </button>
       </div>
-      {touched && <FieldError message={emailError} />}
+      {touched && <FieldError message={emailError || duplicateError} />}
     </form>
   );
 }

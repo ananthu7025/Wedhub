@@ -59,11 +59,11 @@ export function LeadStatusTrack({ status }: { status: LeadStatus }) {
   const currentIndex = stepIndexFor(status);
 
   return (
-    <div className="mt-2.5 flex items-center max-[700px]:w-full">
+    <div className="mt-2.5 flex items-center max-[700px]:w-full overflow-x-auto no-scrollbar py-1">
       {STEPS.map((step, index) => (
-        <div key={step} className="flex items-center">
+        <div key={step} className="flex items-center shrink-0">
           <div
-            className={`flex items-center gap-1.5 text-[11px] ${
+            className={`flex items-center gap-1.5 text-[11px] whitespace-nowrap ${
               index < currentIndex
                 ? "text-text-grey"
                 : index === currentIndex
@@ -72,14 +72,14 @@ export function LeadStatusTrack({ status }: { status: LeadStatus }) {
             }`}
           >
             <span
-              className={`h-2 w-2 rounded-full ${
+              className={`h-2 w-2 rounded-full shrink-0 ${
                 index < currentIndex ? "bg-emerald" : index === currentIndex ? "bg-brand-primary" : "bg-border"
               }`}
             />
             {step}
           </div>
           {index < STEPS.length - 1 && (
-            <span className={`mx-1 h-0.5 w-7 ${index < currentIndex ? "bg-emerald" : "bg-border"}`} />
+            <span className={`mx-1 h-0.5 w-3.5 sm:w-7 shrink-0 ${index < currentIndex ? "bg-emerald" : "bg-border"}`} />
           )}
         </div>
       ))}

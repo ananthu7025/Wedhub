@@ -348,6 +348,8 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
             <Link href="/community" className="px-2.5 py-1 hover:text-white">Community</Link>
             <span className="opacity-30">•</span>
             <Link href="/login?next=/wedding-website" className="px-2.5 py-1 hover:text-white">Create Website</Link>
+            <span className="opacity-30">•</span>
+            <Link href="/signup?type=vendor" className="rounded-full bg-white/20 px-2.5 py-0.5 font-bold text-white hover:bg-white hover:text-[#c2185b]">Join as Vendor ↗</Link>
           </>
         )}
       </div>
