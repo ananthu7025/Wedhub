@@ -35,17 +35,20 @@ export const CATEGORY_SEO_SLUGS: Record<string, string> = {
   "wedding-cars-luxury-rentals": "wedding-car-rentals",
   "event-planners": "wedding-planners",
   "content-creators": "wedding-content-creators",
-  "content-creator": "wedding-content-creators",
 };
 
 /** Real Category.slug -> marketing SEO slug, e.g. "photography-videography" -> "wedding-photographers". */
 export function resolveCategorySeoSlug(realSlug: string): string {
+  if (realSlug === "content-creator") return "wedding-content-creators";
   return CATEGORY_SEO_SLUGS[realSlug] ?? realSlug;
 }
 
-const REVERSE_CATEGORY_SEO_SLUGS: Record<string, string> = Object.fromEntries(
-  Object.entries(CATEGORY_SEO_SLUGS).map(([realSlug, seoSlug]) => [seoSlug, realSlug]),
-);
+const REVERSE_CATEGORY_SEO_SLUGS: Record<string, string> = {
+  ...Object.fromEntries(
+    Object.entries(CATEGORY_SEO_SLUGS).map(([realSlug, seoSlug]) => [seoSlug, realSlug]),
+  ),
+  "wedding-content-creators": "content-creators",
+};
 
 /**
  * Marketing SEO slug (or a raw real slug, or an unknown slug) -> real
@@ -56,5 +59,6 @@ const REVERSE_CATEGORY_SEO_SLUGS: Record<string, string> = Object.fromEntries(
  * resolveCitySlugAlias.
  */
 export function resolveCategoryDbSlug(seoSlug: string): string {
+  if (seoSlug === "content-creator") return "content-creators";
   return REVERSE_CATEGORY_SEO_SLUGS[seoSlug] ?? seoSlug;
 }
