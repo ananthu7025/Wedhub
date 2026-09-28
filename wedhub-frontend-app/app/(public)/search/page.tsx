@@ -109,7 +109,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   return (
     <div className="min-h-screen bg-[#fafbfc] flex flex-col justify-between">
       <div>
-        <PublicTopbar />
+        <PublicTopbar activeHref="/search" />
 
         {/* WedMeGood Horizontal Dropdown Filter Strip */}
         <SearchFilterBar

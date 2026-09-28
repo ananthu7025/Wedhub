@@ -21,9 +21,9 @@ interface PublicTopbarProps {
 const coupleNavLinks = [
   { href: "/", label: "Home" },
   { href: "/search", label: "Find Vendors" },
+  { href: "/gallery", label: "Photos" },
   { href: "/shortlist", label: "Shortlist" },
   { href: "/enquiries", label: "My Enquiries" },
-  { href: "/inbox", label: "Inbox" },
   { href: "/community", label: "Community" },
   { href: "/wedding-website", label: "Wedding Website" },
 ];
@@ -68,7 +68,7 @@ const coupleBottomNavLinks = [
 // bottleneck). Isolated into its own async component so <Suspense> can let
 // the rest of the header (logo, nav links) paint immediately while these
 // stream in a beat later, instead of the whole page waiting on them.
-async function AccountQuickActions() {
+async function AccountQuickActions({ activeHref }: { activeHref?: string }) {
   const [unreadCount, unreadMessageCount, me] = await Promise.all([
     getMyUnreadNotificationCount()
       .then((r) => r.data.count)
@@ -87,7 +87,11 @@ async function AccountQuickActions() {
       <Link
         href="/inbox"
         aria-label={unreadMessageCount > 0 ? `Inbox (${unreadMessageCount} unread)` : "Inbox"}
-        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 shrink-0"
+        className={`relative flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0 ${
+          activeHref === "/inbox"
+            ? "bg-white/30 text-white ring-2 ring-white/50"
+            : "bg-white/15 text-white hover:bg-white/25"
+        }`}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M22 12h-6l-2 3h-4l-2-3H2" />
@@ -98,7 +102,11 @@ async function AccountQuickActions() {
       <Link
         href="/notifications"
         aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
-        className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 shrink-0"
+        className={`relative flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0 ${
+          activeHref === "/notifications"
+            ? "bg-white/30 text-white ring-2 ring-white/50"
+            : "bg-white/15 text-white hover:bg-white/25"
+        }`}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -108,7 +116,9 @@ async function AccountQuickActions() {
       </Link>
       <Link
         href="/account"
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-white font-bold text-[#e00b41] shadow-sm ring-2 ring-white/40 transition-transform hover:scale-105 shrink-0"
+        className={`flex h-9 w-9 items-center justify-center rounded-full bg-white font-bold text-[#e00b41] shadow-sm transition-transform hover:scale-105 shrink-0 ${
+          activeHref === "/account" ? "ring-2 ring-white" : "ring-2 ring-white/40"
+        }`}
         title="My Account"
       >
         {initials}
@@ -120,13 +130,15 @@ async function AccountQuickActions() {
 // Fallback shown while AccountQuickActions streams in — same layout/sizing
 // so nothing shifts when it resolves, just no unread dots yet and a blank
 // avatar instead of initials.
-function AccountQuickActionsFallback() {
+function AccountQuickActionsFallback({ activeHref }: { activeHref?: string }) {
   return (
     <div className="flex items-center gap-2 shrink-0">
       <Link
         href="/inbox"
         aria-label="Inbox"
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 shrink-0"
+        className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0 ${
+          activeHref === "/inbox" ? "bg-white/30 text-white ring-2 ring-white/50" : "bg-white/15 text-white hover:bg-white/25"
+        }`}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M22 12h-6l-2 3h-4l-2-3H2" />
@@ -136,7 +148,9 @@ function AccountQuickActionsFallback() {
       <Link
         href="/notifications"
         aria-label="Notifications"
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 shrink-0"
+        className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors shrink-0 ${
+          activeHref === "/notifications" ? "bg-white/30 text-white ring-2 ring-white/50" : "bg-white/15 text-white hover:bg-white/25"
+        }`}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -287,8 +301,8 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
           )}
 
           {session ? (
-            <Suspense fallback={<AccountQuickActionsFallback />}>
-              <AccountQuickActions />
+            <Suspense fallback={<AccountQuickActionsFallback activeHref={activeHref} />}>
+              <AccountQuickActions activeHref={activeHref} />
             </Suspense>
           ) : (
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">

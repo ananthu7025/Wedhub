@@ -35,7 +35,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps) {
 
   return (
     <>
-      <PublicTopbar />
+      <PublicTopbar activeHref="/gallery" />
       <GalleryPageView
         key={category ?? "all"}
         initialItems={items}
