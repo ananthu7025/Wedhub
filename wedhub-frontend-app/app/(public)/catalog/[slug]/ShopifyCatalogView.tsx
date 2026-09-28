@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { CloseIcon } from "@/components/portfolio/icons";
 import type { VendorDetail } from "@/lib/api/vendors.types";
@@ -14,6 +14,63 @@ import { getPublicMediaUrl } from "@/lib/media/url";
 import { themeForCatalog } from "./catalog-theme";
 import { formatCatalogPrice, getCatalogCalculatedPrice, getCatalogItemBasePrice, type RentalDuration } from "./catalog-pricing";
 import { useCatalogCart } from "./useCatalogCart";
+
+// --- Shopify-Style Scroll & Text Reveal Wrapper ---
+function ScrollReveal({
+  children,
+  className = "",
+  delay = 0,
+  variant = "fade-up",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+  variant?: "fade-up" | "text-reveal" | "fade";
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isRevealed, setIsRevealed] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      setIsRevealed(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsRevealed(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: "0px 0px -30px 0px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        transitionDelay: delay ? `${delay}ms` : undefined,
+      }}
+      className={`transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${
+        isRevealed
+          ? "opacity-100 translate-y-0"
+          : variant === "text-reveal"
+          ? "opacity-0 translate-y-4"
+          : "opacity-0 translate-y-3.5"
+      } ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
 
 // --- Clean SVG Icon Definitions (No System Icons / Emojis) ---
 
@@ -213,6 +270,22 @@ export function ShopifyCatalogView({
   const trialBtnLabel = customConfig?.trialButtonText || null;
   const shopBtnLabel = customConfig?.shopButtonText || null;
   const topAnnouncement = customConfig?.announcementText || null;
+
+  const marqueeItems = useMemo(() => {
+    if (topAnnouncement && topAnnouncement.trim()) {
+      const parts = topAnnouncement
+        .split(/[·|;]/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+      if (parts.length > 0) return parts;
+    }
+    return [
+      `Welcome to ${vendor.businessName} Luxury Bridal Catalog`,
+      "100% Certified Authentic Suites",
+      "Studio Trial & Fitting Appointments Available",
+      `Secure Delivery in ${cityName}`,
+    ];
+  }, [topAnnouncement, vendor.businessName, cityName]);
 
 // Vendor-curated collections (see CatalogCollectionsManager) — a vendor
   // explicitly assigns items to each one, so this is real merchandising
@@ -501,42 +574,43 @@ export function ShopifyCatalogView({
     return (
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className={`grid grid-cols-1 gap-4 sm:gap-5 ${customConfig.promoTiles.length > 1 ? "sm:grid-cols-2" : ""}`}>
-          {customConfig.promoTiles.map((tile) => (
-            <div
-              key={tile.id}
-              className="group relative rounded-2xl overflow-hidden bg-[#2A2620] h-56 sm:h-64 flex items-end border border-[#E0D7C8] shadow-xs hover:shadow-xl transition-all duration-500"
-            >
-              {tile.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={tile.imageUrl}
-                  alt={tile.heading}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
-                />
-              ) : null}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent transition-opacity group-hover:opacity-90" />
-              <div className="relative p-6 sm:p-7 transition-transform duration-300 group-hover:-translate-y-0.5">
-                <h3 className="text-xl sm:text-2xl font-serif text-white font-medium">{tile.heading}</h3>
-                {tile.description && (
-                  <p className="mt-1 text-xs text-white/85 max-w-xs">{tile.description}</p>
-                )}
-                {tile.buttonLabel && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (tile.linkedCollection) {
-                        setSelectedCollectionId(tile.linkedCollection.id);
-                        document.getElementById("featured-collections")?.scrollIntoView({ behavior: "smooth" });
-                      }
-                    }}
-                    className={`mt-4 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg ${theme.accentBgClass} ${theme.accentBgHoverClass} active:scale-95 text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all duration-200`}
-                  >
-                    <span>{tile.buttonLabel}</span>
-                    <ArrowRightSvg className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
-                  </button>
-                )}
+          {customConfig.promoTiles.map((tile, idx) => (
+            <ScrollReveal key={tile.id} delay={idx * 90}>
+              <div
+                className="group relative rounded-2xl overflow-hidden bg-[#2A2620] h-56 sm:h-64 flex items-end border border-[#E0D7C8] shadow-xs hover:shadow-xl transition-all duration-500"
+              >
+                {tile.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={tile.imageUrl}
+                    alt={tile.heading}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
+                  />
+                ) : null}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent transition-opacity group-hover:opacity-90" />
+                <div className="relative p-6 sm:p-7 transition-transform duration-300 group-hover:-translate-y-0.5">
+                  <h3 className="text-xl sm:text-2xl font-serif text-white font-medium">{tile.heading}</h3>
+                  {tile.description && (
+                    <p className="mt-1 text-xs text-white/85 max-w-xs">{tile.description}</p>
+                  )}
+                  {tile.buttonLabel && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (tile.linkedCollection) {
+                          setSelectedCollectionId(tile.linkedCollection.id);
+                          document.getElementById("featured-collections")?.scrollIntoView({ behavior: "smooth" });
+                        }
+                      }}
+                      className={`mt-4 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg ${theme.accentBgClass} ${theme.accentBgHoverClass} active:scale-95 text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all duration-200`}
+                    >
+                      <span>{tile.buttonLabel}</span>
+                      <ArrowRightSvg className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            </ScrollReveal>
           ))}
         </div>
       </section>
@@ -570,40 +644,15 @@ export function ShopifyCatalogView({
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
           <div className="overflow-hidden flex-1 relative">
             <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-[11px] font-medium tracking-wide">
-              <span className="flex items-center gap-1.5 text-white/95">
-                <SparklesSvg className="w-3.5 h-3.5 text-[#D8B478]" />
-                <span>{topAnnouncement || `Welcome to ${vendor.businessName} Luxury Bridal Catalog`}</span>
-              </span>
-              <span className="text-[#555]">•</span>
-              <span className="flex items-center gap-1.5 text-[#D8B478]">
-                <span>💎 100% Certified Authentic Suites</span>
-              </span>
-              <span className="text-[#555]">•</span>
-              <span className="flex items-center gap-1.5 text-white/90">
-                <span>✨ Studio Trial & Fitting Appointments Available</span>
-              </span>
-              <span className="text-[#555]">•</span>
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <span>🚚 Secure Delivery in {cityName}</span>
-              </span>
-              <span className="text-[#555]">•</span>
-              {/* Duplicate for seamless infinite loop */}
-              <span className="flex items-center gap-1.5 text-white/95">
-                <SparklesSvg className="w-3.5 h-3.5 text-[#D8B478]" />
-                <span>{topAnnouncement || `Welcome to ${vendor.businessName} Luxury Bridal Catalog`}</span>
-              </span>
-              <span className="text-[#555]">•</span>
-              <span className="flex items-center gap-1.5 text-[#D8B478]">
-                <span>💎 100% Certified Authentic Suites</span>
-              </span>
-              <span className="text-[#555]">•</span>
-              <span className="flex items-center gap-1.5 text-white/90">
-                <span>✨ Studio Trial & Fitting Appointments Available</span>
-              </span>
-              <span className="text-[#555]">•</span>
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <span>🚚 Secure Delivery in {cityName}</span>
-              </span>
+              {[...marqueeItems, ...marqueeItems].map((itemText, idx) => (
+                <div key={idx} className="flex items-center gap-8 shrink-0">
+                  <span className="flex items-center gap-1.5 text-white/95">
+                    <SparklesSvg className="w-3.5 h-3.5 text-[#D8B478] shrink-0" />
+                    <span>{itemText}</span>
+                  </span>
+                  <span className="text-[#555] select-none shrink-0">•</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -653,7 +702,7 @@ export function ShopifyCatalogView({
                 {vendor.businessName}
               </div>
               <div className="text-[10px] tracking-wider uppercase text-[#887B6C] font-medium">
-                {primaryCategory} · {cityName}
+                {customConfig?.heroTagline || `${primaryCategory} · ${cityName}`}
               </div>
             </div>
           </Link>
@@ -743,42 +792,50 @@ export function ShopifyCatalogView({
         <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12 sm:pb-16">
           <div className="max-w-xl">
             {heroPreheading && (
-              <span className="text-[11px] uppercase tracking-widest text-[#E5C88A] font-bold">
-                {heroPreheading}
-              </span>
+              <ScrollReveal delay={60}>
+                <span className="text-[11px] uppercase tracking-widest text-[#E5C88A] font-bold">
+                  {heroPreheading}
+                </span>
+              </ScrollReveal>
             )}
-            <h1 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-serif text-white font-normal leading-[1.15] drop-shadow-sm">
-              {heroTitle}
-            </h1>
+            <ScrollReveal delay={140} variant="text-reveal">
+              <h1 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-serif text-white font-normal leading-[1.15] drop-shadow-sm">
+                {heroTitle}
+              </h1>
+            </ScrollReveal>
             {heroSubtitle && (
-              <p className="mt-4 text-sm sm:text-base text-white/85 leading-relaxed font-light max-w-lg">
-                {heroSubtitle}
-              </p>
+              <ScrollReveal delay={220}>
+                <p className="mt-4 text-sm sm:text-base text-white/85 leading-relaxed font-light max-w-lg">
+                  {heroSubtitle}
+                </p>
+              </ScrollReveal>
             )}
 
             {(shopBtnLabel || trialBtnLabel) && (
-              <div className="mt-8 flex flex-wrap items-center gap-4">
-                {shopBtnLabel && (
-                  <a
-                    href="#catalog-grid"
-                    className={`px-7 py-3.5 rounded-lg ${theme.accentBgClass} ${theme.accentBgHoverClass} text-white text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-md hover:shadow-xl hover:scale-105 active:scale-95 flex items-center gap-2 animate-shimmer`}
-                  >
-                    <span>{shopBtnLabel}</span>
-                    <ArrowRightSvg className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                  </a>
-                )}
-                {trialBtnLabel && (
-                  <a
-                    href={`https://wa.me/${vendorPhone}?text=${encodeURIComponent(`Hi ${vendor.businessName}, I would like to book a trial appointment.`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-3.5 rounded-lg border border-white/70 text-white hover:bg-white/10 text-xs sm:text-sm font-semibold tracking-wide transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
-                  >
-                    <span>{trialBtnLabel}</span>
-                    <CalendarSvg className="w-4 h-4" />
-                  </a>
-                )}
-              </div>
+              <ScrollReveal delay={300}>
+                <div className="mt-8 flex flex-wrap items-center gap-4">
+                  {shopBtnLabel && (
+                    <a
+                      href="#catalog-grid"
+                      className={`px-7 py-3.5 rounded-lg ${theme.accentBgClass} ${theme.accentBgHoverClass} text-white text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-md hover:shadow-xl hover:scale-105 active:scale-95 flex items-center gap-2 animate-shimmer`}
+                    >
+                      <span>{shopBtnLabel}</span>
+                      <ArrowRightSvg className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </a>
+                  )}
+                  {trialBtnLabel && (
+                    <a
+                      href={`https://wa.me/${vendorPhone}?text=${encodeURIComponent(`Hi ${vendor.businessName}, I would like to book a trial appointment.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-6 py-3.5 rounded-lg border border-white/70 text-white hover:bg-white/10 text-xs sm:text-sm font-semibold tracking-wide transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+                    >
+                      <span>{trialBtnLabel}</span>
+                      <CalendarSvg className="w-4 h-4" />
+                    </a>
+                  )}
+                </div>
+              </ScrollReveal>
             )}
           </div>
         </div>
@@ -825,61 +882,64 @@ export function ShopifyCatalogView({
           section's earlier large rectangular tile treatment). */}
       {collectionSummaries.length > 0 && (
         <section id="catalog-grid" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-          <div className="flex items-end justify-between mb-7">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">
-                {customConfig?.categorySectionHeading || "Shop by Category"}
-              </h2>
-              {customConfig?.categorySectionSubheading && (
-                <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
-                  {customConfig.categorySectionSubheading}
-                </p>
-              )}
+          <ScrollReveal>
+            <div className="flex items-end justify-between mb-7">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">
+                  {customConfig?.categorySectionHeading || "Shop by Category"}
+                </h2>
+                {customConfig?.categorySectionSubheading && (
+                  <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
+                    {customConfig.categorySectionSubheading}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedCollectionId("ALL")}
+                className="text-xs font-semibold text-[#8C6732] hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>View All</span>
+                <ArrowRightSvg className="w-3 h-3" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setSelectedCollectionId("ALL")}
-              className="text-xs font-semibold text-[#8C6732] hover:underline flex items-center gap-1 shrink-0"
-            >
-              <span>View All</span>
-              <ArrowRightSvg className="w-3 h-3" />
-            </button>
-          </div>
+          </ScrollReveal>
 
           <div className="flex items-start gap-5 sm:gap-8 overflow-x-auto no-scrollbar pb-3 pt-1">
-            {collectionSummaries.map((collection) => {
+            {collectionSummaries.map((collection, idx) => {
               const isSelected = selectedCollectionId === collection.id;
               return (
-                <button
-                  type="button"
-                  key={collection.id}
-                  onClick={() => setSelectedCollectionId(isSelected ? "ALL" : collection.id)}
-                  className="group flex flex-col items-center gap-2.5 shrink-0 w-20 sm:w-24 cursor-pointer transition-transform"
-                >
-                  <div
-                    className={`relative h-16 w-16 sm:h-20 sm:w-20 rounded-full overflow-hidden bg-[#EFE9DF] shadow-xs transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1.5 ${
-                      isSelected ? `ring-2 ${theme.accentRingClass} ring-offset-2 ring-offset-[#FCFBF7] scale-105 shadow-md` : "ring-1 ring-[#EDE8E0]"
-                    }`}
+                <ScrollReveal key={collection.id} delay={idx * 40} className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCollectionId(isSelected ? "ALL" : collection.id)}
+                    className="group flex flex-col items-center gap-2.5 shrink-0 w-20 sm:w-24 cursor-pointer transition-transform"
                   >
-                    {collection.sampleImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={collection.sampleImage}
-                        alt={collection.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-[#F7F4EE] to-[#E5DEC7]">
-                        <SparklesSvg className="w-6 h-6 text-[#9A743D]" />
-                      </div>
-                    )}
-                  </div>
-                  <span className={`text-[11px] sm:text-xs font-semibold text-center leading-tight transition-colors ${
-                    isSelected ? "text-[#1F1C18] font-bold" : "text-[#554C41] group-hover:text-[#1F1C18]"
-                  }`}>
-                    {collection.name}
-                  </span>
-                </button>
+                    <div
+                      className={`relative h-16 w-16 sm:h-20 sm:w-20 rounded-full overflow-hidden bg-[#EFE9DF] shadow-xs transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1.5 ${
+                        isSelected ? `ring-2 ${theme.accentRingClass} ring-offset-2 ring-offset-[#FCFBF7] scale-105 shadow-md` : "ring-1 ring-[#EDE8E0]"
+                      }`}
+                    >
+                      {collection.sampleImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={collection.sampleImage}
+                          alt={collection.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-[#F7F4EE] to-[#E5DEC7]">
+                          <SparklesSvg className="w-6 h-6 text-[#9A743D]" />
+                        </div>
+                      )}
+                    </div>
+                    <span className={`text-[11px] sm:text-xs font-semibold text-center leading-tight transition-colors ${
+                      isSelected ? "text-[#1F1C18] font-bold" : "text-[#554C41] group-hover:text-[#1F1C18]"
+                    }`}>
+                      {collection.name}
+                    </span>
+                  </button>
+                </ScrollReveal>
               );
             })}
           </div>
@@ -894,25 +954,31 @@ export function ShopifyCatalogView({
       {shelfRows.map((row, idx) => (
         <div key={row.id}>
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex items-end justify-between mb-6">
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">{row.name}</h2>
-                <p className="text-xs sm:text-sm text-[#7A7165] mt-1">{row.subheading}</p>
+            <ScrollReveal>
+              <div className="flex items-end justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">{row.name}</h2>
+                  <p className="text-xs sm:text-sm text-[#7A7165] mt-1">{row.subheading}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCollectionId(row.id);
+                    document.getElementById("featured-collections")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="text-xs font-semibold text-[#8C6732] hover:underline flex items-center gap-1 shrink-0"
+                >
+                  <span>View All</span>
+                  <ArrowRightSvg className="w-3 h-3" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCollectionId(row.id);
-                  document.getElementById("featured-collections")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="text-xs font-semibold text-[#8C6732] hover:underline flex items-center gap-1 shrink-0"
-              >
-                <span>View All</span>
-                <ArrowRightSvg className="w-3 h-3" />
-              </button>
-            </div>
+            </ScrollReveal>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5 sm:gap-6">
-              {row.items.map((item) => renderProductCard(item))}
+              {row.items.map((item, itemIdx) => (
+                <ScrollReveal key={item.id} delay={(itemIdx % 5) * 45}>
+                  {renderProductCard(item)}
+                </ScrollReveal>
+              ))}
             </div>
           </section>
 
@@ -922,51 +988,53 @@ export function ShopifyCatalogView({
 
       {/* 5. "Featured Collections" Section */}
       <section id="featured-collections" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-[#EAE5DC]">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-          <div>
-            {customConfig?.featuredSectionHeading && (
-              <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">
-                {customConfig.featuredSectionHeading}
-              </h2>
-            )}
-            {customConfig?.featuredSectionSubheading && (
-              <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
-                {customConfig.featuredSectionSubheading}
-              </p>
-            )}
-          </div>
+        <ScrollReveal>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+            <div>
+              {customConfig?.featuredSectionHeading && (
+                <h2 className="text-2xl sm:text-3xl font-serif text-[#1F1C18] font-medium">
+                  {customConfig.featuredSectionHeading}
+                </h2>
+              )}
+              {customConfig?.featuredSectionSubheading && (
+                <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
+                  {customConfig.featuredSectionSubheading}
+                </p>
+              )}
+            </div>
 
-          {/* Collection Tab Filters — real vendor-curated collections only */}
-          {collectionSummaries.length > 0 && (
-            <div className="flex items-center gap-6 text-xs font-semibold text-[#665D52] overflow-x-auto no-scrollbar pb-1">
-              <button
-                type="button"
-                onClick={() => setSelectedCollectionId("ALL")}
-                className={`pb-1 transition ${
-                  selectedCollectionId === "ALL"
-                    ? "text-[#1F1C18] border-b-2 border-[#1F1C18] font-bold"
-                    : "hover:text-[#1F1C18]"
-                }`}
-              >
-                All
-              </button>
-              {collectionSummaries.map((collection) => (
+            {/* Collection Tab Filters — real vendor-curated collections only */}
+            {collectionSummaries.length > 0 && (
+              <div className="flex items-center gap-6 text-xs font-semibold text-[#665D52] overflow-x-auto no-scrollbar pb-1">
                 <button
-                  key={collection.id}
                   type="button"
-                  onClick={() => setSelectedCollectionId(collection.id)}
+                  onClick={() => setSelectedCollectionId("ALL")}
                   className={`pb-1 transition ${
-                    selectedCollectionId === collection.id
+                    selectedCollectionId === "ALL"
                       ? "text-[#1F1C18] border-b-2 border-[#1F1C18] font-bold"
                       : "hover:text-[#1F1C18]"
                   }`}
                 >
-                  {collection.name}
+                  All
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
+                {collectionSummaries.map((collection) => (
+                  <button
+                    key={collection.id}
+                    type="button"
+                    onClick={() => setSelectedCollectionId(collection.id)}
+                    className={`pb-1 transition ${
+                      selectedCollectionId === collection.id
+                        ? "text-[#1F1C18] border-b-2 border-[#1F1C18] font-bold"
+                        : "hover:text-[#1F1C18]"
+                    }`}
+                  >
+                    {collection.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </ScrollReveal>
 
         {/* Product Cards Grid */}
         {filteredItems.length === 0 ? (
@@ -990,7 +1058,11 @@ export function ShopifyCatalogView({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-7">
-            {filteredItems.map((item) => renderProductCard(item))}
+            {filteredItems.map((item, itemIdx) => (
+              <ScrollReveal key={item.id} delay={(itemIdx % 4) * 45}>
+                {renderProductCard(item)}
+              </ScrollReveal>
+            ))}
           </div>
         )}
       </section>
@@ -1002,20 +1074,21 @@ export function ShopifyCatalogView({
             {customConfig.trustBadges.slice(0, 4).map((badge, idx) => {
               const Icon = TRUST_BADGE_ICONS[idx] ?? SparklesSvg;
               return (
-                <div
-                  key={idx}
-                  className="group bg-white p-5 rounded-2xl border border-[#EDE8E0] shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center gap-4 cursor-default"
-                >
-                  <div className="h-11 w-11 rounded-full bg-[#FAF6EE] border border-[#E8DFC8] flex items-center justify-center text-[#9A743D] shrink-0 group-hover:scale-110 group-hover:bg-[#F4ECE0] transition-all duration-300">
-                    <Icon className="w-5 h-5 transition-transform duration-300 group-hover:rotate-3" />
+                <ScrollReveal key={idx} delay={idx * 75}>
+                  <div
+                    className="group bg-white p-5 rounded-2xl border border-[#EDE8E0] shadow-xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex items-center gap-4 cursor-default"
+                  >
+                    <div className="h-11 w-11 rounded-full bg-[#FAF6EE] border border-[#E8DFC8] flex items-center justify-center text-[#9A743D] shrink-0 group-hover:scale-110 group-hover:bg-[#F4ECE0] transition-all duration-300">
+                      <Icon className="w-5 h-5 transition-transform duration-300 group-hover:rotate-3" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs sm:text-sm text-[#1C1A17] group-hover:text-[#9A743D] transition-colors">
+                        {badge.title}
+                      </h4>
+                      <p className="text-[11px] text-[#7A7165] mt-0.5">{badge.subtitle}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-xs sm:text-sm text-[#1C1A17] group-hover:text-[#9A743D] transition-colors">
-                      {badge.title}
-                    </h4>
-                    <p className="text-[11px] text-[#7A7165] mt-0.5">{badge.subtitle}</p>
-                  </div>
-                </div>
+                </ScrollReveal>
               );
             })}
           </div>
@@ -1027,43 +1100,48 @@ export function ShopifyCatalogView({
           both set a heading and there are photos to show. */}
       {galleryPhotos.length > 0 && customConfig?.galleryHeading && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex items-end justify-between mb-6">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-serif text-[#1F1C18] font-medium">
-                {customConfig.galleryHeading}
-              </h2>
-              {customConfig.gallerySubheading && (
-                <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
-                  {customConfig.gallerySubheading}
-                </p>
-              )}
+          <ScrollReveal>
+            <div className="flex items-end justify-between mb-6">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-serif text-[#1F1C18] font-medium">
+                  {customConfig.galleryHeading}
+                </h2>
+                {customConfig.gallerySubheading && (
+                  <p className="text-xs sm:text-sm text-[#7A7165] mt-1">
+                    {customConfig.gallerySubheading}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          </ScrollReveal>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {galleryPhotos.map((url, idx) => (
-              <div
-                key={url}
-                className="aspect-[3/4] rounded-xl overflow-hidden bg-[#EFE9DF] border border-[#EDE8E0]"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={url}
-                  alt={`${vendor.businessName} piece ${idx + 1}`}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                />
-              </div>
+              <ScrollReveal key={url} delay={(idx % 6) * 40}>
+                <div
+                  className="aspect-[3/4] rounded-xl overflow-hidden bg-[#EFE9DF] border border-[#EDE8E0]"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`${vendor.businessName} piece ${idx + 1}`}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+              </ScrollReveal>
             ))}
             {customConfig.instagramUrl && (
-              <a
-                href={customConfig.instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="aspect-[3/4] rounded-xl border border-dashed border-[#D5CDBD] bg-[#FAF8F5] flex flex-col items-center justify-center gap-2 text-center px-3 hover:bg-[#F5F2EB] transition"
-              >
-                <InstagramSvg className="w-6 h-6 text-[#8F6B38]" />
-                <span className="text-[11px] font-bold text-[#1F1C18]">Follow us on Instagram</span>
-              </a>
+              <ScrollReveal delay={galleryPhotos.length * 40}>
+                <a
+                  href={customConfig.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="aspect-[3/4] rounded-xl border border-dashed border-[#D5CDBD] bg-[#FAF8F5] flex flex-col items-center justify-center gap-2 text-center px-3 hover:bg-[#F5F2EB] transition"
+                >
+                  <InstagramSvg className="w-6 h-6 text-[#8F6B38]" />
+                  <span className="text-[11px] font-bold text-[#1F1C18]">Follow us on Instagram</span>
+                </a>
+              </ScrollReveal>
             )}
           </div>
         </section>

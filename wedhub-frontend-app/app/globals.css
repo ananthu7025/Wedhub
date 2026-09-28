@@ -253,3 +253,18 @@ body {
   animation: shimmerSweep 1s ease-in-out;
 }
 
+@keyframes textRevealUp {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-text-reveal {
+  animation: textRevealUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+

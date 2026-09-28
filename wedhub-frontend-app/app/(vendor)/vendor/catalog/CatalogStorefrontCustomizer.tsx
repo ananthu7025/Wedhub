@@ -26,7 +26,7 @@ const ACCENT_COLOR_OPTIONS: { value: StoreAccentColor; label: string; swatchClas
   { value: "SLATE", label: "Slate", swatchClass: "bg-jet-black" },
 ];
 
-const TABS = ["Banner & Theme", "Hero", "Sections", "Promo Banner", "Gallery", "Trust Badges", "Footer"] as const;
+const TABS = ["Header & Marquee", "Banner & Theme", "Hero", "Sections", "Promo Banner", "Gallery", "Trust Badges", "Footer"] as const;
 type Tab = (typeof TABS)[number];
 
 function TextField({
@@ -344,7 +344,7 @@ export function CatalogStorefrontCustomizer({
    * scroll clamp. Defaults to the original centered-modal presentation. */
   variant?: "modal" | "page";
 }) {
-  const [activeTab, setActiveTab] = useState<Tab>("Banner & Theme");
+  const [activeTab, setActiveTab] = useState<Tab>("Header & Marquee");
 
   const [heroImages, setHeroImages] = useState<UploadedImage[]>(
     (initialSettings?.heroImages ?? [])
@@ -556,6 +556,111 @@ export function CatalogStorefrontCustomizer({
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 sm:px-7 py-5 space-y-4 text-xs">
+          {activeTab === "Header & Marquee" && (
+            <>
+              <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/70 text-neutral-700">
+                <span className="font-bold text-neutral-900 block mb-0.5">Top Announcement Bar & Header Customization</span>
+                Control the animated infinite scrolling marquee ticker at the top of your catalog storefront and your brand tagline in the sticky header.
+              </div>
+
+              {/* Marquee Ticker Section */}
+              <div className="space-y-3 bg-white p-4 rounded-xl border border-neutral-200">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-neutral-900 text-xs">Top Marquee Ticker Copy</label>
+                  <span className="text-[10px] text-neutral-500 font-mono">Max 300 chars</span>
+                </div>
+                <p className="text-[11px] text-neutral-500">
+                  Separate multiple announcement points with <code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-800 font-bold">·</code> or <code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-800 font-bold">|</code> to create individual looping badge pills in the infinite marquee.
+                </p>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. 💎 100% Certified Authentic · ✨ Studio Trial & Fitting Appointments · 🚚 Secure Delivery Across City"
+                  value={announcementText}
+                  onChange={(e) => setAnnouncementText(e.target.value)}
+                  maxLength={300}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary font-mono text-[11px]"
+                />
+
+                {/* Preset Chips */}
+                <div>
+                  <span className="text-[11px] font-semibold text-neutral-600 block mb-1.5">Quick Inspiration Templates:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setAnnouncementText("💎 100% Certified Authentic · ✨ Studio Trial Appointments · 🚚 Secure Delivery · 💬 WhatsApp Support")}
+                      className="px-2.5 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-[10px] font-medium text-neutral-700 transition"
+                    >
+                      + Authentic & Trials
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAnnouncementText("👑 Handcrafted Designer Bridal Sets · 💬 Reserve Dates on WhatsApp · 💖 Matching Accessories Included")}
+                      className="px-2.5 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-[10px] font-medium text-neutral-700 transition"
+                    >
+                      + Designer & WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAnnouncementText("✨ Sanitized Rental Suites · 📦 Insured Express Shipping · 💎 Free Fitting Consultations")}
+                      className="px-2.5 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-[10px] font-medium text-neutral-700 transition"
+                    >
+                      + Shipping & Sanitized
+                    </button>
+                  </div>
+                </div>
+
+                {/* Live Marquee Preview Box */}
+                <div className="mt-3 pt-3 border-t border-neutral-100">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider block mb-1">
+                    Live Marquee Ticker Preview:
+                  </span>
+                  <div className="bg-[#141414] text-[#E0D9CE] py-2 px-3 rounded-lg overflow-hidden flex items-center text-[10px] font-medium">
+                    <span className="text-[#D8B478] mr-2">✨</span>
+                    <span className="truncate">
+                      {announcementText.trim() || "Welcome to our Luxury Bridal Catalog · 100% Certified Authentic Suites · Studio Trials Available"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Store Header Section */}
+              <div className="space-y-3 bg-white p-4 rounded-xl border border-neutral-200">
+                <label className="font-bold text-neutral-900 text-xs block">Store Header Tagline / Subtitle</label>
+                <p className="text-[11px] text-neutral-500">
+                  Displayed beneath your business name in the sticky storefront header navigation bar across desktop and mobile.
+                </p>
+                <input
+                  type="text"
+                  placeholder="e.g. Handcrafted Bridal Jewellery & Couture · Bangalore"
+                  value={heroTagline}
+                  onChange={(e) => setHeroTagline(e.target.value)}
+                  maxLength={150}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-300 text-xs outline-none focus:border-brand-primary"
+                />
+
+                {/* Live Header Preview */}
+                <div className="mt-3 pt-3 border-t border-neutral-100">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider block mb-1">
+                    Header Appearance Preview:
+                  </span>
+                  <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#EDE8E0] flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-full bg-[#181818] text-[#D8B478] flex items-center justify-center font-serif text-xs font-bold border border-[#D8B478]/30">
+                      V
+                    </div>
+                    <div>
+                      <div className="font-serif tracking-widest text-xs font-bold uppercase text-[#1C1C1C]">
+                        Your Store Name
+                      </div>
+                      <div className="text-[10px] tracking-wider uppercase text-[#887B6C] font-medium">
+                        {heroTagline.trim() || "Bridal Rentals · Studio Location"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
           {activeTab === "Banner & Theme" && (
             <>
               <MultiImageUploader
