@@ -33,17 +33,18 @@ interface RealWeddingsPageProps {
 
 export default async function RealWeddingsPage({ searchParams }: RealWeddingsPageProps) {
   const params = await searchParams;
+  const currentPage = Math.max(1, Number(params.page) || 1);
 
   let initialData: WeddingStoriesListResponse = {
     stories: [],
-    pagination: { page: 1, limit: 12, total: 0, totalPages: 1 },
+    pagination: { page: currentPage, limit: 6, total: 0, totalPages: 1 },
     filterOptions: { locations: [], tags: [] },
   };
 
   try {
     const response = await listAllWeddingStories({
-      page: params.page ? Number(params.page) : 1,
-      limit: 12,
+      page: currentPage,
+      limit: 6,
       location: params.location,
       tag: params.tag,
       search: params.search,
@@ -58,7 +59,11 @@ export default async function RealWeddingsPage({ searchParams }: RealWeddingsPag
     <div className="min-h-screen bg-[#fafbfc]">
       <PublicTopbar />
       <main>
-        <RealWeddingsView initialData={initialData} />
+        <RealWeddingsView
+          initialData={initialData}
+          currentPage={currentPage}
+          searchParams={params}
+        />
       </main>
       <PublicFooter />
     </div>

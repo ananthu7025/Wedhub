@@ -23,7 +23,17 @@ export async function backendAuthFetch(path: string, init: RequestInit & { cooki
 }
 
 export async function parseBackendJson<T>(response: Response): Promise<ApiResponse<T>> {
-  return (await response.json()) as ApiResponse<T>;
+  try {
+    return (await response.json()) as ApiResponse<T>;
+  } catch {
+    return {
+      success: false,
+      error: {
+        code: "BACKEND_ERROR",
+        message: `Backend service error (${response.status})`,
+      },
+    };
+  }
 }
 
 /**

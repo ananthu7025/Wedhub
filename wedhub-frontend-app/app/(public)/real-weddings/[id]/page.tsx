@@ -185,6 +185,296 @@ const SAMPLE_DETAILS: Record<string, StoryDetailData> = {
       { id: "sample-5", coupleName: "Ishaan & Diya", location: "The Leela, Udaipur", coverImageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80", tag: "Lakeside Luxury Wedding" },
     ],
   },
+  "sample-7": {
+    id: "sample-7",
+    coupleName: "Ritu & Dev",
+    location: "Grand Hyatt, Mumbai",
+    tag: "Punjabi Big Fat Wedding",
+    snippet: "A grand celebration in Mumbai with foot-tapping dhol beats, glamorous sangeet sets, and lavish cocktail soiree.",
+    narrativeStory: [
+      "Ritu and Dev celebrated their union in magnificent Punjabi style at the Grand Hyatt Mumbai, surrounded by lively family traditions, high energy, and unforgettable music.",
+      "The festivities kicked off with an electrifying Sangeet night featuring choreographed family performances, international live percussionists, and a grand midnight cocktail feast.",
+      "The Anand Karaj the following morning was serene and prayerful, followed by an opulent reception in the grand ballroom draped with crystal chandeliers and blush roses."
+    ],
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    vendorCity: "Mumbai, Maharashtra",
+    coverImageUrl: "https://images.unsplash.com/photo-1545232979-fbf68fe9b1af?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1545232979-fbf68fe9b1af?w=800&q=80", caption: "Grand ballroom mandap setup with cascading crystals", aspectRatioClass: "aspect-[16/10]", category: "Mandap & Decor" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&q=80", caption: "Bridal portrait in intricately embroidered blush lehenga", aspectRatioClass: "aspect-[2/3]", category: "Bridal Portrait" },
+      { id: "p3", url: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800&q=80", caption: "Couple entrance amidst pyro sparks and dhol beats", aspectRatioClass: "aspect-[4/3]", category: "Couple Portraits" },
+    ],
+    relatedStories: [
+      { id: "sample-1", coupleName: "Ananya & Rohan", location: "Palace Grounds, Bengaluru", coverImageUrl: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&q=80", tag: "South Indian Traditional" },
+      { id: "sample-8", coupleName: "Sneha & Abhiram", location: "Guruvayur Heritage, Thrissur", coverImageUrl: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&q=80", tag: "Kerala Hindu Traditional" },
+    ],
+  },
+  "sample-8": {
+    id: "sample-8",
+    coupleName: "Sneha & Abhiram",
+    location: "Guruvayur Heritage, Thrissur",
+    tag: "Kerala Hindu Traditional",
+    snippet: "An auspicious dawn wedding ceremony with traditional kasavu attire, temple gopuram backdrop, and grand vadya melam.",
+    narrativeStory: [
+      "Sneha and Abhiram tied the knot in the spiritual cultural heart of Kerala at Thrissur, greeted by dawn temple bells and fragrant jasmine garlands.",
+      "The ceremony was steeped in timeless Kerala heritage: the bride adorned in handwoven kasavu mundu with traditional palakka and nagapadam gold ornaments, while the groom wore pristine silk.",
+      "Following the thalikkettu ceremony, guests enjoyed a grand traditional 28-course Sadhya feast served on fresh banana leaves accompanied by classical instrumental melodies."
+    ],
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    vendorCity: "Thrissur, Kerala",
+    coverImageUrl: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80", caption: "Temple courtyard ceremony with brass nilavilakku lamps", aspectRatioClass: "aspect-[3/4]", category: "Ceremony" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?w=800&q=80", caption: "Bride in traditional kasavu attire and antique temple jewelry", aspectRatioClass: "aspect-[2/3]", category: "Bridal Portrait" },
+      { id: "p3", url: "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80", caption: "Traditional Kerala Sadhya served to wedding guests", aspectRatioClass: "aspect-[16/10]", category: "Dining" },
+    ],
+    relatedStories: [
+      { id: "sample-4", coupleName: "Kavya & Arjun", location: "Backwater Resort, Alleppey", coverImageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80", tag: "Kerala Christian Wedding" },
+      { id: "sample-7", coupleName: "Ritu & Dev", location: "Grand Hyatt, Mumbai", coverImageUrl: "https://images.unsplash.com/photo-1545232979-fbf68fe9b1af?w=600&q=80", tag: "Punjabi Big Fat Wedding" },
+    ],
+  },
+  "sample-9": {
+    id: "sample-9",
+    coupleName: "Tanya & Varun",
+    location: "Neemrana Fort Palace, Alwar",
+    tag: "Royal Fort Wedding",
+    snippet: "A medieval hill-fort wedding with tiered ramparts lit by oil torches, royal trumpeters, and timeless Rajputana majesty.",
+    narrativeStory: [
+      "Perched on the rugged Aravalli cliffs, Neemrana Fort Palace provided an awe-inspiring historical setting for Tanya and Varun’s royal nuptials.",
+      "The fort's multi-tiered courtyards came alive with thousands of mashaal torches, folk dancers, and royal nagada drummers echoing across the valley.",
+      "The couple exchanged vows on the palace rooftop under a canopy of marigolds, overlooking the ancient plains illuminated by firework displays."
+    ],
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    vendorCity: "Alwar, Rajasthan",
+    coverImageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80", caption: "Torchlit fort ramparts during royal wedding reception", aspectRatioClass: "aspect-[16/10]", category: "Mandap & Decor" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=800&q=80", caption: "Bride in royal crimson zardozi lehenga on fort terrace", aspectRatioClass: "aspect-[2/3]", category: "Bridal Portrait" },
+    ],
+    relatedStories: [
+      { id: "sample-2", coupleName: "Pooja & Kabir", location: "City Palace, Jaipur", coverImageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&q=80", tag: "Royal Heritage Wedding" },
+      { id: "sample-10", coupleName: "Priyanka & Aditya", location: "Alila Diwa, Goa", coverImageUrl: "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=600&q=80", tag: "Modern Minimalist Celebration" },
+    ],
+  },
+  "sample-10": {
+    id: "sample-10",
+    coupleName: "Priyanka & Aditya",
+    location: "Alila Diwa, Goa",
+    tag: "Modern Minimalist Celebration",
+    snippet: "Contemporary pastel aesthetic set amidst sprawling paddy fields, acoustic sundowners, and fairy-lit courtyard vows.",
+    narrativeStory: [
+      "Priyanka and Aditya opted for an intimate, design-forward celebration nestled among the tranquil paddy fields of South Goa.",
+      "The aesthetic was organic and airy: bleached wood arches, dried florals, olive foliage, and warm ambient bistro lighting.",
+      "An open-air sundowner cocktail turned into an intimate dance party under a starry coastal canopy."
+    ],
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    vendorCity: "Goa",
+    coverImageUrl: "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=800&q=80", caption: "Minimalist pastel floral mandap overlooking paddy fields", aspectRatioClass: "aspect-[16/10]", category: "Mandap & Decor" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1544078751-58fee2d8a03b?w=800&q=80", caption: "Bride in contemporary ivory silk lehenga", aspectRatioClass: "aspect-[2/3]", category: "Bridal Portrait" },
+    ],
+    relatedStories: [
+      { id: "sample-3", coupleName: "Meera & Siddharth", location: "Heritage Village, Goa", coverImageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80", tag: "Beachside Destination" },
+      { id: "sample-9", coupleName: "Tanya & Varun", location: "Neemrana Fort Palace, Alwar", coverImageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80", tag: "Royal Fort Wedding" },
+    ],
+  },
+  "sample-11": {
+    id: "sample-11",
+    coupleName: "Ananya & Karthik",
+    location: "Chidambara Vilas, Karaikudi",
+    tag: "Chettinad Heritage Wedding",
+    snippet: "A heritage mansion wedding surrounded by Burmese teak pillars, Athangudi tiles, and rich Chettinad culinary feasts.",
+    narrativeStory: [
+      "In the storied town of Karaikudi, Ananya and Karthik’s wedding paid homage to centuries of grand merchant mansion architecture.",
+      "Handmade Athangudi tile courtyards were accented with fresh banana stems, brass urlis, and fragrant tuberoses.",
+      "The celebration featured classical violin duets and a banquet that showcased the world-famous culinary heritage of Chettinad."
+    ],
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    vendorCity: "Karaikudi, Tamil Nadu",
+    coverImageUrl: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800&q=80", caption: "Heritage courtyard with carved teak pillars", aspectRatioClass: "aspect-[16/10]", category: "Mandap & Decor" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1546804784-896d0dca3805?w=800&q=80", caption: "Traditional Chettinad bridal portrait in pure zari silk", aspectRatioClass: "aspect-[2/3]", category: "Bridal Portrait" },
+    ],
+    relatedStories: [
+      { id: "sample-1", coupleName: "Ananya & Rohan", location: "Palace Grounds, Bengaluru", coverImageUrl: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&q=80", tag: "South Indian Traditional" },
+      { id: "sample-12", coupleName: "Simran & Aman", location: "ITC Grand Bharat, Gurugram", coverImageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&q=80", tag: "Sikh Anand Karaj" },
+    ],
+  },
+  "sample-12": {
+    id: "sample-12",
+    coupleName: "Simran & Aman",
+    location: "ITC Grand Bharat, Gurugram",
+    tag: "Sikh Anand Karaj",
+    snippet: "A spiritual morning Anand Karaj followed by an opulent black-tie reception and spectacular palace courtyard decor.",
+    narrativeStory: [
+      "Simran and Aman celebrated their union with a deeply moving Anand Karaj ceremony in a bespoke floral marquee followed by royal palace festivities.",
+      "The bride wore an ethereal blush and mint green lehenga, while the groom was regal in an ivory sherwani with an emerald kalgi.",
+      "The evening black-tie reception featured an 8-piece jazz band, an artisanal dessert pavilion, and breathtaking fireworks over the Aravali hills."
+    ],
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    vendorCity: "Gurugram, Haryana",
+    coverImageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=800&q=80", caption: "Bespoke floral marquee for morning Anand Karaj", aspectRatioClass: "aspect-[16/10]", category: "Ceremony" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1509927083803-4bd519298ac4?w=800&q=80", caption: "Black-tie reception couple portrait", aspectRatioClass: "aspect-[2/3]", category: "Couple Portraits" },
+    ],
+    relatedStories: [
+      { id: "sample-7", coupleName: "Ritu & Dev", location: "Grand Hyatt, Mumbai", coverImageUrl: "https://images.unsplash.com/photo-1545232979-fbf68fe9b1af?w=600&q=80", tag: "Punjabi Big Fat Wedding" },
+      { id: "sample-11", coupleName: "Ananya & Karthik", location: "Chidambara Vilas, Karaikudi", coverImageUrl: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&q=80", tag: "Chettinad Heritage Wedding" },
+    ],
+  },
+  "sample-13": {
+    id: "sample-13",
+    coupleName: "Devika & Ashwin",
+    location: "Taj Green Cove, Kovalam",
+    tag: "Kovalam Cliffside Destination",
+    snippet: "Perched high above the Arabian Sea, exchanging garlands as waves crest against the rocky shoreline at sunset.",
+    narrativeStory: [
+      "Overlooking the boundless blue waters of Kovalam, Devika and Ashwin hosted a coastal destination wedding that captivated their guests.",
+      "The mandap was set atop the dramatic granite cliff edge with waves crashing softly below as temple conch shells signaled the auspicious muhurtham.",
+      "An open-air starlit reception followed with Kerala fusion barbecue, live coastal acoustic music, and lantern releases."
+    ],
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    vendorCity: "Kovalam, Kerala",
+    coverImageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&q=80", caption: "Cliffside mandap overlooking the Arabian Sea", aspectRatioClass: "aspect-[16/10]", category: "Mandap & Decor" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=800&q=80", caption: "Sunset portraits on the Kovalam coastline", aspectRatioClass: "aspect-[2/3]", category: "Couple Portraits" },
+    ],
+    relatedStories: [
+      { id: "sample-4", coupleName: "Kavya & Arjun", location: "Backwater Resort, Alleppey", coverImageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80", tag: "Kerala Christian Wedding" },
+      { id: "sample-14", coupleName: "Radhika & Harsh", location: "Laxmi Vilas Palace, Vadodara", coverImageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80", tag: "Royal Gujarati Vivah" },
+    ],
+  },
+  "sample-14": {
+    id: "sample-14",
+    coupleName: "Radhika & Harsh",
+    location: "Laxmi Vilas Palace, Vadodara",
+    tag: "Royal Gujarati Vivah",
+    snippet: "A grand Indo-Saracenic palace wedding adorned with thousands of tuberoses, garba night festivities, and royal regalia.",
+    narrativeStory: [
+      "Four times the size of Buckingham Palace, Laxmi Vilas Palace provided a truly royal setting for Radhika and Harsh’s lavish Gujarati vivah.",
+      "The weekend opened with a high-spirited Garba and Dandiya night under thousands of twinkling fairy lights in the sprawling gardens.",
+      "The wedding ceremony was held in the royal courtyard with shehnai maestro performances and an opulent banquet of royal Kathiawadi fare."
+    ],
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    vendorCity: "Vadodara, Gujarat",
+    coverImageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80", caption: "Palace facade illuminated for the wedding night", aspectRatioClass: "aspect-[16/10]", category: "Mandap & Decor" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80", caption: "Bride in traditional Gujarati panetar sari", aspectRatioClass: "aspect-[2/3]", category: "Bridal Portrait" },
+    ],
+    relatedStories: [
+      { id: "sample-2", coupleName: "Pooja & Kabir", location: "City Palace, Jaipur", coverImageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&q=80", tag: "Royal Heritage Wedding" },
+      { id: "sample-13", coupleName: "Devika & Ashwin", location: "Taj Green Cove, Kovalam", coverImageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&q=80", tag: "Kovalam Cliffside Destination" },
+    ],
+  },
+  "sample-15": {
+    id: "sample-15",
+    coupleName: "Zoya & Farhan",
+    location: "Shalimar Gardens, Srinagar",
+    tag: "Regal Kashmir Garden Nikah",
+    snippet: "An enchanting autumn ceremony beneath majestic Chinar trees with Kashmiri kahwa, wazwan, and pashmina accents.",
+    narrativeStory: [
+      "Framed by the golden leaves of century-old Chinar trees and the snow-capped Zabarwan range, Zoya and Farhan celebrated an autumn Nikah in Srinagar.",
+      "The ceremony was rich in Kashmiri customs, featuring delicate walnut-wood carved shamianas, copper samovars serving saffron kahwa, and traditional Sufiana music.",
+      "An elaborate 36-course royal Wazwan feast was served under silk pavilions adorned with handcrafted papier-mâché lanterns."
+    ],
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    vendorCity: "Srinagar, Jammu & Kashmir",
+    coverImageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80", caption: "Autumn Mughal garden Nikah setting under Chinars", aspectRatioClass: "aspect-[16/10]", category: "Ceremony" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1546804784-896d0dca3805?w=800&q=80", caption: "Bride in emerald velvet tilla-embroidered pheran", aspectRatioClass: "aspect-[2/3]", category: "Bridal Portrait" },
+    ],
+    relatedStories: [
+      { id: "sample-5", coupleName: "Ishaan & Diya", location: "The Leela, Udaipur", coverImageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80", tag: "Lakeside Luxury Wedding" },
+      { id: "sample-16", coupleName: "Nandini & Gautham", location: "Kumarakom Lake Resort, Kottayam", coverImageUrl: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=600&q=80", tag: "Temple Bells & Lotus Pond" },
+    ],
+  },
+  "sample-16": {
+    id: "sample-16",
+    coupleName: "Nandini & Gautham",
+    location: "Kumarakom Lake Resort, Kottayam",
+    tag: "Temple Bells & Lotus Pond",
+    snippet: "Waterfront wooden pavilions lit by floating nilavilakkus, fragrant lotus garlands, and tranquil backwater breezes.",
+    narrativeStory: [
+      "At the serene Kumarakom Lake Resort on Lake Vembanad, Nandini and Gautham created a magical backwater celebration.",
+      "The mandap was built over a natural lotus pond adorned with thousands of pink lotus blossoms and hanging brass bells.",
+      "Sunset couple portraits on a traditional wooden boat were followed by an intimate dinner under illuminated banyan trees."
+    ],
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    vendorCity: "Kottayam, Kerala",
+    coverImageUrl: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=800&q=80", caption: "Floating lotus pond mandap with traditional oil lamps", aspectRatioClass: "aspect-[16/10]", category: "Mandap & Decor" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=800&q=80", caption: "Sunset wooden boat cruise across the backwaters", aspectRatioClass: "aspect-[2/3]", category: "Couple Portraits" },
+    ],
+    relatedStories: [
+      { id: "sample-4", coupleName: "Kavya & Arjun", location: "Backwater Resort, Alleppey", coverImageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80", tag: "Kerala Christian Wedding" },
+      { id: "sample-8", coupleName: "Sneha & Abhiram", location: "Guruvayur Heritage, Thrissur", coverImageUrl: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&q=80", tag: "Kerala Hindu Traditional" },
+    ],
+  },
+  "sample-17": {
+    id: "sample-17",
+    coupleName: "Rhea & Neil",
+    location: "Taj Mahal Palace, Colaba, Mumbai",
+    tag: "Contemporary Parsi & Western Fusion",
+    snippet: "Grand ballroom celebration overlooking the Gateway of India with vintage chandeliers, jazz quartets, and bespoke fashion.",
+    narrativeStory: [
+      "In the iconic heritage wing of the Taj Mahal Palace Mumbai, Rhea and Neil hosted a celebration blending Parsi traditions with classic ballroom glamour.",
+      "The evening began with an acoustic jazz trio playing under soaring vaulted ceilings while guests enjoyed bespoke craft cocktails.",
+      "The couple shared their first dance on a chequered marble floor surrounded by cascading white orchids and soft amber candlelight."
+    ],
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    vendorCity: "Mumbai, Maharashtra",
+    coverImageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=800&q=80", caption: "Grand ballroom with crystal chandeliers and white florals", aspectRatioClass: "aspect-[16/10]", category: "Reception" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1544078751-58fee2d8a03b?w=800&q=80", caption: "Bride in embroidered vintage French chantilly lace gown", aspectRatioClass: "aspect-[2/3]", category: "Bridal Portrait" },
+    ],
+    relatedStories: [
+      { id: "sample-7", coupleName: "Ritu & Dev", location: "Grand Hyatt, Mumbai", coverImageUrl: "https://images.unsplash.com/photo-1545232979-fbf68fe9b1af?w=600&q=80", tag: "Punjabi Big Fat Wedding" },
+      { id: "sample-18", coupleName: "Divya & Vikram", location: "Wildflower Hall, Shimla", coverImageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80", tag: "Himalayan Cedar Forest Destination" },
+    ],
+  },
+  "sample-18": {
+    id: "sample-18",
+    coupleName: "Divya & Vikram",
+    location: "Wildflower Hall, Shimla",
+    tag: "Himalayan Cedar Forest Destination",
+    snippet: "A romantic fairytale framed by snow-capped peaks, pine-scented mountain air, and a glasshouse reception.",
+    narrativeStory: [
+      "Surrounded by cedar pine forests at 8,250 feet above sea level in Shimla, Divya and Vikram celebrated an alpine destination wedding.",
+      "Guests gathered on open meadows facing the snow-capped Himalayan ranges, wrapped in warm cashmere shawls beside firepits.",
+      "The reception took place inside a glasshouse conservatory filled with twinkling candles and evergreen pine garlands."
+    ],
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    vendorCity: "Shimla, Himachal Pradesh",
+    coverImageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&q=80",
+    photos: [
+      { id: "p1", url: "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80", caption: "Glasshouse conservatory dinner in pine forest", aspectRatioClass: "aspect-[16/10]", category: "Reception" },
+      { id: "p2", url: "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=800&q=80", caption: "Couple portraits with snow-capped Himalayan backdrop", aspectRatioClass: "aspect-[2/3]", category: "Couple Portraits" },
+    ],
+    relatedStories: [
+      { id: "sample-15", coupleName: "Zoya & Farhan", location: "Shalimar Gardens, Srinagar", coverImageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600&q=80", tag: "Regal Kashmir Garden Nikah" },
+      { id: "sample-17", coupleName: "Rhea & Neil", location: "Taj Mahal Palace, Colaba, Mumbai", coverImageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&q=80", tag: "Contemporary Parsi & Western Fusion" },
+    ],
+  },
 };
 
 export async function generateMetadata({ params }: StoryPageProps): Promise<Metadata> {

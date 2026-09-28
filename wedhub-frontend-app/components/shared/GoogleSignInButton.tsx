@@ -62,9 +62,11 @@ const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 export function GoogleSignInButton({
   role,
   onSuccess,
+  onError,
 }: {
   role?: Extract<UserRole, "END_USER" | "VENDOR">;
   onSuccess: (user: AuthenticatedUser) => void;
+  onError?: (error: string) => void;
 }) {
   const router = useRouter();
   const { showToast } = useToast();
@@ -86,7 +88,9 @@ export function GoogleSignInButton({
           router.push("/signup");
           return;
         }
-        showToast(formatApiError(result.error), "error");
+        const message = formatApiError(result.error);
+        onError?.(message);
+        showToast(message, "error");
         return;
       }
 

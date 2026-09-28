@@ -7,8 +7,9 @@ import type { WeddingStoriesListResponse } from "@/lib/api/vendors.types";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { DisplayRealWeddingStory, RealWeddingCollageCard } from "./RealWeddingCollageCard";
 
-// Exactly 6 curated sample stories with unique, high-resolution photography for each card
-const EXACT_6_SAMPLE_STORIES: DisplayRealWeddingStory[] = [
+// 18 curated sample stories across 3 pages (6 per page) with unique, high-resolution photography
+const ALL_SAMPLE_STORIES: DisplayRealWeddingStory[] = [
+  // Page 1
   {
     id: "sample-1",
     coupleName: "Ananya & Rohan",
@@ -99,20 +100,209 @@ const EXACT_6_SAMPLE_STORIES: DisplayRealWeddingStory[] = [
     ],
     photoCountLabel: "+110 Photos",
   },
+  // Page 2
+  {
+    id: "sample-7",
+    coupleName: "Ritu & Dev",
+    location: "Grand Hyatt, Mumbai",
+    tag: "Punjabi Big Fat Wedding",
+    snippet: "A grand celebration in Mumbai with foot-tapping dhol beats, glamorous sangeet sets, and lavish cocktail soiree.",
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    coverImageUrl: "https://images.unsplash.com/photo-1545232979-fbf68fe9b1af?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=500&q=80",
+      "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=500&q=80",
+    ],
+    photoCountLabel: "+130 Photos",
+  },
+  {
+    id: "sample-8",
+    coupleName: "Sneha & Abhiram",
+    location: "Guruvayur Heritage, Thrissur",
+    tag: "Kerala Hindu Traditional",
+    snippet: "An auspicious dawn wedding ceremony with traditional kasavu attire, temple gopuram backdrop, and grand vadya melam.",
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    coverImageUrl: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?w=500&q=80",
+      "https://images.unsplash.com/photo-1519741497674-611481863552?w=500&q=80",
+    ],
+    photoCountLabel: "+90 Photos",
+  },
+  {
+    id: "sample-9",
+    coupleName: "Tanya & Varun",
+    location: "Neemrana Fort Palace, Alwar",
+    tag: "Royal Fort Wedding",
+    snippet: "A medieval hill-fort wedding with tiered ramparts lit by oil torches, royal trumpeters, and timeless Rajputana majesty.",
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    coverImageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=500&q=80",
+      "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=500&q=80",
+    ],
+    photoCountLabel: "+160 Photos",
+  },
+  {
+    id: "sample-10",
+    coupleName: "Priyanka & Aditya",
+    location: "Alila Diwa, Goa",
+    tag: "Modern Minimalist Celebration",
+    snippet: "Contemporary pastel aesthetic set amidst sprawling paddy fields, acoustic sundowners, and fairy-lit courtyard vows.",
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    coverImageUrl: "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1544078751-58fee2d8a03b?w=500&q=80",
+      "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=500&q=80",
+    ],
+    photoCountLabel: "+105 Photos",
+  },
+  {
+    id: "sample-11",
+    coupleName: "Ananya & Karthik",
+    location: "Chidambara Vilas, Karaikudi",
+    tag: "Chettinad Heritage Wedding",
+    snippet: "A heritage mansion wedding surrounded by Burmese teak pillars, Athangudi tiles, and rich Chettinad culinary feasts.",
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    coverImageUrl: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1546804784-896d0dca3805?w=500&q=80",
+      "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=500&q=80",
+    ],
+    photoCountLabel: "+115 Photos",
+  },
+  {
+    id: "sample-12",
+    coupleName: "Simran & Aman",
+    location: "ITC Grand Bharat, Gurugram",
+    tag: "Sikh Anand Karaj",
+    snippet: "A spiritual morning Anand Karaj followed by an opulent black-tie reception and spectacular palace courtyard decor.",
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    coverImageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1509927083803-4bd519298ac4?w=500&q=80",
+      "https://images.unsplash.com/photo-1587271407850-8d438ca9fdf2?w=500&q=80",
+    ],
+    photoCountLabel: "+175 Photos",
+  },
+  // Page 3
+  {
+    id: "sample-13",
+    coupleName: "Devika & Ashwin",
+    location: "Taj Green Cove, Kovalam",
+    tag: "Kovalam Cliffside Destination",
+    snippet: "Perched high above the Arabian Sea, exchanging garlands as waves crest against the rocky shoreline at sunset.",
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    coverImageUrl: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=500&q=80",
+      "https://images.unsplash.com/photo-1529636798458-92182e662485?w=500&q=80",
+    ],
+    photoCountLabel: "+125 Photos",
+  },
+  {
+    id: "sample-14",
+    coupleName: "Radhika & Harsh",
+    location: "Laxmi Vilas Palace, Vadodara",
+    tag: "Royal Gujarati Vivah",
+    snippet: "A grand Indo-Saracenic palace wedding adorned with thousands of tuberoses, garba night festivities, and royal regalia.",
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    coverImageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=500&q=80",
+      "https://images.unsplash.com/photo-1544078751-58fee2d8a03b?w=500&q=80",
+    ],
+    photoCountLabel: "+150 Photos",
+  },
+  {
+    id: "sample-15",
+    coupleName: "Zoya & Farhan",
+    location: "Shalimar Gardens, Srinagar",
+    tag: "Regal Kashmir Garden Nikah",
+    snippet: "An enchanting autumn ceremony beneath majestic Chinar trees with Kashmiri kahwa, wazwan, and pashmina accents.",
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    coverImageUrl: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1546804784-896d0dca3805?w=500&q=80",
+      "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=500&q=80",
+    ],
+    photoCountLabel: "+140 Photos",
+  },
+  {
+    id: "sample-16",
+    coupleName: "Nandini & Gautham",
+    location: "Kumarakom Lake Resort, Kottayam",
+    tag: "Temple Bells & Lotus Pond",
+    snippet: "Waterfront wooden pavilions lit by floating nilavilakkus, fragrant lotus garlands, and tranquil backwater breezes.",
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    coverImageUrl: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=500&q=80",
+      "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?w=500&q=80",
+    ],
+    photoCountLabel: "+110 Photos",
+  },
+  {
+    id: "sample-17",
+    coupleName: "Rhea & Neil",
+    location: "Taj Mahal Palace, Colaba, Mumbai",
+    tag: "Contemporary Parsi & Western Fusion",
+    snippet: "Grand ballroom celebration overlooking the Gateway of India with vintage chandeliers, jazz quartets, and bespoke fashion.",
+    vendorName: "Lens & Light Studios",
+    vendorSlug: "lens-light-studios",
+    coverImageUrl: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1544078751-58fee2d8a03b?w=500&q=80",
+      "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=500&q=80",
+    ],
+    photoCountLabel: "+165 Photos",
+  },
+  {
+    id: "sample-18",
+    coupleName: "Divya & Vikram",
+    location: "Wildflower Hall, Shimla",
+    tag: "Himalayan Cedar Forest Destination",
+    snippet: "A romantic fairytale framed by snow-capped peaks, pine-scented mountain air, and a glasshouse reception.",
+    vendorName: "Frame & Co. Photography",
+    vendorSlug: "frame-co-photography",
+    coverImageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80",
+    galleryPhotos: [
+      "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=500&q=80",
+      "https://images.unsplash.com/photo-1587271407850-8d438ca9fdf2?w=500&q=80",
+    ],
+    photoCountLabel: "+135 Photos",
+  },
 ];
 
 interface RealWeddingsViewProps {
   initialData: WeddingStoriesListResponse;
+  currentPage?: number;
+  searchParams?: {
+    location?: string;
+    tag?: string;
+    search?: string;
+    sort?: string;
+    page?: string;
+  };
 }
 
-export function RealWeddingsView({ initialData }: RealWeddingsViewProps) {
+const PAGE_SIZE = 6;
+
+export function RealWeddingsView({ initialData, currentPage = 1, searchParams }: RealWeddingsViewProps) {
   // Map real database stories to display cards
   const realDisplayStories: DisplayRealWeddingStory[] = useMemo(() => {
     return (initialData.stories ?? []).map((s) => {
       const coverKey = s.album.coverMedia?.optimizedObjectKey ?? s.album.coverMedia?.originalObjectKey;
-      // Collage sub-thumbnails render at ~20vw (RealWeddingCollageCard's
-      // "gallery[0]"/"gallery[1]" tiles) — thumbnail-first, unlike the
-      // 16:10 cover photo which stays medium-sized for its larger tile.
       const galleryThumbs = (s.album.media ?? [])
         .slice(0, 2)
         .map((m) => {
@@ -138,15 +328,41 @@ export function RealWeddingsView({ initialData }: RealWeddingsViewProps) {
     });
   }, [initialData.stories]);
 
-  // Real stories fill first; exactly 6 items total without repetition
+  const isUsingRealStories = (initialData.pagination?.total ?? 0) > 0 || realDisplayStories.length > 0;
+
+  const totalStories = isUsingRealStories
+    ? (initialData.pagination?.total ?? realDisplayStories.length)
+    : ALL_SAMPLE_STORIES.length;
+
+  const totalPages = isUsingRealStories
+    ? Math.max(1, initialData.pagination?.totalPages ?? 1)
+    : Math.max(1, Math.ceil(ALL_SAMPLE_STORIES.length / PAGE_SIZE));
+
+  const page = Math.min(Math.max(1, currentPage), totalPages);
+
   const displayedStories = useMemo(() => {
-    const totalSlots = 6;
-    if (realDisplayStories.length >= totalSlots) {
-      return realDisplayStories.slice(0, totalSlots);
+    if (isUsingRealStories) {
+      return realDisplayStories;
     }
-    const remaining = totalSlots - realDisplayStories.length;
-    return [...realDisplayStories, ...EXACT_6_SAMPLE_STORIES.slice(0, remaining)];
-  }, [realDisplayStories]);
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return ALL_SAMPLE_STORIES.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [isUsingRealStories, realDisplayStories, page]);
+
+  function buildPageUrl(pageNumber: number) {
+    const params = new URLSearchParams();
+    if (searchParams?.location) params.set("location", searchParams.location);
+    if (searchParams?.tag) params.set("tag", searchParams.tag);
+    if (searchParams?.search) params.set("search", searchParams.search);
+    if (searchParams?.sort) params.set("sort", searchParams.sort);
+    if (pageNumber > 1) {
+      params.set("page", String(pageNumber));
+    }
+    const qs = params.toString();
+    return `/real-weddings${qs ? `?${qs}` : ""}`;
+  }
+
+  const startItem = totalStories > 0 ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const endItem = Math.min(page * PAGE_SIZE, totalStories);
 
   return (
     <div className="min-h-screen bg-[#fafbfc]">
@@ -198,7 +414,17 @@ export function RealWeddingsView({ initialData }: RealWeddingsViewProps) {
 
           {/* Results Count */}
           <div className="text-xs font-semibold text-text-grey">
-            Showing <strong className="text-jet-black font-extrabold">{displayedStories.length}</strong> real wedding stories
+            {totalStories > 0 ? (
+              <>
+                Showing{" "}
+                <strong className="text-jet-black font-extrabold">
+                  {startItem === endItem ? startItem : `${startItem}–${endItem}`}
+                </strong>{" "}
+                of <strong className="text-jet-black font-extrabold">{totalStories}</strong> real wedding stories
+              </>
+            ) : (
+              "No real wedding stories found"
+            )}
           </div>
         </div>
 
@@ -210,44 +436,80 @@ export function RealWeddingsView({ initialData }: RealWeddingsViewProps) {
         </div>
 
         {/* Numbered Pagination Bar */}
-        <div className="mt-14 flex justify-center">
-          <nav aria-label="Pagination" className="inline-flex items-center gap-1.5 rounded-2xl border border-border/80 bg-white p-1.5 shadow-xs">
-            <button
-              type="button"
-              disabled
-              aria-label="Previous page"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black opacity-30 pointer-events-none"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
+        {totalPages > 1 && (
+          <div className="mt-14 flex justify-center">
+            <nav aria-label="Pagination" className="inline-flex items-center gap-1.5 rounded-2xl border border-border/80 bg-white p-1.5 shadow-xs">
+              {/* Previous Page Link / Button */}
+              {page > 1 ? (
+                <Link
+                  href={buildPageUrl(page - 1)}
+                  aria-label="Previous page"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black transition-colors hover:bg-surface-input"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </Link>
+              ) : (
+                <span
+                  aria-disabled="true"
+                  aria-label="Previous page"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black opacity-30 cursor-not-allowed pointer-events-none"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </span>
+              )}
 
-            {[1, 2, 3].map((p) => (
-              <button
-                key={p}
-                type="button"
-                className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-extrabold transition-all ${
-                  p === 1
-                    ? "bg-crimson text-white shadow-sm"
-                    : "text-jet-black hover:bg-surface-input"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
+              {/* Page Numbers */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                const isCurrent = p === page;
+                return isCurrent ? (
+                  <span
+                    key={p}
+                    aria-current="page"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-extrabold bg-crimson text-white shadow-sm cursor-default"
+                  >
+                    {p}
+                  </span>
+                ) : (
+                  <Link
+                    key={p}
+                    href={buildPageUrl(p)}
+                    aria-label={`Page ${p}`}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-extrabold text-jet-black transition-all hover:bg-surface-input"
+                  >
+                    {p}
+                  </Link>
+                );
+              })}
 
-            <button
-              type="button"
-              aria-label="Next page"
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black transition-colors hover:bg-surface-input"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
-          </nav>
-        </div>
+              {/* Next Page Link / Button */}
+              {page < totalPages ? (
+                <Link
+                  href={buildPageUrl(page + 1)}
+                  aria-label="Next page"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black transition-colors hover:bg-surface-input"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </Link>
+              ) : (
+                <span
+                  aria-disabled="true"
+                  aria-label="Next page"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-jet-black opacity-30 cursor-not-allowed pointer-events-none"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </span>
+              )}
+            </nav>
+          </div>
+        )}
 
         {/* Editorial SEO Blurb (Matching WedMeGood Footer Section) */}
         <section className="mt-16 rounded-2xl border border-border/80 bg-white p-6 sm:p-8 shadow-xs">

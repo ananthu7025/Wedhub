@@ -11,13 +11,36 @@ import type { AuthenticatedUser, UserRole } from "@/lib/auth/types";
  */
 
 async function postJson<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
-  const response = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    credentials: "include",
-  });
-  return (await response.json()) as ApiResponse<T>;
+  try {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      credentials: "include",
+    });
+    const text = await response.text();
+    try {
+      return JSON.parse(text) as ApiResponse<T>;
+    } catch {
+      return {
+        success: false,
+        error: {
+          code: "SERVER_ERROR",
+          message: response.ok
+            ? "Unexpected response from server"
+            : `Server returned an error (${response.status})`,
+        },
+      };
+    }
+  } catch (err) {
+    return {
+      success: false,
+      error: {
+        code: "NETWORK_ERROR",
+        message: err instanceof Error ? err.message : "Network error. Please check your connection and try again.",
+      },
+    };
+  }
 }
 
 export function login(identifier: string, password: string, rememberMe?: boolean) {

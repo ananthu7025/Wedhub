@@ -13,7 +13,7 @@ import { GoogleSignInButton } from "./GoogleSignInButton";
 import { login } from "@/lib/api/auth-client";
 import type { AuthenticatedUser } from "@/lib/auth/types";
 import { formatApiError } from "@/lib/utils/error";
-import { identifierSchema, loginPasswordSchema, validateField } from "@/lib/validation/auth-schemas";
+import { emailSchema, phoneSchema, loginPasswordSchema, validateField } from "@/lib/validation/auth-schemas";
 
 /**
  * In-page "sign in to continue" popup — used wherever an unauthenticated
@@ -49,6 +49,7 @@ export function SignInModal({
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState<{ identifier?: boolean; password?: boolean }>({});
   const [pending, setPending] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -59,7 +60,8 @@ export function SignInModal({
     };
   }, []);
 
-  const identifierError = useMemo(() => validateField(identifierSchema, identifier), [identifier]);
+  const activeIdentifierSchema = mode === "email" ? emailSchema : phoneSchema;
+  const identifierError = useMemo(() => validateField(activeIdentifierSchema, identifier), [activeIdentifierSchema, identifier]);
   const passwordError = useMemo(() => validateField(loginPasswordSchema, password), [password]);
   const isFormValid = !identifierError && !passwordError;
 
@@ -89,19 +91,27 @@ export function SignInModal({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setFormError(null);
     setTouched({ identifier: true, password: true });
     if (!isFormValid) return;
 
     setPending(true);
-    const result = await login(identifier, password);
-    setPending(false);
-
-    if (!result.success) {
-      showToast(formatApiError(result.error), "error");
-      return;
+    try {
+      const result = await login(identifier, password);
+      if (!result.success) {
+        const message = formatApiError(result.error);
+        setFormError(message);
+        showToast(message, "error");
+        return;
+      }
+      handleSignedIn(result.data.user);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred. Please try again.";
+      setFormError(message);
+      showToast(message, "error");
+    } finally {
+      setPending(false);
     }
-
-    handleSignedIn(result.data.user);
   }
 
   if (!mounted) return null;
@@ -147,7 +157,7 @@ export function SignInModal({
             and continue the original reveal/enquiry action via onSuccess,
             exactly like an existing user signing in would.
           */}
-          <GoogleSignInButton role="END_USER" onSuccess={handleSignedIn} />
+          <GoogleSignInButton role="END_USER" onSuccess={handleSignedIn} onError={setFormError} />
         </div>
 
         <div className="mb-5 flex items-center gap-3 text-[12px] text-text-grey">
@@ -155,6 +165,15 @@ export function SignInModal({
           OR
           <span className="h-px flex-1 bg-border" />
         </div>
+
+        {formError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-md bg-red-10 p-3 text-[13px] font-medium text-red-70"
+          >
+            {formError}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="mb-1.5 flex items-center justify-between">
@@ -166,6 +185,7 @@ export function SignInModal({
                   setMode("email");
                   setIdentifier("");
                   setTouched({});
+                  setFormError(null);
                 }}
                 className={
                   mode === "email"
@@ -181,6 +201,7 @@ export function SignInModal({
                   setMode("phone");
                   setIdentifier("");
                   setTouched({});
+                  setFormError(null);
                 }}
                 className={
                   mode === "phone"
@@ -197,7 +218,10 @@ export function SignInModal({
               type={mode === "email" ? "email" : "tel"}
               placeholder={mode === "email" ? "you@example.com" : "10-digit mobile number"}
               value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              onChange={(e) => {
+                setIdentifier(e.target.value);
+                if (formError) setFormError(null);
+              }}
               onBlur={() => setTouched((t) => ({ ...t, identifier: true }))}
               invalid={touched.identifier && !!identifierError}
               autoComplete="username"
@@ -211,7 +235,10 @@ export function SignInModal({
             <PasswordInput
               placeholder="Password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (formError) setFormError(null);
+              }}
               onBlur={() => setTouched((t) => ({ ...t, password: true }))}
               invalid={touched.password && !!passwordError}
               autoComplete="current-password"

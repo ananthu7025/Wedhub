@@ -39,6 +39,7 @@ export function LoginForm() {
   const [rememberMe, setRememberMe] = useState(false);
   const [touched, setTouched] = useState<{ identifier?: boolean; password?: boolean }>({});
   const [pending, setPending] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const identifierError = useMemo(() => validateField(identifierSchema, identifier), [identifier]);
   const passwordError = useMemo(() => validateField(loginPasswordSchema, password), [password]);
@@ -46,22 +47,32 @@ export function LoginForm() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setFormError(null);
     setTouched({ identifier: true, password: true });
     if (!isFormValid) return;
 
     setPending(true);
-    const result = await login(identifier, password, rememberMe);
+    try {
+      const result = await login(identifier, password, rememberMe);
 
-    if (!result.success) {
-      showToast(formatApiError(result.error), "error");
+      if (!result.success) {
+        const message = formatApiError(result.error);
+        setFormError(message);
+        showToast(message, "error");
+        return;
+      }
+
+      // Best-effort, doesn't block navigation — see mergeGuestShortlistIntoAccount's
+      // doc comment (a failed add is silently skipped, never surfaced here).
+      void mergeGuestShortlistIntoAccount();
+      goToDestination(result.data.user.role);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An unexpected error occurred. Please try again.";
+      setFormError(message);
+      showToast(message, "error");
+    } finally {
       setPending(false);
-      return;
     }
-
-    // Best-effort, doesn't block navigation — see mergeGuestShortlistIntoAccount's
-    // doc comment (a failed add is silently skipped, never surfaced here).
-    void mergeGuestShortlistIntoAccount();
-    goToDestination(result.data.user.role);
   }
 
   function goToDestination(role: UserRole) {
@@ -78,6 +89,11 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full" noValidate>
+      {formError && (
+        <div role="alert" className="mb-4.5 rounded-md bg-red-10 p-3 text-[13px] font-medium text-red-70">
+          {formError}
+        </div>
+      )}
       {justVerifiedEmail && (
         <div className="mb-4.5 flex items-start gap-2 rounded-md bg-emerald-10 p-3 text-[13px] text-emerald-70">
           <span className="mt-0.5"><CheckIcon className="h-3.5 w-3.5" /></span>
@@ -89,7 +105,10 @@ export function LoginForm() {
           type="text"
           placeholder="Email or phone"
           value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
+          onChange={(e) => {
+            setIdentifier(e.target.value);
+            if (formError) setFormError(null);
+          }}
           onBlur={() => setTouched((t) => ({ ...t, identifier: true }))}
           invalid={touched.identifier && !!identifierError}
           autoComplete="username"
@@ -100,7 +119,10 @@ export function LoginForm() {
         <PasswordInput
           placeholder="Password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            if (formError) setFormError(null);
+          }}
           onBlur={() => setTouched((t) => ({ ...t, password: true }))}
           invalid={touched.password && !!passwordError}
           autoComplete="current-password"
@@ -134,6 +156,7 @@ export function LoginForm() {
             void mergeGuestShortlistIntoAccount();
             goToDestination(user.role);
           }}
+          onError={setFormError}
         />
       </div>
     </form>
