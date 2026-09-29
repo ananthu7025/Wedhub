@@ -296,11 +296,6 @@ function CategoryLocationSection({
   const { showToast } = useToast();
   const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? null;
   const subcategoryIds = vendor.categories.filter((c) => !c.isPrimary).map((c) => c.categoryId);
-  // Item 13: venues are a single fixed location, not a coverage area — skip
-  // the service-area picker for this category rather than asking vendors to
-  // answer a question that doesn't apply to them.
-  const selectedCategory = categories.find((c) => c.id === primaryCategoryId) ?? primaryCategory;
-  const isVenueCategory = selectedCategory?.slug === "venues";
 
   const [primaryCategoryId, setPrimaryCategoryId] = useState(primaryCategory?.id ?? categories[0]?.id ?? "");
   const [selectedSubcategoryIds, setSelectedSubcategoryIds] = useState<Set<string>>(new Set(subcategoryIds));
@@ -313,6 +308,12 @@ function CategoryLocationSection({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Item 13: venues are a single fixed location, not a coverage area — skip
+  // the service-area picker for this category rather than asking vendors to
+  // answer a question that doesn't apply to them.
+  const selectedCategory = categories.find((c) => c.id === primaryCategoryId) ?? primaryCategory;
+  const isVenueCategory = selectedCategory?.slug === "venues";
 
   const primaryCategoryChanged = vendor.status === "APPROVED" && primaryCategoryId !== primaryCategory?.id;
 
