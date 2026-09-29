@@ -25,7 +25,6 @@ export type MediaType =
   | "COVER"
   | "PORTFOLIO"
   | "VIDEO"
-  | "STORE_ITEM_PHOTO"
   | "PACKAGE_PHOTO"
   | "CATEGORY_ATTRIBUTE_PHOTO"
   | "CATALOG_ITEM_PHOTO"
@@ -136,7 +135,6 @@ export interface CategorySelf {
   slug: string;
   description: string | null;
   parentId: string | null;
-  hasStoreEnabled?: boolean;
   hasCatalogEnabled?: boolean;
   attributes: CategoryAttributeSelf[];
   children?: CategorySelf[];

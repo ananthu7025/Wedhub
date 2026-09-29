@@ -48,7 +48,6 @@ export interface PlanLimits {
 export interface PlanFeatures {
   analytics_level?: boolean;
   featured_eligibility?: boolean;
-  store_access?: boolean;
   invoicing_access?: boolean;
   portfolio_page_access?: boolean;
   catalog_access?: boolean;
@@ -81,7 +80,6 @@ export interface EffectivePlan {
   features: {
     analytics_level: "basic" | "advanced";
     featured_eligibility: boolean;
-    store_access: boolean;
     invoicing_access: boolean;
     portfolio_page_access: boolean;
     catalog_access: boolean;
@@ -97,7 +95,6 @@ export interface EffectivePlan {
 export const BOOLEAN_FEATURE_CATALOG: Array<{ key: keyof PlanFeatures; label: string }> = [
   { key: "analytics_level", label: "Advanced Analytics" },
   { key: "featured_eligibility", label: "Featured Placement" },
-  { key: "store_access", label: "Vendor Store" },
   { key: "invoicing_access", label: "Invoicing & Billing" },
   { key: "portfolio_page_access", label: "Shareable Portfolio Page" },
   { key: "catalog_access", label: "Catalog" },

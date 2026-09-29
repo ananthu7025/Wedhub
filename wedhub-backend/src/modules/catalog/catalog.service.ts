@@ -131,10 +131,10 @@ function formatCollection(collection: CollectionWithCover) {
   };
 }
 
-// Same ordering as vendor-store.service.ts's createStoreItem: plan
-// entitlement checked before category eligibility. Centralized here (both
-// checks, one function) rather than repeated per call site — every mutating
-// catalog.service.ts function already routes through this single gate.
+// Plan entitlement checked before category eligibility. Centralized here
+// (both checks, one function) rather than repeated per call site — every
+// mutating catalog.service.ts function already routes through this single
+// gate.
 async function assertCatalogEligible(vendorId: string) {
   await assertVendorFeatureAccess(vendorId, "catalog_access", "Catalog");
   const isEligible = await catalogRepository.checkVendorCatalogEligibility(vendorId);
@@ -190,9 +190,9 @@ export async function createCatalogItem(userId: string, input: CreateCatalogItem
 
 export async function updateCatalogItem(userId: string, itemId: string, input: UpdateCatalogItemInput) {
   const vendor = await getOwnedVendorOrThrow(userId);
-  // Same asymmetry as vendor-store.service.ts's updateStoreItem: plan access
-  // is re-checked on every mutation, but category eligibility is only
-  // checked at create time (a vendor's category doesn't change mid-edit).
+  // Plan access is re-checked on every mutation, but category eligibility is
+  // only checked at create time (a vendor's category doesn't change
+  // mid-edit).
   await assertVendorFeatureAccess(vendor.id, "catalog_access", "Catalog");
   const existing = await catalogRepository.findCatalogItemById(itemId);
   if (!existing || existing.vendorId !== vendor.id) {
@@ -224,8 +224,8 @@ export async function deleteCatalogItem(userId: string, itemId: string) {
     throw new NotFoundError("Catalog item not found");
   }
 
-  // Deletion stays ungated — same precedent as vendor-store's item delete:
-  // removing value must still work even if catalog access lapses.
+  // Deletion stays ungated — removing value must still work even if catalog
+  // access lapses.
   await catalogRepository.deleteCatalogItem(itemId);
   return { success: true };
 }

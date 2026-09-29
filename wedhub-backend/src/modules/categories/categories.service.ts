@@ -42,7 +42,6 @@ export async function createCategory(input: CreateCategoryInput) {
     slug,
     description: input.description,
     parentId: input.parentId,
-    hasStoreEnabled: input.hasStoreEnabled,
   });
 }
 
@@ -57,7 +56,6 @@ export async function updateCategory(id: string, input: UpdateCategoryInput) {
     description: input.description,
     sortOrder: input.sortOrder,
     isActive: input.isActive,
-    hasStoreEnabled: input.hasStoreEnabled,
     hasCatalogEnabled: input.hasCatalogEnabled,
     imageUrl: input.imageUrl,
     isFeaturedOnHomepage: input.isFeaturedOnHomepage,

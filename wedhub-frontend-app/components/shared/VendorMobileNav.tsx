@@ -11,11 +11,6 @@ interface VendorMobileNavProps {
   vendorSlug?: string;
   unreadCount?: number;
   unreadMessageCount?: number;
-  hasStoreEligibleCategory?: boolean;
-  // Plan-gated (store_access), separate from category eligibility above —
-  // both must be true for Store to appear anywhere in this nav. See
-  // VendorShell.tsx's identical gate on the desktop sidebar.
-  hasStoreAccess?: boolean;
   hasCatalogEligibleCategory?: boolean;
   // Plan-gated (catalog_access), separate from category eligibility above —
   // both must be true for Catalog to appear anywhere in this nav. See
@@ -56,17 +51,6 @@ const PRIMARY_BOTTOM_TABS = [
       </svg>
     ),
   },
-  {
-    href: "/vendor/store",
-    label: "Store",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-        <line x1="3" y1="6" x2="21" y2="6" />
-        <path d="M16 10a4 4 0 01-8 0" />
-      </svg>
-    ),
-  },
 ];
 
 const SECONDARY_SECTIONS = [
@@ -90,17 +74,6 @@ const SECONDARY_SECTIONS = [
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z" />
             <circle cx="6.5" cy="6.5" r="1.5" />
-          </svg>
-        ),
-      },
-      {
-        href: "/vendor/store",
-        label: "Vendor Store",
-        icon: (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <path d="M16 10a4 4 0 01-8 0" />
           </svg>
         ),
       },
@@ -227,8 +200,6 @@ export function VendorMobileNav({
   vendorSlug,
   unreadCount = 0,
   unreadMessageCount = 0,
-  hasStoreEligibleCategory = false,
-  hasStoreAccess = false,
   hasCatalogEligibleCategory = false,
   hasCatalogAccess = false,
   hasInvoicingAccess = false,
@@ -236,26 +207,21 @@ export function VendorMobileNav({
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const canShowStore = hasStoreEligibleCategory && hasStoreAccess;
   const canShowCatalog = hasCatalogEligibleCategory && hasCatalogAccess;
 
-  // Mirrors VendorShell's desktop nav filter — same Store/Catalog/Finances
-  // links, same gates, just applied to this drawer's separate
-  // SECONDARY_SECTIONS copies of the links.
+  // Mirrors VendorShell's desktop nav filter — same Catalog/Finances links,
+  // same gates, just applied to this drawer's separate SECONDARY_SECTIONS
+  // copies of the links.
   const visibleSections = SECONDARY_SECTIONS.map((section) => ({
     ...section,
     links: section.links.filter((link) => {
-      if (link.href === "/vendor/store") return canShowStore;
       if (link.href === "/vendor/catalog") return canShowCatalog;
       if (link.href === "/vendor/finances") return hasInvoicingAccess;
       return true;
     }),
   }));
 
-  // The bottom tab bar's own separate copy of the Store link (previously
-  // unfiltered entirely — a pre-existing gap fixed alongside this plan gate,
-  // since it's the same nav item this pass is already touching).
-  const visiblePrimaryTabs = PRIMARY_BOTTOM_TABS.filter((tab) => tab.href !== "/vendor/store" || canShowStore);
+  const visiblePrimaryTabs = PRIMARY_BOTTOM_TABS;
 
   // Check if current route is one of the primary tabs
   const isPrimaryTab = visiblePrimaryTabs.some((tab) => pathname === tab.href || pathname.startsWith(tab.href + "/"));
@@ -297,7 +263,7 @@ export function VendorMobileNav({
         aria-label="Mobile vendor navigation"
         className="fixed inset-x-0 bottom-0 z-40 block border-t border-border bg-white/95 backdrop-blur-md shadow-[0_-4px_24px_rgba(0,0,0,0.06)] lg:hidden pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1"
       >
-        <div className="grid grid-cols-5 items-center justify-around px-1">
+        <div className="grid grid-cols-4 items-center justify-around px-1">
           {visiblePrimaryTabs.map((tab) => {
             const isActive = pathname === tab.href || pathname.startsWith(tab.href + "/");
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { VendorDetail } from "@/lib/api/vendors.types";
 import type { CatalogItem } from "@/lib/api/vendor-catalog.types";
-import type { StoreTheme } from "@/components/vendor-store/store-theme";
+import type { StoreTheme } from "../catalog-theme-tokens";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { useCatalogCart } from "../useCatalogCart";
 import { CatalogProductDetail } from "../CatalogProductDetail";

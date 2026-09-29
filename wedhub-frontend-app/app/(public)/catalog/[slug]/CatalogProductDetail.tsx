@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { VendorDetail } from "@/lib/api/vendors.types";
 import type { CatalogItem, CatalogItemVariant } from "@/lib/api/vendor-catalog.types";
-import type { StoreTheme } from "@/components/vendor-store/store-theme";
+import type { StoreTheme } from "./catalog-theme-tokens";
 import { formatCatalogPrice, getCatalogCalculatedPrice, getCatalogItemBasePrice, type RentalDuration } from "./catalog-pricing";
 
 function SparklesIcon({ className = "w-12 h-12" }: { className?: string }) {

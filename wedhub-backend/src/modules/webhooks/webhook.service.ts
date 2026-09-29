@@ -7,11 +7,9 @@ import * as entitlementService from "../entitlements/entitlement.service";
 import * as leadRepository from "../leads/lead.repository";
 import * as notificationService from "../notifications/notification.service";
 import { notifyWeddingWebsitePublished } from "../telegram/telegram.webhook.service";
-import { prisma } from "../../config/database";
 import { periodEndFor } from "../subscriptions/billing-period.util";
 import * as subscriptionRepository from "../subscriptions/subscription.repository";
 import * as weddingWebsiteService from "../wedding-website/wedding-website.service";
-import * as vendorPaymentRepository from "../vendor-payments/vendor-payment.repository";
 import type { RazorpayWebhookPayload } from "./webhook.types";
 
 
@@ -103,16 +101,6 @@ async function processEvent(payload: RazorpayWebhookPayload): Promise<void> {
       // separate record" applies regardless of which side initiated it.
       await handleRefundWebhook(payload);
       return;
-    case "account.updated":
-    case "account.activated":
-    case "account.under_review":
-      await handleAccountWebhook(payload);
-      return;
-    case "transfer.processed":
-    case "transfer.failed":
-    case "transfer.reversed":
-      await handleTransferWebhook(payload);
-      return;
     default:
       logger.info({ eventType: payload.event }, "Unhandled webhook event type (logged, no action)");
   }
@@ -121,12 +109,6 @@ async function processEvent(payload: RazorpayWebhookPayload): Promise<void> {
 async function handlePaymentCaptured(payload: RazorpayWebhookPayload): Promise<void> {
   const paymentEntity = payload.payload.payment?.entity;
   if (!paymentEntity) return;
-
-  // Check if this payment is for a Vendor Store Order
-  if (paymentEntity.notes?.purpose === "VENDOR_STORE_ORDER" || paymentEntity.notes?.storeOrderId) {
-    await handleStoreOrderPaymentCaptured(paymentEntity);
-    return;
-  }
 
   const payment = await subscriptionRepository.findPaymentByOrderId(paymentEntity.order_id);
   if (!payment) {
@@ -322,11 +304,6 @@ async function handlePaymentFailed(payload: RazorpayWebhookPayload): Promise<voi
   const paymentEntity = payload.payload.payment?.entity;
   if (!paymentEntity) return;
 
-  if (paymentEntity.notes?.purpose === "VENDOR_STORE_ORDER" || paymentEntity.notes?.storeOrderId) {
-    await handleStoreOrderPaymentFailed(paymentEntity);
-    return;
-  }
-
   const payment = await subscriptionRepository.findPaymentByOrderId(paymentEntity.order_id);
   if (!payment) {
     logger.warn({ orderId: paymentEntity.order_id }, "Webhook for unknown order — ignoring");
@@ -378,249 +355,4 @@ async function handleRefundWebhook(payload: RazorpayWebhookPayload): Promise<voi
     });
     return;
   }
-
-  // Check if refund is for a Vendor Store Order
-  await handleStoreOrderRefund(refundEntity);
 }
-
-async function handleStoreOrderPaymentCaptured(paymentEntity: any): Promise<void> {
-  const order = paymentEntity.notes?.storeOrderId
-    ? await vendorPaymentRepository.findStoreOrderById(paymentEntity.notes.storeOrderId)
-    : await vendorPaymentRepository.findStoreOrderByRazorpayOrderId(paymentEntity.order_id);
-
-  if (!order) {
-    logger.warn({ orderId: paymentEntity.order_id }, "Store order payment captured for unknown order — ignoring");
-    return;
-  }
-
-  if (order.paymentStatus === "CAPTURED") {
-    logger.info({ orderId: order.id }, "Store order payment already captured — ignoring");
-    return;
-  }
-
-  const actualGatewayFee = typeof paymentEntity.fee === "number" ? paymentEntity.fee / 100 : undefined;
-
-  await vendorPaymentRepository.markOrderPaymentCaptured(order.id, {
-    razorpayPaymentId: paymentEntity.id,
-    paidAt: new Date(),
-    actualGatewayFee,
-  });
-
-  if (paymentEntity.order_id) {
-    try {
-      await vendorPaymentRepository.updatePaymentAttempt(order.id, paymentEntity.order_id, {
-        razorpayPaymentId: paymentEntity.id,
-        status: "CAPTURED",
-      });
-    } catch (err) {
-      logger.warn({ err, orderId: order.id }, "Failed to update payment attempt status in webhook");
-    }
-  }
-
-  const vendorOwner = await subscriptionRepository.findVendorOwner(order.store.vendorId);
-  if (vendorOwner?.ownerUserId) {
-    await notificationService.notify({
-      userId: vendorOwner.ownerUserId,
-      eventType: "LEAD_STATUS_UPDATED",
-      data: {
-        title: `Online Order #${order.orderNumber} Confirmed!`,
-        message: `Customer ${order.customerName} completed payment of ₹${Number(order.totalAmount).toLocaleString("en-IN")}.`,
-      },
-      relatedEntityType: "store_order",
-      relatedEntityId: order.id,
-    });
-  }
-
-  await logAnalyticsEvent({
-    userId: order.userId ?? undefined,
-    eventType: "store_order_paid",
-    vendorId: order.store.vendorId,
-    metadata: {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      amount: Number(order.totalAmount),
-      paymentId: paymentEntity.id,
-    },
-  });
-}
-
-async function handleStoreOrderPaymentFailed(paymentEntity: any): Promise<void> {
-  const order = paymentEntity.notes?.storeOrderId
-    ? await vendorPaymentRepository.findStoreOrderById(paymentEntity.notes.storeOrderId)
-    : await vendorPaymentRepository.findStoreOrderByRazorpayOrderId(paymentEntity.order_id);
-
-  if (!order) return;
-  await vendorPaymentRepository.markOrderPaymentFailed(order.id);
-
-  if (paymentEntity.order_id) {
-    try {
-      await vendorPaymentRepository.updatePaymentAttempt(order.id, paymentEntity.order_id, {
-        razorpayPaymentId: paymentEntity.id,
-        status: "FAILED",
-        failureCode: paymentEntity.error_code || null,
-        failureReason: paymentEntity.error_description || paymentEntity.error_reason || null,
-      });
-    } catch (err) {
-      logger.warn({ err, orderId: order.id }, "Failed to update payment attempt status on failure webhook");
-    }
-  }
-}
-
-async function handleStoreOrderRefund(refundEntity: any): Promise<void> {
-  const storeOrder = refundEntity.notes?.orderId
-    ? await vendorPaymentRepository.findStoreOrderById(refundEntity.notes.orderId)
-    : (refundEntity.payment_id
-        ? await prisma.vendorStoreOrder.findUnique({
-            where: { razorpayPaymentId: refundEntity.payment_id },
-            include: { refunds: true, store: { include: { vendor: true } } },
-          })
-        : null);
-
-  if (!storeOrder) {
-    logger.warn({ refundId: refundEntity.id, paymentId: refundEntity.payment_id }, "Refund webhook for unknown entity — ignoring");
-    return;
-  }
-
-  const existingRefund = storeOrder.refunds?.find((r) => r.razorpayRefundId === refundEntity.id);
-  if (existingRefund) {
-    logger.info({ refundId: refundEntity.id }, "Store order refund already recorded — ignoring");
-    return;
-  }
-
-  const refundAmount = refundEntity.amount / 100;
-  const currentTotalRefunded = storeOrder.refunds?.reduce((sum, r) => sum + Number(r.amount), 0) ?? 0;
-  const isFullyRefunded = currentTotalRefunded + refundAmount >= Number(storeOrder.totalAmount);
-
-  await vendorPaymentRepository.createOrderRefundTx(storeOrder.id, {
-    razorpayRefundId: refundEntity.id,
-    amount: refundAmount,
-    reason: refundEntity.notes?.reason || "Refund via gateway",
-    isFullyRefunded,
-  });
-}
-
-async function handleAccountWebhook(payload: RazorpayWebhookPayload): Promise<void> {
-  const accountEntity = (payload.payload as any).account?.entity;
-  if (!accountEntity?.id) return;
-
-  const isActivated = payload.event === "account.activated" || accountEntity.status === "activated";
-  const bankStatus = accountEntity.bank_account_verification?.status || undefined;
-  const routeStatus = accountEntity.products?.find((p: any) => p.product_name === "route")?.status || undefined;
-
-  await vendorPaymentRepository.updatePaymentAccountByRazorpayId(accountEntity.id, {
-    status: isActivated ? "ACTIVE" : "PENDING_VERIFICATION",
-    chargesEnabled: isActivated,
-    payoutsEnabled: isActivated,
-    ...(bankStatus ? { bankVerificationStatus: bankStatus } : {}),
-    ...(routeStatus ? { routeActivationStatus: routeStatus } : {}),
-  });
-}
-
-async function handleTransferWebhook(payload: RazorpayWebhookPayload): Promise<void> {
-  const transferEntity = payload.payload.transfer?.entity;
-  if (!transferEntity) return;
-
-  const eventName = payload.event;
-  const transferId = transferEntity.id;
-  const recipient = transferEntity.recipient;
-  const amount = transferEntity.amount / 100;
-  const storeOrderId = transferEntity.notes?.storeOrderId;
-
-  logger.info(
-    { transferId, recipient, amount, eventName, status: transferEntity.status },
-    "Razorpay Route transfer webhook received",
-  );
-
-  let order: any = null;
-  if (storeOrderId) {
-    order = await vendorPaymentRepository.findStoreOrderById(storeOrderId);
-  }
-
-  if (eventName === "transfer.failed") {
-    const reason = transferEntity.error?.description || transferEntity.error?.reason || "Transfer settlement failed";
-    const code = transferEntity.error?.code || null;
-    logger.error(
-      { transferId, recipient, amount, reason },
-      "Razorpay Route linked account transfer failed!",
-    );
-
-    await vendorPaymentRepository.recordOrUpdateStoreTransfer(transferId, {
-      orderId: storeOrderId,
-      vendorId: order?.store?.vendorId,
-      recipientAccountId: recipient,
-      amount,
-      currency: transferEntity.currency || "INR",
-      status: "FAILED",
-      failureCode: code,
-      failureReason: reason,
-      failedAt: new Date(),
-    });
-
-    if (order) {
-      const existingNotes = order.notes ? `${order.notes} | ` : "";
-      const bounceNote = `${existingNotes}[SETTLEMENT_ATTENTION: Transfer ${transferId} to ${recipient} failed: ${reason}]`;
-      await prisma.vendorStoreOrder.update({
-        where: { id: order.id },
-        data: { notes: bounceNote },
-      });
-
-      if (order.store?.vendor?.ownerUserId) {
-        await notificationService.notify({
-          userId: order.store.vendor.ownerUserId,
-          eventType: "LEAD_STATUS_UPDATED",
-          data: {
-            title: `Settlement Attention Required for Order #${order.orderNumber}`,
-            message: `Razorpay Route failed to settle ₹${amount} to your linked account: ${reason}. Please verify your bank details in Settings.`,
-          },
-          relatedEntityType: "store_order",
-          relatedEntityId: order.id,
-        });
-      }
-    }
-  } else if (eventName === "transfer.processed") {
-    logger.info(
-      { transferId, recipient, amount, storeOrderId },
-      "Razorpay Route linked account transfer successfully processed",
-    );
-
-    await vendorPaymentRepository.recordOrUpdateStoreTransfer(transferId, {
-      orderId: storeOrderId,
-      vendorId: order?.store?.vendorId,
-      recipientAccountId: recipient,
-      amount,
-      currency: transferEntity.currency || "INR",
-      status: "PROCESSED",
-      processedAt: new Date(),
-    });
-
-    const tr = transferEntity as any;
-    const settlementId = tr.recipient_settlement_id || tr.settlement_id;
-    if (settlementId) {
-      await vendorPaymentRepository.recordOrUpdateStoreSettlement(settlementId, {
-        vendorId: order?.store?.vendorId,
-        orderId: storeOrderId,
-        recipientAccountId: recipient,
-        amount,
-        status: "PROCESSED",
-        processedAt: new Date(),
-      });
-    }
-  } else if (eventName === "transfer.reversed") {
-    logger.warn(
-      { transferId, recipient, amount, storeOrderId },
-      "Razorpay Route linked account transfer reversed",
-    );
-
-    await vendorPaymentRepository.recordOrUpdateStoreTransfer(transferId, {
-      orderId: storeOrderId,
-      vendorId: order?.store?.vendorId,
-      recipientAccountId: recipient,
-      amount,
-      currency: transferEntity.currency || "INR",
-      status: "REVERSED",
-      reversedAt: new Date(),
-    });
-  }
-}
-
-

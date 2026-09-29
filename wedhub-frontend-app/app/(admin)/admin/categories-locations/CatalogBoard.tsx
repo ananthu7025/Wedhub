@@ -152,18 +152,6 @@ export function CatalogBoard({
     setCategories((prev) => prev.map((c) => (c.id === category.id ? { ...c, isFeaturedOnHomepage: result.data.isFeaturedOnHomepage } : c)));
   }
 
-  async function handleToggleStore(category: Category) {
-    setPendingId(category.id);
-    setError(null);
-    const result = await updateAdminCategory(category.id, { hasStoreEnabled: !category.hasStoreEnabled });
-    setPendingId(null);
-    if (!result.success) {
-      setError(formatApiError(result.error));
-      return;
-    }
-    setCategories((prev) => prev.map((c) => (c.id === category.id ? { ...c, hasStoreEnabled: result.data.hasStoreEnabled } : c)));
-  }
-
   async function handleToggleCatalog(category: Category) {
     setPendingId(category.id);
     setError(null);
@@ -409,7 +397,6 @@ export function CatalogBoard({
                   onSaveBasicInfo={(name, description, imageUrl) => handleSaveBasicInfo(selected, name, description, imageUrl)}
                   onToggle={() => handleToggleCategory(selected)}
                   onToggleFeatured={() => handleToggleFeatured(selected)}
-                  onToggleStore={() => handleToggleStore(selected)}
                   onToggleCatalog={() => handleToggleCatalog(selected)}
                   onSaveHomepageFields={(imageUrl, priceLabel) => handleSaveHomepageFields(selected, imageUrl, priceLabel)}
                   onAttributesChange={(attributes) => handleAttributesChange(selected.id, attributes)}
@@ -460,7 +447,6 @@ function CategoryDetailPanel({
   onSaveBasicInfo,
   onToggle,
   onToggleFeatured,
-  onToggleStore,
   onToggleCatalog,
   onSaveHomepageFields,
   onAttributesChange,
@@ -472,7 +458,6 @@ function CategoryDetailPanel({
   onSaveBasicInfo: (name: string, description: string, imageUrl?: string | null) => void;
   onToggle: () => void;
   onToggleFeatured: () => void;
-  onToggleStore: () => void;
   onToggleCatalog: () => void;
   onSaveHomepageFields: (imageUrl: string | null, startingPriceLabel: string) => void;
   onAttributesChange: (attributes: Category["attributes"]) => void;
@@ -729,23 +714,10 @@ function CategoryDetailPanel({
       {activeTab === "settings" && (
         <div className="rounded-xl border border-border bg-white p-5">
           <h3 className="text-sm font-bold">Settings</h3>
-          <p className="mt-0.5 text-xs text-text-grey">Store and other category settings</p>
+          <p className="mt-0.5 text-xs text-text-grey">Category settings</p>
 
           <label
             className="mt-4 flex items-center gap-2 text-xs text-text-grey cursor-pointer"
-            title="Enable/Disable Vendor Store feature for vendors in this category"
-          >
-            Store enabled
-            <ToggleSwitch
-              checked={Boolean(category.hasStoreEnabled)}
-              disabled={pending}
-              onChange={onToggleStore}
-              activeColorClassName="peer-checked:bg-emerald-600"
-            />
-          </label>
-
-          <label
-            className="mt-3 flex items-center gap-2 text-xs text-text-grey cursor-pointer"
             title="Enable/Disable the vendor catalog (items, variants, availability calendar) for vendors in this category"
           >
             Catalog enabled

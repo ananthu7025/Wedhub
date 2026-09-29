@@ -81,9 +81,9 @@ export function deleteTestUser(email: string): void {
  * Directly stamps email_verified_at via psql — substitutes for actually
  * clicking the emailed verification link, which no e2e test can do (real
  * mail delivery isn't part of this suite). Same "substitute for a step with
- * no scriptable UI" pattern as approveVendor()/activateVendorPaymentAccountForTest
- * below. Needed since requireVerifiedMiddleware (2026-09-16) now gates
- * POST /vendors and PUT /users/me/wedding-profile behind a verified email.
+ * no scriptable UI" pattern as approveVendor() below. Needed since
+ * requireVerifiedMiddleware (2026-09-16) now gates POST /vendors and
+ * PUT /users/me/wedding-profile behind a verified email.
  */
 export function verifyTestUserEmail(email: string): void {
   runPsql(`UPDATE users SET email_verified_at = now() WHERE email = '${email}';`);
@@ -141,52 +141,3 @@ export function deleteCategoryByName(name: string): void {
   runPsql(`DELETE FROM categories WHERE name = '${name}';`);
 }
 
-/**
- * Creates a store-enabled category (Category.hasStoreEnabled, see
- * prisma/schema.prisma) and assigns it to the given vendor as their primary
- * category, via psql. Vendor-store eligibility (checkVendorStoreEligibility,
- * wedhub-backend/src/modules/vendor-store/vendor-store.repository.ts) is
- * gated on the vendor having at least one active category with this flag
- * set — there is no self-service UI for a vendor to assign their own
- * category (that's an admin/onboarding-wizard concern orthogonal to the
- * store feature under test here), so this is done directly, the same way
- * approveVendor() substitutes for a not-yet-scripted admin-review UI.
- * Returns the created category's id for cleanup.
- */
-export function enableStoreForVendorCategory(vendorId: string, categoryName: string): string {
-  const slug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  const insertCategorySql =
-    `INSERT INTO categories (id, name, slug, has_store_enabled, is_active, created_at, updated_at) ` +
-    `VALUES (gen_random_uuid(), '${categoryName}', '${slug}', true, true, now(), now()) RETURNING id;`;
-  const out = execFileSync("psql", psqlArgs(["-t", "-A", "-c", insertCategorySql]), {
-    env: { ...process.env, PGPASSWORD: PG_PASSWORD },
-    stdio: "pipe",
-  })
-    .toString()
-    .trim();
-  const categoryId = out.split("\n")[0]!.trim();
-
-  runPsql(
-    `INSERT INTO vendor_categories (vendor_id, category_id, is_primary, created_at) VALUES ('${vendorId}', '${categoryId}', true, now());`,
-  );
-
-  return categoryId;
-}
-
-/**
- * Directly activates a vendor's VendorPaymentAccount row so the storefront's
- * canVendorAcceptOnlinePayments() gate (vendor-payment.service.ts) passes —
- * used AFTER the vendor has submitted the real bank-connect form through
- * the UI (which always lands the account in PENDING_VERIFICATION, since
- * real Razorpay KYC/penny-drop verification cannot complete instantly even
- * in test mode). This substitutes only for Razorpay's own KYC review time,
- * not for any part of WedHub's own UI — every other step of vendor
- * onboarding in the e2e spec goes through the real dashboard.
- */
-export function activateVendorPaymentAccountForTest(vendorId: string): void {
-  runPsql(
-    `UPDATE vendor_payment_accounts SET status = 'ACTIVE', charges_enabled = true, payouts_enabled = true, ` +
-      `bank_verification_status = 'VERIFIED', route_activation_status = 'activated', transfer_eligible_at = now() - interval '1 hour' ` +
-      `WHERE vendor_id = '${vendorId}';`,
-  );
-}

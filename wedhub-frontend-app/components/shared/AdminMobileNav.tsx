@@ -10,7 +10,7 @@ import type { NavSection } from "./AdminShell";
 /**
  * Mobile nav for (admin) routes — AdminShell's sidebar has ~8 sections and
  * 16 items with no natural "primary 4" the way VendorMobileNav's bottom
- * tabs has (Dashboard/Leads/Portfolio/Store), so this is a sticky header +
+ * tabs has (Dashboard/Leads/Portfolio), so this is a sticky header +
  * hamburger opening the exact same sectioned nav as a slide-over drawer,
  * rather than VendorMobileNav's bottom-tab-bar + separate "more" drawer.
  * Mirrors VendorMobileNav's drawer mechanics (ESC key, body scroll lock,

@@ -400,7 +400,6 @@ model Category {
   isFeaturedOnHomepage   Boolean @default(false) @map("is_featured_on_homepage")
   homepageSortOrder      Int     @default(0) @map("homepage_sort_order")
   startingPriceLabel     String? @map("starting_price_label")
-  hasStoreEnabled        Boolean @default(false) @map("has_store_enabled")
   // Gates the photography/videography "studio" back-office module
   // (client/project/shoot pipeline management) for vendors under this
   // category — restored 2026-09-16 after this column and the models below
@@ -413,9 +412,9 @@ model Category {
   // 20260916_restore_studio_module_schema.
   hasStudioModuleEnabled Boolean @default(false) @map("has_studio_module_enabled")
   // Gates the vendor catalog module (CatalogItem/CatalogItemVariant/etc.) —
-  // same on/off-per-category convention as hasStoreEnabled/
-  // hasStudioModuleEnabled above. Seeded true for Wedding Cars & Luxury
-  // Rentals, Bridal Wear, Groom Wear, Jewellery, Cakes & Desserts.
+  // same on/off-per-category convention as hasStudioModuleEnabled above.
+  // Seeded true for Wedding Cars & Luxury Rentals, Bridal Wear, Groom Wear,
+  // Jewellery, Cakes & Desserts.
   hasCatalogEnabled      Boolean @default(false) @map("has_catalog_enabled")
 
   parent                            Category?                          @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
@@ -433,7 +432,6 @@ model Category {
   @@index([parentId])
   @@index([isActive])
   @@index([isFeaturedOnHomepage])
-  @@index([hasStoreEnabled])
   @@index([hasStudioModuleEnabled])
   @@index([hasCatalogEnabled])
   @@map("categories")
@@ -620,10 +618,6 @@ model Vendor {
   featuredListings        FeaturedListing[]
   billingProfile          VendorBillingProfile?
   vendorInvoices          VendorInvoice[]
-  store                   VendorStore?
-  paymentAccount          VendorPaymentAccount?
-  storeTransfers          VendorStoreTransfer[]
-  storeSettlements        VendorStoreSettlement[]
   challengeEntries        ChallengeEntry[]
   studioClients           StudioClient[]
   studioProjects          StudioProject[]
@@ -785,10 +779,9 @@ enum CatalogAvailabilityStatus {
   BLOCKED
 }
 
-// Lightweight, purpose-built vendor catalog (items 1/2/3/10/12) — deliberately
-// separate from VendorStore (the existing e-commerce/checkout module): this
-// has no order/payment/settlement machinery, just browsable items + variants
-// + availability. Gated per-category by Category.hasCatalogEnabled.
+// Lightweight, purpose-built vendor catalog (items 1/2/3/10/12) — has no
+// order/payment/settlement machinery, just browsable items + variants +
+// availability. Gated per-category by Category.hasCatalogEnabled.
 model CatalogItem {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   vendorId       String   @map("vendor_id") @db.Uuid
@@ -873,8 +866,7 @@ model CatalogItemVariant {
   attributes    Json
   price         Decimal  @db.Decimal(10, 2)
   sku           String?
-  // Null = unlimited/not tracked — same informational-only convention as
-  // VendorStoreItem.stockQuantity (no transactional stock decrement).
+  // Null = unlimited/not tracked (no transactional stock decrement).
   stockQuantity Int?     @map("stock_quantity")
   isAvailable   Boolean  @default(true) @map("is_available")
   sortOrder     Int      @default(0) @map("sort_order")
@@ -947,11 +939,22 @@ model CatalogItemAvailability {
   @@map("catalog_item_availability")
 }
 
+// Vendor-selectable catalog page accent color — a closed preset set backed by
+// existing design tokens (see wedhub-frontend-app/app/(public)/catalog/[slug]/
+// catalog-theme.ts), never free-form hex.
+enum StoreAccentColor {
+  CRIMSON
+  EMERALD
+  NAVY
+  AMBER
+  PLUM
+  SLATE
+}
+
 // Vendor-editable public catalog page settings (banner, hero copy, accent
-// color) — one row per vendor, created lazily on first save. Mirrors
-// VendorStore's tagline/aboutStore/accentColor customization pattern so the
+// color) — one row per vendor, created lazily on first save. Backs the
 // "Customize Storefront" UI (previously localStorage-only, never actually
-// persisted) has a real backend to save to.
+// persisted) with a real backend to save to.
 model CatalogStoreSettings {
   id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   vendorId         String           @unique @map("vendor_id") @db.Uuid
@@ -1128,8 +1131,6 @@ enum MediaType {
   // owns the upload. Added 2026-09-04, closing out Arch Phase 17 (CMS &
   // SEO Backend)'s last remaining item.
   BLOG_COVER_IMAGE
-  // Arch Phase 29 — Product & rental item photos subject to moderation and worker WebP variants
-  STORE_ITEM_PHOTO
   // Admin-only, platform-owned image (no vendorId/userId) — a standalone
   // Gallery Inspiration photo with no owning vendor, tagged with a
   // GalleryCategory instead. Same shape as CATEGORY_IMAGE/
@@ -1159,8 +1160,8 @@ enum MediaType {
   // exists (userId set, communityPostId null at upload time). Same
   // presigned-upload-then-attach shape as REVIEW_PHOTO/CHALLENGE_ENTRY_PHOTO.
   COMMUNITY_POST_PHOTO
-  // Vendor-owned catalog item photo (CatalogItemMedia), same
-  // multi-image-gallery shape as STORE_ITEM_PHOTO.
+  // Vendor-owned catalog item photo (CatalogItemMedia), a multi-image
+  // gallery shape.
   CATALOG_ITEM_PHOTO
   // Item 6 — vendor-owned rule book document (Vendor.ruleBookMediaId), the
   // first non-image/video MediaType. A PDF, not a photo/video, so
@@ -1241,7 +1242,6 @@ model Media {
   featuredMedia                FeaturedMedia?
   weddingWebsiteCoverFor       WeddingWebsite?            @relation("WeddingWebsiteCover")
   weddingWebsiteCouplePhotoFor WeddingWebsite?            @relation("WeddingWebsiteCouplePhoto")
-  storeItemMedia               VendorStoreItemMedia[]
   catalogItemMedia             CatalogItemMedia[]         @relation("CatalogItemMedia")
   packageImageFor              Package[]                  @relation("PackageImage")
   challengeEntryCoverFor       ChallengeEntry?            @relation("ChallengeEntryCoverImage")
@@ -2808,7 +2808,6 @@ model VendorInvoice {
   items       VendorInvoiceItem[]
   payments    VendorInvoicePayment[]
   activities  VendorInvoiceActivity[]
-  storeOrder  VendorStoreOrder?
   bookings    VendorBooking[]
   quotationId String?                 @map("quotation_id") @db.Uuid
   quotation   VendorQuotation?        @relation(fields: [quotationId], references: [id], onDelete: SetNull)
@@ -2875,343 +2874,6 @@ model VendorInvoiceActivity {
 
   @@index([invoiceId])
   @@map("vendor_invoice_activities")
-}
-
-// ---------------------------------------------------------------------------
-// Stage 11 / Arch Phase 29 — Vendor Mini-Store & Direct Commerce Engine
-// ---------------------------------------------------------------------------
-
-enum StoreItemType {
-  PHYSICAL_PRODUCT
-  RENTAL_ITEM
-  DIGITAL_DOWNLOAD
-  SERVICE_TOKEN
-}
-
-enum StoreOrderStatus {
-  PENDING_CONFIRMATION
-  CONFIRMED
-  PROCESSING
-  SHIPPED_OR_READY
-  COMPLETED
-  CANCELLED
-}
-
-enum StorePaymentStatus {
-  CREATED
-  PENDING
-  AUTHORIZED
-  CAPTURED
-  FAILED
-  REFUNDED
-  PARTIALLY_REFUNDED
-  CANCELLED
-}
-
-enum VendorPaymentAccountStatus {
-  NOT_CONNECTED
-  ONBOARDING
-  PENDING_VERIFICATION
-  ACTIVE
-  RESTRICTED
-  DISABLED
-}
-
-model VendorPaymentAccount {
-  id                            String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId                      String                     @unique @map("vendor_id") @db.Uuid
-  provider                      String                     @default("razorpay")
-  razorpayAccountId             String?                    @unique @map("razorpay_account_id") // acc_xxxxxxxx
-  status                        VendorPaymentAccountStatus @default(NOT_CONNECTED)
-  legalBusinessName             String?                    @map("legal_business_name")
-  businessType                  String?                    @map("business_type")
-  contactEmail                  String?                    @map("contact_email")
-  contactPhone                  String?                    @map("contact_phone")
-  bankName                      String?                    @map("bank_name")
-  accountNumberMasked           String?                    @map("account_number_masked")
-  ifscCode                      String?                    @map("ifsc_code")
-  chargesEnabled                Boolean                    @default(false) @map("charges_enabled")
-  payoutsEnabled                Boolean                    @default(false) @map("payouts_enabled")
-  razorpayStakeholderId         String?                    @unique @map("razorpay_stakeholder_id")
-  razorpayRouteProductId        String?                    @unique @map("razorpay_route_product_id")
-  razorpayAccountStatus         String?                    @map("razorpay_account_status") // created, suspended, activated
-  bankVerificationStatus        String                     @default("UNKNOWN") @map("bank_verification_status") // UNKNOWN, PENDING, VERIFIED, FAILED
-  bankVerificationFailureReason String?                    @map("bank_verification_failure_reason")
-  routeActivationStatus         String?                    @map("route_activation_status") // requested, needs_clarification, under_review, activated, suspended
-  routeRequirements             Json?                      @map("route_requirements")
-  linkedAccountCreatedAt        DateTime?                  @map("linked_account_created_at")
-  transferEligibleAt            DateTime?                  @map("transfer_eligible_at")
-  lastProviderSyncAt            DateTime?                  @map("last_provider_sync_at")
-  onboardingUrl                 String?                    @map("onboarding_url") @db.Text
-  onboardingUrlExpiresAt        DateTime?                  @map("onboarding_url_expires_at")
-  kycDetails                    Json?                      @map("kyc_details")
-  createdAt                     DateTime                   @default(now()) @map("created_at")
-  updatedAt                     DateTime                   @updatedAt @map("updated_at")
-
-  vendor Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  orders VendorStoreOrder[]
-
-  @@index([status])
-  @@index([razorpayStakeholderId])
-  @@index([razorpayRouteProductId])
-  @@map("vendor_payment_accounts")
-}
-
-// Vendor-selectable storefront accent color — a closed preset set backed by
-// existing design tokens (see wedhub-frontend-app/components/vendor-store/
-// store-theme.ts), never free-form hex, mirroring WeddingWebsiteTemplate's
-// enum-plus-THEMES-map pattern.
-enum StoreAccentColor {
-  CRIMSON
-  EMERALD
-  NAVY
-  AMBER
-  PLUM
-  SLATE
-}
-
-model VendorStore {
-  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId           String           @unique @map("vendor_id") @db.Uuid
-  storeName          String           @map("store_name")
-  slug               String           @unique @map("slug")
-  tagline            String?          @map("tagline")
-  aboutStore         String?          @map("about_store") @db.Text
-  isEnabled          Boolean          @default(true) @map("is_enabled")
-  currency           String           @default("INR") @map("currency")
-  whatsappOrderPhone String?          @map("whatsapp_order_phone")
-  shippingPolicy     String?          @map("shipping_policy") @db.Text
-  returnPolicy       String?          @map("return_policy") @db.Text
-  minOrderValue      Decimal?         @map("min_order_value") @db.Decimal(10, 2)
-  nextOrderNumber    Int              @default(1) @map("next_order_number")
-  accentColor        StoreAccentColor @default(CRIMSON) @map("accent_color")
-  createdAt          DateTime         @default(now()) @map("created_at")
-  updatedAt          DateTime         @updatedAt @map("updated_at")
-
-  vendor Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  items  VendorStoreItem[]
-  orders VendorStoreOrder[]
-
-  @@map("vendor_stores")
-}
-
-model VendorStoreItem {
-  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  storeId          String        @map("store_id") @db.Uuid
-  title            String        @map("title")
-  slug             String        @map("slug")
-  description      String?       @map("description") @db.Text
-  itemType         StoreItemType @default(PHYSICAL_PRODUCT) @map("item_type")
-  price            Decimal       @map("price") @db.Decimal(10, 2)
-  compareAtPrice   Decimal?      @map("compare_at_price") @db.Decimal(10, 2)
-  gstRate          Int           @default(18) @map("gst_rate")
-  minOrderQuantity Int           @default(1) @map("min_order_quantity")
-  stockQuantity    Int?          @map("stock_quantity")
-  isAvailable      Boolean       @default(true) @map("is_available")
-  tags             String[]      @default([]) @map("tags")
-  sortOrder        Int           @default(0) @map("sort_order")
-  createdAt        DateTime      @default(now()) @map("created_at")
-  updatedAt        DateTime      @updatedAt @map("updated_at")
-
-  store      VendorStore            @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  media      VendorStoreItemMedia[]
-  orderItems VendorStoreOrderItem[]
-
-  @@unique([storeId, slug])
-  @@index([storeId, isAvailable])
-  @@map("vendor_store_items")
-}
-
-model VendorStoreItemMedia {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  itemId    String   @map("item_id") @db.Uuid
-  mediaId   String   @map("media_id") @db.Uuid
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  item  VendorStoreItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  media Media           @relation(fields: [mediaId], references: [id], onDelete: Cascade)
-
-  @@unique([itemId, mediaId])
-  @@index([itemId, sortOrder])
-  @@map("vendor_store_item_media")
-}
-
-model VendorStoreOrder {
-  id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderNumber            String             @unique @map("order_number")
-  storeId                String             @map("store_id") @db.Uuid
-  userId                 String?            @map("user_id") @db.Uuid
-  customerName           String             @map("customer_name")
-  customerPhone          String             @map("customer_phone")
-  customerEmail          String?            @map("customer_email")
-  shippingAddress        String?            @map("shipping_address") @db.Text
-  city                   String?            @map("city")
-  customerState          String?            @map("customer_state")
-  pincode                String?            @map("pincode")
-  eventDate              DateTime?          @map("event_date")
-  subtotal               Decimal            @default(0) @map("subtotal") @db.Decimal(10, 2)
-  discount               Decimal            @default(0) @map("discount") @db.Decimal(10, 2)
-  gstAmount              Decimal            @default(0) @map("gst_amount") @db.Decimal(10, 2)
-  totalAmount            Decimal            @map("total_amount") @db.Decimal(10, 2)
-  currency               String             @default("INR") @map("currency")
-  status                 StoreOrderStatus   @default(PENDING_CONFIRMATION) @map("status")
-  orderChannel           String             @default("WHATSAPP") @map("order_channel")
-  paymentStatus          StorePaymentStatus @default(PENDING) @map("payment_status")
-  paymentProvider        String             @default("razorpay") @map("payment_provider")
-  razorpayOrderId        String?            @unique @map("razorpay_order_id")
-  razorpayPaymentId      String?            @unique @map("razorpay_payment_id")
-  vendorPaymentAccountId String?            @map("vendor_payment_account_id") @db.Uuid
-  platformCommission     Decimal            @default(0) @map("platform_commission") @db.Decimal(10, 2)
-  gatewayFee             Decimal            @default(0) @map("gateway_fee") @db.Decimal(10, 2)
-  estimatedGatewayFee    Decimal            @default(0) @map("estimated_gateway_fee") @db.Decimal(10, 2)
-  actualGatewayFee       Decimal?           @map("actual_gateway_fee") @db.Decimal(10, 2)
-  vendorSettlementAmount Decimal?           @map("vendor_settlement_amount") @db.Decimal(10, 2)
-  paidAt                 DateTime?          @map("paid_at")
-  notes                  String?            @map("notes") @db.Text
-  invoiceId              String?            @unique @map("invoice_id") @db.Uuid
-  createdAt              DateTime           @default(now()) @map("created_at")
-  updatedAt              DateTime           @updatedAt @map("updated_at")
-
-  store                VendorStore                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  invoice              VendorInvoice?              @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  vendorPaymentAccount VendorPaymentAccount?       @relation(fields: [vendorPaymentAccountId], references: [id], onDelete: SetNull)
-  items                VendorStoreOrderItem[]
-  refunds              VendorStoreOrderRefund[]
-  transfers            VendorStoreTransfer[]
-  paymentAttempts      VendorStorePaymentAttempt[]
-  settlements          VendorStoreSettlement[]
-
-  @@index([storeId, status])
-  @@index([customerPhone])
-  @@index([paymentStatus])
-  @@map("vendor_store_orders")
-}
-
-model VendorStoreOrderItem {
-  id                 String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderId            String  @map("order_id") @db.Uuid
-  itemId             String? @map("item_id") @db.Uuid
-  itemTitle          String  @map("item_title")
-  unitPrice          Decimal @map("unit_price") @db.Decimal(10, 2)
-  gstRate            Int     @default(18) @map("gst_rate")
-  quantity           Int     @map("quantity")
-  totalPrice         Decimal @map("total_price") @db.Decimal(10, 2)
-  customizationNotes String? @map("customization_notes")
-
-  order VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  item  VendorStoreItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
-
-  @@map("vendor_store_order_items")
-}
-
-model VendorStoreOrderRefund {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderId          String   @map("order_id") @db.Uuid
-  razorpayRefundId String?  @unique @map("razorpay_refund_id")
-  amount           Decimal  @db.Decimal(10, 2)
-  currency         String   @default("INR")
-  status           String   @default("PROCESSED")
-  reason           String?  @map("reason")
-  createdAt        DateTime @default(now()) @map("created_at")
-
-  order VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@index([orderId])
-  @@map("vendor_store_order_refunds")
-}
-
-enum StoreTransferStatus {
-  CREATED
-  PENDING
-  PROCESSED
-  FAILED
-  REVERSED
-  PARTIALLY_REVERSED
-}
-
-model VendorStoreTransfer {
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderId            String              @map("order_id") @db.Uuid
-  vendorId           String              @map("vendor_id") @db.Uuid
-  provider           String              @default("razorpay")
-  providerTransferId String?             @unique @map("provider_transfer_id") // trf_xxxxxxxx
-  recipientAccountId String              @map("recipient_account_id") // acc_xxxxxxxx
-  paymentAccountId   String?             @map("payment_account_id") @db.Uuid
-  razorpayOrderId    String?             @map("razorpay_order_id")
-  razorpayPaymentId  String?             @map("razorpay_payment_id")
-  amount             Decimal             @db.Decimal(10, 2)
-  currency           String              @default("INR")
-  status             StoreTransferStatus @default(CREATED)
-  failureCode        String?             @map("failure_code")
-  failureReason      String?             @map("failure_reason") @db.Text
-  processedAt        DateTime?           @map("processed_at")
-  failedAt           DateTime?           @map("failed_at")
-  reversedAt         DateTime?           @map("reversed_at")
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
-
-  order  VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  vendor Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-
-  @@index([orderId])
-  @@index([vendorId])
-  @@index([paymentAccountId])
-  @@index([razorpayOrderId])
-  @@index([razorpayPaymentId])
-  @@index([status])
-  @@map("vendor_store_transfers")
-}
-
-model VendorStorePaymentAttempt {
-  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderId           String             @map("order_id") @db.Uuid
-  attemptNumber     Int                @default(1) @map("attempt_number")
-  razorpayOrderId   String?            @map("razorpay_order_id")
-  razorpayPaymentId String?            @unique @map("razorpay_payment_id")
-  amount            Decimal            @db.Decimal(10, 2)
-  currency          String             @default("INR")
-  status            StorePaymentStatus @default(PENDING)
-  failureCode       String?            @map("failure_code")
-  failureReason     String?            @map("failure_reason") @db.Text
-  createdAt         DateTime           @default(now()) @map("created_at")
-  authorizedAt      DateTime?          @map("authorized_at")
-  capturedAt        DateTime?          @map("captured_at")
-  failedAt          DateTime?          @map("failed_at")
-
-  order VendorStoreOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@index([orderId])
-  @@index([razorpayOrderId])
-  @@index([razorpayPaymentId])
-  @@index([status])
-  @@map("vendor_store_payment_attempts")
-}
-
-model VendorStoreSettlement {
-  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId             String    @map("vendor_id") @db.Uuid
-  orderId              String?   @map("order_id") @db.Uuid
-  providerSettlementId String    @unique @map("provider_settlement_id") // setl_xxxxxxxx
-  recipientAccountId   String    @map("recipient_account_id") // acc_xxxxxxxx
-  amount               Decimal   @db.Decimal(10, 2)
-  fees                 Decimal   @default(0) @db.Decimal(10, 2)
-  tax                  Decimal   @default(0) @db.Decimal(10, 2)
-  utr                  String?   @map("utr")
-  status               String    @default("PROCESSED") // PENDING, PROCESSED, RECONCILED, FAILED
-  processedAt          DateTime? @map("processed_at")
-  reconciledAt         DateTime? @map("reconciled_at")
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
-
-  vendor Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  order  VendorStoreOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
-
-  @@index([vendorId])
-  @@index([orderId])
-  @@index([utr])
-  @@index([status])
-  @@map("vendor_store_settlements")
 }
 
 // ---------------------------------------------------------------------------

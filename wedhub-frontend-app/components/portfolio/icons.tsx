@@ -133,16 +133,6 @@ export function FacebookIcon({ className }: IconProps) {
   );
 }
 
-export function StoreIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 9.5V19a1 1 0 001 1h14a1 1 0 001-1V9.5" />
-      <path d="M3 5h18l1.2 4.5a2.3 2.3 0 01-4.4 1.2 2.3 2.3 0 01-4.4 0 2.3 2.3 0 01-4.4 0 2.3 2.3 0 01-4.4-1.2z" strokeLinejoin="round" />
-      <path d="M9.5 20v-4.5a1 1 0 011-1h3a1 1 0 011 1V20" />
-    </svg>
-  );
-}
-
 export function ExpandIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
