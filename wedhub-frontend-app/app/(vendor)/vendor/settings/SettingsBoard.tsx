@@ -989,7 +989,7 @@ function ProfileVisibilitySection({ vendor }: { vendor: VendorSelf }) {
 
         <div className="flex flex-wrap items-center gap-3">
           <SectionStatus saving={saving} saved={saved} error={null} />
-          {vendor.slug && vendor.status === "APPROVED" && (
+          {vendor.slug && (
             <a
               href={`/vendors/${vendor.slug}`}
               target="_blank"

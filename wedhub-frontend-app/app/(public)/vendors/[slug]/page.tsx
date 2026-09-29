@@ -17,7 +17,14 @@ import { MapPinIcon, StarIcon, CheckIcon } from "@/components/portfolio/icons";
 import { StarRating } from "@/components/ui/StarRating";
 import { pickPortfolioQuote } from "@/lib/utils/portfolio-quotes";
 import { CuratedVendorShelf } from "../CuratedVendorShelf";
-import { getVendorAlbums, getVendorBySlug, getVendorReviews, searchVendors } from "@/lib/api/catalog";
+import {
+  getVendorAlbums,
+  getVendorAlbumsAsOwner,
+  getVendorBySlug,
+  getVendorBySlugAsOwner,
+  getVendorReviews,
+  searchVendors,
+} from "@/lib/api/catalog";
 import { getPublicMediaUrl, isPreOptimizedMediaUrl } from "@/lib/media/url";
 import { formatResponseTimeBucket } from "@/lib/utils/response-time";
 import { ApiRequestError } from "@/lib/api/types";
@@ -31,12 +38,30 @@ interface VendorPageProps {
   params: Promise<{ slug: string }>;
 }
 
+// The cached, unauthenticated getVendorBySlug() 404s for any non-APPROVED
+// vendor. Before treating that as a real not-found, retry with the
+// uncached, session-carrying variant so a logged-in vendor can preview
+// their OWN not-yet-approved page (same fallback as
+// /portfolio/[slug]/page.tsx) — this page is where both the dashboard's
+// "View Public Profile" link and Settings' "Preview my public profile"
+// link actually point.
 async function loadVendor(slug: string) {
   try {
     const { data } = await getVendorBySlug(slug);
     return data;
   } catch (error) {
     if (error instanceof ApiRequestError && error.status === 404) {
+      const session = await getOptionalSession();
+      if (session) {
+        try {
+          const { data } = await getVendorBySlugAsOwner(slug);
+          return data;
+        } catch (ownerError) {
+          if (!(ownerError instanceof ApiRequestError && ownerError.status === 404)) {
+            throw ownerError;
+          }
+        }
+      }
       notFound();
     }
     throw error;
@@ -80,7 +105,10 @@ export async function generateMetadata({ params }: VendorPageProps): Promise<Met
       description,
       images: ogImage ? [ogImage] : undefined,
     },
-    robots: { index: true, follow: true },
+    // A preview response only ever reaches the owner's own logged-in
+    // request (see loadVendor's owner fallback) — never indexable, since
+    // the page isn't really live yet.
+    robots: vendor.isOwnerPreview ? { index: false, follow: false } : { index: true, follow: true },
   };
 }
 
@@ -98,7 +126,7 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
   const primaryCategory = vendor.categories.find((c) => c.isPrimary)?.category ?? vendor.categories[0]?.category;
 
   const [{ data: albums }, reviewsResult, session, similarResult] = await Promise.all([
-    getVendorAlbums(slug),
+    (vendor.isOwnerPreview ? getVendorAlbumsAsOwner(slug) : getVendorAlbums(slug)).catch(() => ({ data: [] })),
     // limit=50: high enough that the fetched page equals the vendor's real
     // total for the overwhelming majority of vendors on this marketplace
     // today (rating distribution below only renders when it genuinely
@@ -210,25 +238,36 @@ export default async function VendorProfilePage({ params }: VendorPageProps) {
 
   return (
     <>
-      <JsonLd data={breadcrumbListJsonLd(breadcrumbItems)} />
-      <JsonLd
-        data={vendorLocalBusinessJsonLd({
-          businessName: vendor.businessName,
-          slug: vendor.slug,
-          description: vendor.profile?.description ?? vendor.profile?.shortDescription,
-          categoryName: primaryCategory?.name,
-          address: vendor.profile?.address,
-          cityName: vendor.city?.name,
-          latitude: vendor.profile?.latitude,
-          longitude: vendor.profile?.longitude,
-          imageUrl: heroImageUrl,
-          priceRangeMin: vendor.profile?.priceRangeMin,
-          priceRangeMax: vendor.profile?.priceRangeMax,
-          currency: vendor.profile?.currency,
-          averageRating: vendor.averageRating,
-          reviewCount: vendor.reviewCount,
-        })}
-      />
+      {/* Never emit structured data for a not-yet-live page an owner is
+          previewing — this page isn't real search-result content yet. */}
+      {!vendor.isOwnerPreview && (
+        <>
+          <JsonLd data={breadcrumbListJsonLd(breadcrumbItems)} />
+          <JsonLd
+            data={vendorLocalBusinessJsonLd({
+              businessName: vendor.businessName,
+              slug: vendor.slug,
+              description: vendor.profile?.description ?? vendor.profile?.shortDescription,
+              categoryName: primaryCategory?.name,
+              address: vendor.profile?.address,
+              cityName: vendor.city?.name,
+              latitude: vendor.profile?.latitude,
+              longitude: vendor.profile?.longitude,
+              imageUrl: heroImageUrl,
+              priceRangeMin: vendor.profile?.priceRangeMin,
+              priceRangeMax: vendor.profile?.priceRangeMax,
+              currency: vendor.profile?.currency,
+              averageRating: vendor.averageRating,
+              reviewCount: vendor.reviewCount,
+            })}
+          />
+        </>
+      )}
+      {vendor.isOwnerPreview && (
+        <div className="sticky top-0 z-50 bg-amber px-4 py-2.5 text-center text-sm font-bold text-jet-black shadow-sm">
+          Preview mode — this page isn&apos;t live yet. Only you can see it this way.
+        </div>
+      )}
       <PublicTopbar />
 
       <div className="bg-surface-page">

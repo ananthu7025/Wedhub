@@ -244,6 +244,11 @@ export interface VendorDetail {
   // (badge, search-ranking boost) — see
   // PLAN-2026-09-22-premium-feature-buildout.md §3a.
   isPremiumEligible: boolean;
+  // True only when this response was served via the owner-preview bypass
+  // (status !== APPROVED, but the requesting user owns this vendor) — lets
+  // the page show a "this is a preview, not live yet" banner. Always false
+  // for the real public view.
+  isOwnerPreview: boolean;
 }
 
 // ---- GET /vendors/:slug/portfolio-access ----

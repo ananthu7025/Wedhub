@@ -88,15 +88,25 @@ export async function updateAlbumAsAdmin(req: Request, res: Response): Promise<v
 }
 
 export async function listPublicAlbums(req: Request, res: Response): Promise<void> {
-  const vendor = await vendorRepository.findApprovedVendorBySlug(req.params.slug as string);
-  if (!vendor) {
+  const slug = req.params.slug as string;
+  const approvedVendor = await vendorRepository.findApprovedVendorBySlug(slug);
+  // Owner self-preview: same bypass as vendor.controller.ts's
+  // getPublicVendor, so a vendor previewing their own not-yet-approved page
+  // sees their real portfolio photos instead of a silently-empty gallery.
+  const vendor =
+    approvedVendor ??
+    (req.user ? await vendorRepository.findVendorBySlug(slug) : null);
+  if (!vendor || (vendor.status !== "APPROVED" && vendor.ownerUserId !== req.user?.id)) {
     throw new NotFoundError("Vendor not found");
   }
   const albums = await albumService.listPublicAlbums(vendor.id);
   // Arch Phase 18 Stage A — "Portfolio view" (product.md §46). Fires
   // whenever a visitor loads a vendor's public album list, regardless of
   // referrer, mirroring vendor_profile_viewed's own posture in
-  // vendor.controller.ts. Best-effort, never blocks the response.
-  void logAnalyticsEvent({ userId: req.user?.id, eventType: "portfolio_viewed", vendorId: vendor.id });
+  // vendor.controller.ts. Best-effort, never blocks the response. Skipped
+  // for an owner previewing their own unapproved page — not a real view.
+  if (vendor.status === "APPROVED") {
+    void logAnalyticsEvent({ userId: req.user?.id, eventType: "portfolio_viewed", vendorId: vendor.id });
+  }
   res.json(successResponse(albums));
 }

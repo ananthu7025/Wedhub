@@ -145,15 +145,15 @@ export async function VendorShell({
   ]);
 
   const resolvedSlug = vendorSlug ?? vendorResult?.data.slug;
-  // A DRAFT/PENDING/REJECTED vendor's public /portfolio/[slug] page already
-  // 404s (the backend's public GET /vendors/:slug only ever returns
-  // APPROVED vendors) — showing a "share your portfolio" button before
-  // that point just hands out a broken link. Also requires
-  // portfolio_page_access on the vendor's current plan (§2d of
-  // PLAN-2026-09-22-premium-feature-buildout.md) — sharing a link to a page
-  // that now shows "unavailable" would be a broken experience.
-  const isApproved = vendorResult?.data.status === "APPROVED";
-  const canSharePortfolio = isApproved && Boolean(planResult?.data.features.portfolio_page_access);
+  // A DRAFT/PENDING/REJECTED vendor's public /portfolio/[slug] page no
+  // longer 404s for its own owner — GET /vendors/:slug and
+  // /portfolio-access both have an owner-preview bypass (vendor.controller.ts)
+  // that serves the page (flagged isOwnerPreview) to the vendor who owns it
+  // even before approval, so they can check how it looks and share the QR/
+  // link ahead of time. Still requires portfolio_page_access on the current
+  // plan (§2d of PLAN-2026-09-22-premium-feature-buildout.md) — a plan
+  // without that feature shows "unavailable" regardless of approval status.
+  const canSharePortfolio = Boolean(planResult?.data.features.portfolio_page_access);
   const hasCatalogEligibleCategory = Boolean(
     vendorResult?.data.categories.some((vc) => vc.category.hasCatalogEnabled),
   );

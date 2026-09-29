@@ -79,6 +79,17 @@ export function getVendorBySlug(slug: string) {
   return apiFetch<VendorDetail>(`/vendors/${slug}`, { skipAuth: true, public: true, next: { revalidate: 300 } });
 }
 
+// Owner self-preview fallback for getVendorBySlug — only ever called after
+// the cached public call above 404s, and only when the visitor is logged in
+// (see /portfolio/[slug]/page.tsx). Deliberately NOT cached (no `next`) and
+// NOT skipAuth: this sends the visitor's own session so the backend's owner
+// bypass (vendor.controller.ts's getPublicVendor) can tell "this is my own
+// unapproved vendor" apart from a real stranger — caching this response
+// would risk serving one vendor's preview to a different visitor.
+export function getVendorBySlugAsOwner(slug: string) {
+  return apiFetch<VendorDetail>(`/vendors/${slug}`, { cache: "no-store" });
+}
+
 // Backs /portfolio/[slug]'s frontend-only plan gate — see
 // PLAN-2026-09-22-premium-feature-buildout.md §2. Not cached as long as the
 // vendor payload itself (a plan can change any time an admin/vendor acts,
@@ -87,8 +98,20 @@ export function getPortfolioAccess(slug: string) {
   return apiFetch<PortfolioPageAccess>(`/vendors/${slug}/portfolio-access`, { skipAuth: true, public: true });
 }
 
+// Owner self-preview fallback for getPortfolioAccess, same reasoning as
+// getVendorBySlugAsOwner above — sends the session, never cached.
+export function getPortfolioAccessAsOwner(slug: string) {
+  return apiFetch<PortfolioPageAccess>(`/vendors/${slug}/portfolio-access`, { cache: "no-store" });
+}
+
 export function getVendorAlbums(slug: string) {
   return apiFetch<VendorAlbum[]>(`/vendors/${slug}/albums`, { skipAuth: true, public: true, next: { revalidate: 300 } });
+}
+
+// Owner self-preview fallback for getVendorAlbums, same reasoning as
+// getVendorBySlugAsOwner above — sends the session, never cached.
+export function getVendorAlbumsAsOwner(slug: string) {
+  return apiFetch<VendorAlbum[]>(`/vendors/${slug}/albums`, { cache: "no-store" });
 }
 
 export function getVendorReviews(vendorId: string, page = 1, limit = 20) {
