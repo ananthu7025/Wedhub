@@ -40,26 +40,10 @@ const navLinks = [
     icon: <><path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z" /><circle cx="6.5" cy="6.5" r="1.5" /></>,
   },
   {
-    href: "/vendor/store",
-    label: "Store",
-    // Only shown when hasStoreEligibleCategory AND store_access (plan-gated,
-    // see VendorShell's filter below) are both true. Kept in this array
-    // (not removed) so the filter is a single, obvious line rather than a
-    // second, easy-to-forget list.
-    icon: (
-      <>
-        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-        <line x1="3" y1="6" x2="21" y2="6" />
-        <path d="M16 10a4 4 0 01-8 0" />
-      </>
-    ),
-  },
-  {
     href: "/vendor/catalog",
     label: "Catalog",
-    // Only shown when hasCatalogEligibleCategory is true (see VendorShell's
-    // filter below) — same category-gated pattern as Store above, but
-    // unmetered by plan (no catalog_access feature flag exists).
+    // Only shown when hasCatalogEligibleCategory AND catalog_access
+    // (plan-gated, see VendorShell's filter below) are both true.
     icon: (
       <>
         <path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z" />
@@ -86,8 +70,7 @@ const navLinks = [
     // Plan-gated (invoicing_access) — see VendorShell's filter below.
     // Confirmed 2026-09-22: both Quotations and Invoicing are Premium-only,
     // so unlike Leads/Analytics (which keep a free baseline), this whole
-    // nav item is hidden for a plan without invoicing_access, same
-    // treatment as Store.
+    // nav item is hidden for a plan without invoicing_access.
     icon: (
       <>
         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -156,7 +139,7 @@ export async function VendorShell({
       .catch(() => 0),
     // Always fetched now (previously only as a slug fallback) — status and
     // categories are needed to gate the share-portfolio button and the
-    // Store nav link below, not just to resolve a slug.
+    // Catalog nav link below, not just to resolve a slug.
     getMyVendor().catch(() => undefined),
     getMyEffectivePlan().catch(() => undefined),
   ]);
@@ -171,25 +154,17 @@ export async function VendorShell({
   // that now shows "unavailable" would be a broken experience.
   const isApproved = vendorResult?.data.status === "APPROVED";
   const canSharePortfolio = isApproved && Boolean(planResult?.data.features.portfolio_page_access);
-  // Mirrors the backend's own store-eligibility check (vendor-store.service.ts:
-  // category.hasStoreEnabled && category.isActive on any of the vendor's
-  // categories) — same principle as the public portfolio page's Online
-  // Store link.
-  const hasStoreEligibleCategory = Boolean(
-    vendorResult?.data.categories.some((vc) => vc.category.hasStoreEnabled),
-  );
   const hasCatalogEligibleCategory = Boolean(
     vendorResult?.data.categories.some((vc) => vc.category.hasCatalogEnabled),
   );
-  // Store and Quotes & Invoices are hidden entirely for a plan without their
-  // feature, rather than shown-and-gated-on-click — there is nothing usable
-  // behind either on a plan that lacks the feature (confirmed 2026-09-22
-  // with the user, revised same day to also cover Quotations — previously
-  // Quotations stayed free while only Invoicing was gated inside the page;
-  // now both are invoicing_access-gated and the whole nav item is hidden,
-  // same treatment as Store). Leads/Analytics keep a free baseline and stay
-  // visible with only their Premium-specific parts gated inline.
-  const hasStoreAccess = Boolean(planResult?.data.features.store_access);
+  // Quotes & Invoices is hidden entirely for a plan without invoicing_access,
+  // rather than shown-and-gated-on-click — there is nothing usable behind it
+  // on a plan that lacks the feature (confirmed 2026-09-22 with the user,
+  // revised same day to also cover Quotations — previously Quotations stayed
+  // free while only Invoicing was gated inside the page; now both are
+  // invoicing_access-gated and the whole nav item is hidden). Leads/Analytics
+  // keep a free baseline and stay visible with only their Premium-specific
+  // parts gated inline.
   const hasInvoicingAccess = Boolean(planResult?.data.features.invoicing_access);
   const hasCatalogAccess = Boolean(planResult?.data.features.catalog_access);
   // Item 9: surfaced sitewide (not just on the dashboard body) so vendors
@@ -199,7 +174,6 @@ export async function VendorShell({
   const profileCompleteness = vendorResult?.data.profileCompleteness;
   const showCompletenessWidget = typeof profileCompleteness === "number" && profileCompleteness < 100;
   const visibleNavLinks = navLinks.filter((link) => {
-    if (link.href === "/vendor/store") return hasStoreEligibleCategory && hasStoreAccess;
     if (link.href === "/vendor/catalog") return hasCatalogEligibleCategory && hasCatalogAccess;
     if (link.href === "/vendor/finances") return hasInvoicingAccess;
     return true;
@@ -360,8 +334,6 @@ export async function VendorShell({
         vendorSlug={resolvedSlug}
         unreadCount={unreadCount}
         unreadMessageCount={unreadMessageCount}
-        hasStoreEligibleCategory={hasStoreEligibleCategory}
-        hasStoreAccess={hasStoreAccess}
         hasCatalogEligibleCategory={hasCatalogEligibleCategory}
         hasCatalogAccess={hasCatalogAccess}
         hasInvoicingAccess={hasInvoicingAccess}

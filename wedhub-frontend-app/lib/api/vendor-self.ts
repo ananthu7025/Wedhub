@@ -24,9 +24,9 @@ export function getMyAnalytics() {
   return apiFetch<VendorAnalytics>("/vendors/me/analytics");
 }
 
-// Backs page-level upgrade prompts (e.g. /vendor/store, /vendor/invoices) —
-// server-merged against the plan's real defaults, so this never needs the
-// client-side "?? fallback" duplication GET /plans data requires.
+// Backs page-level upgrade prompts (e.g. /vendor/invoices) — server-merged
+// against the plan's real defaults, so this never needs the client-side
+// "?? fallback" duplication GET /plans data requires.
 export function getMyEffectivePlan() {
   return apiFetch<EffectivePlan>("/vendors/me/effective-plan");
 }

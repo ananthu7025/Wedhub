@@ -12,7 +12,6 @@ export const createUploadRequestSchema = z.object({
     "COVER",
     "PORTFOLIO",
     "VIDEO",
-    "STORE_ITEM_PHOTO",
     "PACKAGE_PHOTO",
     "CATEGORY_ATTRIBUTE_PHOTO",
     "CATALOG_ITEM_PHOTO",

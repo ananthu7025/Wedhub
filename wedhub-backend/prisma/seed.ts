@@ -79,8 +79,8 @@ const WEDDING_CATEGORIES: string[] = [
 ];
 
 // Categories with the vendor catalog module enabled (items 1/2/3/5/10/12) —
-// same on/off-per-category convention as the (currently empty) store/studio
-// enablement lists.
+// same on/off-per-category convention as the (currently empty) studio
+// enablement list.
 const CATALOG_ENABLED_CATEGORIES = new Set([
   "Wedding Cars & Luxury Rentals",
   "Bridal Wear",
@@ -1439,7 +1439,6 @@ const SUBSCRIPTION_PLANS: PlanSeed[] = [
     features: {
       analytics_level: false,
       featured_eligibility: false,
-      store_access: false,
       invoicing_access: false,
       portfolio_page_access: false,
       catalog_access: false,
@@ -1458,7 +1457,6 @@ const SUBSCRIPTION_PLANS: PlanSeed[] = [
     features: {
       analytics_level: true,
       featured_eligibility: true,
-      store_access: true,
       invoicing_access: true,
       portfolio_page_access: true,
       catalog_access: true,

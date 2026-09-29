@@ -9,8 +9,7 @@ import { castVote } from "../../src/modules/challenges/challenge-vote.service";
  * constraint alone closes it, but for PER_CHALLENGE scope (voting for two
  * DIFFERENT entries in the same challenge) only the Serializable isolation
  * level closes the check-then-insert race, since the composite unique
- * constraint permits both rows individually. Same pattern as
- * vendor-store-stock-concurrency.spec.ts.
+ * constraint permits both rows individually.
  */
 describe("Challenge voting — concurrency", () => {
   let categoryId: string;

@@ -13,7 +13,6 @@ export const Entitlement = {
   MONTHLY_LEAD_LIMIT: "monthly_lead_limit",
   ANALYTICS_LEVEL: "analytics_level",
   FEATURED_ELIGIBILITY: "featured_eligibility",
-  STORE_ACCESS: "store_access",
   INVOICING_ACCESS: "invoicing_access",
   PORTFOLIO_PAGE_ACCESS: "portfolio_page_access",
   CATALOG_ACCESS: "catalog_access",
@@ -37,7 +36,6 @@ export interface PlanLimits {
 export interface PlanFeatures {
   analytics_level: AnalyticsLevel;
   featured_eligibility: boolean;
-  store_access: boolean;
   invoicing_access: boolean;
   portfolio_page_access: boolean;
   catalog_access: boolean;
@@ -108,13 +106,6 @@ export const FEATURE_CATALOG: FeatureDefinition[] = [
     defaultValue: false,
   },
   {
-    key: Entitlement.STORE_ACCESS,
-    label: "Vendor Store",
-    description: "Branded storefront with WhatsApp ordering",
-    valueType: "boolean",
-    defaultValue: false,
-  },
-  {
     key: Entitlement.INVOICING_ACCESS,
     label: "Invoicing & Billing",
     description: "GST invoices and payment tracking",
@@ -157,7 +148,6 @@ export const FALLBACK_PLAN_LIMITS: PlanLimits = {
 export const FALLBACK_PLAN_FEATURES: PlanFeatures = {
   analytics_level: "basic",
   featured_eligibility: false,
-  store_access: false,
   invoicing_access: false,
   portfolio_page_access: false,
   catalog_access: false,

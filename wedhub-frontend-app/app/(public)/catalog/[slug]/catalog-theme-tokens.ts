@@ -1,14 +1,12 @@
-import type { StoreAccentColor } from "@/lib/api/vendor-store.types";
+import type { StoreAccentColor } from "@/lib/api/vendor-catalog.types";
 
 /**
- * Vendor-selectable storefront accent color — a closed preset set backed by
+ * Vendor-selectable catalog page accent color — a closed preset set backed by
  * this codebase's existing design tokens (app/globals.css) or Tailwind's
- * built-in palette (already used elsewhere for non-token colors, e.g.
- * PublicStorefrontView.tsx's purple/pink cover-fallback gradient), never a
- * new ad-hoc hex value. Mirrors components/wedding-website/theme.ts's
- * enum-plus-THEMES-map pattern: pick a preset, splice its precomputed
- * Tailwind class strings into JSX — no inline styles, no CSS custom
- * properties.
+ * built-in palette, never a new ad-hoc hex value. Mirrors
+ * components/wedding-website/theme.ts's enum-plus-THEMES-map pattern: pick a
+ * preset, splice its precomputed Tailwind class strings into JSX — no inline
+ * styles, no CSS custom properties.
  */
 export interface StoreTheme {
   accentTextClass: string;
@@ -22,9 +20,8 @@ export interface StoreTheme {
   /** A softer hover-only border tint, for unselected-state hover affordance. */
   accentHoverBorderClass: string;
   /**
-   * The one exception to "no raw hex": Razorpay Checkout's SDK config
-   * (`theme.color`) requires an actual hex string, not a Tailwind class —
-   * an external SDK requirement, not a WedHub design decision.
+   * The one exception to "no raw hex": third-party SDK theme configs that
+   * require an actual hex string, not a Tailwind class.
    */
   accentHex: string;
 }
@@ -106,7 +103,3 @@ export const STORE_ACCENT_COLOR_LABELS: Record<StoreAccentColor, string> = {
   PLUM: "Plum",
   SLATE: "Slate",
 };
-
-export function themeForStore(accentColor: StoreAccentColor): StoreTheme {
-  return STORE_THEMES[accentColor] ?? STORE_THEMES.CRIMSON;
-}

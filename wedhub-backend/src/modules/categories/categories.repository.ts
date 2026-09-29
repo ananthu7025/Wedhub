@@ -79,12 +79,10 @@ export function createCategory(data: {
   slug: string;
   description: string | undefined;
   parentId: string | undefined;
-  hasStoreEnabled?: boolean | undefined;
 }) {
   const fields = omitUndefined({
     description: data.description,
     parentId: data.parentId,
-    hasStoreEnabled: data.hasStoreEnabled,
   });
   return prisma.category.create({
     data: { name: data.name, slug: data.slug, ...fields },
@@ -96,7 +94,6 @@ export interface CategoryUpdateFields {
   description: string | undefined;
   sortOrder: number | undefined;
   isActive: boolean | undefined;
-  hasStoreEnabled: boolean | undefined;
   hasCatalogEnabled: boolean | undefined;
   imageUrl: string | null | undefined;
   isFeaturedOnHomepage: boolean | undefined;

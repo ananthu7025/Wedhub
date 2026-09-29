@@ -209,7 +209,6 @@ export interface AdminCreateCategoryBody {
   name: string;
   description?: string;
   parentId?: string;
-  hasStoreEnabled?: boolean;
 }
 
 // ---- PATCH /categories/:id (ADMIN) ----
@@ -218,7 +217,6 @@ export interface AdminUpdateCategoryBody {
   description?: string;
   sortOrder?: number;
   isActive?: boolean;
-  hasStoreEnabled?: boolean;
   hasCatalogEnabled?: boolean;
   // Homepage presentation fields (added 2026-09-03) — nullable so an admin
   // can explicitly clear a previously-set image/price, not just leave it
@@ -450,7 +448,6 @@ export type BillingInterval = "MONTHLY" | "YEARLY";
 export interface AdminPlanFeatures {
   analytics_level?: boolean;
   featured_eligibility?: boolean;
-  store_access?: boolean;
   invoicing_access?: boolean;
   portfolio_page_access?: boolean;
 }
