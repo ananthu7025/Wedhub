@@ -1,24 +1,29 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { RowActionsMenu } from "@/components/ui/RowActionsMenu";
 import { approveAdminVendor, restoreAdminVendor, suspendAdminVendor } from "@/lib/api/admin-client";
 import type { AdminVendorListItem } from "@/lib/api/admin.types";
+import type { Category, Location } from "@/lib/api/vendors.types";
 import type { VendorStatus } from "@/lib/api/vendor-self.types";
 import { formatApiError } from "@/lib/utils/error";
 
 /**
  * Vendors list (Frontend Arch Phase 8), matching
  * wedhub-frontend/admin/vendors.html's pill-tabs + filter toolbar + table.
- * Real gaps vs. the mockup, confirmed via backend research (see
- * frontenddocs/10-risks-and-open-questions.md): no free-text search, no
- * Plan column/filter (no subscription join on this endpoint), no
- * "Verified"/"Featured" filter pills (no backing enum value or data
- * source) — all omitted rather than built against nothing. Reject is not
- * available from this table (mockup's inline reject needs a reason
- * textarea) — that action lives on the detail page.
+ * Search (business name, trigram-indexed) plus category/city/Premium/
+ * Featured filters are wired end-to-end against GET /admin/vendors (added
+ * alongside this component — see vendor-admin.service.ts's listVendors).
+ * Premium/Featured aren't real Vendor columns: Premium reflects a live
+ * subscription whose plan has featured_eligibility, Featured reflects an
+ * ACTIVE FeaturedListing row — both are booleans the backend derives
+ * per-request, not stored flags. "Verified" still has no filter pill (no
+ * backing enum value beyond verificationLevel, shown as a column already).
+ * Reject is not available from this table (mockup's inline reject needs a
+ * reason textarea) — that action lives on the detail page.
  */
 
 const STATUS_TABS: Array<{ value: VendorStatus | "ALL"; label: string }> = [
@@ -59,16 +64,53 @@ export function VendorsTable({
   initialVendors,
   total,
   activeStatus,
+  activeSearch,
+  activeCategoryId,
+  activeCityId,
+  activeIsPremium,
+  activeIsFeatured,
+  categories,
+  cities,
 }: {
   initialVendors: AdminVendorListItem[];
   total: number;
   activeStatus: VendorStatus | undefined;
+  activeSearch: string;
+  activeCategoryId: string;
+  activeCityId: string;
+  activeIsPremium: boolean;
+  activeIsFeatured: boolean;
+  categories: Category[];
+  cities: Location[];
 }) {
+  const router = useRouter();
   const [vendors, setVendors] = useState(initialVendors);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const triggerRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  function buildParams(overrides: Record<string, string>) {
+    const params = new URLSearchParams();
+    const current: Record<string, string> = {
+      status: activeStatus ?? "",
+      search: activeSearch,
+      categoryId: activeCategoryId,
+      cityId: activeCityId,
+      isPremium: activeIsPremium ? "true" : "",
+      isFeatured: activeIsFeatured ? "true" : "",
+      ...overrides,
+    };
+    for (const [key, value] of Object.entries(current)) {
+      if (value) params.set(key, value);
+    }
+    return params;
+  }
+
+  function navigate(overrides: Record<string, string>) {
+    const query = buildParams(overrides).toString();
+    router.push(query ? `/admin/vendors?${query}` : "/admin/vendors");
+  }
 
   // initialVendors only seeds state on first mount — clicking a status
   // tab changes the URL and re-renders this same mounted component with a
@@ -148,13 +190,84 @@ export function VendorsTable({
 
       {error && <div className="mb-4 rounded-md bg-red-10 p-3 text-[13px] text-red-70">{error}</div>}
 
+      <div className="mb-4 flex flex-wrap items-center gap-2.5">
+        <form
+          method="get"
+          className="max-w-sm flex-1"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = new FormData(e.currentTarget);
+            navigate({ search: String(form.get("search") ?? "").trim() });
+          }}
+        >
+          <input
+            type="search"
+            name="search"
+            defaultValue={activeSearch}
+            placeholder="Search business name"
+            className="w-full rounded-md border border-border bg-white px-3.5 py-2 text-[13px]"
+          />
+        </form>
+
+        <select
+          value={activeCategoryId}
+          onChange={(e) => navigate({ categoryId: e.target.value })}
+          className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px]"
+        >
+          <option value="">All categories</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={activeCityId}
+          onChange={(e) => navigate({ cityId: e.target.value })}
+          className="rounded-md border border-border bg-white px-3.5 py-2 text-[13px]"
+        >
+          <option value="">All locations</option>
+          {cities.map((city) => (
+            <option key={city.id} value={city.id}>
+              {city.name}
+            </option>
+          ))}
+        </select>
+
+        <button
+          type="button"
+          onClick={() => navigate({ isPremium: activeIsPremium ? "" : "true" })}
+          className={`rounded-full px-4 py-2 text-[13px] font-bold ${
+            activeIsPremium ? "bg-jet-black-90 text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
+          }`}
+        >
+          Premium
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate({ isFeatured: activeIsFeatured ? "" : "true" })}
+          className={`rounded-full px-4 py-2 text-[13px] font-bold ${
+            activeIsFeatured ? "bg-jet-black-90 text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
+          }`}
+        >
+          Featured
+        </button>
+      </div>
+
       <div className="mb-5 flex flex-wrap gap-2">
         {STATUS_TABS.map((tab) => {
           const isActive = tab.value === "ALL" ? activeStatus === undefined : activeStatus === tab.value;
+          const tabHref = (() => {
+            const params = buildParams({ status: tab.value === "ALL" ? "" : tab.value });
+            const query = params.toString();
+            return query ? `/admin/vendors?${query}` : "/admin/vendors";
+          })();
           return (
             <Link
               key={tab.value}
-              href={tab.value === "ALL" ? "/admin/vendors" : `/admin/vendors?status=${tab.value}`}
+              href={tabHref}
               className={`rounded-full px-4 py-2 text-[13px] font-bold no-underline ${
                 isActive ? "bg-jet-black-90 text-white" : "border border-border bg-white text-text-body hover:bg-surface-input"
               }`}
@@ -176,8 +289,10 @@ export function VendorsTable({
             <thead>
               <tr className="border-b border-border text-xs text-text-grey">
                 <th className="px-4 py-3 font-semibold">Business name</th>
+                <th className="px-4 py-3 font-semibold">Location</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold">Verification</th>
+                <th className="px-4 py-3 font-semibold">Plan</th>
                 <th className="px-4 py-3 font-semibold">Submitted</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -196,6 +311,7 @@ export function VendorsTable({
                       </div>
                     </div>
                   </td>
+                  <td className="px-4 py-3">{vendor.city?.name ?? "—"}</td>
                   <td className="px-4 py-3">
                     <Badge variant={statusBadgeVariant(vendor.status)}>{vendor.status.replace(/_/g, " ")}</Badge>
                   </td>
@@ -203,6 +319,13 @@ export function VendorsTable({
                     <Badge variant={vendor.verificationLevel === "UNVERIFIED" ? "grey" : "blue"}>
                       {verificationLabel(vendor.verificationLevel)}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1.5">
+                      {vendor.isPremium && <Badge variant="amber">Premium</Badge>}
+                      {vendor.isFeatured && <Badge variant="blue">Featured</Badge>}
+                      {!vendor.isPremium && !vendor.isFeatured && <span className="text-text-grey">—</span>}
+                    </div>
                   </td>
                   <td className="px-4 py-3">{formatDate(vendor.submittedAt)}</td>
                   <td className="px-4 py-3 text-right">

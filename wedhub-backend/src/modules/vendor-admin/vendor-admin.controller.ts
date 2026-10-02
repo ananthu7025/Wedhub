@@ -50,6 +50,9 @@ export async function listVendors(req: Request, res: Response): Promise<void> {
     verificationLevel: query.verificationLevel,
     categoryId: query.categoryId,
     cityId: query.cityId,
+    search: query.search,
+    isPremium: query.isPremium,
+    isFeatured: query.isFeatured,
     page: query.page,
     limit: query.limit,
   });

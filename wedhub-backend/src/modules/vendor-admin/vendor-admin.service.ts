@@ -1,3 +1,4 @@
+import type { Prisma, SubscriptionStatus } from "@prisma/client";
 import { prisma } from "../../config/database";
 import { ConflictError, NotFoundError } from "../../common/errors";
 import { generateOpaqueToken, hashToken } from "../../common/utils/token.util";
@@ -84,11 +85,26 @@ export async function createInvitation(
   return invitation;
 }
 
+// "Premium" = vendor currently has a subscription (in one of the live
+// statuses getEffectivePlan treats as in-force, before its grace-period/
+// cancel-at-period-end expiry checks) to a plan whose features JSON has
+// featured_eligibility: true — the same entitlement search/vendor-ranking
+// and the public vendor profile reuse for the "Premium vendor" signal (see
+// search.service.ts's withPremiumEligibility, vendor.controller.ts's
+// isPremiumEligible). Expressed here as a Prisma `some` join + JSON path
+// filter for list filtering rather than calling getEffectivePlan per row
+// (which would also apply expiry side effects not appropriate for a list
+// filter).
+const LIVE_SUBSCRIPTION_STATUSES: SubscriptionStatus[] = ["TRIALING", "ACTIVE", "PAST_DUE"];
+
 export async function listVendors(filter: {
   status: string | undefined;
   verificationLevel: string | undefined;
   categoryId: string | undefined;
   cityId: string | undefined;
+  search: string | undefined;
+  isPremium: boolean | undefined;
+  isFeatured: boolean | undefined;
   page: number;
   limit: number;
 }) {
@@ -97,17 +113,53 @@ export async function listVendors(filter: {
   if (filter.verificationLevel) where.verificationLevel = filter.verificationLevel;
   if (filter.cityId) where.cityId = filter.cityId;
   if (filter.categoryId) where.categories = { some: { categoryId: filter.categoryId } };
+  if (filter.search) {
+    where.businessName = { contains: filter.search, mode: "insensitive" };
+  }
+  if (filter.isPremium !== undefined) {
+    const premiumJoin = {
+      some: {
+        status: { in: LIVE_SUBSCRIPTION_STATUSES },
+        plan: { features: { path: ["featured_eligibility"], equals: true } },
+      },
+    };
+    where.subscriptions = filter.isPremium ? premiumJoin : { none: premiumJoin };
+  }
+  if (filter.isFeatured !== undefined) {
+    const featuredJoin = { some: { status: "ACTIVE" } };
+    where.featuredListings = filter.isFeatured ? featuredJoin : { none: featuredJoin };
+  }
 
-  const [vendors, total] = await Promise.all([
+  const listInclude = {
+    ...vendorRepository.VENDOR_FULL_INCLUDE,
+    subscriptions: {
+      where: { status: { in: LIVE_SUBSCRIPTION_STATUSES } },
+      select: { plan: { select: { features: true } } },
+    },
+    featuredListings: { where: { status: "ACTIVE" }, select: { id: true } },
+  } satisfies Prisma.VendorInclude;
+
+  const [rows, total] = await Promise.all([
     prisma.vendor.findMany({
       where,
-      include: vendorRepository.VENDOR_FULL_INCLUDE,
+      include: listInclude,
       skip: (filter.page - 1) * filter.limit,
       take: filter.limit,
       orderBy: { createdAt: "desc" },
     }),
     prisma.vendor.count({ where }),
   ]);
+
+  // Flattened to booleans for the list view — same featured_eligibility
+  // reuse as the `where` filter above, not a stored column.
+  const vendors = rows.map(({ subscriptions, featuredListings, ...vendor }) => ({
+    ...vendor,
+    isPremium: subscriptions.some(
+      (s: { plan: { features: unknown } }) =>
+        (s.plan.features as { featured_eligibility?: boolean }).featured_eligibility === true,
+    ),
+    isFeatured: featuredListings.length > 0,
+  }));
 
   return { vendors, total };
 }

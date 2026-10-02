@@ -54,6 +54,9 @@ export function listAdminVendors(params: {
   verificationLevel?: VerificationLevel;
   categoryId?: string;
   cityId?: string;
+  search?: string;
+  isPremium?: boolean;
+  isFeatured?: boolean;
   page?: number;
   limit?: number;
 } = {}) {
@@ -63,6 +66,9 @@ export function listAdminVendors(params: {
       verificationLevel: params.verificationLevel,
       categoryId: params.categoryId,
       cityId: params.cityId,
+      search: params.search,
+      isPremium: params.isPremium,
+      isFeatured: params.isFeatured,
       page: params.page ?? 1,
       limit: params.limit ?? 20,
     },

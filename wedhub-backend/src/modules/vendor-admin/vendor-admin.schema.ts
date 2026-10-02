@@ -48,6 +48,9 @@ export const listAdminVendorsQuerySchema = z.object({
     .optional(),
   categoryId: z.string().uuid().optional(),
   cityId: z.string().uuid().optional(),
+  search: z.string().trim().min(1).max(200).optional(),
+  isPremium: z.coerce.boolean().optional(),
+  isFeatured: z.coerce.boolean().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });

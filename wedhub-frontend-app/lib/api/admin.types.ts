@@ -81,7 +81,11 @@ export interface AdminVendor {
   city: LocationSelf | null;
 }
 
-export type AdminVendorListItem = AdminVendor;
+// isPremium/isFeatured are only present on GET /admin/vendors (the list
+// endpoint) — derived server-side from the vendor's live subscription plan
+// (featured_eligibility) and any ACTIVE FeaturedListing row, not stored
+// columns. Not part of AdminVendorDetail/GET /admin/vendors/:id.
+export type AdminVendorListItem = AdminVendor & { isPremium: boolean; isFeatured: boolean };
 
 export interface AdminVendorDetail extends AdminVendor {
   owner: { id: string; email: string; phone: string | null } | null;
