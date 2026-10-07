@@ -149,3 +149,29 @@ export const communityCommentRateLimiter = createRateLimiter({
   message: "Too many comments submitted. Please slow down.",
 });
 
+// See PLAN-2026-09-30-whatsapp-notification-channel.md §5. Per-IP guard on
+// whichever endpoint(s) trigger a WhatsApp OTP/template send (e.g. the
+// vendor-claim flow's "send code" step) — a real per-message cost sits
+// behind every one of these. This is the IP-side limiter; the
+// per-recipient-phone cooldown (which an IP-only limiter can't provide —
+// it doesn't stop many different IPs hammering the same number) lives in
+// whatsapp.service.ts's checkRecipientCooldown, applied alongside this one.
+export const whatsAppSendRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.WHATSAPP_SEND_RATE_LIMIT_MAX ? Number(process.env.WHATSAPP_SEND_RATE_LIMIT_MAX) : 10,
+  message: "Too many WhatsApp send requests. Please try again later.",
+});
+
+// PLAN-2026-09-30-vendor-bulk-import-claim-flow.md — guards both the
+// send-otp (email or WhatsApp) and verify-otp (code-guessing) endpoints on
+// an unauthenticated, token-addressable route. IP-keyed, same as every
+// other limiter here; the per-recipient cooldown (30s between sends to the
+// same contact) and per-OTP max-attempts lockout live in
+// vendor-claim.service.ts itself, since those need to be keyed by
+// invitation/contact, not by caller IP.
+export const vendorClaimOtpRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.VENDOR_CLAIM_OTP_RATE_LIMIT_MAX ? Number(process.env.VENDOR_CLAIM_OTP_RATE_LIMIT_MAX) : 20,
+  message: "Too many verification attempts. Please try again later.",
+});
+

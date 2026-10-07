@@ -1069,23 +1069,55 @@ model CatalogStorePromoTile {
   @@map("catalog_store_promo_tiles")
 }
 
+// 2026-09-30 bulk-import claim flow (see
+// PLAN-2026-09-30-vendor-bulk-import-claim-flow.md): expiresAt became
+// nullable — a null value means the link never expires, which is safe only
+// because claiming now requires a separate OTP proof-of-contact step
+// (VendorInvitationOtp below) before a password can be set. invitedPhone
+// was added alongside the pre-existing invitedEmail so a vendor collected
+// by phone (no email) can still be invited and OTP'd via WhatsApp.
 model VendorInvitation {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   vendorId         String    @map("vendor_id") @db.Uuid
   tokenHash        String    @unique @map("token_hash")
   invitedEmail     String?   @map("invited_email")
+  invitedPhone     String?   @map("invited_phone")
   invitedByAdminId String    @map("invited_by_admin_id") @db.Uuid
-  expiresAt        DateTime  @map("expires_at")
+  expiresAt        DateTime? @map("expires_at")
   usedAt           DateTime? @map("used_at")
   claimedByUserId  String?   @map("claimed_by_user_id") @db.Uuid
   createdAt        DateTime  @default(now()) @map("created_at")
 
-  vendor         Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  invitedByAdmin User   @relation("VendorInvitationsSent", fields: [invitedByAdminId], references: [id], onDelete: Restrict)
-  claimedByUser  User?  @relation("VendorInvitationsClaimed", fields: [claimedByUserId], references: [id], onDelete: SetNull)
+  vendor         Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  invitedByAdmin User                @relation("VendorInvitationsSent", fields: [invitedByAdminId], references: [id], onDelete: Restrict)
+  claimedByUser  User?               @relation("VendorInvitationsClaimed", fields: [claimedByUserId], references: [id], onDelete: SetNull)
+  otps           VendorInvitationOtp[]
 
   @@index([vendorId])
   @@map("vendor_invitations")
+}
+
+// The 2FA proof-of-contact step that makes a non-expiring invitation link
+// (above) safe: possessing the link alone is not enough to claim a listing,
+// the claimer must also prove they control the exact email/phone collected
+// during the onboarding call (contact is never editable on the claim page —
+// see the plan's locked-contact decision). One row per OTP send; a resend
+// creates a new row rather than mutating the old one, so a stale/guessed
+// code from an earlier send can never verify.
+model VendorInvitationOtp {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invitationId String    @map("invitation_id") @db.Uuid
+  codeHash     String    @map("code_hash")
+  channel      NotificationChannel // EMAIL or WHATSAPP only — enforced at the app layer
+  expiresAt    DateTime  @map("expires_at")
+  attempts     Int       @default(0)
+  consumedAt   DateTime? @map("consumed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  invitation VendorInvitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+
+  @@index([invitationId])
+  @@map("vendor_invitation_otps")
 }
 
 model VendorStatusHistory {
@@ -2313,11 +2345,14 @@ enum NotificationEventType {
   PROFILE_COMPLETION_REMINDER
 }
 
-// SMS/WhatsApp are explicitly "later" per product.md §22 — not modeled yet.
+// SMS is still "later" per product.md §22. WhatsApp was added 2026-09-30 —
+// see PLAN-2026-09-30-whatsapp-notification-channel.md — as a reusable
+// channel, not a one-off for any single feature.
 enum NotificationChannel {
   IN_APP
   EMAIL
   TELEGRAM
+  WHATSAPP
 }
 
 enum NotificationStatus {
@@ -2376,6 +2411,39 @@ model NotificationPreference {
 
   @@unique([userId, eventType, channel])
   @@map("notification_preferences")
+}
+
+// Outbound WhatsApp template sends to a phone number that has no User row
+// yet (e.g. a vendor claiming a bulk-imported listing, before any account
+// exists to attach a Notification to) — see
+// PLAN-2026-09-30-whatsapp-notification-channel.md §4c for why this is a
+// separate model rather than relaxing Notification.userId to optional: this
+// case has no recipient user to fan out preferences/read-state for, it is a
+// one-shot transactional send. Deliberately mirrors Notification's own
+// PENDING-row-before-enqueue crash-safety and attempts/lastError shape so a
+// "direct" send gets the same dead-letter visibility a "notification" send
+// already has, just without a userId to key off.
+model WhatsAppDirectSend {
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  to           String
+  templateName String                   @map("template_name")
+  languageCode String                   @map("language_code")
+  params       Json
+  status       WhatsAppDirectSendStatus @default(PENDING)
+  attempts     Int                      @default(0)
+  lastError    String?                  @map("last_error")
+  sentAt       DateTime?                @map("sent_at")
+  createdAt    DateTime                 @default(now()) @map("created_at")
+
+  @@index([to])
+  @@index([status])
+  @@map("whatsapp_direct_sends")
+}
+
+enum WhatsAppDirectSendStatus {
+  PENDING
+  SENT
+  FAILED
 }
 
 // ---------------------------------------------------------------------------

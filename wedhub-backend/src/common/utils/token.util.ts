@@ -1,4 +1,4 @@
-import { randomBytes, createHash } from "node:crypto";
+import { randomBytes, randomInt, createHash } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env";
 import type { Role } from "../enums/roles.enum";
@@ -27,6 +27,15 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 
 export function generateOpaqueToken(): string {
   return randomBytes(32).toString("hex");
+}
+
+// 6-digit numeric OTP — matches the shape every OTP-sending channel
+// (WhatsApp/SMS/email templates) already assumes. randomInt is used (not
+// Math.random) for the same reason generateOpaqueToken uses randomBytes: a
+// code that gates account claiming needs a CSPRNG, not a predictable PRNG.
+export function generateOtpCode(): string {
+  const n = randomInt(0, 1_000_000);
+  return n.toString().padStart(6, "0");
 }
 
 export function hashToken(token: string): string {

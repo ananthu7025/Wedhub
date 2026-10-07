@@ -6,12 +6,11 @@ import { logger } from "../../config/logger";
 import { generateUniqueSlug, slugify } from "../../common/utils/slug.util";
 import { omitUndefined } from "../../common/utils/object.util";
 import { sendEmail } from "../../integrations/email/resend.client";
+import { sendWhatsAppDirect } from "../../integrations/whatsapp/whatsapp.service";
 import { renderEmailHtml } from "../notifications/notification.templates";
 import * as notificationService from "../notifications/notification.service";
 import { env } from "../../config/env";
 import * as vendorRepository from "../vendors/vendor.repository";
-
-const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function createAdminVendor(input: { businessName: string }) {
   const slug = await generateUniqueSlug(slugify(input.businessName), async (candidate) =>
@@ -35,10 +34,20 @@ export async function createAdminVendor(input: { businessName: string }) {
   return vendor;
 }
 
+// 2026-09-30 bulk-import claim flow (see
+// PLAN-2026-09-30-vendor-bulk-import-claim-flow.md): invitations no longer
+// expire (expiresAt is left null — see VendorInvitation's schema comment).
+// This is safe only because claiming now requires a separate OTP
+// proof-of-contact step (vendor-claim.service.ts) before a password can be
+// set — possessing the link alone is not enough. invitedPhone is accepted
+// alongside invitedEmail so a phone-only vendor (no email collected) can
+// still be invited; the claim notice goes out via whichever channel(s) were
+// given.
 export async function createInvitation(
   vendorId: string,
   adminId: string,
   invitedEmail: string | undefined,
+  invitedPhone: string | undefined,
 ) {
   const vendor = await vendorRepository.findVendorById(vendorId);
   if (!vendor) {
@@ -54,20 +63,21 @@ export async function createInvitation(
       vendorId,
       tokenHash: hashToken(token),
       invitedByAdminId: adminId,
-      expiresAt: new Date(Date.now() + INVITATION_TTL_MS),
-      ...omitUndefined({ invitedEmail }),
+      expiresAt: null,
+      ...omitUndefined({ invitedEmail, invitedPhone }),
     },
   });
+
+  const claimUrl = `${env.FRONTEND_URL}/vendor-claim/${token}`;
 
   // Bypasses the notification service on purpose: the invitee has no User
   // row yet (that's the whole point of an invitation), so there's no
   // recipient to attach a Notification/preference row to — this is a raw
-  // transactional email to an address, not a notification about a user's
-  // own activity. Best-effort: an invitation record still exists and can be
-  // resent even if this particular send fails.
+  // transactional send to an address/number, not a notification about a
+  // user's own activity. Best-effort on both channels: an invitation record
+  // still exists and can be resent even if a particular send fails.
   if (invitedEmail) {
     try {
-      const claimUrl = `${env.FRONTEND_URL}/vendor-claim?token=${token}`;
       await sendEmail({
         to: invitedEmail,
         subject: "You're invited to claim your itsmyKalyanam vendor profile",
@@ -79,6 +89,24 @@ export async function createInvitation(
       });
     } catch (err) {
       logger.error({ err, vendorId, invitationId: invitation.id }, "Failed to send vendor claim invitation email");
+    }
+  }
+
+  if (invitedPhone) {
+    try {
+      // Requires a Meta-approved template (e.g. "vendor_claim_invite") —
+      // see PLAN-2026-09-30-whatsapp-notification-channel.md §7.2. Template
+      // name/language are read from env rather than hardcoded so they can
+      // be updated once the real approved template name is known, without
+      // a code change.
+      await sendWhatsAppDirect({
+        to: invitedPhone,
+        templateName: env.WHATSAPP_VENDOR_CLAIM_TEMPLATE_NAME,
+        languageCode: env.WHATSAPP_VENDOR_CLAIM_TEMPLATE_LANGUAGE,
+        params: [vendor.businessName, claimUrl],
+      });
+    } catch (err) {
+      logger.error({ err, vendorId, invitationId: invitation.id }, "Failed to send vendor claim invitation via WhatsApp");
     }
   }
 

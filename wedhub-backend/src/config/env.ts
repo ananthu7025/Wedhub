@@ -45,6 +45,31 @@ const envSchema = z.object({
   // receiving/processing updates once it's set.
   API_PUBLIC_URL: z.string().url().optional(),
 
+  // WhatsApp Business Platform Cloud API (Meta direct, no BSP) — see
+  // PLAN-2026-09-30-whatsapp-notification-channel.md. Optional, same lazy-
+  // gated pattern as every other integration here: the app boots fine
+  // unconfigured, whatsapp.client.ts throws ExternalServiceError only when
+  // actually invoked without these set.
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_GRAPH_API_VERSION: z.string().default("v21.0"),
+  WHATSAPP_DELIVERY_CONCURRENCY: z.coerce.number().int().positive().default(10),
+  // Meta/BSP-side outbound rate limit — see the plan's §6. Conservative
+  // default (80 messages/minute) until the real account's actual tier
+  // limit is confirmed; tune once that's known.
+  WHATSAPP_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(80),
+  WHATSAPP_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  // Vendor bulk-import claim flow (PLAN-2026-09-30-vendor-bulk-import-claim-
+  // flow.md) — names of the Meta-approved templates this flow sends.
+  // Defaults are placeholders matching the plan's proposed template
+  // content; must be updated to the real approved template names before
+  // any real send can succeed (whatsapp.client.ts will surface a clear
+  // rejection from Meta if a name doesn't match an approved template).
+  WHATSAPP_VENDOR_CLAIM_TEMPLATE_NAME: z.string().default("vendor_claim_invite"),
+  WHATSAPP_VENDOR_CLAIM_TEMPLATE_LANGUAGE: z.string().default("en"),
+  WHATSAPP_OTP_TEMPLATE_NAME: z.string().default("otp_verification"),
+  WHATSAPP_OTP_TEMPLATE_LANGUAGE: z.string().default("en"),
+
   RESEND_API_KEY: z.string().optional(),
   // The domain here must be verified with the email provider (Resend) before
   // sending will actually work — this default is a display placeholder, not

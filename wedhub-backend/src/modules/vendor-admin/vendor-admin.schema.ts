@@ -4,9 +4,14 @@ export const adminCreateVendorSchema = z.object({
   businessName: z.string().min(1).max(200),
 });
 
-export const createInvitationSchema = z.object({
-  invitedEmail: z.string().email().optional(),
-});
+export const createInvitationSchema = z
+  .object({
+    invitedEmail: z.string().email().optional(),
+    invitedPhone: z.string().min(6).max(20).optional(),
+  })
+  .refine((data) => data.invitedEmail || data.invitedPhone, {
+    message: "Provide at least one of invitedEmail or invitedPhone",
+  });
 
 export const adminUpdateVendorSchema = z.object({
   businessName: z.string().min(1).max(200).optional(),

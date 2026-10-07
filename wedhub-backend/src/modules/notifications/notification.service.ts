@@ -1,6 +1,7 @@
 import type { NotificationChannel, NotificationEventType, Prisma } from "@prisma/client";
 import { logger } from "../../config/logger";
 import { enqueueNotificationDelivery } from "../../jobs/queues/notification-delivery.queue";
+import { enqueueWhatsAppDelivery } from "../../jobs/queues/whatsapp-delivery.queue";
 import { DEFAULT_CHANNELS } from "./notification.constants";
 import * as notificationRepository from "./notification.repository";
 import { renderNotification, type TemplateData } from "./notification.templates";
@@ -97,7 +98,17 @@ export async function notify(input: NotifyInput): Promise<void> {
           relatedEntityType: input.relatedEntityType,
           relatedEntityId: input.relatedEntityId,
         });
-        await enqueueNotificationDelivery(notification.id);
+        // WHATSAPP is queue-backed via a dedicated worker, not
+        // notification-delivery — see PLAN-2026-09-30-whatsapp-notification-
+        // channel.md §4c for why (that worker also has to serve a
+        // no-Notification-row case notification-delivery was never built to
+        // handle, so they're kept as two separate queues rather than
+        // special-casing that assumption into the existing one).
+        if (channel === "WHATSAPP") {
+          await enqueueWhatsAppDelivery({ kind: "notification", notificationId: notification.id });
+        } else {
+          await enqueueNotificationDelivery(notification.id);
+        }
       }),
     );
   } catch (err) {

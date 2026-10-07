@@ -1,15 +1,18 @@
 import { logger } from "./config/logger";
 import { startMediaProcessingWorker } from "./jobs/processors/media-processing.processor";
 import { startNotificationDeliveryWorker } from "./jobs/processors/notification-delivery.processor";
+import { startWhatsAppDeliveryWorker } from "./jobs/processors/whatsapp-delivery.processor";
 import { startProfileCompletionReminderWorker } from "./jobs/processors/profile-completion-reminder.processor";
 import { registerProfileCompletionReminderSchedule } from "./jobs/schedules/profile-completion-reminder.schedule";
 
 const mediaWorker = startMediaProcessingWorker();
 const notificationDeliveryWorker = startNotificationDeliveryWorker();
+const whatsAppDeliveryWorker = startWhatsAppDeliveryWorker();
 const profileCompletionReminderWorker = startProfileCompletionReminderWorker();
 
 logger.info("Media processing worker started");
 logger.info("Notification delivery worker started");
+logger.info("WhatsApp delivery worker started");
 logger.info("Profile completion reminder worker started");
 
 // Registers (or updates, idempotently) the daily repeatable job — must run
@@ -21,9 +24,12 @@ void registerProfileCompletionReminderSchedule()
 
 function shutdown(signal: string): void {
   logger.info(`Received ${signal}, shutting down worker`);
-  void Promise.all([mediaWorker.close(), notificationDeliveryWorker.close(), profileCompletionReminderWorker.close()]).then(() =>
-    process.exit(0),
-  );
+  void Promise.all([
+    mediaWorker.close(),
+    notificationDeliveryWorker.close(),
+    whatsAppDeliveryWorker.close(),
+    profileCompletionReminderWorker.close(),
+  ]).then(() => process.exit(0));
 }
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));

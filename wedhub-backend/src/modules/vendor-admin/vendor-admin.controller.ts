@@ -33,6 +33,7 @@ export async function createInvitation(req: Request, res: Response): Promise<voi
     req.params.id as string,
     adminId,
     body.invitedEmail,
+    body.invitedPhone,
   );
   res.status(201).json(
     successResponse({
