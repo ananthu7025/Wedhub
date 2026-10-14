@@ -11,11 +11,11 @@ import { createOfferSchema, listPublicOffersQuerySchema, updateOfferSchema } fro
 export const offerRouter = Router();
 offerRouter.use(authenticateMiddleware, authorize(Role.VENDOR));
 
-offerRouter.get("/me", asyncHandler(offerController.listMyOffers));
-offerRouter.post("/me", validateBody(createOfferSchema), asyncHandler(offerController.createOffer));
-offerRouter.get("/me/:id", asyncHandler(offerController.getMyOffer));
-offerRouter.put("/me/:id", validateBody(updateOfferSchema), asyncHandler(offerController.updateOffer));
-offerRouter.delete("/me/:id", asyncHandler(offerController.deleteOffer));
+offerRouter.get("/", asyncHandler(offerController.listMyOffers));
+offerRouter.post("/", validateBody(createOfferSchema), asyncHandler(offerController.createOffer));
+offerRouter.get("/:id", asyncHandler(offerController.getMyOffer));
+offerRouter.put("/:id", validateBody(updateOfferSchema), asyncHandler(offerController.updateOffer));
+offerRouter.delete("/:id", asyncHandler(offerController.deleteOffer));
 
 // Public: /api/v1/offers (Offer Wall discovery feed)
 export const publicOfferRouter = Router();
