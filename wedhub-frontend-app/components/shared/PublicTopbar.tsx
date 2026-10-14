@@ -21,6 +21,7 @@ interface PublicTopbarProps {
 const coupleNavLinks = [
   { href: "/", label: "Home" },
   { href: "/search", label: "Find Vendors" },
+  { href: "/offers", label: "Offers" },
   { href: "/gallery", label: "Photos" },
   { href: "/shortlist", label: "Shortlist" },
   { href: "/enquiries", label: "My Enquiries" },
@@ -239,6 +240,14 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
                   Vendors
                 </Link>
                 <Link
+                  href="/offers"
+                  className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all ${
+                    activeHref === "/offers" ? "bg-white/25 text-white" : "text-white/90 hover:bg-white/15 hover:text-white"
+                  }`}
+                >
+                  Offers
+                </Link>
+                <Link
                   href="/gallery"
                   className="rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 transition-all hover:bg-white/15 hover:text-white"
                 >
@@ -329,6 +338,8 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
           <>
             <Link href="/vendors" className="px-2.5 py-1 hover:text-white">Vendors</Link>
             <span className="opacity-30">•</span>
+            <Link href="/offers" className="px-2.5 py-1 hover:text-white">Offers</Link>
+            <span className="opacity-30">•</span>
             <Link href="/gallery" className="px-2.5 py-1 hover:text-white">Photos</Link>
             <span className="opacity-30">•</span>
             <Link href="/real-weddings" className="px-2.5 py-1 hover:text-white">Real Weddings</Link>
@@ -340,6 +351,8 @@ export async function PublicTopbar({ variant = "brand", activeHref }: PublicTopb
         ) : (
           <>
             <Link href="/vendors" className="px-2.5 py-1 hover:text-white">Vendors</Link>
+            <span className="opacity-30">•</span>
+            <Link href="/offers" className="px-2.5 py-1 hover:text-white">Offers</Link>
             <span className="opacity-30">•</span>
             <Link href="/gallery" className="px-2.5 py-1 hover:text-white">Photos</Link>
             <span className="opacity-30">•</span>

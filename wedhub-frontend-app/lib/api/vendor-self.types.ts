@@ -28,6 +28,7 @@ export type MediaType =
   | "PACKAGE_PHOTO"
   | "CATEGORY_ATTRIBUTE_PHOTO"
   | "CATALOG_ITEM_PHOTO"
+  | "OFFER_PHOTO"
   | "RULE_BOOK";
 
 export interface MediaItem {

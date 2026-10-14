@@ -40,6 +40,19 @@ const navLinks = [
     icon: <><path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z" /><circle cx="6.5" cy="6.5" r="1.5" /></>,
   },
   {
+    href: "/vendor/offers",
+    label: "Offers",
+    icon: (
+      <>
+        <path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2v-7" />
+        <path d="M2 7h20v5H2z" />
+        <path d="M12 22V7" />
+        <path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z" />
+        <path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z" />
+      </>
+    ),
+  },
+  {
     href: "/vendor/catalog",
     label: "Catalog",
     // Only shown when hasCatalogEligibleCategory AND catalog_access

@@ -15,6 +15,7 @@ export const createUploadRequestSchema = z.object({
     "PACKAGE_PHOTO",
     "CATEGORY_ATTRIBUTE_PHOTO",
     "CATALOG_ITEM_PHOTO",
+    "OFFER_PHOTO",
     "RULE_BOOK",
   ]),
   albumId: z.string().uuid().optional(),

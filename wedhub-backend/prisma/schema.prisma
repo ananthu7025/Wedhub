@@ -424,6 +424,7 @@ model Category {
   vendorCategories                  VendorCategory[]
   enquiries                         Enquiry[]
   featuredListings                  FeaturedListing[]
+  offers                            Offer[]
   seoOverrides                      SeoOverride[]
   challenges                        Challenge[]
   challengeEntries                  ChallengeEntry[]
@@ -595,14 +596,15 @@ model Vendor {
   updatedAt             DateTime             @updatedAt @map("updated_at")
   deletedAt             DateTime?            @map("deleted_at")
 
-  owner                   User?                   @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
-  city                    Location?               @relation("VendorPrimaryCity", fields: [cityId], references: [id], onDelete: SetNull)
-  ruleBookMedia           Media?                  @relation("VendorRuleBook", fields: [ruleBookMediaId], references: [id], onDelete: SetNull)
+  owner                   User?                  @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  city                    Location?              @relation("VendorPrimaryCity", fields: [cityId], references: [id], onDelete: SetNull)
+  ruleBookMedia           Media?                 @relation("VendorRuleBook", fields: [ruleBookMediaId], references: [id], onDelete: SetNull)
   profile                 VendorProfile?
   categories              VendorCategory[]
   serviceAreas            VendorServiceArea[]
   attributeValues         VendorAttributeValue[]
   packages                Package[]
+  offers                  Offer[]
   catalogItems            CatalogItem[]
   catalogCollections      CatalogCollection[]
   catalogStoreSettings    CatalogStoreSettings?
@@ -622,7 +624,7 @@ model Vendor {
   studioClients           StudioClient[]
   studioProjects          StudioProject[]
   conversations           Conversation[]
-  weddingStorySubmissions WeddingStory[]          @relation("WeddingStorySubmitter")
+  weddingStorySubmissions WeddingStory[]         @relation("WeddingStorySubmitter")
   storyCollaborations     WeddingStoryVendor[]
   bookings                VendorBooking[]
   blackoutDates           VendorBlackoutDate[]
@@ -770,6 +772,65 @@ model Package {
 
   @@index([vendorId])
   @@map("packages")
+}
+
+// Offer Wall — vendor self-service discounted/promotional package cards,
+// standalone from Package (which has no discount field and only one image).
+// No admin approval step: a vendor's own offer goes live as soon as they
+// create it, matching the explicit product decision for this feature.
+enum OfferBadgeType {
+  SAVE_PERCENT
+  FLAT_PERCENT_OFF
+  NEW
+  LIMITED_TIME_DEAL
+  FREE_ADD_ON
+  TOP_RATED
+  CATALOG_OFFER
+}
+
+model Offer {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId        String         @map("vendor_id") @db.Uuid
+  categoryId      String         @map("category_id") @db.Uuid
+  title           String
+  description     String?        @db.Text
+  originalPrice   Decimal        @map("original_price") @db.Decimal(12, 2)
+  offerPrice      Decimal        @map("offer_price") @db.Decimal(12, 2)
+  currency        String         @default("INR")
+  badgeType       OfferBadgeType @map("badge_type")
+  // Optional explicit override for the displayed "Save X%"/"Flat X% OFF"
+  // number; when unset the service layer derives it from the two prices.
+  discountPercent Int?           @map("discount_percent")
+  startDate       DateTime?      @map("start_date")
+  endDate         DateTime?      @map("end_date")
+  isActive        Boolean        @default(true) @map("is_active")
+  sortOrder       Int            @default(0) @map("sort_order")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  vendor   Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category Category     @relation(fields: [categoryId], references: [id])
+  media    OfferMedia[]
+
+  @@index([vendorId])
+  @@index([categoryId, isActive])
+  @@index([isActive, endDate])
+  @@map("offers")
+}
+
+model OfferMedia {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  offerId   String   @map("offer_id") @db.Uuid
+  mediaId   String   @map("media_id") @db.Uuid
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  offer Offer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  media Media @relation("OfferMedia", fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([offerId, mediaId])
+  @@index([offerId, sortOrder])
+  @@map("offer_media")
 }
 
 enum CatalogAvailabilityStatus {
@@ -1163,6 +1224,9 @@ enum MediaType {
   // Vendor-owned catalog item photo (CatalogItemMedia), a multi-image
   // gallery shape.
   CATALOG_ITEM_PHOTO
+  // Vendor-owned Offer Wall photo (OfferMedia), same multi-image gallery
+  // shape as CATALOG_ITEM_PHOTO.
+  OFFER_PHOTO
   // Item 6 — vendor-owned rule book document (Vendor.ruleBookMediaId), the
   // first non-image/video MediaType. A PDF, not a photo/video, so
   // media.service.ts's upload-family validation gets a third branch
@@ -1244,6 +1308,7 @@ model Media {
   weddingWebsiteCouplePhotoFor WeddingWebsite?            @relation("WeddingWebsiteCouplePhoto")
   catalogItemMedia             CatalogItemMedia[]         @relation("CatalogItemMedia")
   packageImageFor              Package[]                  @relation("PackageImage")
+  offerMediaFor                OfferMedia[]               @relation("OfferMedia")
   challengeEntryCoverFor       ChallengeEntry?            @relation("ChallengeEntryCoverImage")
   challengeEntryPhotoFor       ChallengeEntryPhoto?       @relation("ChallengeEntryAdditionalPhoto")
   ruleBookFor                  Vendor[]                   @relation("VendorRuleBook")

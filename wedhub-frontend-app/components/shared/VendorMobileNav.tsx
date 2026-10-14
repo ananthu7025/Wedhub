@@ -78,6 +78,19 @@ const SECONDARY_SECTIONS = [
         ),
       },
       {
+        href: "/vendor/offers",
+        label: "Offers",
+        icon: (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2v-7" />
+            <path d="M2 7h20v5H2z" />
+            <path d="M12 22V7" />
+            <path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z" />
+            <path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z" />
+          </svg>
+        ),
+      },
+      {
         href: "/vendor/catalog",
         label: "Catalog",
         icon: (

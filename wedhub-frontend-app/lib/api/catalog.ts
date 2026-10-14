@@ -21,6 +21,7 @@ import type {
   WeddingStoriesListResponse,
   WeddingStory,
 } from "./vendors.types";
+import type { PublicOffer, SearchOffersParams } from "./vendor-offers.types";
 
 /**
  * Public, unauthenticated reads for the discovery surface (Frontend Arch
@@ -230,6 +231,25 @@ export function listFeaturedListings(placementType: FeaturedListing["placementTy
     skipAuth: true,
     public: true,
     next: { revalidate: 300 },
+  });
+}
+
+// Offer Wall — public discovery feed of vendor self-service discounted
+// packages. No rate limiter on this route (plain findMany, unlike
+// /search/vendors), so public: true is safe here.
+export function listOffers(params: SearchOffersParams) {
+  return apiFetch<PublicOffer[], PaginationMeta>("/offers", {
+    query: {
+      categoryId: params.categoryId,
+      priceMin: params.priceMin,
+      priceMax: params.priceMax,
+      sort: params.sort,
+      page: params.page,
+      limit: params.limit,
+    },
+    skipAuth: true,
+    public: true,
+    next: { revalidate: 120 },
   });
 }
 

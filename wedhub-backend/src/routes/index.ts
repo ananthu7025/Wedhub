@@ -21,6 +21,7 @@ import { subscriptionAdminRouter, subscriptionRouter } from "../modules/subscrip
 import { platformSettingAdminRouter } from "../modules/platform-settings";
 import { webhookRouter } from "../modules/webhooks";
 import { featuredListingAdminRouter, featuredListingRouter } from "../modules/featured-listings";
+import { offerRouter, publicOfferRouter } from "../modules/offers";
 import { notificationRouter } from "../modules/notifications";
 import { messagingRouter } from "../modules/messaging";
 import { telegramAdminRouter, telegramRouter } from "../modules/telegram";
@@ -80,6 +81,11 @@ apiV1Router.use("/admin/settings", platformSettingAdminRouter);
 apiV1Router.use("/webhooks", webhookRouter);
 apiV1Router.use("/featured-listings", featuredListingRouter);
 apiV1Router.use("/admin/featured-listings", featuredListingAdminRouter);
+// /offers/me (vendor self-service, authenticated) is mounted before the
+// public /offers router — distinct prefixes, same two-router convention as
+// catalog's /catalog + /public-catalog split.
+apiV1Router.use("/offers/me", offerRouter);
+apiV1Router.use("/offers", publicOfferRouter);
 apiV1Router.use("/notifications", notificationRouter);
 apiV1Router.use("/messaging", messagingRouter);
 apiV1Router.use("/telegram", telegramRouter);
